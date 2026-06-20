@@ -2780,19 +2780,85 @@ function drawClassicStadium() {
 }
 
 function drawBeachScene() {
-  function palmFrond(cx, cy, deg, L, col) {
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(deg * Math.PI / 180);
-    ctx.fillStyle = col || '#2a7a18';
-    ctx.strokeStyle = darkenHex(col || '#2a7a18', 0.55);
-    ctx.lineWidth = 0.9;
-    ctx.beginPath(); ctx.moveTo(0,0);
-    ctx.bezierCurveTo(L*0.26,-L*0.10, L*0.57,-L*0.37, L,-L*0.68);
-    ctx.bezierCurveTo(L*0.63,-L*0.37, L*0.26,-L*0.10, 0,0);
-    ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(0,0);
-    ctx.bezierCurveTo(L*0.26,-L*0.10, L*0.57,-L*0.37, L,-L*0.68);
-    ctx.stroke(); ctx.restore();
+  // Draw a realistic palm tree at (tx, ty) = trunk base, curving to crown at (hx, hy)
+  function drawPalmTree(tx, ty, hx, hy, trunkW, frondLen, frondAngles) {
+    // Tapered trunk using quadratic bezier
+    const cpx = (tx + hx) * 0.5 + (hy - ty) * 0.08, cpy = (ty + hy) * 0.5 - (hx - tx) * 0.05;
+    // Trunk fill — wide at base, narrow at top
+    for (let w = trunkW; w >= 1; w -= 1.5) {
+      const t = 1 - w / trunkW;
+      const alpha = 0.06 + t * 0.04;
+      ctx.strokeStyle = t < 0.5 ? `rgba(90,55,12,${alpha+0.7})` : `rgba(120,75,20,${alpha+0.5})`;
+      ctx.lineWidth = w;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(tx + (w - trunkW) * 0.1, ty);
+      ctx.quadraticCurveTo(cpx, cpy, hx + (w - trunkW) * 0.05, hy);
+      ctx.stroke();
+    }
+    // Trunk ring texture
+    ctx.strokeStyle = 'rgba(60,35,8,0.30)';
+    ctx.lineWidth = 0.8;
+    for (let r = 0; r <= 10; r++) {
+      const t = r / 10;
+      const rx = tx + (hx - tx) * t + (cpx - tx - (hx - tx) * 0.5) * 4 * t * (1 - t);
+      const ry = ty + (hy - ty) * t + (cpy - ty - (hy - ty) * 0.5) * 4 * t * (1 - t);
+      const rw = trunkW * (1 - t * 0.65) * 0.55;
+      ctx.beginPath(); ctx.ellipse(rx, ry, rw, rw * 0.22, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    // Crown base (knob where fronds meet)
+    ctx.fillStyle = '#4a3010';
+    ctx.beginPath(); ctx.arc(hx, hy, trunkW * 0.75, 0, Math.PI * 2); ctx.fill();
+    // Fronds
+    frondAngles.forEach(([angleDeg, col]) => {
+      const a = angleDeg * Math.PI / 180;
+      // Frond stem droops — control point offset downward
+      const fx = hx + Math.cos(a) * frondLen;
+      const fy = hy + Math.sin(a) * frondLen + frondLen * 0.30;  // gravity droop
+      const fcpx = hx + Math.cos(a) * frondLen * 0.55;
+      const fcpy = hy + Math.sin(a) * frondLen * 0.35 + frondLen * 0.18;
+      // Leaflet pairs along the frond
+      const nLeaflets = 9;
+      for (let l = 1; l <= nLeaflets; l++) {
+        const lt = l / nLeaflets;
+        // Point along bezier stem
+        const lx = hx*(1-lt)*(1-lt) + fcpx*2*lt*(1-lt) + fx*lt*lt;
+        const ly = hy*(1-lt)*(1-lt) + fcpy*2*lt*(1-lt) + fy*lt*lt;
+        // Tangent direction
+        const dtx = 2*(1-lt)*(fcpx-hx) + 2*lt*(fx-fcpx);
+        const dty = 2*(1-lt)*(fcpy-hy) + 2*lt*(fy-fcpy);
+        const tang = Math.atan2(dty, dtx);
+        const leafL = frondLen * (0.12 + 0.10*(1-lt));
+        const leafW = frondLen * (0.030 + 0.015*(1-lt));
+        [-1, 1].forEach(side => {
+          const la = tang + side * Math.PI / 2 + side * 0.3;
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.moveTo(lx, ly);
+          ctx.quadraticCurveTo(
+            lx + Math.cos(la) * leafL * 0.5,
+            ly + Math.sin(la) * leafL * 0.5 + leafL * 0.15,
+            lx + Math.cos(la) * leafL,
+            ly + Math.sin(la) * leafL + leafL * 0.25
+          );
+          ctx.quadraticCurveTo(lx + Math.cos(la)*leafL*0.4 + Math.cos(tang)*leafW, ly + Math.sin(la)*leafL*0.4 + Math.sin(tang)*leafW + leafL*0.12, lx, ly);
+          ctx.closePath(); ctx.fill();
+        });
+      }
+      // Central stem
+      ctx.strokeStyle = darkenHex(col, 0.6);
+      ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.quadraticCurveTo(fcpx, fcpy, fx, fy); ctx.stroke();
+    });
+    // Coconuts
+    ['#4a3010','#5c3c14','#3a2408'].forEach((c,i)=>{
+      ctx.fillStyle=c;
+      ctx.beginPath(); ctx.arc(hx+(i-1)*trunkW*0.9, hy+trunkW*0.6, trunkW*0.65, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,200,100,0.2)';
+      ctx.beginPath(); ctx.arc(hx+(i-1)*trunkW*0.9 - trunkW*0.2, hy+trunkW*0.4, trunkW*0.22, 0, Math.PI*2); ctx.fill();
+    });
   }
+
   function drawUmbrella(ux, uy, radius, col1, col2) {
     const segs = 8;
     for (let i = 0; i < segs; i++) {
@@ -2888,37 +2954,40 @@ function drawBeachScene() {
   });
 
   // ── PALM TREES ───────────────────────────────────────────────
-  const fLen = W * 0.078;
-  // Left palm – leaning right over field
-  const lp = {x: W*0.055, y: H*0.130, bx: W*0.048, by: H*(FIELD_CY-FIELD_RY)+H*0.008};
-  ctx.strokeStyle = '#6a4010'; ctx.lineWidth = W*0.020; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(lp.bx, lp.by); ctx.quadraticCurveTo(W*0.052,H*0.170, lp.x, lp.y); ctx.stroke();
-  ctx.strokeStyle = '#8a5828'; ctx.lineWidth = W*0.010;
-  ctx.beginPath(); ctx.moveTo(lp.bx+W*0.003, lp.by); ctx.quadraticCurveTo(W*0.055,H*0.170, lp.x+W*0.004, lp.y); ctx.stroke();
-  [[-135,'#1e6014'],[-90,'#2a7a1e'],[-45,'#2e7e20'],[-5,'#257018'],[38,'#1c5c14'],[100,'#1c5c14'],[155,'#1a5412']].forEach(([d,c])=>{ palmFrond(lp.x,lp.y,d,fLen,c); });
-  // Coconuts
-  ['#4a3010','#5a3c14','#402808'].forEach((c,i)=>{ ctx.fillStyle=c; ctx.beginPath(); ctx.arc(lp.x+(i-1)*W*0.010, lp.y+H*0.007, W*0.012, 0, Math.PI*2); ctx.fill(); });
+  const ovalTopY = H * (FIELD_CY - FIELD_RY);
+  const g1 = '#2a7a1a', g2 = '#1f6214', g3 = '#358020', g4 = '#1a5010', g5 = '#2c7018';
+
+  // Left large palm — trunk leans right over field
+  drawPalmTree(
+    W*0.052, ovalTopY + H*0.010,   // trunk base
+    W*0.058, H*0.098,              // crown
+    W*0.018, W*0.088,
+    [[-155,g4],[-120,g2],[-85,g1],[-50,g3],[-15,g2],[22,g3],[60,g4],[105,g4],[148,g5]]
+  );
 
   // Centre-left smaller palm
-  const mp = {x: W*0.165, y: H*0.108, bx: W*0.160, by: H*(FIELD_CY-FIELD_RY)+H*0.005};
-  ctx.strokeStyle = '#7a5018'; ctx.lineWidth = W*0.013;
-  ctx.beginPath(); ctx.moveTo(mp.bx, mp.by); ctx.quadraticCurveTo(W*0.162,H*0.145, mp.x, mp.y); ctx.stroke();
-  [[-120,'#226818'],[-70,'#2c781c'],[-20,'#2e7e20'],[35,'#267020'],[90,'#1e5c18'],[145,'#1c5416']].forEach(([d,c])=>{ palmFrond(mp.x,mp.y,d,fLen*0.72,c); });
+  drawPalmTree(
+    W*0.158, ovalTopY + H*0.006,
+    W*0.162, H*0.085,
+    W*0.012, W*0.064,
+    [[-140,g4],[-100,g2],[-60,g3],[-18,g2],[28,g3],[75,g4],[125,g4]]
+  );
 
-  // Right palm – leaning left
-  const rp = {x: W*0.945, y: H*0.125, bx: W*0.952, by: H*(FIELD_CY-FIELD_RY)+H*0.008};
-  ctx.strokeStyle = '#6a4010'; ctx.lineWidth = W*0.020;
-  ctx.beginPath(); ctx.moveTo(rp.bx, rp.by); ctx.quadraticCurveTo(W*0.948,H*0.165, rp.x, rp.y); ctx.stroke();
-  ctx.strokeStyle = '#8a5828'; ctx.lineWidth = W*0.010;
-  ctx.beginPath(); ctx.moveTo(rp.bx-W*0.003, rp.by); ctx.quadraticCurveTo(W*0.945,H*0.165, rp.x-W*0.004, rp.y); ctx.stroke();
-  [[-45,'#1e6014'],[-90,'#2a7a1e'],[-135,'#2e7e20'],[-178,'#257018'],[140,'#1c5c14'],[80,'#1c5c14'],[25,'#1a5412']].forEach(([d,c])=>{ palmFrond(rp.x,rp.y,d,fLen,c); });
-  ['#4a3010','#5a3c14','#402808'].forEach((c,i)=>{ ctx.fillStyle=c; ctx.beginPath(); ctx.arc(rp.x+(i-1)*W*0.010, rp.y+H*0.007, W*0.012, 0, Math.PI*2); ctx.fill(); });
+  // Right large palm — trunk leans left over field
+  drawPalmTree(
+    W*0.948, ovalTopY + H*0.010,
+    W*0.942, H*0.095,
+    W*0.018, W*0.088,
+    [[-25,g4],[-60,g2],[-95,g1],[-130,g3],[-165,g2],[155,g3],[118,g4],[78,g4],[35,g5]]
+  );
 
   // Centre-right smaller palm
-  const mp2 = {x: W*0.830, y: H*0.112, bx: W*0.836, by: H*(FIELD_CY-FIELD_RY)+H*0.004};
-  ctx.strokeStyle = '#7a5018'; ctx.lineWidth = W*0.013;
-  ctx.beginPath(); ctx.moveTo(mp2.bx, mp2.by); ctx.quadraticCurveTo(W*0.834,H*0.148, mp2.x, mp2.y); ctx.stroke();
-  [[-55,'#226818'],[-108,'#2c781c'],[-158,'#2e7e20'],[145,'#267020'],[92,'#1e5c18'],[38,'#1c5416']].forEach(([d,c])=>{ palmFrond(mp2.x,mp2.y,d,fLen*0.72,c); });
+  drawPalmTree(
+    W*0.838, ovalTopY + H*0.006,
+    W*0.834, H*0.088,
+    W*0.012, W*0.064,
+    [[-40,g4],[-80,g2],[-118,g3],[-158,g2],[148,g3],[105,g4],[58,g4]]
+  );
 
   // ── BEACH BAR / SHACK (far-end centre) ───────────────────────
   const barX = W*0.38, barY = H*0.170, barW = W*0.24, barH = H*0.058;
