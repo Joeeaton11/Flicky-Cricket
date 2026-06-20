@@ -2373,17 +2373,14 @@ function drawClassicStadium() {
   const isNight = tod.key === 'night';
   const isEvening = tod.key === 'evening';
 
-  // Layout constants (all as fractions of canvas dimensions)
-  const skyH       = H * 0.065;   // sky strip height
-  const standTopY   = skyH;        // stands begin at bottom of sky
-  const standFrontY = H * 0.152;   // stands end here (boundary ad-boards below)
-  const adH         = H * 0.026;   // advertising-board strip height
-  const numTiers    = 5;
-  const tierH       = (standFrontY - standTopY) / numTiers;
+  // Field oval geometry
+  const ocx = W * 0.5, ocy = H * FIELD_CY;
+  const orx = W * FIELD_RX, ory = H * FIELD_RY;
+  const ovalTop = ocy - ory;   // ≈ H*0.16
+
+  const skyH = H * 0.065;
 
   // ── SKY ──────────────────────────────────────────────────────
-  // Repaint the sky (the grass fill in drawField() covers the sky gradient
-  // drawn there, so each scene must redraw it)
   const skyGrad = ctx.createLinearGradient(0, 0, 0, skyH);
   skyGrad.addColorStop(0, tod.skyTop);
   skyGrad.addColorStop(1, tod.skyBottom);
@@ -2391,338 +2388,272 @@ function drawClassicStadium() {
   ctx.fillRect(0, 0, W, skyH);
 
   if (isNight) {
-    // stars
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
     for (let i = 0; i < 32; i++) {
       const sx = (i * 83 + 17) % W, sy = (i * 37 + 5) % (skyH * 0.88);
       ctx.fillRect(sx, sy, i%5===0?2:1.5, i%5===0?2:1.5);
     }
-    // twinkling highlight on a few
-    ctx.fillStyle = 'rgba(200,220,255,0.5)';
-    for (let i = 0; i < 6; i++) { ctx.fillRect((i*139+23)%W, (i*61+9)%(skyH*0.8), 2, 2); }
-    // moon with crescent shadow
     const mx = W*0.82, my = skyH*0.40, mr = H*0.019;
     const mgr = ctx.createRadialGradient(mx, my, 0, mx, my, mr*3);
-    mgr.addColorStop(0, 'rgba(220,230,180,0.18)');
-    mgr.addColorStop(1, 'rgba(220,230,180,0)');
-    ctx.fillStyle = mgr; ctx.beginPath(); ctx.arc(mx, my, mr*3, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#dde8c8'; ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = tod.skyTop;  ctx.beginPath(); ctx.arc(mx+mr*0.42, my-mr*0.25, mr*0.78, 0, Math.PI*2); ctx.fill();
+    mgr.addColorStop(0,'rgba(220,230,180,0.18)'); mgr.addColorStop(1,'rgba(220,230,180,0)');
+    ctx.fillStyle = mgr; ctx.beginPath(); ctx.arc(mx,my,mr*3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#dde8c8'; ctx.beginPath(); ctx.arc(mx,my,mr,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = tod.skyTop; ctx.beginPath(); ctx.arc(mx+mr*0.42,my-mr*0.25,mr*0.78,0,Math.PI*2); ctx.fill();
   } else if (isEvening) {
-    // setting sun near the horizon
     const sx = W*0.78, sy = skyH*0.72, sr = H*0.025;
-    const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr*5);
-    sg.addColorStop(0, 'rgba(255,150,40,0.6)'); sg.addColorStop(0.4,'rgba(255,100,20,0.25)'); sg.addColorStop(1,'rgba(255,60,10,0)');
-    ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(sx, sy, sr*5, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#ffb828'; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI*2); ctx.fill();
-    // horizon haze
-    const hg = ctx.createLinearGradient(0, skyH*0.55, 0, skyH);
+    const sg = ctx.createRadialGradient(sx,sy,0,sx,sy,sr*5);
+    sg.addColorStop(0,'rgba(255,150,40,0.6)'); sg.addColorStop(0.4,'rgba(255,100,20,0.25)'); sg.addColorStop(1,'rgba(255,60,10,0)');
+    ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(sx,sy,sr*5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffb828'; ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill();
+    const hg = ctx.createLinearGradient(0,skyH*0.55,0,skyH);
     hg.addColorStop(0,'rgba(255,130,50,0)'); hg.addColorStop(1,'rgba(255,90,20,0.22)');
-    ctx.fillStyle = hg; ctx.fillRect(0, skyH*0.55, W, skyH*0.45);
-    // evening clouds - lit from below
+    ctx.fillStyle = hg; ctx.fillRect(0,skyH*0.55,W,skyH*0.45);
     ctx.fillStyle = 'rgba(255,180,100,0.38)';
     [{x:W*0.14,y:skyH*0.28,rx:W*0.10,ry:skyH*0.20},{x:W*0.46,y:skyH*0.42,rx:W*0.08,ry:skyH*0.17},{x:W*0.62,y:skyH*0.18,rx:W*0.06,ry:skyH*0.14}].forEach(c=>{
-      ctx.beginPath();
-      ctx.ellipse(c.x,c.y,c.rx,c.ry,0,0,Math.PI*2);
+      ctx.beginPath(); ctx.ellipse(c.x,c.y,c.rx,c.ry,0,0,Math.PI*2);
       ctx.ellipse(c.x+c.rx*0.65,c.y-c.ry*0.3,c.rx*0.60,c.ry*0.72,0,0,Math.PI*2);
-      ctx.ellipse(c.x-c.rx*0.55,c.y+c.ry*0.1,c.rx*0.50,c.ry*0.60,0,0,Math.PI*2);
-      ctx.fill();
+      ctx.ellipse(c.x-c.rx*0.55,c.y+c.ry*0.1,c.rx*0.50,c.ry*0.60,0,0,Math.PI*2); ctx.fill();
     });
   } else {
-    // bright day – sun with halo
     const sx = W*0.76, sy = skyH*0.30, sr = H*0.021;
-    const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr*4);
+    const sg = ctx.createRadialGradient(sx,sy,0,sx,sy,sr*4);
     sg.addColorStop(0,'rgba(255,255,210,0.55)'); sg.addColorStop(1,'rgba(255,255,180,0)');
-    ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(sx, sy, sr*4, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#fff8d0'; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI*2); ctx.fill();
-    // fluffy clouds
+    ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(sx,sy,sr*4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff8d0'; ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.62)';
     [{x:W*0.17,y:skyH*0.32,rx:W*0.09,ry:skyH*0.22},{x:W*0.44,y:skyH*0.50,rx:W*0.07,ry:skyH*0.19},{x:W*0.62,y:skyH*0.22,rx:W*0.055,ry:skyH*0.17}].forEach(c=>{
-      ctx.beginPath();
-      ctx.ellipse(c.x,c.y,c.rx,c.ry,0,0,Math.PI*2);
+      ctx.beginPath(); ctx.ellipse(c.x,c.y,c.rx,c.ry,0,0,Math.PI*2);
       ctx.ellipse(c.x+c.rx*0.68,c.y-c.ry*0.28,c.rx*0.62,c.ry*0.74,0,0,Math.PI*2);
-      ctx.ellipse(c.x-c.rx*0.58,c.y+c.ry*0.12,c.rx*0.52,c.ry*0.62,0,0,Math.PI*2);
-      ctx.fill();
+      ctx.ellipse(c.x-c.rx*0.58,c.y+c.ry*0.12,c.rx*0.52,c.ry*0.62,0,0,Math.PI*2); ctx.fill();
     });
-    // blue-sky haze at horizon
-    const hg = ctx.createLinearGradient(0, skyH*0.6, 0, skyH);
+    const hg = ctx.createLinearGradient(0,skyH*0.6,0,skyH);
     hg.addColorStop(0,'rgba(180,220,255,0)'); hg.addColorStop(1,'rgba(180,220,255,0.14)');
-    ctx.fillStyle = hg; ctx.fillRect(0, skyH*0.6, W, skyH*0.4);
+    ctx.fillStyle = hg; ctx.fillRect(0,skyH*0.6,W,skyH*0.4);
   }
 
-  // ── DISTANT TREELINE / CITYSCAPE SILHOUETTE ─────────────────
-  const treeSilY = skyH - 1;
-  if (isNight) {
-    // city lights silhouette
-    ctx.fillStyle = '#0e0e1c';
-    for (let i = 0; i < 22; i++) {
-      const bx = (i * W/21) - W*0.01, bh = skyH*(0.18+((i*11)%10)*0.028), bw = W*0.042;
-      ctx.fillRect(bx, treeSilY - bh, bw, bh);
-    }
-    // lit windows in buildings
-    ctx.fillStyle = 'rgba(255,240,160,0.55)';
-    for (let i = 0; i < 18; i++) {
-      const bx = (i * W/21) + W*0.006;
-      const bh = skyH*(0.18+((i*11)%10)*0.028);
-      for (let wy = 0; wy < bh-3; wy += 5) {
-        if ((i*3+wy)%7 !== 0) ctx.fillRect(bx + (i%3)*4, treeSilY-bh+wy+1, 3, 3);
-      }
-    }
-  } else {
-    // tree silhouettes
-    ctx.fillStyle = isEvening ? 'rgba(50,20,8,0.52)' : 'rgba(22,52,14,0.42)';
-    for (let i = 0; i < 18; i++) {
-      const tx = (i * W/17) - W*0.025;
-      const th2 = skyH*(0.28+(((i*7)%10)/10)*0.38);
-      // pine-ish triangle
-      ctx.beginPath();
-      ctx.moveTo(tx, treeSilY);
-      ctx.lineTo(tx + W*0.033, treeSilY - th2);
-      ctx.lineTo(tx + W*0.068, treeSilY);
-      ctx.closePath(); ctx.fill();
-      // second tree layer offset
-      ctx.beginPath();
-      ctx.moveTo(tx+W*0.015, treeSilY);
-      ctx.lineTo(tx+W*0.038, treeSilY - th2*0.7);
-      ctx.lineTo(tx+W*0.062, treeSilY);
-      ctx.closePath(); ctx.fill();
-    }
-  }
-
-  // ── CONCRETE BACK WALL of the stand ──────────────────────────
-  ctx.fillStyle = isNight ? '#0f0f18' : (isEvening ? '#2e1e12' : '#2a2a38');
-  ctx.fillRect(0, standTopY, W, standFrontY - standTopY);
-
-  // ── SEATING TIERS (back→front = top→bottom) ─────────────────
+  // ── PALETTES ─────────────────────────────────────────────────
   const SHIRTS_DAY  = ['#e74c3c','#1f5fa8','#f4d03f','#2a8c3e','#ffffff','#e67e22','#9b59b6','#16a085','#f39c12','#2c3e50','#c0392b','#2980b9'];
   const SHIRTS_EVE  = ['#c03020','#18487a','#c09818','#1a5c2a','#ddd','#b85e10','#7a2880','#0c6868','#b07010','#1a2530'];
   const SHIRTS_NITE = ['#8a1c1c','#12306a','#8a7a08','#144c20','#bbb','#883808','#5a1070','#085858','#885808','#101828'];
   const shirts = isNight ? SHIRTS_NITE : (isEvening ? SHIRTS_EVE : SHIRTS_DAY);
-  const seatPalette = scheme.sectionColors; // used for empty-seat colours per section block
+  const seatPalette = scheme.sectionColors;
+  const skinTones = ['#c49060','#e8c090','#8a5030','#d4a070','#b87840','#f0d0a0'];
+  const concBase  = isNight ? '#0c0c1a' : (isEvening ? '#20140a' : '#18182c');
+  const concLight = isNight ? '#181828' : (isEvening ? '#2c1c0e' : '#242438');
+  const fasciaColor = isNight ? '#4040cc' : (isEvening ? '#c88030' : '#7878b8');
 
-  for (let tier = numTiers - 1; tier >= 0; tier--) {
-    const ty = standTopY + tier * tierH;
+  // ── FAR-END STAND (above oval top – full width) ───────────────
+  // The visible stand runs from skyH down to ovalTop (≈ H*0.095 tall)
+  const farH = ovalTop - skyH;
+  const numFarTiers = 5;
+  const farTierH = farH / numFarTiers;
 
-    // Perspective: front tiers taller/closer, back tiers compressed
-    const frontness = tier / (numTiers - 1); // 0=back(top), 1=front(bottom) — WAIT: tier0=back, tier4=front
-    // Actually tier 0 starts at standTopY (back), tier numTiers-1 ends at standFrontY (front)
-    // Let's define: backness = (numTiers-1-tier)/(numTiers-1) → 0=front, 1=back
-    const backness = (numTiers - 1 - tier) / (numTiers - 1);
-    const rowScale = 1.0 - backness * 0.35; // rows appear smaller further back
+  // Draw tiers back→front (top→bottom)
+  for (let tier = 0; tier < numFarTiers; tier++) {
+    const ty  = skyH + tier * farTierH;
+    const frontFrac = tier / (numFarTiers - 1);  // 0=back, 1=front
 
-    // concrete step line at bottom of each tier (riser)
-    const riserH = Math.max(1, tierH * 0.06);
-    ctx.fillStyle = isNight ? '#080810' : (isEvening ? '#1c1008' : '#18182a');
-    ctx.fillRect(0, ty + tierH - riserH, W, riserH);
+    // Concrete tier fill
+    const tg = ctx.createLinearGradient(0, ty, 0, ty + farTierH);
+    tg.addColorStop(0, concLight);
+    tg.addColorStop(1, concBase);
+    ctx.fillStyle = tg;
+    ctx.fillRect(0, ty, W, farTierH);
 
-    // seat/crowd rows inside this tier
-    const usableH = tierH - riserH;
-    const rowH = Math.max(2.5, usableH * 0.30 * rowScale);
-    const headR = Math.max(1.0, rowH * 0.38);
-    const rowPad = Math.max(1, usableH * 0.08);
-    const numRows = Math.max(1, Math.floor((usableH - rowPad) / (rowH + rowPad)));
-
-    // Number of "colour blocks" (like a club's stand section) across the width
-    const numBlocks = 8;
+    // Crowd rows inside tier
+    const rowH   = Math.max(3, farTierH * 0.38);
+    const headR  = Math.max(1.2, rowH * 0.42);
+    const rowGap = Math.max(1, farTierH * 0.12);
+    const numRows = Math.max(1, Math.floor((farTierH - rowGap) / (rowH + rowGap)));
+    const dotW   = Math.max(3, W / 95);
+    const dotGap = Math.max(0.5, dotW * 0.22);
+    const numBlocks = 10;
     const blockW = W / numBlocks;
 
     for (let row = 0; row < numRows; row++) {
-      const ry = ty + rowPad * 0.5 + row * (rowH + rowPad);
-      if (ry + rowH > ty + usableH) break;
-
-      // per-seat sizing
-      const seatW  = Math.max(2, blockW * 0.10 * rowScale);
-      const seatGap = Math.max(0.5, seatW * 0.18);
-      const stride  = seatW + seatGap;
+      const ry = ty + rowGap + row * (rowH + rowGap);
+      if (ry + rowH > ty + farTierH - 1) break;
 
       for (let blk = 0; blk < numBlocks; blk++) {
         const bx = blk * blockW;
-        const seatsInBlk = Math.max(1, Math.floor(blockW / stride));
-        const blkSeatColor = seatPalette[blk % seatPalette.length];
+        const numSeats = Math.floor(blockW / (dotW + dotGap));
+        const blkColor = seatPalette[blk % seatPalette.length];
 
-        for (let s = 0; s < seatsInBlk; s++) {
-          const sx = bx + s * stride + seatGap * 0.5;
-          if (sx + seatW > bx + blockW) break;
-          const hash = (tier * 29 + row * 17 + blk * 11 + s * 7) % 100;
-          const isEmpty = hash > 91; // ~9% empty seats
+        for (let s = 0; s < numSeats; s++) {
+          const sx = bx + s * (dotW + dotGap) + dotGap;
+          if (sx + dotW > bx + blockW) break;
+          const hash = (tier * 31 + row * 19 + blk * 13 + s * 7) % 100;
+          const empty = hash > 94;  // ~6% empty – packed stadium
+          ctx.fillStyle = empty ? darkenHex(blkColor, 0.42) : shirts[(hash + blk*4 + row*3) % shirts.length];
+          ctx.fillRect(sx, ry, dotW, rowH * 0.78);
 
-          ctx.fillStyle = isEmpty ? darkenHex(blkSeatColor, 0.55) : shirts[(hash + blk*3 + row) % shirts.length];
-          ctx.fillRect(sx, ry, seatW, rowH);
-
-          if (!isEmpty) {
-            // head
-            if (headR >= 1.0) {
-              ctx.fillStyle = (hash % 6 === 0) ? '#c49060' : ((hash%6===1)?'#e8c090':((hash%6===2)?'#8a5030':'#d4a070'));
-              ctx.beginPath();
-              ctx.arc(sx + seatW * 0.5, ry - headR * 0.45, headR, 0, Math.PI*2);
-              ctx.fill();
-            }
-            // raised arm (excitement / wave) — ~12% of fans
-            if (hash % 9 === 0 && headR >= 1.2) {
+          if (!empty && headR >= 1.2) {
+            ctx.fillStyle = skinTones[(hash + blk + row) % skinTones.length];
+            ctx.beginPath(); ctx.arc(sx + dotW*0.5, ry - headR*0.45, headR*0.78, 0, Math.PI*2); ctx.fill();
+            if (hash % 7 === 0) {  // raised arm
               ctx.strokeStyle = shirts[(hash + blk + 5) % shirts.length];
-              ctx.lineWidth = Math.max(0.8, headR * 0.55);
-              const armSide = (hash % 2 === 0) ? -seatW*0.55 : seatW*0.55;
+              ctx.lineWidth = Math.max(0.8, headR * 0.5);
+              const aOff = (hash%2===0) ? -dotW*0.55 : dotW*0.55;
               ctx.beginPath();
-              ctx.moveTo(sx + seatW*0.5, ry + rowH*0.2);
-              ctx.lineTo(sx + seatW*0.5 + armSide, ry - rowH*0.55);
+              ctx.moveTo(sx+dotW*0.5, ry+rowH*0.18);
+              ctx.lineTo(sx+dotW*0.5+aOff, ry-rowH*0.45);
               ctx.stroke();
             }
           }
         }
-
-        // Block colour divider (aisle gap between stand sections)
+        // Aisle divider every 2 blocks
         if (blk % 2 === 1) {
-          ctx.fillStyle = 'rgba(0,0,0,0.28)';
-          ctx.fillRect(blk*blockW, ty, 1.5, tierH);
+          ctx.fillStyle = 'rgba(0,0,0,0.22)';
+          ctx.fillRect(blk * blockW, ty, 1.5, farTierH);
         }
       }
     }
+    // Concrete step riser at base of tier
+    ctx.fillStyle = concBase;
+    ctx.fillRect(0, ty + farTierH - 2, W, 2);
   }
 
-  // ── ROOF CANOPY (covers back ~45% of the stand) ──────────────
-  const roofEndY = standTopY + tierH * (numTiers * 0.46);
-  // Roof body
-  ctx.fillStyle = isNight ? '#090912' : (isEvening ? '#201410' : '#16162a');
+  // ── SIDE & CORNER STANDS (scanline outside oval) ──────────────
+  // For each horizontal band in the oval's y-range, compute oval boundary
+  // and fill the left/right strips (outside the oval = stand area)
+  const scanH   = Math.max(4, H * 0.010);
+  const sDotR   = Math.max(2.5, H * 0.0068);
+  const sDotSpc = sDotR * 2.5;
+
+  for (let y = ovalTop; y < ocy + ory * 0.68; y += scanH) {
+    const dy = y - ocy;
+    const ratio = dy / ory;
+    if (Math.abs(ratio) >= 0.9999) continue;
+    const hw = orx * Math.sqrt(1 - ratio * ratio);
+    const leftEdge  = ocx - hw;
+    const rightEdge = ocx + hw;
+
+    // Fade/thin out stands approaching the lower oval (far side from camera)
+    const belowFrac = Math.max(0, (y - ocy) / (ory * 0.68));
+    const alpha = 1 - belowFrac * 0.5;
+
+    // ─ Left strip ─
+    if (leftEdge > 4) {
+      const nCols = Math.max(1, Math.round(leftEdge / (sDotSpc)));
+      const colW  = leftEdge / nCols;
+      for (let col = 0; col < nCols; col++) {
+        const cx2 = col * colW + colW * 0.5;
+        const depthF = (nCols - 1 - col) / Math.max(1, nCols - 1);  // 0=field-edge, 1=screen-edge
+        ctx.fillStyle = darkenHex(concLight, 0.72 + depthF * 0.22);
+        ctx.fillRect(col * colW, y, colW + 1, scanH);
+        // crowd dot
+        const hash = Math.floor(cx2 * 7 + y * 13) % 100;
+        if (hash > 5 && belowFrac < 0.90) {
+          const si = (Math.floor(col * 3) + Math.floor(y / sDotSpc * 5)) % shirts.length;
+          ctx.fillStyle = shirts[si];
+          ctx.beginPath(); ctx.arc(cx2, y + scanH*0.42, sDotR*0.78, 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle = skinTones[hash % skinTones.length];
+          ctx.beginPath(); ctx.arc(cx2, y + scanH*0.42 - sDotR*1.25, sDotR*0.52, 0, Math.PI*2); ctx.fill();
+        }
+      }
+      // Boundary shadow line
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(leftEdge - 2, y, 2, scanH);
+    }
+
+    // ─ Right strip ─
+    const rightW = W - rightEdge;
+    if (rightW > 4) {
+      const nCols = Math.max(1, Math.round(rightW / sDotSpc));
+      const colW  = rightW / nCols;
+      for (let col = 0; col < nCols; col++) {
+        const cx2 = rightEdge + col * colW + colW * 0.5;
+        const depthF = col / Math.max(1, nCols - 1);  // 0=field-edge, 1=screen-edge
+        ctx.fillStyle = darkenHex(concLight, 0.72 + depthF * 0.22);
+        ctx.fillRect(rightEdge + col * colW, y, colW + 1, scanH);
+        const hash = Math.floor(cx2 * 7 + y * 13) % 100;
+        if (hash > 5 && belowFrac < 0.90) {
+          const si = (Math.floor((nCols - col) * 3) + Math.floor(y / sDotSpc * 5)) % shirts.length;
+          ctx.fillStyle = shirts[si];
+          ctx.beginPath(); ctx.arc(cx2, y + scanH*0.42, sDotR*0.78, 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle = skinTones[hash % skinTones.length];
+          ctx.beginPath(); ctx.arc(cx2, y + scanH*0.42 - sDotR*1.25, sDotR*0.52, 0, Math.PI*2); ctx.fill();
+        }
+      }
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(rightEdge, y, 2, scanH);
+    }
+  }
+
+  // ── ROOF CANOPY (far-end, cantilever over top ~48% of stand) ─
+  const roofBotY = skyH + farH * 0.50;
+  ctx.fillStyle = isNight ? '#08080f' : (isEvening ? '#1a1008' : '#131320');
   ctx.beginPath();
-  ctx.moveTo(0, standTopY);
-  ctx.lineTo(W, standTopY);
-  ctx.lineTo(W, roofEndY);
-  ctx.quadraticCurveTo(W/2, roofEndY + tierH * 0.18, 0, roofEndY);
+  ctx.moveTo(-2, skyH);
+  ctx.lineTo(W + 2, skyH);
+  ctx.lineTo(W * 1.03, roofBotY + farH * 0.06);
+  ctx.quadraticCurveTo(W * 0.5, roofBotY + farH * 0.14, -W * 0.03, roofBotY + farH * 0.06);
   ctx.closePath();
   ctx.fill();
 
-  // Roof underside (slightly lighter to show curvature / depth)
-  ctx.fillStyle = isNight ? 'rgba(30,30,70,0.55)' : (isEvening ? 'rgba(70,40,15,0.50)' : 'rgba(60,60,100,0.50)');
-  const roofUndersideTop = standTopY + tierH * 0.22;
+  // Roof soffit (underside strip with light gradient)
+  const soffitGrad = ctx.createLinearGradient(0, skyH + farH * 0.20, 0, roofBotY + farH * 0.06);
+  soffitGrad.addColorStop(0, isNight ? 'rgba(40,40,100,0.0)' : (isEvening ? 'rgba(100,55,15,0.0)' : 'rgba(70,70,120,0.0)'));
+  soffitGrad.addColorStop(1, isNight ? 'rgba(40,40,100,0.65)' : (isEvening ? 'rgba(100,55,15,0.58)' : 'rgba(70,70,120,0.60)'));
+  ctx.fillStyle = soffitGrad;
   ctx.beginPath();
-  ctx.moveTo(0, roofUndersideTop);
-  ctx.lineTo(W, roofUndersideTop);
-  ctx.lineTo(W, roofEndY);
-  ctx.quadraticCurveTo(W/2, roofEndY + tierH*0.18, 0, roofEndY);
+  ctx.moveTo(-2, skyH + farH * 0.20);
+  ctx.lineTo(W + 2, skyH + farH * 0.20);
+  ctx.lineTo(W * 1.03, roofBotY + farH * 0.06);
+  ctx.quadraticCurveTo(W * 0.5, roofBotY + farH * 0.14, -W * 0.03, roofBotY + farH * 0.06);
   ctx.closePath();
   ctx.fill();
 
-  // Support trusses across the roof
-  ctx.strokeStyle = isNight ? 'rgba(70,70,160,0.45)' : (isEvening ? 'rgba(160,90,30,0.40)' : 'rgba(100,100,150,0.45)');
-  ctx.lineWidth = 1.8;
-  const numTrusses = 8;
-  for (let i = 1; i < numTrusses; i++) {
-    const tx = (i / numTrusses) * W;
-    const bend = (i % 2 === 0) ? 0.78 : 0.68;
-    ctx.beginPath();
-    ctx.moveTo(tx, standTopY);
-    ctx.lineTo(tx, roofEndY * bend + standTopY * (1-bend));
-    ctx.stroke();
-  }
-
-  // Roof front fascia edge
-  const edgeColor = isNight ? '#3030aa' : (isEvening ? '#c07828' : '#6868a8');
-  ctx.strokeStyle = edgeColor;
-  ctx.lineWidth = 2.5;
+  // Roof front edge fascia
+  ctx.strokeStyle = fasciaColor;
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(0, roofEndY);
-  ctx.quadraticCurveTo(W/2, roofEndY + tierH*0.18, W, roofEndY);
+  ctx.moveTo(-W * 0.03, roofBotY + farH * 0.06);
+  ctx.quadraticCurveTo(W * 0.5, roofBotY + farH * 0.14, W * 1.03, roofBotY + farH * 0.06);
   ctx.stroke();
 
-  // ── FLOODLIGHT TOWERS ────────────────────────────────────────
-  const towers = [
-    {x: W*0.055, groundY: standFrontY, topY: H*0.01},
-    {x: W*0.945, groundY: standFrontY, topY: H*0.01},
-  ];
-  towers.forEach(t => {
-    const tw = Math.max(4, W*0.008);
-    // Mast
-    const mastGrad = ctx.createLinearGradient(t.x, t.topY, t.x, t.groundY);
-    mastGrad.addColorStop(0, isNight ? '#606060' : '#7a7a8a');
-    mastGrad.addColorStop(1, isNight ? '#303030' : '#404050');
-    ctx.fillStyle = mastGrad;
-    ctx.fillRect(t.x - tw/2, t.topY, tw, t.groundY - t.topY);
-    // Cross-arm
-    ctx.fillStyle = isNight ? '#555' : '#666';
-    ctx.fillRect(t.x - W*0.022, t.topY + H*0.005, W*0.044, Math.max(2, H*0.004));
-    // Light array (bank of 5 lamps)
-    for (let li = -2; li <= 2; li++) {
-      const lx = t.x + li * W*0.009;
-      const ly = t.topY + H*0.002;
-      ctx.fillStyle = isNight ? '#ffffd0' : '#d8d8c0';
-      ctx.fillRect(lx - W*0.003, ly, W*0.006, H*0.006);
-      if (isNight) {
-        // individual lamp glow
-        const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, H*0.06);
-        lg.addColorStop(0,'rgba(255,255,200,0.14)'); lg.addColorStop(1,'rgba(255,255,200,0)');
-        ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(lx, ly, H*0.06, 0, Math.PI*2); ctx.fill();
-      }
-    }
-    // Full tower night glow
-    if (isNight) {
-      const tg = ctx.createRadialGradient(t.x, t.topY, 0, t.x, t.topY, H*0.38);
-      tg.addColorStop(0,'rgba(255,255,200,0.12)'); tg.addColorStop(1,'rgba(255,255,200,0)');
-      ctx.fillStyle = tg; ctx.beginPath(); ctx.arc(t.x, t.topY, H*0.38, 0, Math.PI*2); ctx.fill();
-    }
-  });
+  // Roof support columns / trusses
+  ctx.strokeStyle = isNight ? 'rgba(60,60,150,0.5)' : (isEvening ? 'rgba(150,85,20,0.45)' : 'rgba(80,80,140,0.5)');
+  ctx.lineWidth = 1.5;
+  for (let i = 1; i <= 9; i++) {
+    const tx  = (i / 10) * W;
+    const bby = roofBotY + Math.sin(i / 10 * Math.PI) * farH * 0.14;
+    ctx.beginPath(); ctx.moveTo(tx, skyH); ctx.lineTo(tx, bby); ctx.stroke();
+  }
 
-  // ── SIDE STANDS (left and right wings along oval edge) ───────
-  const sideW     = W * 0.092;
-  const sideTopY  = H * 0.115;
-  const sideBotY  = H * 0.40;
-  const sideTiers = 3;
-  const sideTierW = sideW / sideTiers;
+  // ── SIDE STAND CANOPIES (corner areas) ───────────────────────
+  // Small cantilever roofs over the upper corner stands
+  const cRoofY1 = ovalTop + (ocy - ovalTop) * 0.12;
+  const cRoofY2 = ovalTop + (ocy - ovalTop) * 0.60;
+  const r1hw = orx * Math.sqrt(1 - Math.pow((cRoofY1 - ocy) / ory, 2));
+  const r2hw = orx * Math.sqrt(1 - Math.pow((cRoofY2 - ocy) / ory, 2));
 
-  ['left','right'].forEach(side => {
-    const isLeft = side === 'left';
-    const baseX   = isLeft ? 0 : W - sideW;
+  [[0, ocx - r1hw, ocx - r2hw], [W, ocx + r1hw, ocx + r2hw]].forEach(([screenEdge, x1, x2]) => {
+    const isL = screenEdge === 0;
+    const roofInnerX1 = isL ? x1 * 0.50 : W - (W - x1) * 0.50;
+    const roofInnerX2 = isL ? x2 * 0.60 : W - (W - x2) * 0.60;
 
-    // concrete back of side stand
-    ctx.fillStyle = isNight ? '#0e0e18' : (isEvening ? '#28180e' : '#24243a');
-    ctx.fillRect(baseX, sideTopY, sideW, sideBotY - sideTopY);
-
-    for (let t = 0; t < sideTiers; t++) {
-      // tiers go front-to-back: leftmost visible tier = "front" on left stand
-      const depthFrac = isLeft ? (sideTiers-1-t)/sideTiers : t/sideTiers; // 0=front,1=back
-      const tierX = isLeft ? (baseX + t * sideTierW) : (baseX + (sideTiers-1-t)*sideTierW);
-      const tCol  = seatPalette[t % seatPalette.length];
-
-      // tier fill
-      ctx.fillStyle = darkenHex(tCol, 0.45 + depthFrac*0.30);
-      ctx.fillRect(tierX, sideTopY, sideTierW, sideBotY - sideTopY);
-
-      // crowd dots
-      const dotR  = Math.max(1.2, sideTierW * 0.055);
-      const dotGX = dotR * 2.6;
-      const dotGY = dotR * 2.4;
-      for (let dy = sideTopY + dotGY; dy < sideBotY - dotR; dy += dotGY) {
-        for (let dx = tierX + dotR; dx < tierX + sideTierW - dotR; dx += dotGX) {
-          const h2 = Math.round(dx * 7 + dy * 11 + t * 3) % 100;
-          if (h2 > 86) continue; // occasional empty gap
-          ctx.fillStyle = shirts[(h2 + t * 4) % shirts.length];
-          ctx.beginPath(); ctx.arc(dx, dy, dotR, 0, Math.PI*2); ctx.fill();
-          // head
-          ctx.fillStyle = '#d4a070';
-          ctx.beginPath(); ctx.arc(dx, dy - dotR*1.1, dotR*0.6, 0, Math.PI*2); ctx.fill();
-        }
-      }
-
-      // tier edge line
-      const edgeX = isLeft ? tierX + sideTierW : tierX;
-      ctx.fillStyle = 'rgba(0,0,0,0.32)';
-      ctx.fillRect(edgeX, sideTopY, 1.5, sideBotY - sideTopY);
-    }
-
-    // Side stand roof overhang (small canopy)
-    ctx.fillStyle = isNight ? '#080812' : (isEvening ? '#1c1008' : '#141428');
-    const roofW = sideW * 0.55;
-    const roofX = isLeft ? baseX : baseX + sideW - roofW;
-    ctx.fillRect(roofX, sideTopY, roofW, (sideBotY-sideTopY)*0.25);
-    ctx.strokeStyle = edgeColor;
-    ctx.lineWidth = 1.5;
+    ctx.fillStyle = isNight ? '#07070e' : (isEvening ? '#180e06' : '#111120');
     ctx.beginPath();
-    ctx.moveTo(roofX, sideTopY + (sideBotY-sideTopY)*0.25);
-    ctx.lineTo(roofX + roofW, sideTopY + (sideBotY-sideTopY)*0.25);
+    ctx.moveTo(screenEdge, cRoofY1);
+    ctx.lineTo(roofInnerX1, cRoofY1);
+    ctx.lineTo(roofInnerX2, cRoofY2);
+    ctx.lineTo(screenEdge, cRoofY2);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = fasciaColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(roofInnerX1, cRoofY1);
+    ctx.lineTo(roofInnerX2, cRoofY2);
     ctx.stroke();
   });
 
-  // ── ADVERTISING BOARDS (boundary perimeter strip) ────────────
-  const adY = standFrontY;
+  // ── ADVERTISING BOARDS ───────────────────────────────────────
+  // Horizontal LED strip just above the oval's top boundary
+  const adY  = ovalTop - H * 0.004;
+  const adH  = H * 0.022;
   const numBoards = 6;
   const boardW = W / numBoards;
   const adColors = scheme.adColors;
@@ -2730,103 +2661,120 @@ function drawClassicStadium() {
 
   for (let i = 0; i < numBoards; i++) {
     const ac = adColors[i % adColors.length];
-    // LED panel gradient
     const bg = ctx.createLinearGradient(0, adY, 0, adY + adH);
     bg.addColorStop(0, ac);
     bg.addColorStop(1, darkenHex(ac.startsWith('#') ? ac : '#888888', 0.68));
     ctx.fillStyle = bg;
     ctx.fillRect(i * boardW, adY, boardW, adH);
-
-    // LED pixel-grid overlay for realism
     ctx.fillStyle = 'rgba(0,0,0,0.07)';
     for (let px = 3; px < boardW - 2; px += 4) {
-      for (let py = 2; py < adH - 1; py += 4) {
-        ctx.fillRect(i*boardW + px, adY + py, 1, 1);
-      }
+      for (let py = 2; py < adH - 1; py += 4) ctx.fillRect(i*boardW+px, adY+py, 1, 1);
     }
-
-    // slight sheen highlight at top
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillStyle = 'rgba(255,255,255,0.13)';
     ctx.fillRect(i*boardW + 1, adY + 1, boardW - 2, adH * 0.28);
-
-    // label
-    const textColor = (ac === '#fff' || ac === '#f4d03f' || ac === '#39ff6a') ? '#111111' : '#ffffff';
+    const textColor = (ac === '#fff' || ac === '#f4d03f' || ac === '#39ff6a') ? '#111' : '#fff';
     ctx.fillStyle = textColor;
-    ctx.font = `bold ${Math.max(8, adH * 0.52)}px Courier New`;
-    ctx.textAlign = 'center';
-    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 2;
+    ctx.font = `bold ${Math.max(7, adH*0.52)}px Courier New`;
+    ctx.textAlign = 'center'; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 2;
     ctx.fillText(adLabels[i % adLabels.length], i*boardW + boardW/2, adY + adH*0.72);
     ctx.shadowBlur = 0;
-
-    // board divider
-    ctx.fillStyle = '#000';
-    ctx.fillRect(i * boardW, adY, 2, adH);
+    ctx.fillStyle = '#000'; ctx.fillRect(i * boardW, adY, 2, adH);
   }
   ctx.textAlign = 'left';
 
-  // ── ELECTRONIC SCOREBOARD ────────────────────────────────────
-  // Sits in the stand, below the roof overhang, centred on the far end
-  const sbW  = W * 0.30, sbH = H * 0.055;
-  const sbX  = W/2 - sbW/2;
-  const sbY  = roofEndY + tierH * 0.28;
+  // ── FLOODLIGHT TOWERS (4 towers at oval corners) ──────────────
+  // Two at the top of the far-end stand, two at mid-height on each side
+  const floodTowers = [
+    {x: W*0.055, topY: skyH * 0.5,             baseY: skyH + farH * 0.45},
+    {x: W*0.945, topY: skyH * 0.5,             baseY: skyH + farH * 0.45},
+    {x: W*0.022, topY: ovalTop + farH * 0.5,   baseY: ovalTop + (ocy - ovalTop) * 0.50},
+    {x: W*0.978, topY: ovalTop + farH * 0.5,   baseY: ovalTop + (ocy - ovalTop) * 0.50},
+  ];
 
-  // Outer housing (thick bezel)
-  ctx.fillStyle = '#060608';
-  ctx.fillRect(sbX - 5, sbY - 5, sbW + 10, sbH + 10);
-  ctx.strokeStyle = '#f4d03f';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(sbX - 5, sbY - 5, sbW + 10, sbH + 10);
-  // Corner bolts
-  [[sbX-4,sbY-4],[sbX+sbW+4,sbY-4],[sbX-4,sbY+sbH+4],[sbX+sbW+4,sbY+sbH+4]].forEach(([bx,by])=>{
-    ctx.fillStyle='#888'; ctx.beginPath(); ctx.arc(bx, by, 2, 0, Math.PI*2); ctx.fill();
+  floodTowers.forEach(t => {
+    const tw   = Math.max(3, W * 0.006);
+    const mastH = t.baseY - t.topY;
+    const armW  = W * 0.034;
+
+    // Mast
+    const mg = ctx.createLinearGradient(t.x, t.topY, t.x, t.baseY);
+    mg.addColorStop(0, isNight ? '#787878' : '#9a9aaa');
+    mg.addColorStop(1, isNight ? '#343434' : '#484858');
+    ctx.fillStyle = mg;
+    ctx.fillRect(t.x - tw/2, t.topY, tw, mastH);
+
+    // Cross-arm with diagonal braces
+    ctx.fillStyle = isNight ? '#585858' : '#686878';
+    ctx.fillRect(t.x - armW, t.topY + mastH*0.06, armW*2, Math.max(2, H*0.003));
+
+    // Lamp bank (6 lamps)
+    for (let li = -2; li <= 2; li++) {
+      const lx = t.x + li * armW * 0.44;
+      const ly = t.topY + mastH * 0.02;
+      ctx.fillStyle = isNight ? '#ffffd8' : '#b8b8a0';
+      ctx.fillRect(lx - W*0.0025, ly, W*0.005, H*0.005);
+      if (isNight) {
+        const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, H*0.065);
+        lg.addColorStop(0,'rgba(255,255,200,0.16)'); lg.addColorStop(1,'rgba(255,255,200,0)');
+        ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(lx, ly, H*0.065, 0, Math.PI*2); ctx.fill();
+      }
+    }
+
+    if (isNight) {
+      const tg = ctx.createRadialGradient(t.x, t.topY, 0, t.x, t.topY, H*0.40);
+      tg.addColorStop(0,'rgba(255,255,200,0.10)'); tg.addColorStop(1,'rgba(255,255,200,0)');
+      ctx.fillStyle = tg; ctx.beginPath(); ctx.arc(t.x, t.topY, H*0.40, 0, Math.PI*2); ctx.fill();
+    }
   });
 
-  // Screen face
-  const scrGrad = ctx.createLinearGradient(sbX, sbY, sbX, sbY+sbH);
-  scrGrad.addColorStop(0,'#050510'); scrGrad.addColorStop(1,'#020208');
-  ctx.fillStyle = scrGrad; ctx.fillRect(sbX, sbY, sbW, sbH);
+  // ── ELECTRONIC SCOREBOARD ────────────────────────────────────
+  // Positioned in the open part of the far-end stand (below roof edge)
+  const sbW = W * 0.28, sbH = H * 0.048;
+  const sbX = W/2 - sbW/2;
+  const sbY = roofBotY + farH * 0.06 + H * 0.005;
 
-  // Scanline overlay
+  ctx.fillStyle = '#040408';
+  ctx.fillRect(sbX - 5, sbY - 4, sbW + 10, sbH + 8);
+  ctx.strokeStyle = '#f4d03f'; ctx.lineWidth = 2;
+  ctx.strokeRect(sbX - 5, sbY - 4, sbW + 10, sbH + 8);
+  [[sbX-4,sbY-3],[sbX+sbW+4,sbY-3],[sbX-4,sbY+sbH+3],[sbX+sbW+4,sbY+sbH+3]].forEach(([bx,by])=>{
+    ctx.fillStyle = '#888'; ctx.beginPath(); ctx.arc(bx,by,2,0,Math.PI*2); ctx.fill();
+  });
+
+  const scrG = ctx.createLinearGradient(sbX,sbY,sbX,sbY+sbH);
+  scrG.addColorStop(0,'#040510'); scrG.addColorStop(1,'#020208');
+  ctx.fillStyle = scrG; ctx.fillRect(sbX,sbY,sbW,sbH);
   ctx.fillStyle = 'rgba(0,80,0,0.06)';
-  for (let sl = 0; sl < sbH; sl += 2.5) ctx.fillRect(sbX, sbY+sl, sbW, 1);
+  for (let sl = 0; sl < sbH; sl += 2.5) ctx.fillRect(sbX,sbY+sl,sbW,1);
 
-  // "FLICKY CRICKET" header line
-  ctx.fillStyle = '#39ff6a';
-  ctx.shadowColor = '#00ff40'; ctx.shadowBlur = 4;
-  ctx.font = `bold ${Math.max(7, sbH*0.27)}px Courier New`;
+  ctx.fillStyle = '#39ff6a'; ctx.shadowColor = '#00ff40'; ctx.shadowBlur = 4;
+  ctx.font = `bold ${Math.max(7,sbH*0.27)}px Courier New`;
   ctx.textAlign = 'center';
   ctx.fillText('FLICKY CRICKET', W/2, sbY + sbH*0.36);
   ctx.shadowBlur = 0;
-
-  // Score line
   ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${Math.max(9, sbH*0.36)}px Courier New`;
+  ctx.font = `bold ${Math.max(9,sbH*0.36)}px Courier New`;
   ctx.fillText('RUNS: ' + runs + '  |  TARGET: ' + target, W/2, sbY + sbH*0.78);
   ctx.textAlign = 'left';
 
-  // ── ENERGY BAR (below scoreboard) ───────────────────────────
-  const ebW = sbW, ebH = Math.max(5, H * 0.010);
+  // ── ENERGY BAR ───────────────────────────────────────────────
+  const ebW = sbW, ebH = Math.max(5, H*0.009);
   const ebX = sbX, ebY = sbY + sbH + 3;
   ctx.fillStyle = 'rgba(0,0,0,0.65)';
-  ctx.fillRect(ebX - 5, ebY, ebW + 10, ebH + 2);
+  ctx.fillRect(ebX-5, ebY, ebW+10, ebH+2);
   const pct = Math.max(0, Math.min(1, energy / MAX_ENERGY));
-  let barColor;
-  if (pct > 0.6) barColor = '#39ff6a';
-  else if (pct > ENERGY_LOW_THRESHOLD/MAX_ENERGY) barColor = '#f4d03f';
-  else barColor = '#e74c3c';
-  // bar glow
+  let barColor = pct > 0.6 ? '#39ff6a' : pct > ENERGY_LOW_THRESHOLD/MAX_ENERGY ? '#f4d03f' : '#e74c3c';
   ctx.shadowColor = barColor; ctx.shadowBlur = 4;
   ctx.fillStyle = barColor;
-  ctx.fillRect(ebX, ebY + 1, ebW * pct, ebH);
+  ctx.fillRect(ebX, ebY+1, ebW*pct, ebH);
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(ebX, ebY + 1, ebW, ebH);
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
+  ctx.strokeRect(ebX, ebY+1, ebW, ebH);
   if (ebH >= 6) {
     ctx.fillStyle = 'rgba(0,0,0,0.75)';
-    ctx.font = `bold ${Math.max(6, ebH*0.72)}px Courier New`;
+    ctx.font = `bold ${Math.max(6,ebH*0.72)}px Courier New`;
     ctx.textAlign = 'center';
-    ctx.fillText('ENERGY', W/2, ebY + ebH*0.83);
+    ctx.fillText('ENERGY', W/2, ebY+ebH*0.83);
     ctx.textAlign = 'left';
   }
 }
