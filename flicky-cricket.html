@@ -1035,6 +1035,7 @@ let ballTrail = [];
 let particles = [];
 let shake = { x:0, y:0, t:0, mag:0 };
 let flash = 0;
+let flashColor = '255,255,255';
 let popText = null; // {text, x, y, life, color}
 
 function triggerShake(mag, duration) {
@@ -1950,17 +1951,29 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
 
   // immediate impact juice (happens at moment of contact, before flight anim)
   const bx = ball.screenX || W/2, by = ball.screenY || PITCH_BOTTOM()-20;
-  spawnParticles(bx, by, 'rgba(244,208,63,ALPHA)', 8 + Math.floor(distance*10), distance);
-  if (distance >= 0.9) {
-    flash = 0.35;
-    triggerShake(distance >= 1.5 ? 14 : 9, 12);
-    popText = { text: outcome, x: bx, y: by-30, life: 40, maxLife: 40,
-                color: outcome === 'SIX!' ? '#f4d03f' : '#fff' };
+  if (outcome === 'SIX!') {
+    spawnParticles(bx, by, 'rgba(244,208,63,ALPHA)', 32, distance);
+    spawnParticles(bx, by, 'rgba(255,100,0,ALPHA)', 16, distance);
+    spawnParticles(bx, by, 'rgba(255,255,255,ALPHA)', 10, distance * 0.7);
+    flash = 0.55; flashColor = '244,208,63';
+    triggerShake(18, 18);
+    popText = { text: 'SIX!', x: W/2, y: H * 0.38, life: 70, maxLife: 70,
+                color: '#f4d03f', big: true };
+  } else if (outcome === 'FOUR!') {
+    spawnParticles(bx, by, 'rgba(255,255,255,ALPHA)', 20, distance);
+    spawnParticles(bx, by, 'rgba(100,220,255,ALPHA)', 12, distance * 0.8);
+    flash = 0.35; flashColor = '100,220,255';
+    triggerShake(10, 12);
+    popText = { text: 'FOUR!', x: W/2, y: H * 0.40, life: 55, maxLife: 55,
+                color: '#ffffff', big: true };
   } else if (distance >= 0.18) {
+    spawnParticles(bx, by, 'rgba(244,208,63,ALPHA)', 8 + Math.floor(distance*10), distance);
     triggerShake(4, 6);
     if (fieldedSave) {
-      popText = { text: outcome, x: bx, y: by-30, life: 40, maxLife: 40, color: '#fff' };
+      popText = { text: outcome, x: bx, y: by-30, life: 40, maxLife: 40, color: '#fff', big: false };
     }
+  } else {
+    spawnParticles(bx, by, 'rgba(244,208,63,ALPHA)', 8 + Math.floor(distance*10), distance);
   }
 }
 
@@ -5805,17 +5818,77 @@ function drawTrail() {
 function drawPopText() {
   if (!popText) return;
   const t = popText.life / popText.maxLife;
-  const scale = t > 0.8 ? lerp(0.5, 1.3, (1-t)/0.2) : lerp(1.3, 1, (t)/0.8);
+  const isBig = popText.big;
+  const isSix = popText.text === 'SIX!';
+
+  let scale, alpha, yOff;
+  if (isBig) {
+    // punch in fast, hold, fade out
+    const progress = 1 - t; // 0=just appeared, 1=dying
+    if (progress < 0.12) {
+      // slam in: overshoot scale
+      scale = lerp(2.4, 1.05, progress / 0.12);
+    } else if (progress < 0.7) {
+      // hold with subtle pulse
+      const pulse = 1 + 0.04 * Math.sin(progress * 40);
+      scale = 1.05 * pulse;
+    } else {
+      // fade out scaling up slightly
+      scale = lerp(1.05, 1.3, (progress - 0.7) / 0.3);
+    }
+    alpha = progress < 0.1 ? progress / 0.1 : (progress > 0.72 ? lerp(1, 0, (progress - 0.72) / 0.28) : 1);
+    yOff = 0;
+  } else {
+    scale = t > 0.8 ? lerp(0.5, 1.3, (1-t)/0.2) : lerp(1.3, 1, t/0.8);
+    alpha = Math.min(1, t * 2);
+    yOff = (1-t) * 40;
+  }
+
   ctx.save();
-  ctx.translate(popText.x, popText.y - (1-t)*40);
+  ctx.translate(popText.x, popText.y - yOff);
   ctx.scale(scale, scale);
-  ctx.font = 'bold 28px Courier New';
   ctx.textAlign = 'center';
-  ctx.globalAlpha = Math.min(1, t*2);
-  ctx.fillStyle = '#000';
-  ctx.fillText(popText.text, 2, 2);
-  ctx.fillStyle = popText.color;
-  ctx.fillText(popText.text, 0, 0);
+  ctx.textBaseline = 'middle';
+  ctx.globalAlpha = alpha;
+
+  if (isBig) {
+    const fontSize = isSix ? Math.round(W * 0.2) : Math.round(W * 0.16);
+    ctx.font = `900 ${fontSize}px Impact, Arial Black, sans-serif`;
+
+    if (isSix) {
+      // gold glow layers
+      ctx.shadowColor = '#f4d03f';
+      ctx.shadowBlur = 30 * scale;
+      ctx.fillStyle = '#f4d03f';
+      ctx.fillText(popText.text, 0, 0);
+      ctx.shadowBlur = 0;
+      // dark outline
+      ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+      ctx.lineWidth = Math.max(1, fontSize * 0.06);
+      ctx.strokeText(popText.text, 0, 0);
+      // bright centre
+      ctx.fillStyle = '#fff8dc';
+      ctx.font = `900 ${Math.round(fontSize * 0.88)}px Impact, Arial Black, sans-serif`;
+      ctx.fillText(popText.text, 0, 0);
+    } else {
+      // FOUR: clean white with blue shadow
+      ctx.shadowColor = '#4dd9ff';
+      ctx.shadowBlur = 20 * scale;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(popText.text, 0, 0);
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(0,0,80,0.6)';
+      ctx.lineWidth = Math.max(1, fontSize * 0.05);
+      ctx.strokeText(popText.text, 0, 0);
+    }
+  } else {
+    ctx.font = 'bold 28px Courier New';
+    ctx.fillStyle = '#000';
+    ctx.fillText(popText.text, 2, 2);
+    ctx.fillStyle = popText.color;
+    ctx.fillText(popText.text, 0, 0);
+  }
+
   ctx.restore();
   ctx.globalAlpha = 1;
   popText.life--;
@@ -5824,7 +5897,7 @@ function drawPopText() {
 
 function drawFlash() {
   if (flash > 0) {
-    ctx.fillStyle = `rgba(255,255,255,${flash.toFixed(2)})`;
+    ctx.fillStyle = `rgba(${flashColor},${flash.toFixed(2)})`;
     ctx.fillRect(0,0,W,H);
     flash -= 0.04;
     if (flash < 0) flash = 0;
