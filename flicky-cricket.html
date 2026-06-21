@@ -1317,9 +1317,15 @@ function updateFielders() {
 }
 
 // ---------- INPUT ----------
+let currentTouchPos = null;
 canvas.addEventListener('pointerdown', e => {
   if (state !== 'ready' && state !== 'ballcoming') return;
   touchStart = { x: e.clientX, y: e.clientY, t: performance.now() };
+  currentTouchPos = { x: e.clientX, y: e.clientY };
+});
+canvas.addEventListener('pointermove', e => {
+  if (!touchStart) return;
+  currentTouchPos = { x: e.clientX, y: e.clientY };
 });
 canvas.addEventListener('pointerup', e => {
   if (!touchStart) return;
@@ -1328,6 +1334,7 @@ canvas.addEventListener('pointerup', e => {
   const dt = Math.max(performance.now() - touchStart.t, 16);
   swipeVec = { dx, dy, dt };
   touchStart = null;
+  currentTouchPos = null;
   attemptFlick();
 });
 
@@ -5636,12 +5643,89 @@ function drawBall() {
 }
 
 function drawSwipeTrail() {
-  if (touchStart) {
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.beginPath();
-    ctx.arc(touchStart.x, touchStart.y, 12, 0, Math.PI*2);
-    ctx.fill();
+  if (!touchStart || !currentTouchPos) return;
+  const sx = touchStart.x, sy = touchStart.y;
+  const cx = currentTouchPos.x, cy = currentTouchPos.y;
+  const dx = cx - sx, dy = cy - sy;
+  const dist = Math.hypot(dx, dy);
+
+  // touch origin dot
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.beginPath();
+  ctx.arc(sx, sy, 12, 0, Math.PI*2);
+  ctx.fill();
+
+  if (dist < 8) return; // no direction yet
+
+  // arrow shaft
+  const angle = Math.atan2(dy, dx);
+  const arrowLen = Math.min(dist, 90);
+  const ex = sx + Math.cos(angle) * arrowLen;
+  const ey = sy + Math.sin(angle) * arrowLen;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(ex, ey);
+  ctx.stroke();
+
+  // arrowhead
+  const headLen = 14;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.beginPath();
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - Math.cos(angle - 0.4)*headLen, ey - Math.sin(angle - 0.4)*headLen);
+  ctx.lineTo(ex - Math.cos(angle + 0.4)*headLen, ey - Math.sin(angle + 0.4)*headLen);
+  ctx.closePath();
+  ctx.fill();
+
+  // shot name label near arrow tip
+  const shotAngleDeg = Math.atan2(dx, -dy) * 180 / Math.PI;
+  let shotLabel;
+  if (shotAngleDeg > 120 || shotAngleDeg < -120) shotLabel = 'BEHIND';
+  else if (shotAngleDeg > 60) shotLabel = 'OFF SIDE';
+  else if (shotAngleDeg > 20) shotLabel = 'COVER DRIVE';
+  else if (shotAngleDeg > -20) shotLabel = 'STRAIGHT';
+  else if (shotAngleDeg > -60) shotLabel = 'MID-ON';
+  else shotLabel = 'LEG SIDE';
+
+  const labelX = sx + Math.cos(angle) * (arrowLen + 22);
+  const labelY = sy + Math.sin(angle) * (arrowLen + 22);
+  ctx.font = 'bold 11px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillText(shotLabel, labelX+1, labelY+1);
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillText(shotLabel, labelX, labelY);
+
+  // shot sector overlay on the field: project swipe angle onto field
+  const shotAngle = shotAngleDeg * Math.PI / 180; // radians, 0=straight, +ve=off, -ve=leg
+  const fieldCx = W/2, fieldCy = H * 0.56;
+  const rx = W * 0.46, ry = H * 0.40;
+  const sectorHalf = Math.PI / 6; // 30 degrees each side
+  const sectorStart = shotAngle - sectorHalf - Math.PI/2;
+  const sectorEnd   = shotAngle + sectorHalf - Math.PI/2;
+
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = '#39ff6a';
+  ctx.beginPath();
+  ctx.moveTo(fieldCx, fieldCy);
+  // approximate ellipse sector with line segments
+  const steps = 20;
+  for (let i = 0; i <= steps; i++) {
+    const a = sectorStart + (sectorEnd - sectorStart) * (i / steps);
+    ctx.lineTo(fieldCx + Math.cos(a) * rx, fieldCy + Math.sin(a) * ry);
   }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  ctx.restore();
 }
 
 function drawTutorialPrompt() {
