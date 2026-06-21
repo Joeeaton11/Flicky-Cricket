@@ -2857,97 +2857,169 @@ function drawBeachScene() {
 
   // ── PALM TREES on the narrow side strips ────────────────────────────────────
   // These lean dramatically over the oval from very edge positions
-  function palm(bx,by,lean,trunkH,tw2) {
+  // Draw one palm tree: base=(bx,by), top leans to (bx+lean, by-trunkH)
+  function palm(bx,by,lean,trunkH,tw) {
     const tx=bx+lean, ty=by-trunkH;
-    const cpx=bx+lean*.35, cpy=by-trunkH*.48;
+    const cpx=bx+lean*.28, cpy=by-trunkH*.52;  // curve control
 
-    // Shadow stroke
-    ctx.save(); ctx.strokeStyle='rgba(0,0,0,.2)'; ctx.lineWidth=tw2*1.6; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(bx+tw2*.35,by); ctx.quadraticCurveTo(cpx+tw2*.35,cpy,tx+tw2*.35,ty); ctx.stroke();
+    // Trunk shadow
+    ctx.save(); ctx.lineCap='round';
+    ctx.strokeStyle='rgba(0,0,0,.18)'; ctx.lineWidth=tw*1.5;
+    ctx.beginPath(); ctx.moveTo(bx+tw*.4,by); ctx.quadraticCurveTo(cpx+tw*.4,cpy,tx+tw*.4,ty); ctx.stroke();
 
-    // Trunk
-    ctx.strokeStyle='#7A4818'; ctx.lineWidth=tw2;
+    // Trunk — light grey-brown like real palm
+    ctx.strokeStyle='#A09060'; ctx.lineWidth=tw;
     ctx.beginPath(); ctx.moveTo(bx,by); ctx.quadraticCurveTo(cpx,cpy,tx,ty); ctx.stroke();
-    // Highlight
-    ctx.strokeStyle='rgba(180,110,40,.45)'; ctx.lineWidth=tw2*.3;
-    ctx.beginPath(); ctx.moveTo(bx-tw2*.15,by); ctx.quadraticCurveTo(cpx-tw2*.15,cpy,tx-tw2*.15,ty); ctx.stroke();
+    // Trunk shadow side
+    ctx.strokeStyle='rgba(80,55,20,.5)'; ctx.lineWidth=tw*.4;
+    ctx.beginPath(); ctx.moveTo(bx+tw*.25,by); ctx.quadraticCurveTo(cpx+tw*.25,cpy,tx+tw*.25,ty); ctx.stroke();
+    // Trunk highlight
+    ctx.strokeStyle='rgba(220,190,130,.45)'; ctx.lineWidth=tw*.25;
+    ctx.beginPath(); ctx.moveTo(bx-tw*.22,by); ctx.quadraticCurveTo(cpx-tw*.22,cpy,tx-tw*.22,ty); ctx.stroke();
     ctx.restore();
 
-    // Ring marks
-    ctx.strokeStyle='rgba(50,25,5,.3)'; ctx.lineWidth=1;
-    for(let i=1;i<9;i++){const t2=i/9; const mx=bx+(tx-bx)*t2+(lean*.35)*t2*(1-t2), my=by+(ty-by)*t2, rw=tw2*(1-t2*.5)*.6; ctx.beginPath(); ctx.moveTo(mx-rw,my-rw*.2); ctx.lineTo(mx+rw,my+rw*.2); ctx.stroke();}
+    // Horizontal ring marks up trunk
+    ctx.save(); ctx.strokeStyle='rgba(70,50,15,.28)'; ctx.lineWidth=1;
+    for(let i=1;i<10;i++){
+      const t2=i/10;
+      const mx=bx+(tx-bx)*t2 + lean*.28*t2*(1-t2);
+      const my=by+(ty-by)*t2;
+      const rw=tw*(1-t2*.45)*.65;
+      ctx.beginPath(); ctx.moveTo(mx-rw,my); ctx.lineTo(mx+rw,my); ctx.stroke();
+    }
+    ctx.restore();
 
-    // Crown
-    ctx.fillStyle='#3C2008'; ctx.beginPath(); ctx.arc(tx,ty,tw2*.75,0,Math.PI*2); ctx.fill();
+    // Crown bud
+    ctx.fillStyle='#4A3010'; ctx.beginPath(); ctx.arc(tx,ty,tw*.8,0,Math.PI*2); ctx.fill();
 
-    // Fronds
-    const fronds=[[-2.1,1.0,.5],[-1.4,1.05,.25],[-0.7,1.0,.1],[0.0,.95,.12],[0.65,1.0,.3],[1.3,.92,.52],[1.95,.82,.72]];
-    const fl=trunkH*.6;
-    fronds.forEach(([ang,lf,drp])=>{
-      const tipX=tx+Math.cos(ang)*fl*lf, tipY=ty+Math.sin(ang)*fl*lf+fl*drp*.35;
-      const cpfX=tx+Math.cos(ang)*fl*.5, cpfY=ty+Math.sin(ang)*fl*.5+fl*drp*.1;
-      const fdx=tipX-tx, fdy=tipY-ty, flen=Math.sqrt(fdx*fdx+fdy*fdy)||1;
-      const px2=-fdy/flen, py2=fdx/flen, hw2=tw2*.52;
-      // Dark underside
-      ctx.fillStyle='#1A5808';
-      ctx.beginPath(); ctx.moveTo(tx,ty);
-      ctx.quadraticCurveTo(cpfX+px2*hw2,cpfY+py2*hw2,tipX+px2*hw2*.2,tipY+py2*hw2*.2);
-      ctx.lineTo(tipX,tipY); ctx.lineTo(tipX-px2*hw2*.2,tipY-py2*hw2*.2);
-      ctx.quadraticCurveTo(cpfX-px2*hw2,cpfY-py2*hw2,tx,ty); ctx.closePath(); ctx.fill();
-      // Top surface
-      ctx.fillStyle='#2E8C12';
-      ctx.beginPath(); ctx.moveTo(tx,ty);
-      ctx.quadraticCurveTo(cpfX+px2*hw2*.8,cpfY+py2*hw2*.8,tipX+px2*hw2*.15,tipY+py2*hw2*.15);
-      ctx.lineTo(tipX,tipY); ctx.lineTo(tipX-px2*hw2*.15,tipY-py2*hw2*.15);
-      ctx.quadraticCurveTo(cpfX-px2*hw2*.65,cpfY-py2*hw2*.65,tx,ty); ctx.closePath(); ctx.fill();
-      // Highlight
-      ctx.fillStyle='rgba(90,200,40,.28)';
-      ctx.beginPath(); ctx.moveTo(tx,ty);
-      ctx.quadraticCurveTo(cpfX,cpfY,tipX,tipY);
-      ctx.quadraticCurveTo(cpfX-px2*hw2*.3,cpfY-py2*hw2*.3,tx,ty); ctx.closePath(); ctx.fill();
+    // Fronds — 8 fronds, long and drooping heavily like real palm
+    // Each frond: angle outward from crown, then droops DOWN dramatically
+    const fl=trunkH*.82;  // frond length, long relative to trunk
+    const fAngles=[-2.3,-1.65,-1.0,-0.35,0.3,0.9,1.55,2.2];
+    const fDroop= [0.7,  0.45, 0.28,0.2, 0.22,0.38,0.55,0.75];  // droop per frond
+
+    fAngles.forEach((ang,i)=>{
+      const drp=fDroop[i];
+      // Frond tip — goes outward then droops down hard
+      const tipX=tx + Math.cos(ang)*fl;
+      const tipY=ty + Math.sin(ang)*fl + fl*drp*0.65;  // heavy droop
+      // Control point — midway out, less droop (creates the S-curve droop)
+      const cpfX=tx + Math.cos(ang)*fl*0.5;
+      const cpfY=ty + Math.sin(ang)*fl*0.28 + fl*drp*0.18;
+
+      // Perpendicular for leaf width
+      const fdx=tipX-tx, fdy=tipY-ty;
+      const flen2=Math.sqrt(fdx*fdx+fdy*fdy)||1;
+      const px2=-fdy/flen2, py2=fdx/flen2;
+      const hw2=tw*0.72;  // frond half-width
+
+      // Frond shadow (dark underside)
+      ctx.fillStyle='#1C620A';
+      ctx.beginPath();
+      ctx.moveTo(tx,ty);
+      ctx.quadraticCurveTo(cpfX+px2*hw2*.9,cpfY+py2*hw2*.9, tipX+px2*hw2*.12,tipY+py2*hw2*.12);
+      ctx.quadraticCurveTo(tipX,tipY+fl*.02, tipX-px2*hw2*.12,tipY-py2*hw2*.12);
+      ctx.quadraticCurveTo(cpfX-px2*hw2*.9,cpfY-py2*hw2*.9, tx,ty);
+      ctx.closePath(); ctx.fill();
+
+      // Frond top surface (bright green)
+      ctx.fillStyle='#38A818';
+      ctx.beginPath();
+      ctx.moveTo(tx,ty);
+      ctx.quadraticCurveTo(cpfX+px2*hw2*.75,cpfY+py2*hw2*.75, tipX+px2*hw2*.1,tipY+py2*hw2*.1);
+      ctx.quadraticCurveTo(tipX,tipY, tipX-px2*hw2*.1,tipY-py2*hw2*.1);
+      ctx.quadraticCurveTo(cpfX-px2*hw2*.65,cpfY-py2*hw2*.65, tx,ty);
+      ctx.closePath(); ctx.fill();
+
+      // Light highlight stripe along top of frond
+      ctx.fillStyle='rgba(120,220,60,.22)';
+      ctx.beginPath();
+      ctx.moveTo(tx,ty);
+      ctx.quadraticCurveTo(cpfX-px2*hw2*.1,cpfY-py2*hw2*.1, tipX,tipY);
+      ctx.quadraticCurveTo(cpfX-px2*hw2*.5,cpfY-py2*hw2*.5, tx,ty);
+      ctx.closePath(); ctx.fill();
+
       // Midrib
-      ctx.strokeStyle='#185010'; ctx.lineWidth=.8;
+      ctx.strokeStyle='#1A580C'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(tx,ty); ctx.quadraticCurveTo(cpfX,cpfY,tipX,tipY); ctx.stroke();
     });
 
-    // Coconuts
-    ctx.fillStyle='#5A3210';
-    const baseA=Math.atan2(lean,-trunkH);
-    for(let i=0;i<3;i++){ctx.beginPath(); ctx.arc(tx+Math.cos(baseA+(i-1)*.5)*tw2*2.2, ty+Math.sin(baseA+(i-1)*.5)*tw2*2.2+tw2*.8, tw2*.8,0,Math.PI*2); ctx.fill();}
+    // Coconuts clustered at crown
+    ctx.fillStyle='#5C3410';
+    for(let i=0;i<4;i++){
+      const ca=(i/4)*Math.PI*2;
+      ctx.beginPath(); ctx.arc(tx+Math.cos(ca)*tw, ty+Math.sin(ca)*tw+tw*.5, tw*.72,0,Math.PI*2); ctx.fill();
+    }
+    ctx.fillStyle='#6E4218'; ctx.beginPath(); ctx.arc(tx,ty+tw*.4,tw*.6,0,Math.PI*2); ctx.fill();
   }
 
-  // LEFT side — base hugs left edge, fronds sweep right over oval
-  palm(W*.014, ocy-ory*.38, W*.07,  H*.18, W*.014);
-  palm(W*.006, ocy-ory*.18, W*.055, H*.15, W*.011);
-  // RIGHT side — mirror
-  palm(W*.986, ocy-ory*.38, -W*.07,  H*.18, W*.014);
-  palm(W*.994, ocy-ory*.18, -W*.055, H*.15, W*.011);
+  // One big palm per side — base in lower sandy area, tall trunk, fronds sweep wide
+  palm(W*.01,  H*.78, W*.065, H*.22, W*.016);   // left
+  palm(W*.99,  H*.78, -W*.065, H*.22, W*.016);  // right
 
-  // ── PARASOL function ─────────────────────────────────────────────────────────
+  // ── PARASOL — elliptical dome seen from slight above, like real beach parasol ──
   function parasol(px,py,r,c1,c2) {
-    // shadow on sand
-    ctx.fillStyle='rgba(0,0,0,.13)';
-    ctx.beginPath(); ctx.ellipse(px+r*.35,py+H*.008,r*.9,H*.008,0,0,Math.PI*2); ctx.fill();
-    // 8 dome segments
-    for(let i=0;i<8;i++){
+    // Pole shadow on sand
+    ctx.fillStyle='rgba(0,0,0,.15)';
+    ctx.beginPath(); ctx.ellipse(px+r*.4, py+r*.08, r*.75, r*.14, 0, 0, Math.PI*2); ctx.fill();
+
+    // Dome is an ellipse (rx=r, ry=r*0.38) — flat disc seen from above/side
+    const ry=r*.38;
+
+    // Clip to dome ellipse so stripes don't spill outside
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(px,py,r,ry,0,0,Math.PI*2); ctx.clip();
+
+    // Radial stripes — draw as pie wedges clipped to ellipse
+    const nStripes=8;
+    for(let i=0;i<nStripes;i++){
+      const a1=(i/nStripes)*Math.PI*2 - Math.PI/2;
+      const a2=((i+1)/nStripes)*Math.PI*2 - Math.PI/2;
       ctx.fillStyle=i%2===0?c1:c2;
-      ctx.beginPath(); ctx.moveTo(px,py);
-      ctx.arc(px,py,r,Math.PI+(i/8)*Math.PI,Math.PI+((i+1)/8)*Math.PI);
+      ctx.beginPath();
+      ctx.moveTo(px,py);
+      // Big radius lines to reach edge of ellipse in any direction
+      ctx.lineTo(px+Math.cos(a1)*r*2, py+Math.sin(a1)*r*2);
+      ctx.arc(px,py,r*2,a1,a2);
       ctx.closePath(); ctx.fill();
     }
-    // dome edge
-    ctx.strokeStyle='rgba(0,0,0,.18)'; ctx.lineWidth=.8;
-    ctx.beginPath(); ctx.arc(px,py,r,Math.PI,Math.PI*2); ctx.stroke();
-    // sheen
-    const sg=ctx.createRadialGradient(px-r*.3,py-r*.38,0,px,py,r);
-    sg.addColorStop(0,'rgba(255,255,255,.5)'); sg.addColorStop(.6,'rgba(255,255,255,.07)'); sg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(px,py,r,Math.PI,Math.PI*2); ctx.fill();
-    // fringe dots
-    for(let i=0;i<14;i++){const fa=Math.PI+(i+.5)/14*Math.PI; ctx.fillStyle=i%2===0?c1:c2; ctx.beginPath(); ctx.arc(px+Math.cos(fa)*r,py+Math.sin(fa)*r,r*.09,0,Math.PI*2); ctx.fill();}
-    // pole
-    ctx.strokeStyle='#A08030'; ctx.lineWidth=2.2; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px+r*.08,py+r*1.7); ctx.stroke();
-    ctx.fillStyle='#FFF5D0'; ctx.beginPath(); ctx.arc(px,py,r*.09,0,Math.PI*2); ctx.fill();
+
+    // Dome sheen — radial gradient for 3D roundness
+    const dg=ctx.createRadialGradient(px-r*.3,py-ry*.5,0,px,py,r);
+    dg.addColorStop(0,'rgba(255,255,255,.55)');
+    dg.addColorStop(0.45,'rgba(255,255,255,.12)');
+    dg.addColorStop(1,'rgba(0,0,0,.08)');
+    ctx.fillStyle=dg; ctx.beginPath(); ctx.ellipse(px,py,r,ry,0,0,Math.PI*2); ctx.fill();
+
+    ctx.restore();
+
+    // Dome outline
+    ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.ellipse(px,py,r,ry,0,0,Math.PI*2); ctx.stroke();
+
+    // Fringe — short hanging triangles around the bottom edge of dome
+    const nFringe=20;
+    const fLen=r*0.18;
+    for(let i=0;i<nFringe;i++){
+      const a=(i/(nFringe))*Math.PI*2;
+      const ex=px+Math.cos(a)*r, ey=py+Math.sin(a)*ry;
+      // hang straight down
+      ctx.fillStyle=i%2===0?c1:c2;
+      ctx.beginPath();
+      ctx.moveTo(ex-r*.04, ey);
+      ctx.lineTo(ex+r*.04, ey);
+      ctx.lineTo(ex, ey+fLen);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // Pole — straight down from dome centre
+    ctx.strokeStyle='#B89030'; ctx.lineWidth=2.5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(px,py+ry); ctx.lineTo(px,py+r*1.8); ctx.stroke();
+    // Spike into sand
+    ctx.strokeStyle='#8A6818'; ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.moveTo(px,py+r*1.8); ctx.lineTo(px,py+r*2.05); ctx.stroke();
+    // Centre cap
+    ctx.fillStyle='#FFF8E0'; ctx.beginPath(); ctx.arc(px,py,r*.08,0,Math.PI*2); ctx.fill();
   }
 
   // ── SUNBATHER on towel ───────────────────────────────────────────────────────
