@@ -14,12 +14,15 @@
     font-size:14px; text-shadow:2px 2px 0 #000; pointer-events:none; z-index:2;
   }
   #muteBtn {
-    position:absolute; bottom:10px; right:10px; z-index:6;
-    font-family:'Courier New', monospace; font-size:11px; font-weight:bold;
-    padding:6px 10px; background:rgba(0,0,0,0.5); color:#fff;
-    border:2px solid rgba(255,255,255,0.4); cursor:pointer; letter-spacing:1px;
+    position:absolute; bottom:max(env(safe-area-inset-bottom,10px),10px); right:12px; z-index:6;
+    width:36px; height:36px; border-radius:50%;
+    background:rgba(0,0,0,0.45); color:#fff;
+    border:1.5px solid rgba(255,255,255,0.25); cursor:pointer;
+    font-size:16px; display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
   }
-  #muteBtn:active { transform:scale(0.95); }
+  #muteBtn:active { transform:scale(0.90); opacity:0.8; }
+  #muteBtn.hidden { display:none; }
   #message {
     position:absolute; top:40%; left:50%; transform:translate(-50%,-50%);
     color:#fff; font-size:32px; font-weight:bold; text-shadow:3px 3px 0 #000;
@@ -254,7 +257,7 @@
 <div id="hud">
   <div id="best">BEST: 0</div>
 </div>
-<button id="muteBtn">SOUND ON</button>
+<button id="muteBtn">🔊</button>
 <div id="message"></div>
 <div id="overlay">
   <!-- TOP: logo pinned to top -->
@@ -365,10 +368,10 @@ const leagueDoneBtn = document.getElementById('leagueDoneBtn');
 const leagueSeasonInfo = document.getElementById('leagueSeasonInfo');
 const leagueTableEl = document.getElementById('leagueTable');
 
-muteBtn.textContent = (localStorage.getItem('flickyMuted') === 'true') ? 'SOUND OFF' : 'SOUND ON';
+muteBtn.textContent = (localStorage.getItem('flickyMuted') === 'true') ? '🔇' : '🔊';
 muteBtn.addEventListener('click', () => {
   setMuted(!audioMuted);
-  muteBtn.textContent = audioMuted ? 'SOUND OFF' : 'SOUND ON';
+  muteBtn.textContent = audioMuted ? '🔇' : '🔊';
   if (!audioMuted) playUiTap();
 });
 
@@ -1356,6 +1359,7 @@ startBtn.addEventListener('click', () => {
   document.getElementById('statusBlock').style.display = 'none';
   shareBtn.classList.add('hidden');
   overlay.classList.add('hidden');
+  muteBtn.classList.add('hidden');
   runs = 0;
   ballsBowled = 0;
   thisRunFours = 0;
@@ -2283,6 +2287,7 @@ function endGame() {
   shareBtn.classList.remove('hidden');
 
   overlay.classList.remove('hidden');
+  muteBtn.classList.remove('hidden');
 }
 
 // ---------- BALL PROGRESS UPDATE ----------
@@ -2844,56 +2849,8 @@ function drawClassicStadium() {
     }
   });
 
-  // ── ELECTRONIC SCOREBOARD ────────────────────────────────────
-  // Positioned in the open part of the far-end stand (below roof edge)
-  const sbW = W * 0.28, sbH = H * 0.048;
-  const sbX = W/2 - sbW/2;
-  const sbY = roofBotY + farH * 0.06 + H * 0.005;
-
-  ctx.fillStyle = '#040408';
-  ctx.fillRect(sbX - 5, sbY - 4, sbW + 10, sbH + 8);
-  ctx.strokeStyle = '#f4d03f'; ctx.lineWidth = 2;
-  ctx.strokeRect(sbX - 5, sbY - 4, sbW + 10, sbH + 8);
-  [[sbX-4,sbY-3],[sbX+sbW+4,sbY-3],[sbX-4,sbY+sbH+3],[sbX+sbW+4,sbY+sbH+3]].forEach(([bx,by])=>{
-    ctx.fillStyle = '#888'; ctx.beginPath(); ctx.arc(bx,by,2,0,Math.PI*2); ctx.fill();
-  });
-
-  const scrG = ctx.createLinearGradient(sbX,sbY,sbX,sbY+sbH);
-  scrG.addColorStop(0,'#040510'); scrG.addColorStop(1,'#020208');
-  ctx.fillStyle = scrG; ctx.fillRect(sbX,sbY,sbW,sbH);
-  ctx.fillStyle = 'rgba(0,80,0,0.06)';
-  for (let sl = 0; sl < sbH; sl += 2.5) ctx.fillRect(sbX,sbY+sl,sbW,1);
-
-  ctx.fillStyle = '#39ff6a'; ctx.shadowColor = '#00ff40'; ctx.shadowBlur = 4;
-  ctx.font = `bold ${Math.max(7,sbH*0.27)}px Courier New`;
-  ctx.textAlign = 'center';
-  ctx.fillText('FLICKY CRICKET', W/2, sbY + sbH*0.36);
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${Math.max(9,sbH*0.36)}px Courier New`;
-  ctx.fillText('RUNS: ' + runs + '  |  TARGET: ' + target, W/2, sbY + sbH*0.78);
-  ctx.textAlign = 'left';
-
-  // ── ENERGY BAR ───────────────────────────────────────────────
-  const ebW = sbW, ebH = Math.max(5, H*0.009);
-  const ebX = sbX, ebY = sbY + sbH + 3;
-  ctx.fillStyle = 'rgba(0,0,0,0.65)';
-  ctx.fillRect(ebX-5, ebY, ebW+10, ebH+2);
-  const pct = Math.max(0, Math.min(1, energy / MAX_ENERGY));
-  let barColor = pct > 0.6 ? '#39ff6a' : pct > ENERGY_LOW_THRESHOLD/MAX_ENERGY ? '#f4d03f' : '#e74c3c';
-  ctx.shadowColor = barColor; ctx.shadowBlur = 4;
-  ctx.fillStyle = barColor;
-  ctx.fillRect(ebX, ebY+1, ebW*pct, ebH);
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
-  ctx.strokeRect(ebX, ebY+1, ebW, ebH);
-  if (ebH >= 6) {
-    ctx.fillStyle = 'rgba(0,0,0,0.75)';
-    ctx.font = `bold ${Math.max(6,ebH*0.72)}px Courier New`;
-    ctx.textAlign = 'center';
-    ctx.fillText('ENERGY', W/2, ebY+ebH*0.83);
-    ctx.textAlign = 'left';
-  }
+  // ── SCOREBOARD (re-uses shared chip HUD style) ───────────────
+  drawSceneScoreboard();
 }
 
 function drawBeachScene() {
@@ -3344,21 +3301,7 @@ function drawMoonScene() {
   ctx.lineTo(W,hY+hH); ctx.closePath(); ctx.fill();
 
   // ── SCOREBOARD ──
-  const sbW = W*0.34, sbH = H*0.075, sbX = W/2 - sbW/2, sbY = H*0.012;
-  ctx.fillStyle = '#1a1a1a'; ctx.fillRect(sbX,sbY,sbW,sbH);
-  ctx.strokeStyle = '#f4d03f'; ctx.lineWidth = 2; ctx.strokeRect(sbX,sbY,sbW,sbH);
-  ctx.fillStyle = '#39ff6a'; ctx.font = `bold ${Math.max(10,sbH*0.32)}px Courier New`; ctx.textAlign = 'center';
-  ctx.fillText('FLICKY CRICKET', W/2, sbY+sbH*0.4);
-  ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(11,sbH*0.4)}px Courier New`;
-  ctx.fillText('RUNS: ' + runs + '  |  TARGET: ' + target, W/2, sbY+sbH*0.78);
-  ctx.textAlign = 'left';
-  const ebW = sbW, ebH = Math.max(6,sbH*0.16), ebX = sbX, ebY = sbY+sbH+3;
-  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(ebX,ebY,ebW,ebH);
-  const pct = Math.max(0, Math.min(1, energy/MAX_ENERGY));
-  ctx.fillStyle = pct>0.6?'#39ff6a':(pct>ENERGY_LOW_THRESHOLD/MAX_ENERGY?'#f4d03f':'#e74c3c');
-  ctx.fillRect(ebX,ebY,ebW*pct,ebH);
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(ebX,ebY,ebW,ebH);
-  if (ebH>=8) { ctx.fillStyle='#000'; ctx.font=`bold ${Math.max(7,ebH*0.7)}px Courier New`; ctx.textAlign='center'; ctx.fillText('ENERGY',W/2,ebY+ebH*0.78); ctx.textAlign='left'; }
+  drawSceneScoreboard();
 
   // ── CRATERS scattered on the lunar surface (uses fractional field coords) ──
   function crater(fx, fy, fr) {
@@ -3455,21 +3398,62 @@ function drawMoonScene() {
 // shared helper: draws the 6-ring concentric ground oval used by every
 // custom scene, alternating between two tones
 function drawSceneScoreboard() {
-  const sbW=W*0.34, sbH=H*0.075, sbX=W/2-W*0.17, sbY=H*0.012;
-  ctx.fillStyle='#1a1a1a'; ctx.fillRect(sbX,sbY,sbW,sbH);
-  ctx.strokeStyle='#f4d03f'; ctx.lineWidth=2; ctx.strokeRect(sbX,sbY,sbW,sbH);
-  ctx.fillStyle='#39ff6a'; ctx.font=`bold ${Math.max(10,sbH*0.32)}px Courier New`; ctx.textAlign='center';
-  ctx.fillText('FLICKY CRICKET',W/2,sbY+sbH*0.4);
-  ctx.fillStyle='#fff'; ctx.font=`bold ${Math.max(11,sbH*0.4)}px Courier New`;
-  ctx.fillText('RUNS: '+runs+'  |  TARGET: '+target,W/2,sbY+sbH*0.78);
-  ctx.textAlign='left';
-  const ebW=sbW, ebH=Math.max(6,sbH*0.16), ebX=sbX, ebY=sbY+sbH+3;
-  ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(ebX,ebY,ebW,ebH);
-  const pct=Math.max(0,Math.min(1,energy/MAX_ENERGY));
-  ctx.fillStyle=pct>0.6?'#39ff6a':(pct>ENERGY_LOW_THRESHOLD/MAX_ENERGY?'#f4d03f':'#e74c3c');
-  ctx.fillRect(ebX,ebY,ebW*pct,ebH);
-  ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(ebX,ebY,ebW,ebH);
-  if(ebH>=8){ctx.fillStyle='#000'; ctx.font=`bold ${Math.max(7,ebH*0.7)}px Courier New`; ctx.textAlign='center'; ctx.fillText('ENERGY',W/2,ebY+ebH*0.78); ctx.textAlign='left';}
+  // Two pill chips: RUNS (left) and TARGET (right), separated by a divider
+  const chipH = H * 0.048;
+  const chipW = W * 0.38;
+  const gap   = W * 0.03;
+  const totalW = chipW * 2 + gap;
+  const chipY  = H * 0.014;
+  const lx = W / 2 - totalW / 2;
+  const rx = lx + chipW + gap;
+  const r  = chipH / 2; // corner radius
+
+  function drawChip(x, label, value, valColor) {
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.roundRect(x+2, chipY+2, chipW, chipH, r); ctx.fill();
+    // background
+    ctx.fillStyle = 'rgba(10,10,18,0.82)';
+    ctx.beginPath(); ctx.roundRect(x, chipY, chipW, chipH, r); ctx.fill();
+    // border
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(x, chipY, chipW, chipH, r); ctx.stroke();
+    // label
+    const labelSize = Math.max(8, chipH * 0.28);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = `${labelSize}px Courier New`;
+    ctx.textAlign = 'center';
+    ctx.fillText(label, x + chipW / 2, chipY + chipH * 0.38);
+    // value
+    const valSize = Math.max(12, chipH * 0.46);
+    ctx.fillStyle = valColor;
+    ctx.font = `bold ${valSize}px Courier New`;
+    ctx.fillText(value, x + chipW / 2, chipY + chipH * 0.82);
+    ctx.textAlign = 'left';
+  }
+
+  drawChip(lx, 'RUNS', String(runs), '#ffffff');
+
+  const runsLeft = Math.max(0, target - runs);
+  const targetColor = runsLeft <= 10 ? '#e74c3c' : runsLeft <= 30 ? '#f4d03f' : '#39ff6a';
+  drawChip(rx, 'TARGET', String(target), targetColor);
+
+  // Slim energy bar spanning the full width of both chips, below them
+  const ebY  = chipY + chipH + H * 0.006;
+  const ebH  = Math.max(4, H * 0.007);
+  const ebW  = totalW;
+  const ebX  = lx;
+  const pct  = Math.max(0, Math.min(1, energy / MAX_ENERGY));
+  const barColor = pct > 0.6 ? '#39ff6a' : pct > ENERGY_LOW_THRESHOLD / MAX_ENERGY ? '#f4d03f' : '#e74c3c';
+
+  // track
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.beginPath(); ctx.roundRect(ebX, ebY, ebW, ebH, ebH/2); ctx.fill();
+  // fill
+  if (pct > 0.01) {
+    ctx.fillStyle = barColor;
+    ctx.beginPath(); ctx.roundRect(ebX, ebY, ebW * pct, ebH, ebH/2); ctx.fill();
+  }
 }
 
 function drawGroundRings(colorA, colorB) {
