@@ -3661,71 +3661,53 @@ function drawPirateScene() {
   // ── GROUND ──
   drawGroundRings('#e8c870','#d4a038');
 
-  // ── WOODEN PLANK BOUNDARY WALL ──
-  const numSegs=54;
-  const segHeights=[];
-  for(let i=0;i<numSegs;i++){
-    const base=H*0.030; const wobble=H*0.009*Math.sin(i*2.1+0.5);
-    const crack=(i%11===5||i%17===9)?-H*0.007:0;
-    segHeights.push(base+wobble+crack);
+  // ── ROPE & ANCHOR BOUNDARY ──
+  // Thick ship's rope looped around the oval, with iron anchor rings at intervals
+  const numRopePts=120;
+  const ropePoints=[];
+  for(let i=0;i<=numRopePts;i++){
+    const ang=(i/numRopePts)*Math.PI*2;
+    const sag=H*0.004*Math.sin(ang*8+1.2); // gentle catenary sag between rings
+    ropePoints.push([CX+Math.cos(ang)*(wRX+sag*0.3), CY+Math.sin(ang)*(wRY+sag*0.3)]);
   }
-  for(let i=0;i<numSegs;i++){
-    const ang=(i/numSegs)*Math.PI*2;
-    const angM=ang+(0.5/numSegs)*Math.PI*2;
-    const bx=CX+Math.cos(angM)*wRX, by=CY+Math.sin(angM)*wRY;
-    const sh=segHeights[i];
-    const segW=W*0.050;
-    const wb=72+(i*19)%28;
-    const rw=wb+58, gw=wb+32, bw2=wb+10;
-    ctx.save(); ctx.translate(bx,by); ctx.rotate(angM+Math.PI/2);
-    // shadow at base
-    ctx.fillStyle='rgba(0,0,0,0.42)'; ctx.fillRect(-segW/2+1,2,segW-2,sh*0.38);
-    // plank face
-    const fg=ctx.createLinearGradient(-segW/2,0,segW/2,0);
-    fg.addColorStop(0,`rgb(${rw-20},${gw-16},${bw2-10})`);
-    fg.addColorStop(0.42,`rgb(${rw},${gw},${bw2})`);
-    fg.addColorStop(1,`rgb(${rw-26},${gw-20},${bw2-12})`);
-    ctx.fillStyle=fg; ctx.fillRect(-segW/2,-sh,segW,sh);
-    // sun-bleached top edge
-    ctx.fillStyle=`rgba(${rw+28},${gw+20},${bw2+8},0.75)`; ctx.fillRect(-segW/2,-sh,segW,H*0.0038);
-    // wood grain
-    ctx.strokeStyle='rgba(0,0,0,0.16)'; ctx.lineWidth=0.7;
-    [-sh*0.32,-sh*0.64].forEach(gy=>{ ctx.beginPath(); ctx.moveTo(-segW/2,gy); ctx.lineTo(segW/2,gy); ctx.stroke(); });
-    // plank split down centre
-    ctx.strokeStyle='rgba(0,0,0,0.11)'; ctx.lineWidth=0.6;
-    ctx.beginPath(); ctx.moveTo(0,-sh); ctx.lineTo(0,0); ctx.stroke();
-    // barnacles at waterline base
-    if(i%6===3){
-      ctx.fillStyle='rgba(130,110,80,0.55)';
-      [-segW*0.32,-segW*0.08,segW*0.14,segW*0.36].forEach(bxb=>{ ctx.beginPath(); ctx.arc(bxb,0,H*0.0032,0,Math.PI*2); ctx.fill(); });
+  // rope shadow
+  ctx.strokeStyle='rgba(0,0,0,0.22)'; ctx.lineWidth=9; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath(); ropePoints.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y+3):ctx.lineTo(x,y+3)); ctx.closePath(); ctx.stroke();
+  // rope outer — warm tarred hemp
+  ctx.strokeStyle='#5c3e18'; ctx.lineWidth=8; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath(); ropePoints.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)); ctx.closePath(); ctx.stroke();
+  // rope highlight — twisted strand texture
+  ctx.strokeStyle='rgba(180,140,70,0.45)'; ctx.lineWidth=2.5;
+  ctx.beginPath(); ropePoints.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y-1.5):ctx.lineTo(x,y-1.5)); ctx.closePath(); ctx.stroke();
+  // iron anchor rings at every 10th point — 12 rings total
+  for(let i=0;i<numRopePts;i+=10){
+    const [rx3,ry3]=ropePoints[i];
+    ctx.fillStyle='#3a3630';
+    ctx.beginPath(); ctx.arc(rx3,ry3,H*0.012,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#5a5248';
+    ctx.beginPath(); ctx.arc(rx3,ry3,H*0.009,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.12)';
+    ctx.beginPath(); ctx.arc(rx3-H*0.003,ry3-H*0.003,H*0.004,0,Math.PI*2); ctx.fill();
+    // Jolly Roger pennant on every 3rd ring (every 30th point = 4 flags)
+    if(i%30===0){
+      const ang2=(i/numRopePts)*Math.PI*2;
+      // stake
+      ctx.strokeStyle='#6a4820'; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(rx3,ry3); ctx.lineTo(rx3,ry3-H*0.055); ctx.stroke();
+      // flag body
+      ctx.fillStyle='#0c0a08';
+      ctx.beginPath(); ctx.moveTo(rx3,ry3-H*0.055); ctx.lineTo(rx3+W*0.030,ry3-H*0.042); ctx.lineTo(rx3,ry3-H*0.030); ctx.closePath(); ctx.fill();
+      // skull
+      ctx.fillStyle='#e8e0c8'; ctx.beginPath(); ctx.arc(rx3+W*0.014,ry3-H*0.043,W*0.0072,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#0c0a08'; ctx.beginPath(); ctx.arc(rx3+W*0.011,ry3-H*0.044,W*0.0022,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(rx3+W*0.017,ry3-H*0.044,W*0.0022,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#e8e0c8'; ctx.lineWidth=0.9;
+      ctx.beginPath(); ctx.moveTo(rx3+W*0.009,ry3-H*0.035); ctx.lineTo(rx3+W*0.019,ry3-H*0.033); ctx.moveTo(rx3+W*0.019,ry3-H*0.035); ctx.lineTo(rx3+W*0.009,ry3-H*0.033); ctx.stroke();
     }
-    // rope lashing every 4th
-    if(i%4===0){
-      ctx.strokeStyle='rgba(110,72,24,0.65)'; ctx.lineWidth=1.6;
-      ctx.beginPath(); ctx.arc(0,-sh+H*0.007,H*0.0048,0,Math.PI*2); ctx.stroke();
-    }
-    // Jolly Roger pennant on post every 7th
-    if(i%7===0){
-      ctx.fillStyle='#b89030'; ctx.fillRect(-1.5,-sh-H*0.022,3,H*0.022);
-      ctx.fillStyle='#0e0802';
-      ctx.beginPath(); ctx.moveTo(0,-sh-H*0.022); ctx.lineTo(W*0.028,-sh-H*0.016); ctx.lineTo(0,-sh-H*0.008); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#ece8d8'; ctx.beginPath(); ctx.arc(W*0.013,-sh-H*0.016,W*0.0068,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#0e0802'; ctx.beginPath(); ctx.arc(W*0.010,-sh-H*0.017,W*0.002,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(W*0.016,-sh-H*0.017,W*0.002,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#ece8d8'; ctx.lineWidth=0.9; ctx.beginPath(); ctx.moveTo(W*0.006,-sh-H*0.010); ctx.lineTo(W*0.020,-sh-H*0.008); ctx.moveTo(W*0.020,-sh-H*0.010); ctx.lineTo(W*0.006,-sh-H*0.008); ctx.stroke();
-    }
-    ctx.restore();
   }
-  // wall inner shadow connects planks to sandy field
-  const wShadow=ctx.createRadialGradient(CX,CY,wRX*0.84,CX,CY,wRX*1.01);
-  wShadow.addColorStop(0,'rgba(0,0,0,0)'); wShadow.addColorStop(1,'rgba(0,0,0,0.28)');
-  ctx.fillStyle=wShadow; ctx.beginPath(); ctx.ellipse(CX,CY,wRX*1.02,wRY*1.02,0,0,Math.PI*2); ctx.fill();
-  // Anchor chains coiled at wall base
-  ctx.strokeStyle='rgba(60,48,28,0.55)'; ctx.lineWidth=2;
-  for(let i=0;i<18;i++){
-    const ang=(i/18)*Math.PI*2; const ox=CX+Math.cos(ang)*(wRX+W*0.018), oy=CY+Math.sin(ang)*(wRY+H*0.016);
-    const ch=H*(0.012+((i*7)%6)*0.002);
-    ctx.beginPath(); ctx.moveTo(ox,oy); ctx.quadraticCurveTo(ox+Math.cos(ang+0.5)*W*0.014,oy-ch*0.4,ox+Math.cos(ang+0.8)*W*0.010,oy-ch); ctx.stroke();
-  }
+  // subtle inner glow to tie rope to field
+  const wShadow=ctx.createRadialGradient(CX,CY,wRX*0.82,CX,CY,wRX*0.98);
+  wShadow.addColorStop(0,'rgba(0,0,0,0)'); wShadow.addColorStop(1,'rgba(0,0,0,0.18)');
+  ctx.fillStyle=wShadow; ctx.beginPath(); ctx.ellipse(CX,CY,wRX,wRY,0,0,Math.PI*2); ctx.fill();
 
   drawSceneScoreboard();
 
