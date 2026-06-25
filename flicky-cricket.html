@@ -4248,31 +4248,74 @@ function drawHalloweenScene() {
   fieldEdge.addColorStop(0,'rgba(0,0,0,0)'); fieldEdge.addColorStop(1,'rgba(8,6,14,0.55)');
   ctx.fillStyle=fieldEdge; ctx.beginPath(); ctx.ellipse(CX,CY,RX*1.10,RY*1.10,0,0,Math.PI*2); ctx.fill();
 
-  // ── CRUMBLING STONE WALL — ring just outside oval ──
-  const wRX=RX+W*0.048, wRY=RY+H*0.034, wallThick=H*0.028;
-  ctx.save();
-  ctx.beginPath(); ctx.ellipse(CX,CY,wRX+wallThick/2,wRY+wallThick/2,0,0,Math.PI*2);
-  ctx.ellipse(CX,CY,wRX-wallThick/2,wRY-wallThick/2,0,0,Math.PI*2);
-  const wallGrad=ctx.createLinearGradient(0,CY-wRY,0,CY+wRY);
-  wallGrad.addColorStop(0,'#60586a'); wallGrad.addColorStop(0.5,'#4c4456'); wallGrad.addColorStop(1,'#3a3444');
-  ctx.fillStyle=wallGrad; ctx.fill('evenodd');
-  for(let row=0;row<4;row++){
-    const f=(row+0.5)/4;
-    ctx.strokeStyle='rgba(0,0,0,0.38)'; ctx.lineWidth=1.2;
-    ctx.beginPath(); ctx.ellipse(CX,CY,wRX-wallThick/2+wallThick*f,wRY-wallThick/2+wallThick*f,0,0,Math.PI*2); ctx.stroke();
+  // ── CRUMBLING STONE WALL — individual stone blocks rising from earth ──
+  const wRX=RX+W*0.050, wRY=RY+H*0.036;
+  const numSegs=80;
+  // Per-segment heights — irregular, some crumbled
+  const segHeights=[];
+  for(let i=0;i<numSegs;i++){
+    const base=H*0.030;
+    const wobble=Math.sin(i*2.3)*H*0.005+Math.sin(i*5.7)*H*0.003;
+    const crumble=(i%17===8||i%23===11)?-H*0.014:0;
+    segHeights.push(base+wobble+crumble);
   }
-  for(let i=0;i<72;i++){
-    const ang=(i/72)*Math.PI*2+(i%2)*0.044;
-    const px1=CX+Math.cos(ang)*(wRX-wallThick*0.1), py1=CY+Math.sin(ang)*(wRY-wallThick*0.1);
-    const px2=CX+Math.cos(ang)*(wRX+wallThick*0.1), py2=CY+Math.sin(ang)*(wRY+wallThick*0.1);
-    ctx.strokeStyle='rgba(0,0,0,0.28)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(px1,py1); ctx.lineTo(px2,py2); ctx.stroke();
-    if(i%11===5){ ctx.fillStyle='rgba(14,10,20,0.85)'; ctx.beginPath(); ctx.arc(CX+Math.cos(ang)*wRX,CY+Math.sin(ang)*wRY,wallThick*0.30,0,Math.PI*2); ctx.fill(); }
+  for(let i=0;i<numSegs;i++){
+    const ang=(i/numSegs)*Math.PI*2;
+    const angM=ang+(0.5/numSegs)*Math.PI*2;
+    const bx=CX+Math.cos(angM)*wRX, by=CY+Math.sin(angM)*wRY;
+    const sh=segHeights[i];
+    const segW=W*0.050;
+    const lightness=52+((i*13)%26);
+    const rc=lightness+8, gc=lightness+1, bc=lightness+14;
+    ctx.save(); ctx.translate(bx,by); ctx.rotate(angM+Math.PI/2);
+    // Ground shadow — embeds wall base into earth
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.fillRect(-segW/2+1,2,segW-2,sh*0.4);
+    // Front stone face with lighting gradient
+    const fg=ctx.createLinearGradient(-segW/2,0,segW/2,0);
+    fg.addColorStop(0,'rgba('+(rc-14)+','+(gc-14)+','+(bc-12)+',1)');
+    fg.addColorStop(0.45,'rgba('+rc+','+gc+','+bc+',1)');
+    fg.addColorStop(1,'rgba('+(rc-20)+','+(gc-20)+','+(bc-16)+',1)');
+    ctx.fillStyle=fg; ctx.fillRect(-segW/2,-sh,segW,sh);
+    // Top face — moonlit
+    ctx.fillStyle='rgba('+(rc+18)+','+(gc+18)+','+(bc+14)+',0.8)';
+    ctx.fillRect(-segW/2,-sh,segW,H*0.004);
+    // Horizontal mortar joints
+    ctx.fillStyle='rgba(0,0,0,0.25)';
+    ctx.fillRect(-segW/2,-sh*0.38,segW,H*0.0028);
+    ctx.fillRect(-segW/2,-sh*0.70,segW,H*0.0028);
+    // Vertical mortar (staggered per row)
+    const voff=(i%2)*segW*0.5;
+    ctx.fillStyle='rgba(0,0,0,0.20)';
+    ctx.fillRect(-segW/2+voff,-sh*0.70,H*0.003,sh*0.32);
+    ctx.fillRect(-segW/2+voff+segW*0.5,-sh,H*0.003,sh*0.38);
+    // Moss patches on some stones
+    if(i%7===2||i%11===4){
+      ctx.fillStyle='rgba(28,58,18,0.60)';
+      ctx.fillRect(-segW/2,-sh,segW*0.45,H*0.006);
+      ctx.beginPath(); ctx.ellipse(-segW*0.12,-sh+H*0.004,segW*0.20,H*0.008,0,0,Math.PI*2); ctx.fill();
+    }
+    // Crumbled debris spilling at base
+    if(i%17===8||i%23===11){
+      ctx.fillStyle='rgba('+(rc-10)+','+(gc-10)+','+(bc-8)+',0.75)';
+      ctx.beginPath(); ctx.moveTo(-segW*0.35,2); ctx.lineTo(-segW*0.1,-H*0.007); ctx.lineTo(segW*0.25,2); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(segW*0.1,2); ctx.lineTo(segW*0.3,-H*0.005); ctx.lineTo(segW*0.48,2); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
   }
-  // Wall top highlight
-  ctx.strokeStyle='rgba(110,105,125,0.4)'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.ellipse(CX,CY,wRX+wallThick*0.44,wRY+wallThick*0.44,0,0,Math.PI*2); ctx.stroke();
-  ctx.restore();
+  // Wall casts shadow inward onto field — connects wall to playing surface
+  const wInnerShadow=ctx.createRadialGradient(CX,CY,wRX*0.86,CX,CY,wRX*1.0);
+  wInnerShadow.addColorStop(0,'rgba(0,0,0,0)'); wInnerShadow.addColorStop(1,'rgba(0,0,0,0.35)');
+  ctx.fillStyle=wInnerShadow;
+  ctx.beginPath(); ctx.ellipse(CX,CY,wRX*1.02,wRY*1.02,0,0,Math.PI*2); ctx.fill();
+  // Ivy and weeds rooted at wall base — blends wall into surrounding earth
+  ctx.strokeStyle='rgba(28,52,16,0.60)'; ctx.lineWidth=1.3;
+  for(let i=0;i<22;i++){
+    const ang=(i/22)*Math.PI*2;
+    const bx=CX+Math.cos(ang)*(wRX+W*0.014), by=CY+Math.sin(ang)*(wRY+H*0.012);
+    const wh=H*(0.012+((i*7)%8)*0.002);
+    ctx.beginPath(); ctx.moveTo(bx,by); ctx.quadraticCurveTo(bx+Math.cos(ang+0.4)*W*0.012,by-wh*0.5,bx+Math.cos(ang+0.7)*W*0.010,by-wh); ctx.stroke();
+  }
 
   drawSceneScoreboard();
 
