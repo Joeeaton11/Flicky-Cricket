@@ -3656,24 +3656,92 @@ function drawPirateScene() {
   });
 
   // ── PALM TREES — rooted at sides, framing the oval ──
-  function palm(bx,by,leanX,trunkH){
-    const tx=bx+leanX, ty=by-trunkH, cpx=bx+leanX*0.3, cpy=by-trunkH*0.52;
-    ctx.strokeStyle='rgba(0,0,0,0.16)'; ctx.lineWidth=W*0.022; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(bx+W*0.007,by); ctx.quadraticCurveTo(cpx+W*0.007,cpy,tx+W*0.007,ty); ctx.stroke();
-    ctx.strokeStyle='#8a6030'; ctx.lineWidth=W*0.016;
-    ctx.beginPath(); ctx.moveTo(bx,by); ctx.quadraticCurveTo(cpx,cpy,tx,ty); ctx.stroke();
-    ['#165008','#228016','#0e3806'].forEach((col,ci)=>{
-      [-160,-110,-65,-18,22,70,125,168].forEach((d,i)=>{
-        if(i%3!==ci) return;
-        ctx.fillStyle=col; ctx.save(); ctx.translate(tx,ty); ctx.rotate(d*Math.PI/180);
-        ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(9,-6,20,-16,32,-22); ctx.lineTo(25,-13); ctx.closePath(); ctx.fill(); ctx.restore();
-      });
+  function palm(bx, by, leanX, trunkH) {
+    const tx = bx + leanX;
+    const ty = by - trunkH;
+    const cpx = bx + leanX * 0.38;
+    const cpy = by - trunkH * 0.58;
+
+    // Drop shadow
+    ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = W*0.030; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(bx+W*0.010, by); ctx.quadraticCurveTo(cpx+W*0.010, cpy, tx+W*0.010, ty); ctx.stroke();
+
+    // Trunk — gradient, segmented look
+    const tG = ctx.createLinearGradient(bx, by, tx, ty);
+    tG.addColorStop(0, '#7a4e1a'); tG.addColorStop(0.4, '#9a6628'); tG.addColorStop(0.75, '#8a5820'); tG.addColorStop(1, '#6a4214');
+    ctx.strokeStyle = tG; ctx.lineWidth = W*0.022;
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(cpx, cpy, tx, ty); ctx.stroke();
+
+    // Trunk node rings — the knobby segments of a real palm
+    ctx.strokeStyle = 'rgba(40,18,4,0.45)'; ctx.lineWidth = W*0.014; ctx.lineCap = 'round';
+    for (let t = 0.12; t < 0.92; t += 0.11) {
+      const px = bx*(1-t)*(1-t) + 2*cpx*t*(1-t) + tx*t*t;
+      const py = by*(1-t)*(1-t) + 2*cpy*t*(1-t) + ty*t*t;
+      ctx.beginPath(); ctx.arc(px, py, W*0.011, 0, Math.PI*2); ctx.stroke();
+    }
+
+    // Fronds — long curved leaves fanning out from crown
+    const fronds = [
+      {a:-175, len:1.10, droop:0.55},
+      {a:-140, len:1.20, droop:0.50},
+      {a:-105, len:1.30, droop:0.42},
+      {a: -70, len:1.25, droop:0.35},
+      {a: -35, len:1.15, droop:0.30},
+      {a:   0, len:1.05, droop:0.28},
+      {a:  35, len:1.15, droop:0.30},
+      {a:  70, len:1.25, droop:0.40},
+      {a: 105, len:1.30, droop:0.48},
+      {a: 140, len:1.20, droop:0.52},
+    ];
+    fronds.forEach(({a, len, droop}) => {
+      const rad = a * Math.PI / 180;
+      const fl = W * 0.13 * len;
+      // tip point with droop
+      const ex = tx + Math.cos(rad) * fl;
+      const ey = ty + Math.sin(rad) * fl + fl * droop;
+      // control point — midway with extra droop
+      const cx2 = tx + Math.cos(rad) * fl * 0.5;
+      const cy2 = ty + Math.sin(rad) * fl * 0.5 + fl * droop * 0.6;
+
+      // Frond midrib
+      ctx.strokeStyle = '#1a5c08'; ctx.lineWidth = 2.0; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.quadraticCurveTo(cx2, cy2, ex, ey); ctx.stroke();
+
+      // Leaflets along the midrib — pairs of small blades
+      const steps = 7;
+      for (let s = 2; s <= steps; s++) {
+        const st = s / (steps + 1);
+        const lx2 = tx*(1-st)*(1-st) + 2*cx2*st*(1-st) + ex*st*st;
+        const ly2 = ty*(1-st)*(1-st) + 2*cy2*st*(1-st) + ey*st*st;
+        // tangent direction along midrib
+        const tang = Math.atan2(ey - ty, ex - tx);
+        const blen = W * 0.028 * (1 - st * 0.4);
+        const col = s % 2 === 0 ? '#1a6e0a' : '#137006';
+        ctx.fillStyle = col;
+        // left blade
+        ctx.save(); ctx.translate(lx2, ly2); ctx.rotate(tang - Math.PI*0.38);
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(blen*0.4,-blen*0.3,blen*0.8,-blen*0.1,blen,0);
+        ctx.bezierCurveTo(blen*0.8,blen*0.15,blen*0.4,blen*0.1,0,0); ctx.closePath(); ctx.fill(); ctx.restore();
+        // right blade
+        ctx.save(); ctx.translate(lx2, ly2); ctx.rotate(tang + Math.PI*0.38);
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(blen*0.4,-blen*0.3,blen*0.8,-blen*0.1,blen,0);
+        ctx.bezierCurveTo(blen*0.8,blen*0.15,blen*0.4,blen*0.1,0,0); ctx.closePath(); ctx.fill(); ctx.restore();
+      }
     });
-    ctx.fillStyle='#3e2408'; ctx.beginPath(); ctx.arc(tx,ty+W*0.013,W*0.016,0,Math.PI*2); ctx.fill();
+
+    // Crown — dark knot where fronds meet
+    ctx.fillStyle = '#2e1606';
+    ctx.beginPath(); ctx.arc(tx, ty, W*0.020, 0, Math.PI*2); ctx.fill();
+
+    // Coconuts — 2-3 clustered at crown
+    [[W*0.014, W*0.010], [-W*0.016, W*0.008], [W*0.004, W*0.018]].forEach(([ox, oy]) => {
+      ctx.fillStyle = '#4a2e0c';
+      ctx.beginPath(); ctx.arc(tx+ox, ty+oy, W*0.014, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,200,100,0.12)';
+      ctx.beginPath(); ctx.arc(tx+ox-W*0.004, ty+oy-W*0.004, W*0.005, 0, Math.PI*2); ctx.fill();
+    });
   }
-  // Left palm — rooted at bottom-left, leans right over the oval top-left
   palm(W*0.02, H*0.96, W*0.14, H*0.60);
-  // Right palm — rooted at bottom-right, leans left
   palm(W*0.98, H*0.96, -W*0.14, H*0.60);
 
   // ── FIELD ──
