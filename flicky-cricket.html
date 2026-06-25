@@ -4768,51 +4768,159 @@ function drawVolcanoScene() {
 }
 
 function drawCyberpunkScene() {
-  const sg = ctx.createLinearGradient(0,0,0,H*0.16);
-  sg.addColorStop(0,'#050208'); sg.addColorStop(1,'#3a0e4a');
-  ctx.fillStyle = sg; ctx.fillRect(0,0,W,H*0.16);
-  ctx.fillStyle='#fff'; ctx.globalAlpha=0.4; [[0.2,0.03],[0.7,0.04]].forEach(([fx,fy])=>{ ctx.beginPath(); ctx.arc(W*fx,H*fy,0.8,0,Math.PI*2); ctx.fill(); }); ctx.globalAlpha=1;
-  // skyline
-  ctx.fillStyle='#0e0818';
-  [[0.1,0.06,0.05],[0.22,0.04,0.06],[0.7,0.05,0.05],[0.82,0.03,0.06]].forEach(([fx,fy,fw])=>{ ctx.fillRect(W*fx,H*fy,W*fw,H*0.16-H*fy); });
-  ctx.fillStyle='#00e5ff'; ctx.globalAlpha=0.8;
-  for(let i=0;i<10;i++){ ctx.fillRect(W*(0.12+0.6*(i%2))+((i*7)%30),H*(0.07+(i%4)*0.02),2,2); }
-  ctx.fillStyle='#ff20c0';
-  for(let i=0;i<8;i++){ ctx.fillRect(W*(0.24+0.55*(i%2))+((i*9)%30),H*(0.06+(i%3)*0.02),2,2); }
-  ctx.globalAlpha=1;
-  drawGroundRings('#1c1430','#120c20','rgba(12,8,24,0.92)');
-  drawSceneScoreboard();
-  // radiating grid lines
-  ctx.strokeStyle='#00e5ff'; ctx.globalAlpha=0.3; ctx.lineWidth=0.7;
-  const CX=W/2, CY=H*FIELD_CY;
-  [0,45,90,135,180,225,270,315].forEach(a=>{
-    const rad=a*Math.PI/180;
-    ctx.beginPath(); ctx.moveTo(CX,CY); ctx.lineTo(CX+Math.cos(rad)*W*FIELD_RX,CY+Math.sin(rad)*H*FIELD_RY); ctx.stroke();
+  // ── BACKDROP: clipped to top strip H*0.23 ──
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
+
+  // Deep night sky — near-black purple to dark navy
+  const sg = ctx.createLinearGradient(0,0,0,H*0.23);
+  sg.addColorStop(0,'#030108'); sg.addColorStop(0.4,'#0a0320'); sg.addColorStop(0.8,'#180838'); sg.addColorStop(1,'#220a4a');
+  ctx.fillStyle=sg; ctx.fillRect(0,0,W,H*0.23);
+
+  // Distant smoggy glow — city light pollution low on horizon
+  const fogG=ctx.createLinearGradient(0,H*0.16,0,H*0.23);
+  fogG.addColorStop(0,'rgba(60,0,100,0)'); fogG.addColorStop(1,'rgba(100,20,160,0.45)');
+  ctx.fillStyle=fogG; ctx.fillRect(0,H*0.16,W,H*0.07);
+
+  // Rain streaks — fine diagonal lines
+  ctx.strokeStyle='rgba(100,180,255,0.18)'; ctx.lineWidth=0.8;
+  for(let i=0;i<28;i++){
+    const rx2=(i*67+10)%W, ry2=(i*43)%(H*0.23);
+    ctx.beginPath(); ctx.moveTo(rx2,ry2); ctx.lineTo(rx2-4,ry2+H*0.04); ctx.stroke();
+  }
+
+  // Neon skyline — dense futuristic skyscrapers, varied heights
+  const buildings=[
+    [0.00,0.23,0.06,0.14,'#0a0618'],[0.05,0.23,0.04,0.09,'#0e0820'],
+    [0.08,0.23,0.07,0.06,'#080416'],[0.14,0.23,0.05,0.11,'#0c0620'],
+    [0.18,0.23,0.06,0.07,'#0a0518'],[0.23,0.23,0.08,0.04,'#060310'],
+    [0.30,0.23,0.05,0.08,'#0c0820'],[0.34,0.23,0.07,0.05,'#0a0618'],
+    [0.40,0.23,0.04,0.10,'#080416'],[0.43,0.23,0.09,0.03,'#0e0a22'],
+    [0.51,0.23,0.06,0.07,'#0a0618'],[0.56,0.23,0.05,0.12,'#08041a'],
+    [0.60,0.23,0.07,0.05,'#0c0820'],[0.66,0.23,0.04,0.09,'#060210'],
+    [0.69,0.23,0.08,0.06,'#0a0618'],[0.76,0.23,0.05,0.04,'#0e0820'],
+    [0.80,0.23,0.06,0.10,'#08041a'],[0.85,0.23,0.07,0.07,'#0a0618'],
+    [0.91,0.23,0.05,0.05,'#0c0820'],[0.95,0.23,0.06,0.11,'#060210'],
+  ];
+  buildings.forEach(([fx,fy,fw,fh,fc])=>{
+    ctx.fillStyle=fc; ctx.fillRect(W*fx, H*(fy-fh), W*fw, H*fh);
+  });
+
+  // Building window lights — tiny cyan/magenta/yellow dots
+  buildings.forEach(([fx,_fy,fw,fh,_fc],bi)=>{
+    const rows=Math.floor(fh/0.025), cols=Math.floor(fw/0.025);
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+      if(((bi*7+r*3+c*5)%5)===0){
+        const wx=W*(fx+0.004+c*0.020), wy=H*(_fy-fh+0.008+r*0.022);
+        const col=['#00e5ff','#ff20c0','#f0e040','#80ff80'][(bi+r+c)%4];
+        ctx.fillStyle=col; ctx.globalAlpha=0.85;
+        ctx.fillRect(wx,wy,2,2);
+      }
+    }
   });
   ctx.globalAlpha=1;
-  // neon poles on sides
-  ctx.fillStyle='#ff20c0'; ctx.globalAlpha=0.8; ctx.fillRect(W*0.04,H*0.14,2,H*0.7); ctx.globalAlpha=1;
-  ctx.fillStyle='#00e5ff'; ctx.globalAlpha=0.8; ctx.fillRect(W*0.96,H*0.15,2,H*0.7); ctx.globalAlpha=1;
-  // corners: neon sign + hovercar
-  const lx=W*0.16,ly=H*0.9;
-  // power cable running off the neon pole on this side
-  ctx.strokeStyle='#ff20c0'; ctx.lineWidth=1; ctx.globalAlpha=0.5;
-  ctx.beginPath(); ctx.moveTo(W*0.04,H*0.7); ctx.quadraticCurveTo(W*0.09,H*0.8,lx,ly-H*0.08); ctx.stroke();
+
+  // Large hologram billboard — glowing cyan face centre-left
+  ctx.fillStyle='rgba(0,180,255,0.12)';
+  ctx.fillRect(W*0.30,H*0.06,W*0.14,H*0.10);
+  ctx.strokeStyle='#00e5ff'; ctx.lineWidth=1; ctx.globalAlpha=0.6;
+  ctx.strokeRect(W*0.30,H*0.06,W*0.14,H*0.10);
   ctx.globalAlpha=1;
-  propShadow(lx,ly+H*0.06,W*0.07,H*0.012);
-  ctx.fillStyle='#ff20c0'; ctx.globalAlpha=0.08; ctx.beginPath(); ctx.ellipse(lx,ly+H*0.062,W*0.05,H*0.01,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
-  ctx.fillStyle='#120a1e'; ctx.fillRect(lx-W*0.025,ly-H*0.08,W*0.05,H*0.14);
-  ctx.strokeStyle='#ff20c0'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(lx,ly-H*0.06,4,0,Math.PI*2); ctx.stroke();
-  ctx.fillStyle='#00e5ff'; ctx.fillRect(lx-W*0.012,ly-H*0.03,W*0.024,2);
-  const rx=W*0.84,ry=H*0.9;
-  // dotted light trail matching the drone path drifting down the right pole
-  ctx.strokeStyle='#00e5ff'; ctx.lineWidth=1; ctx.globalAlpha=0.3; ctx.setLineDash([1,4]);
-  ctx.beginPath(); ctx.moveTo(W*0.96,H*0.5); ctx.quadraticCurveTo(W*0.9,H*0.75,rx,ry-H*0.02); ctx.stroke();
-  ctx.setLineDash([]); ctx.globalAlpha=1;
-  propShadow(rx,ry+H*0.02,W*0.07,H*0.012);
-  ctx.fillStyle='#00e5ff'; ctx.globalAlpha=0.08; ctx.beginPath(); ctx.ellipse(rx,ry+H*0.022,W*0.06,H*0.01,0,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
-  ctx.fillStyle='#1c1828'; ctx.beginPath(); ctx.ellipse(rx,ry,W*0.055,H*0.018,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#00e5ff'; ctx.globalAlpha=0.8; ctx.fillRect(rx-W*0.05,ry+H*0.012,W*0.1,2); ctx.globalAlpha=1;
+  // Face outline in hologram
+  ctx.strokeStyle='#00ffff'; ctx.lineWidth=1.2; ctx.globalAlpha=0.7;
+  ctx.beginPath(); ctx.ellipse(W*0.37,H*0.108,W*0.030,H*0.032,0,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W*0.358,H*0.100,W*0.006,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W*0.382,H*0.100,W*0.006,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W*0.370,H*0.116,W*0.012,0,Math.PI); ctx.stroke();
+  ctx.globalAlpha=1;
+  // Hologram scan line flicker
+  ctx.fillStyle='rgba(0,255,255,0.08)';
+  for(let y=H*0.062;y<H*0.158;y+=H*0.012){ ctx.fillRect(W*0.30,y,W*0.14,H*0.005); }
+
+  // Flying vehicles — silhouettes crossing the sky
+  // Hovercar left-to-right
+  ctx.fillStyle='#1a0a2e';
+  ctx.beginPath(); ctx.ellipse(W*0.60,H*0.040,W*0.038,H*0.010,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#00e5ff'; ctx.globalAlpha=0.9;
+  ctx.beginPath(); ctx.arc(W*0.568,H*0.042,2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(W*0.638,H*0.042,2,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=0.4; ctx.fillStyle='#00e5ff';
+  ctx.fillRect(W*0.638,H*0.040,W*0.025,2);
+  ctx.globalAlpha=1;
+  // Drone top-right
+  ctx.fillStyle='#2a0840';
+  ctx.beginPath(); ctx.ellipse(W*0.84,H*0.055,W*0.018,H*0.007,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#ff20c0'; ctx.globalAlpha=0.9;
+  ctx.beginPath(); ctx.arc(W*0.826,H*0.056,1.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(W*0.854,H*0.056,1.5,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+
+  // Neon sign on tallest building — "NEON" in magenta
+  ctx.fillStyle='#ff20c0'; ctx.globalAlpha=0.9; ctx.font=`bold ${Math.max(7,H*0.012)}px monospace`;
+  ctx.textAlign='center'; ctx.fillText('◈ NEON ◈',W*0.595,H*0.085); ctx.textAlign='left';
+  ctx.globalAlpha=1;
+
+  ctx.restore(); // end backdrop clip
+
+  drawGroundRings('#14102a','#0c0820','rgba(8,4,18,0.95)');
+  drawSceneScoreboard();
+
+  // ── SIDE NEON STRIPS: x=0–W*0.022 left, x=W*0.978–W right ──
+  // Magenta strip left
+  const neonL=ctx.createLinearGradient(0,0,0,H);
+  neonL.addColorStop(0,'rgba(255,32,192,0)'); neonL.addColorStop(0.2,'rgba(255,32,192,0.7)'); neonL.addColorStop(0.8,'rgba(255,32,192,0.7)'); neonL.addColorStop(1,'rgba(255,32,192,0)');
+  ctx.fillStyle=neonL; ctx.fillRect(0,H*0.23,W*0.006,H*0.77);
+  ctx.fillStyle='#1a0830'; ctx.fillRect(W*0.006,H*0.23,W*0.016,H*0.77);
+  // Cyan strip right
+  const neonR=ctx.createLinearGradient(0,0,0,H);
+  neonR.addColorStop(0,'rgba(0,229,255,0)'); neonR.addColorStop(0.2,'rgba(0,229,255,0.7)'); neonR.addColorStop(0.8,'rgba(0,229,255,0.7)'); neonR.addColorStop(1,'rgba(0,229,255,0)');
+  ctx.fillStyle='#0a1228'; ctx.fillRect(W*0.978,H*0.23,W*0.016,H*0.77);
+  ctx.fillStyle=neonR; ctx.fillRect(W*0.994,H*0.23,W*0.006,H*0.77);
+  // Neon glow halos on strips
+  ctx.fillStyle='rgba(255,32,192,0.08)'; ctx.fillRect(0,H*0.23,W*0.026,H*0.77);
+  ctx.fillStyle='rgba(0,229,255,0.08)'; ctx.fillRect(W*0.974,H*0.23,W*0.026,H*0.77);
+
+  // ── CORNER PROPS ──
+  // Neon vending machine bottom-left: W*0.14,H*0.91 → outside oval ✓
+  const lx=W*0.14, ly=H*0.91;
+  propShadow(lx,ly+H*0.014,W*0.085,H*0.011);
+  // Machine body
+  ctx.fillStyle='#120820'; ctx.fillRect(lx-W*0.058,ly-H*0.100,W*0.116,H*0.105);
+  ctx.strokeStyle='#ff20c0'; ctx.lineWidth=1.5; ctx.strokeRect(lx-W*0.058,ly-H*0.100,W*0.116,H*0.105);
+  // Screen
+  ctx.fillStyle='#001428'; ctx.fillRect(lx-W*0.040,ly-H*0.090,W*0.080,H*0.048);
+  ctx.fillStyle='#00e5ff'; ctx.globalAlpha=0.9; ctx.font=`bold ${Math.max(6,H*0.010)}px monospace`; ctx.textAlign='center';
+  ctx.fillText('CYBER',lx,ly-H*0.070);
+  ctx.fillStyle='#ff20c0'; ctx.fillText('COLA',lx,ly-H*0.055);
+  ctx.globalAlpha=1; ctx.textAlign='left';
+  // Buttons
+  ['#ff20c0','#00e5ff','#f0e040'].forEach((c,i)=>{
+    ctx.fillStyle=c; ctx.beginPath(); ctx.arc(lx-W*0.020+i*W*0.020,ly-H*0.028,3,0,Math.PI*2); ctx.fill();
+  });
+  // Glow
+  ctx.fillStyle='rgba(255,32,192,0.15)'; ctx.beginPath(); ctx.ellipse(lx,ly-H*0.050,W*0.065,H*0.060,0,0,Math.PI*2); ctx.fill();
+
+  // Hovercar bottom-right: W*0.86,H*0.90 → outside oval ✓
+  const rx=W*0.86, ry=H*0.90;
+  propShadow(rx,ry+H*0.020,W*0.090,H*0.010);
+  // Hover glow underneath
+  const hg=ctx.createRadialGradient(rx,ry+H*0.016,0,rx,ry+H*0.016,W*0.065);
+  hg.addColorStop(0,'rgba(0,229,255,0.35)'); hg.addColorStop(1,'rgba(0,229,255,0)');
+  ctx.fillStyle=hg; ctx.beginPath(); ctx.ellipse(rx,ry+H*0.016,W*0.065,H*0.018,0,0,Math.PI*2); ctx.fill();
+  // Car body — sleek aerodynamic shell
+  ctx.fillStyle='#1a0838';
+  ctx.beginPath(); ctx.moveTo(rx-W*0.075,ry+H*0.010); ctx.quadraticCurveTo(rx-W*0.060,ry-H*0.028,rx-W*0.020,ry-H*0.038); ctx.quadraticCurveTo(rx+W*0.020,ry-H*0.042,rx+W*0.050,ry-H*0.028); ctx.quadraticCurveTo(rx+W*0.072,ry-H*0.012,rx+W*0.075,ry+H*0.010); ctx.closePath(); ctx.fill();
+  // Windscreen
+  ctx.fillStyle='rgba(0,229,255,0.25)';
+  ctx.beginPath(); ctx.moveTo(rx-W*0.010,ry-H*0.038); ctx.quadraticCurveTo(rx+W*0.018,ry-H*0.040,rx+W*0.042,ry-H*0.026); ctx.lineTo(rx+W*0.028,ry-H*0.020); ctx.quadraticCurveTo(rx+W*0.010,ry-H*0.032,rx-W*0.008,ry-H*0.030); ctx.closePath(); ctx.fill();
+  // Neon undercarriage lights
+  ctx.strokeStyle='#00e5ff'; ctx.lineWidth=2; ctx.globalAlpha=0.8;
+  ctx.beginPath(); ctx.moveTo(rx-W*0.068,ry+H*0.008); ctx.lineTo(rx+W*0.068,ry+H*0.008); ctx.stroke();
+  ctx.globalAlpha=1;
+  // Engine glow rear
+  const eg2=ctx.createRadialGradient(rx-W*0.072,ry-H*0.005,0,rx-W*0.072,ry-H*0.005,W*0.020);
+  eg2.addColorStop(0,'rgba(255,32,192,0.9)'); eg2.addColorStop(1,'rgba(255,32,192,0)');
+  ctx.fillStyle=eg2; ctx.beginPath(); ctx.arc(rx-W*0.072,ry-H*0.005,W*0.020,0,Math.PI*2); ctx.fill();
 }
 
 function drawCarnivalScene() {
