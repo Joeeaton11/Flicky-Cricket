@@ -5040,148 +5040,168 @@ function drawCyberpunkScene() {
 
 function drawCarnivalScene() {
   const CX=W/2, CY=H*FIELD_CY;
-  const confettiCols=['#e74c3c','#3498db','#f4d03f','#2ecc71','#9b59b6','#e67e22'];
+  const cc=['#e74c3c','#3498db','#f4d03f','#2ecc71','#9b59b6','#e67e22'];
 
-  // ── FULL TENT INTERIOR BACKGROUND (whole canvas) ──
-  // Tent floor — warm sawdust
-  ctx.fillStyle='#c8a04a'; ctx.fillRect(0,0,W,H);
-
-  // Tent wall canvas — vertical red/cream/yellow stripes behind everything
-  const nWallStripes=14;
-  const wallCols=['#c0392b','#f5f0e8','#f4d03f','#f5f0e8'];
-  for(let i=0;i<nWallStripes;i++){
-    ctx.fillStyle=wallCols[i%4];
-    ctx.fillRect(i/nWallStripes*W,0,W/nWallStripes,H);
-  }
-
-  // Interior shadow vignette — darker at edges, lighter in centre
-  const vig=ctx.createRadialGradient(CX,H*0.55,H*0.1,CX,H*0.55,W*0.75);
-  vig.addColorStop(0,'rgba(40,10,0,0)'); vig.addColorStop(1,'rgba(30,5,0,0.55)');
-  ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
-
-  // ── BACKDROP: tent ceiling (clipped to H*0.23) ──
+  // ── BACKDROP: big top tent visible in the background (clipped to H*0.23) ──
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Ceiling wash — warm amber light from the centre pole
-  const ceilG=ctx.createRadialGradient(CX,0,0,CX,0,W*0.8);
-  ceilG.addColorStop(0,'rgba(255,220,100,0.55)'); ceilG.addColorStop(1,'rgba(60,10,10,0.7)');
-  ctx.fillStyle=ceilG; ctx.fillRect(0,0,W,H*0.23);
+  // Sky — dusk fairground
+  const skyG=ctx.createLinearGradient(0,0,0,H*0.23);
+  skyG.addColorStop(0,'#0d0828'); skyG.addColorStop(0.5,'#2a1060'); skyG.addColorStop(1,'#4a1830');
+  ctx.fillStyle=skyG; ctx.fillRect(0,0,W,H*0.23);
 
-  // Tent roof stripes radiating from apex (inside view — converging upward)
-  const apex={x:CX,y:-H*0.10};
-  const stripeColors=['#c0392b','#f5f0e8','#c0392b','#f4d03f','#c0392b','#f5f0e8','#c0392b','#f4d03f','#c0392b','#f5f0e8'];
-  for(let i=0;i<10;i++){
-    ctx.fillStyle=stripeColors[i]; ctx.globalAlpha=0.85;
-    const a1=i/10*W, a2=(i+1)/10*W;
-    ctx.beginPath(); ctx.moveTo(apex.x,apex.y); ctx.lineTo(a1,H*0.23); ctx.lineTo(a2,H*0.23); ctx.closePath(); ctx.fill();
+  // Stars
+  ctx.fillStyle='rgba(255,255,220,0.8)';
+  [[0.05,0.05],[0.15,0.10],[0.30,0.03],[0.55,0.08],[0.70,0.04],[0.82,0.11],[0.92,0.06],[0.45,0.13]].forEach(([fx,fy])=>{
+    ctx.beginPath(); ctx.arc(W*fx,H*fy,1,0,Math.PI*2); ctx.fill();
+  });
+
+  // Big top tent — large dome shape centred in backdrop
+  // Tent body: classic cone/dome with radiating stripes
+  const tApex={x:CX, y:H*0.01};
+  const tBaseY=H*0.23, tBaseL=W*0.08, tBaseR=W*0.92;
+  const tStripes=['#c0392b','#f5f0e8','#c0392b','#f4d03f','#c0392b','#f5f0e8','#c0392b','#f4d03f','#c0392b','#f5f0e8','#c0392b','#f5f0e8'];
+  const nTS=12;
+  for(let i=0;i<nTS;i++){
+    ctx.fillStyle=tStripes[i%tStripes.length];
+    const x1=tBaseL+i/nTS*(tBaseR-tBaseL);
+    const x2=tBaseL+(i+1)/nTS*(tBaseR-tBaseL);
+    ctx.beginPath(); ctx.moveTo(tApex.x,tApex.y); ctx.lineTo(x1,tBaseY); ctx.lineTo(x2,tBaseY); ctx.closePath(); ctx.fill();
   }
-  ctx.globalAlpha=1;
 
-  // Centre pole coming down from apex
-  ctx.strokeStyle='#8a5010'; ctx.lineWidth=W*0.016;
-  ctx.beginPath(); ctx.moveTo(CX,apex.y+H*0.005); ctx.lineTo(CX,H*0.23); ctx.stroke();
-  ctx.strokeStyle='#c0a020'; ctx.lineWidth=W*0.010;
-  ctx.beginPath(); ctx.moveTo(CX,apex.y+H*0.005); ctx.lineTo(CX,H*0.23); ctx.stroke();
-  // Finial + flag
-  ctx.fillStyle='#f4d03f'; ctx.beginPath(); ctx.arc(CX,apex.y,7,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#e74c3c';
-  ctx.beginPath(); ctx.moveTo(CX,apex.y-H*0.005); ctx.lineTo(CX+W*0.05,apex.y); ctx.lineTo(CX,apex.y+H*0.012); ctx.closePath(); ctx.fill();
-
-  // Scallop fringe at eave
-  for(let i=0;i<14;i++){
-    const sx=i/14*W, sw=W/14;
+  // Scallop fringe along the tent eave
+  for(let i=0;i<16;i++){
+    const sx=tBaseL+i/16*(tBaseR-tBaseL), sw=(tBaseR-tBaseL)/16;
     ctx.fillStyle=i%2===0?'#c0392b':'#f4d03f';
-    ctx.beginPath(); ctx.arc(sx+sw/2,H*0.23,sw*0.52,Math.PI,0); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx+sw/2,tBaseY,sw*0.55,Math.PI,0); ctx.fill();
   }
 
-  // Hanging fairy lights across ceiling
-  ctx.strokeStyle='rgba(160,120,20,0.6)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(0,H*0.19); ctx.quadraticCurveTo(CX,H*0.14,W,H*0.19); ctx.stroke();
-  ['#ffe070','#ff8040','#40d0ff','#ff40a0','#80ff40','#ffb020'].forEach((c,i)=>{
-    const lbx=W*(0.08+i*0.17), lby=H*0.175+(i%2?H*0.006:0);
-    ctx.fillStyle=c; ctx.beginPath(); ctx.arc(lbx,lby,3.5,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='rgba(255,255,180,0.3)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.arc(lbx,lby,6,0,Math.PI*2); ctx.stroke();
+  // Centre pole + finial + flag
+  ctx.strokeStyle='#7a4010'; ctx.lineWidth=W*0.014;
+  ctx.beginPath(); ctx.moveTo(CX,tApex.y); ctx.lineTo(CX,tApex.y-H*0.01); ctx.stroke();
+  ctx.fillStyle='#f4d03f'; ctx.beginPath(); ctx.arc(CX,tApex.y-H*0.005,7,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#e74c3c';
+  ctx.beginPath(); ctx.moveTo(CX,tApex.y-H*0.010); ctx.lineTo(CX+W*0.06,tApex.y-H*0.002); ctx.lineTo(CX,tApex.y+H*0.012); ctx.closePath(); ctx.fill();
+
+  // Side poles flanking the tent
+  ['#c0392b','#f4d03f'].forEach((c,s)=>{
+    const px=s===0?tBaseL-W*0.01:tBaseR+W*0.01;
+    ctx.strokeStyle=c; ctx.lineWidth=W*0.012;
+    ctx.beginPath(); ctx.moveTo(px,tBaseY); ctx.lineTo(px,tApex.y+H*0.06); ctx.stroke();
+    // Small flag
+    ctx.fillStyle=c;
+    ctx.beginPath(); ctx.moveTo(px,tApex.y+H*0.06); ctx.lineTo(px+(s===0?W*0.04:-W*0.04),tApex.y+H*0.075); ctx.lineTo(px,tApex.y+H*0.090); ctx.closePath(); ctx.fill();
+  });
+
+  // Entrance opening at the base of the tent — dark arch
+  {
+    const ex=CX, ey=tBaseY, ew=W*0.18;
+    ctx.fillStyle='#0a0415';
+    ctx.beginPath(); ctx.arc(ex,ey,ew*0.5,Math.PI,0); ctx.lineTo(ex+ew*0.5,ey); ctx.lineTo(ex-ew*0.5,ey); ctx.closePath(); ctx.fill();
+    // Arch frame blocks
+    for(let i=0;i<6;i++){
+      const a1=Math.PI+(i/6)*Math.PI, a2=Math.PI+((i+1)/6)*Math.PI;
+      ctx.fillStyle=i%2===0?'#c0392b':'#f5f0e8';
+      ctx.beginPath(); ctx.arc(ex,ey,ew*0.5+W*0.016,a1,a2); ctx.arc(ex,ey,ew*0.5,a2,a1,true); ctx.closePath(); ctx.fill();
+    }
+    // "BIG TOP" banner
+    ctx.fillStyle='#f4d03f';
+    ctx.beginPath(); ctx.moveTo(ex-W*0.10,ey-ew*0.5-H*0.002); ctx.lineTo(ex+W*0.10,ey-ew*0.5-H*0.002); ctx.lineTo(ex+W*0.085,ey-ew*0.5-H*0.022); ctx.lineTo(ex-W*0.085,ey-ew*0.5-H*0.022); ctx.closePath(); ctx.fill();
+    ctx.font=`bold ${Math.max(7,H*0.012)}px serif`; ctx.textAlign='center';
+    ctx.fillStyle='#c0392b'; ctx.fillText('BIG TOP',ex,ey-ew*0.5-H*0.006); ctx.textAlign='left';
+  }
+
+  // Small fairground structures either side of the tent
+  // Left: ferris wheel silhouette
+  {
+    const fw={x:W*0.10,y:H*0.15,r:H*0.060};
+    ctx.strokeStyle='rgba(255,200,50,0.7)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(fw.x,fw.y,fw.r,0,Math.PI*2); ctx.stroke();
+    for(let a=0;a<6;a++){ const ang=a*Math.PI/3; ctx.beginPath(); ctx.moveTo(fw.x,fw.y); ctx.lineTo(fw.x+Math.cos(ang)*fw.r,fw.y+Math.sin(ang)*fw.r); ctx.stroke(); }
+    ['#e74c3c','#3498db','#f4d03f','#2ecc71','#9b59b6','#e67e22'].forEach((c,a)=>{
+      const ang=a*Math.PI/3; ctx.fillStyle=c;
+      ctx.beginPath(); ctx.rect(fw.x+Math.cos(ang)*fw.r-3,fw.y+Math.sin(ang)*fw.r-3,6,6); ctx.fill();
+    });
+    ctx.fillStyle='#c0a020'; ctx.beginPath(); ctx.arc(fw.x,fw.y,4,0,Math.PI*2); ctx.fill();
+    // Support legs
+    ctx.strokeStyle='rgba(200,160,40,0.6)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(fw.x-fw.r*0.5,tBaseY); ctx.lineTo(fw.x,fw.y+fw.r); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fw.x+fw.r*0.5,tBaseY); ctx.lineTo(fw.x,fw.y+fw.r); ctx.stroke();
+  }
+  // Right: carousel silhouette
+  {
+    const cx3=W*0.88, cy3=H*0.16;
+    ctx.fillStyle='rgba(180,20,20,0.7)';
+    ctx.beginPath(); ctx.moveTo(cx3,cy3-H*0.06); ctx.lineTo(cx3-W*0.07,cy3); ctx.lineTo(cx3+W*0.07,cy3); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(240,200,50,0.6)'; ctx.beginPath(); ctx.ellipse(cx3,cy3,W*0.07,H*0.012,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(240,200,50,0.5)'; ctx.lineWidth=1;
+    for(let a=0;a<5;a++){
+      const ang=a*Math.PI*2/5;
+      ctx.beginPath(); ctx.moveTo(cx3,cy3-H*0.04); ctx.lineTo(cx3+Math.cos(ang)*W*0.05,cy3+H*0.005); ctx.stroke();
+    }
+    ctx.strokeStyle='rgba(200,160,40,0.5)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(cx3,tBaseY); ctx.lineTo(cx3,cy3+H*0.012); ctx.stroke();
+  }
+
+  // Bunting string across the full backdrop
+  ctx.strokeStyle='rgba(160,120,20,0.55)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,H*0.20); ctx.quadraticCurveTo(CX,H*0.15,W,H*0.20); ctx.stroke();
+  cc.forEach((c,i)=>{
+    const t=i/5, bx=W*t, by=H*0.190+Math.sin(t*Math.PI)*(-H*0.008);
+    ctx.fillStyle=c; ctx.beginPath(); ctx.arc(bx,by,3,0,Math.PI*2); ctx.fill();
   });
 
   ctx.restore(); // end backdrop clip
 
-  // ── FIELD on top of tent floor ──
-  drawGroundRings('#e8c460','#d4a030','rgba(210,168,40,0.92)');
+  // ── FIELD ──
+  drawGroundRings('#e8c878','#d4a840','rgba(220,180,60,0.90)');
   drawSceneScoreboard();
 
-  // ── TENT SIDE WALLS (drawn over background, outside oval) ──
-  // These reinforce the tent-wall feel in the margins
-  // Left wall vertical stripes
-  ctx.save();
-  // Clip to left margin only (outside oval will show anyway but this ensures crisp stripes)
-  const stripeW2=W*0.038;
-  for(let i=0;i<4;i++){
-    ctx.fillStyle=wallCols[i%4]; ctx.globalAlpha=0.9;
-    ctx.fillRect(i*stripeW2,H*0.23,(i+1)*stripeW2-i*stripeW2,H*0.77);
-  }
-  ctx.globalAlpha=1;
-  // Right wall
-  for(let i=0;i<4;i++){
-    ctx.fillStyle=wallCols[(i+2)%4]; ctx.globalAlpha=0.9;
-    ctx.fillRect(W-(i+1)*stripeW2,H*0.23,stripeW2,H*0.77);
-  }
-  ctx.globalAlpha=1;
-  ctx.restore();
+  // ── SIDE PROPS ──
 
-  // ── ENTRANCE at bottom centre ──
-  // The tent wall continues across the bottom with a cut-through opening
+  // Left side: clown — W*0.055,H*0.48 (outside oval ✓)
   {
-    const ex=CX, ey=H*0.955, ew=W*0.28, eh=H*0.045;
-    // Wall section across bottom (outside oval bottom — oval ends at H*0.97)
-    ctx.fillStyle='#c0392b'; ctx.fillRect(0,H*0.93,W,H*0.07);
-    ctx.fillStyle='#f5f0e8';
-    for(let i=1;i<6;i++) ctx.fillRect(i*W/6,H*0.93,W*0.02,H*0.07);
-    // Entrance opening — dark beyond
-    const enG=ctx.createLinearGradient(ex,ey-eh,ex,ey+H*0.01);
-    enG.addColorStop(0,'#1a0808'); enG.addColorStop(1,'#3a1010');
-    ctx.fillStyle=enG;
-    ctx.beginPath();
-    ctx.arc(ex,ey-eh,ew*0.5,Math.PI,0);
-    ctx.lineTo(ex+ew*0.5,ey); ctx.lineTo(ex-ew*0.5,ey);
-    ctx.closePath(); ctx.fill();
-    // Arch frame — alternating blocks
-    for(let i=0;i<8;i++){
-      const a1=Math.PI+(i/8)*Math.PI, a2=Math.PI+((i+1)/8)*Math.PI;
-      ctx.fillStyle=i%2===0?'#c0392b':'#f5f0e8';
-      ctx.beginPath();
-      ctx.arc(ex,ey-eh,ew*0.5+W*0.020,a1,a2);
-      ctx.arc(ex,ey-eh,ew*0.5,a2,a1,true);
-      ctx.closePath(); ctx.fill();
-    }
-    // Side poles
-    ['#c0392b','#f4d03f'].forEach((c,s)=>{
-      const px=ex+(s===0?-1:1)*(ew*0.5+W*0.024);
-      ctx.strokeStyle=c; ctx.lineWidth=W*0.012;
-      ctx.beginPath(); ctx.moveTo(px,ey); ctx.lineTo(px,H*0.80); ctx.stroke();
-    });
-    // "BIG TOP" sign above arch
+    const cx2=W*0.055, cy2=H*0.48;
+    propShadow(cx2,cy2+H*0.075,W*0.030,H*0.008);
+    ctx.fillStyle='#e74c3c'; ctx.fillRect(cx2-W*0.020,cy2-H*0.040,W*0.040,H*0.060);
     ctx.fillStyle='#f4d03f';
-    ctx.beginPath(); ctx.moveTo(ex-W*0.12,ey-eh-H*0.005); ctx.lineTo(ex+W*0.12,ey-eh-H*0.005); ctx.lineTo(ex+W*0.10,ey-eh-H*0.028); ctx.lineTo(ex-W*0.10,ey-eh-H*0.028); ctx.closePath(); ctx.fill();
-    ctx.font=`bold ${Math.max(8,H*0.014)}px serif`; ctx.textAlign='center';
-    ctx.fillStyle='#c0392b'; ctx.fillText('BIG TOP',ex,ey-eh-H*0.009);
-    ctx.textAlign='left';
-    // Bunting
-    ctx.strokeStyle='rgba(160,120,20,0.7)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(ex-ew*0.5,ey-eh-H*0.030); ctx.quadraticCurveTo(ex,ey-eh-H*0.050,ex+ew*0.5,ey-eh-H*0.030); ctx.stroke();
-    confettiCols.forEach((c,i)=>{
-      const t=i/5;
-      const bx2=ex-ew*0.5+t*ew, by2=(ey-eh-H*0.030)+Math.sin(t*Math.PI)*(-H*0.012);
-      ctx.fillStyle=c; ctx.beginPath(); ctx.arc(bx2,by2,3,0,Math.PI*2); ctx.fill();
+    [[0.2,0.3],[0.7,0.3],[0.5,0.65]].forEach(([px,py])=>{ ctx.beginPath(); ctx.arc(cx2-W*0.020+px*W*0.040,cy2-H*0.040+py*H*0.060,2.5,0,Math.PI*2); ctx.fill(); });
+    ctx.fillStyle='#f4d03f'; ctx.fillRect(cx2-W*0.018,cy2+H*0.020,W*0.014,H*0.055);
+    ctx.fillStyle='#3498db'; ctx.fillRect(cx2+W*0.004,cy2+H*0.020,W*0.014,H*0.055);
+    ctx.fillStyle='#5a3a10';
+    ctx.beginPath(); ctx.ellipse(cx2-W*0.011,cy2+H*0.075,W*0.018,H*0.010,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx2+W*0.011,cy2+H*0.075,W*0.018,H*0.010,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fde3a7'; ctx.beginPath(); ctx.arc(cx2,cy2-H*0.050,W*0.022,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#e74c3c'; ctx.beginPath(); ctx.arc(cx2,cy2-H*0.048,4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#2c3e50';
+    ctx.beginPath(); ctx.arc(cx2-W*0.008,cy2-H*0.056,2,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx2+W*0.008,cy2-H*0.056,2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#2c3e50'; ctx.fillRect(cx2-W*0.016,cy2-H*0.074,W*0.032,H*0.026);
+    ctx.fillRect(cx2-W*0.020,cy2-H*0.074,W*0.040,H*0.006);
+    ctx.fillStyle='#e74c3c'; ctx.fillRect(cx2-W*0.014,cy2-H*0.074,W*0.028,H*0.005);
+  }
+
+  // Right side: balloon bouquet — W*0.93,H*0.46 (outside oval ✓)
+  {
+    const bx=W*0.935, by=H*0.46;
+    propShadow(bx,by+H*0.060,W*0.030,H*0.008);
+    ctx.strokeStyle='#8a6a20'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(bx,by+H*0.060); ctx.lineTo(bx,by+H*0.010); ctx.stroke();
+    [{ox:-W*0.025,oy:-H*0.070,c:'#e74c3c'},{ox:W*0.022,oy:-H*0.080,c:'#3498db'},
+     {ox:-W*0.005,oy:-H*0.095,c:'#f4d03f'},{ox:W*0.010,oy:-H*0.055,c:'#2ecc71'},
+     {ox:-W*0.018,oy:-H*0.040,c:'#9b59b6'}].forEach(({ox,oy,c})=>{
+      ctx.strokeStyle='rgba(180,160,80,0.6)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(bx,by+H*0.010); ctx.quadraticCurveTo(bx+ox*0.3,by+oy*0.5,bx+ox,by+oy); ctx.stroke();
+      ctx.fillStyle=c; ctx.beginPath(); ctx.ellipse(bx+ox,by+oy,W*0.018,H*0.025,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.35)';
+      ctx.beginPath(); ctx.ellipse(bx+ox-W*0.005,by+oy-H*0.007,W*0.005,H*0.008,0,0,Math.PI*2); ctx.fill();
     });
   }
 
-  // ── PROPS ──
-
-  // Popcorn cart — bottom-left: W*0.13, H*0.88 (outside oval ✓)
+  // Bottom-left: popcorn cart — W*0.13,H*0.90 (outside oval ✓)
   {
-    const lx=W*0.13, ly=H*0.88;
+    const lx=W*0.13, ly=H*0.90;
     propShadow(lx,ly+H*0.014,W*0.095,H*0.012);
     ctx.fillStyle='#5a3a10'; [lx-W*0.055,lx+W*0.055].forEach(wx=>{
       ctx.beginPath(); ctx.arc(wx,ly+H*0.010,H*0.018,0,Math.PI*2); ctx.fill();
@@ -5198,81 +5218,34 @@ function drawCarnivalScene() {
       ctx.beginPath(); ctx.arc(lx+ox,ly-H*0.082+oy,3.5,0,Math.PI*2); ctx.fill();
     });
     ctx.fillStyle='#f4d03f';
-    ctx.beginPath(); ctx.moveTo(lx-W*0.080,ly-H*0.102); ctx.lineTo(lx+W*0.080,ly-H*0.102); ctx.lineTo(lx+W*0.075,ly-H*0.070); ctx.lineTo(lx-W*0.075,ly-H*0.070); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(lx-W*0.080,ly-H*0.100); ctx.lineTo(lx+W*0.080,ly-H*0.100); ctx.lineTo(lx+W*0.075,ly-H*0.070); ctx.lineTo(lx-W*0.075,ly-H*0.070); ctx.closePath(); ctx.fill();
     for(let i=0;i<6;i++){
       ctx.fillStyle=i%2===0?'#c0392b':'#f4d03f';
       ctx.beginPath(); ctx.arc(lx-W*0.075+i*W*0.030,ly-H*0.070,W*0.012,0,Math.PI); ctx.fill();
     }
   }
 
-  // Balloon bouquet — bottom-right: W*0.86, H*0.86 (outside oval ✓)
+  // Bottom-right: ring-toss stall — W*0.86,H*0.90 (outside oval ✓)
   {
-    const bx=W*0.86, by=H*0.86;
-    propShadow(bx,by+H*0.020,W*0.050,H*0.010);
-    ctx.strokeStyle='#8a6a20'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(bx,by+H*0.018); ctx.lineTo(bx,by-H*0.020); ctx.stroke();
-    [{ox:-W*0.030,oy:-H*0.090,c:'#e74c3c'},{ox:W*0.028,oy:-H*0.100,c:'#3498db'},
-     {ox:-W*0.008,oy:-H*0.120,c:'#f4d03f'},{ox:W*0.012,oy:-H*0.075,c:'#2ecc71'},
-     {ox:-W*0.022,oy:-H*0.055,c:'#9b59b6'}].forEach(({ox,oy,c})=>{
-      ctx.strokeStyle='rgba(180,160,80,0.6)'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(bx,by-H*0.020); ctx.quadraticCurveTo(bx+ox*0.3,by+oy*0.5,bx+ox,by+oy); ctx.stroke();
-      ctx.fillStyle=c; ctx.beginPath(); ctx.ellipse(bx+ox,by+oy,W*0.022,H*0.030,0,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.35)';
-      ctx.beginPath(); ctx.ellipse(bx+ox-W*0.007,by+oy-H*0.008,W*0.007,H*0.010,0,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle=c; ctx.beginPath(); ctx.arc(bx+ox,by+oy+H*0.030,2,0,Math.PI*2); ctx.fill();
-    });
-  }
-
-  // Ring-toss stall — right mid: W*0.93, H*0.52 (outside oval ✓)
-  {
-    const rx2=W*0.94, ry2=H*0.50;
-    ctx.fillStyle='#8a3010'; ctx.fillRect(rx2-W*0.040,ry2-H*0.080,W*0.046,H*0.085);
+    const rx2=W*0.865, ry2=H*0.89;
+    propShadow(rx2,ry2+H*0.014,W*0.085,H*0.012);
+    ctx.fillStyle='#8a3010'; ctx.fillRect(rx2-W*0.070,ry2-H*0.080,W*0.090,H*0.085);
+    ctx.fillStyle='#f5f0e8'; for(let i=0;i<3;i++) ctx.fillRect(rx2-W*0.070+i*W*0.030,ry2-H*0.080,W*0.020,H*0.085);
     ctx.fillStyle='#f4d03f';
-    ctx.beginPath(); ctx.moveTo(rx2-W*0.042,ry2-H*0.080); ctx.lineTo(rx2+W*0.008,ry2-H*0.080); ctx.lineTo(rx2+W*0.005,ry2-H*0.105); ctx.lineTo(rx2-W*0.040,ry2-H*0.105); ctx.closePath(); ctx.fill();
-    // Pegs
+    ctx.beginPath(); ctx.moveTo(rx2-W*0.075,ry2-H*0.080); ctx.lineTo(rx2+W*0.025,ry2-H*0.080); ctx.lineTo(rx2+W*0.022,ry2-H*0.108); ctx.lineTo(rx2-W*0.072,ry2-H*0.108); ctx.closePath(); ctx.fill();
+    for(let i=0;i<4;i++){
+      ctx.fillStyle=i%2===0?'#e74c3c':'#f4d03f';
+      ctx.beginPath(); ctx.arc(rx2-W*0.063+i*W*0.021,ry2-H*0.080,W*0.009,0,Math.PI); ctx.fill();
+    }
     ctx.fillStyle='#c0392b';
-    [[0.4,0.3],[0.6,0.3],[0.5,0.6]].forEach(([px,py])=>{
-      ctx.beginPath(); ctx.arc(rx2-W*0.040+px*W*0.046,ry2-H*0.080+py*H*0.075,3,0,Math.PI*2); ctx.fill();
+    [[0.25,0.3],[0.55,0.3],[0.40,0.65]].forEach(([px,py])=>{
+      ctx.beginPath(); ctx.arc(rx2-W*0.070+px*W*0.090,ry2-H*0.080+py*H*0.075,3,0,Math.PI*2); ctx.fill();
     });
-    // Ring on peg
     ctx.strokeStyle='#f4d03f'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.ellipse(rx2-W*0.020,ry2-H*0.060,W*0.010,H*0.006,0.3,0,Math.PI*2); ctx.stroke();
-  }
-
-  // Clown figure — left mid: W*0.055, H*0.52 (outside oval ✓)
-  {
-    const cx2=W*0.055, cy2=H*0.50;
-    propShadow(cx2,cy2+H*0.075,W*0.030,H*0.008);
-    // Body
-    ctx.fillStyle='#e74c3c'; ctx.fillRect(cx2-W*0.020,cy2-H*0.040,W*0.040,H*0.060);
-    // Polka dots on body
-    ctx.fillStyle='#f4d03f';
-    [[0.2,0.3],[0.7,0.3],[0.5,0.65]].forEach(([px,py])=>{
-      ctx.beginPath(); ctx.arc(cx2-W*0.020+px*W*0.040,cy2-H*0.040+py*H*0.060,2.5,0,Math.PI*2); ctx.fill();
-    });
-    // Legs
-    ctx.fillStyle='#f4d03f';
-    ctx.fillRect(cx2-W*0.018,cy2+H*0.020,W*0.014,H*0.055);
-    ctx.fillStyle='#3498db';
-    ctx.fillRect(cx2+W*0.004,cy2+H*0.020,W*0.014,H*0.055);
-    // Big shoes
-    ctx.fillStyle='#5a3a10';
-    ctx.beginPath(); ctx.ellipse(cx2-W*0.011,cy2+H*0.075,W*0.018,H*0.010,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(cx2+W*0.011,cy2+H*0.075,W*0.018,H*0.010,0,0,Math.PI*2); ctx.fill();
-    // Head
-    ctx.fillStyle='#fde3a7'; ctx.beginPath(); ctx.arc(cx2,cy2-H*0.050,W*0.022,0,Math.PI*2); ctx.fill();
-    // Red nose
-    ctx.fillStyle='#e74c3c'; ctx.beginPath(); ctx.arc(cx2,cy2-H*0.048,4,0,Math.PI*2); ctx.fill();
-    // Eyes
-    ctx.fillStyle='#2c3e50';
-    ctx.beginPath(); ctx.arc(cx2-W*0.008,cy2-H*0.056,2,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx2+W*0.008,cy2-H*0.056,2,0,Math.PI*2); ctx.fill();
-    // Hat
-    ctx.fillStyle='#2c3e50'; ctx.fillRect(cx2-W*0.016,cy2-H*0.074,W*0.032,H*0.026);
-    ctx.fillRect(cx2-W*0.020,cy2-H*0.074,W*0.040,H*0.006);
-    ctx.fillStyle='#e74c3c'; ctx.fillRect(cx2-W*0.014,cy2-H*0.074,W*0.028,H*0.005);
+    ctx.beginPath(); ctx.ellipse(rx2-W*0.025,ry2-H*0.050,W*0.014,H*0.008,0.3,0,Math.PI*2); ctx.stroke();
   }
 }
+
 
 function drawHalloweenScene() {
   const CX=W/2, CY=H*0.56, RX=W*0.46, RY=H*0.40;
