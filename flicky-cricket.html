@@ -6758,107 +6758,251 @@ function drawConstructionScene() {
 }
 
 function drawMedievalScene() {
-  const sg = ctx.createLinearGradient(0,0,0,H*0.16);
-  sg.addColorStop(0,'#2a4060'); sg.addColorStop(0.6,'#6a88a8'); sg.addColorStop(1,'#d0dde8');
-  ctx.fillStyle=sg; ctx.fillRect(0,0,W,H*0.16);
+  // Full dark stone/grass background
+  ctx.fillStyle='#1e2a10'; ctx.fillRect(0,0,W,H);
 
-  // Clouds
-  ctx.fillStyle='rgba(255,255,255,0.7)';
-  [[0.18,0.045,0.06,0.016],[0.55,0.035,0.05,0.012],[0.78,0.055,0.04,0.014]].forEach(([fx,fy,rx2,ry2])=>{
-    ctx.beginPath(); ctx.ellipse(W*fx,H*fy,W*rx2,H*ry2,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(W*fx+W*rx2*.6,H*fy-H*ry2*.4,W*rx2*.65,H*ry2*.75,0,0,Math.PI*2); ctx.fill();
-  });
+  // ── BACKDROP clipped to H*0.23 ──
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Castle / town silhouette on horizon
-  ctx.fillStyle='#3a4050';
-  // Multiple towers and walls
-  [[0.3,0.06,0.022,0.04],[0.4,0.04,0.02,0.035],[0.5,0.065,0.025,0.045],[0.6,0.04,0.02,0.035],[0.7,0.055,0.022,0.04]].forEach(([fx,h,w,wh])=>{
-    // Tower
-    ctx.fillRect(W*(fx-w),H*(0.16-h),W*w*2,H*h);
+  // Stormy dramatic sky — deep purple-grey
+  const sg=ctx.createLinearGradient(0,0,0,H*0.23);
+  sg.addColorStop(0,'#0e0c18'); sg.addColorStop(0.40,'#1e1c30');
+  sg.addColorStop(0.72,'#3a3240'); sg.addColorStop(1,'#5a4838');
+  ctx.fillStyle=sg; ctx.fillRect(0,0,W,H*0.23);
+
+  // Storm clouds — dark billowing masses
+  function stormCloud(cx,cy,r,col){
+    ctx.fillStyle=col;
+    [[0,0,1.0],[r*0.55,-r*0.30,0.80],[-r*0.50,-r*0.22,0.75],[r*0.95,-r*0.08,0.70],[-r*0.90,-r*0.05,0.65],[r*0.25,-r*0.42,0.60]].forEach(([dx,dy,s])=>{
+      ctx.beginPath(); ctx.arc(cx+dx,cy+dy,r*s,0,Math.PI*2); ctx.fill();
+    });
+  }
+  stormCloud(W*0.18,H*0.065,H*0.038,'#282030');
+  stormCloud(W*0.55,H*0.050,H*0.044,'#302838');
+  stormCloud(W*0.82,H*0.060,H*0.032,'#242030');
+  // Lightning bolt
+  ctx.save(); ctx.shadowColor='#aaaaff'; ctx.shadowBlur=12; ctx.fillStyle='#d0d8ff';
+  ctx.beginPath(); ctx.moveTo(W*0.60,H*0.025); ctx.lineTo(W*0.575,H*0.085); ctx.lineTo(W*0.592,H*0.085); ctx.lineTo(W*0.568,H*0.140); ctx.lineTo(W*0.610,H*0.076); ctx.lineTo(W*0.594,H*0.076); ctx.lineTo(W*0.622,H*0.025); ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  // Moon breaking through clouds — left side
+  const mx=W*0.18, my=H*0.068;
+  const moonG=ctx.createRadialGradient(mx,my,H*0.015,mx,my,H*0.055);
+  moonG.addColorStop(0,'rgba(220,210,180,0.90)'); moonG.addColorStop(0.5,'rgba(180,160,120,0.25)'); moonG.addColorStop(1,'rgba(150,130,100,0)');
+  ctx.fillStyle=moonG; ctx.beginPath(); ctx.arc(mx,my,H*0.055,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#e8dfc0'; ctx.beginPath(); ctx.arc(mx,my,H*0.022,0,Math.PI*2); ctx.fill();
+
+  // ── Castle silhouette — large, detailed, spanning full width ──
+  ctx.fillStyle='#0e0c10';
+  // Outer curtain walls
+  ctx.fillRect(0,H*0.190,W*0.18,H*0.040);
+  ctx.fillRect(W*0.82,H*0.190,W*0.18,H*0.040);
+  ctx.fillRect(W*0.22,H*0.195,W*0.56,H*0.035);
+
+  // Wall battlements
+  ctx.fillStyle='#0e0c10';
+  for(let bx=0;bx<W*0.18;bx+=W*0.022){ ctx.fillRect(bx,H*0.178,W*0.013,H*0.014); }
+  for(let bx=W*0.82;bx<W;bx+=W*0.022){ ctx.fillRect(bx,H*0.178,W*0.013,H*0.014); }
+  for(let bx=W*0.22;bx<W*0.78;bx+=W*0.024){ ctx.fillRect(bx,H*0.183,W*0.014,H*0.014); }
+
+  // Flanking towers — tall, with crenellations
+  function castleTower(tx,tw,th){
+    ctx.fillStyle='#100e14';
+    ctx.fillRect(tx-tw/2,H*0.23-th,tw,th);
     // Battlements
-    for(let b=0;b<4;b++) ctx.fillRect(W*(fx-w)+b*(W*w*.5),H*(0.16-h)-H*0.008,W*w*.25,H*0.008);
-    // Connecting wall
-    if(fx<0.7) ctx.fillRect(W*(fx+w),H*(0.16-wh),W*(0.1-w*2),H*wh);
-  });
-  // Main gate arch
-  ctx.fillStyle='#1a2028'; ctx.beginPath(); ctx.arc(W*0.5,H*0.16,W*0.018,Math.PI,0); ctx.fill(); ctx.fillRect(W*0.482,H*0.115,W*0.036,H*0.045);
-  ctx.fillStyle='#3a4050';
+    const nb=Math.floor(tw/W*0.022)+1;
+    for(let b=0;b<nb;b++) ctx.fillRect(tx-tw/2+b*(tw/(nb)),H*0.23-th-H*0.012,tw/(nb)*0.60,H*0.012);
+    // Arched window (glowing amber)
+    ctx.fillStyle='rgba(200,140,30,0.50)';
+    const wy=H*0.23-th*0.45;
+    ctx.fillRect(tx-tw*0.14,wy,tw*0.28,H*0.030);
+    ctx.beginPath(); ctx.arc(tx,wy,tw*0.14,Math.PI,0); ctx.fill();
+    // Stone shadow
+    ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=1;
+    for(let r=1;r<5;r++){ ctx.beginPath(); ctx.moveTo(tx-tw/2,H*0.23-th+r*th/5); ctx.lineTo(tx+tw/2,H*0.23-th+r*th/5); ctx.stroke(); }
+  }
+  castleTower(W*0.08, W*0.10, H*0.155);  // far left
+  castleTower(W*0.22, W*0.08, H*0.130);  // inner left
+  castleTower(W*0.50, W*0.12, H*0.185);  // centre keep — tallest
+  castleTower(W*0.78, W*0.08, H*0.130);  // inner right
+  castleTower(W*0.92, W*0.10, H*0.155);  // far right
 
-  drawGroundRings('#4a6828','#2e4418','rgba(30,50,16,0.90)');
+  // Drawbridge gate on centre tower
+  ctx.fillStyle='#080608';
+  ctx.beginPath(); ctx.arc(W*0.50,H*0.23,W*0.030,Math.PI,0); ctx.fill();
+  ctx.fillRect(W*0.470,H*0.195,W*0.060,H*0.035);
+  // Portcullis bars
+  ctx.strokeStyle='rgba(80,60,20,0.7)'; ctx.lineWidth=1.5;
+  for(let i=0;i<4;i++){ ctx.beginPath(); ctx.moveTo(W*0.473+i*W*0.017,H*0.196); ctx.lineTo(W*0.473+i*W*0.017,H*0.230); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(W*0.470,H*0.205); ctx.lineTo(W*0.530,H*0.205); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W*0.470,H*0.218); ctx.lineTo(W*0.530,H*0.218); ctx.stroke();
+
+  // Pennant flags on towers
+  [W*0.08,W*0.22,W*0.50,W*0.78,W*0.92].forEach((tx,i)=>{
+    const fh=[H*0.155,H*0.130,H*0.185,H*0.130,H*0.155][i];
+    const cols=['#cc1010','#1a4a9a','#cc1010','#cc8800','#1a4a9a'];
+    ctx.strokeStyle='#5a3010'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(tx,H*0.23-fh); ctx.lineTo(tx,H*0.23-fh-H*0.028); ctx.stroke();
+    ctx.fillStyle=cols[i];
+    ctx.beginPath(); ctx.moveTo(tx,H*0.23-fh-H*0.028); ctx.lineTo(tx+W*0.030,H*0.23-fh-H*0.018); ctx.lineTo(tx,H*0.23-fh-H*0.008); ctx.closePath(); ctx.fill();
+  });
+
+  ctx.restore(); // end backdrop clip
+
+  // ── Grass ground with worn path ──
+  {
+    const FIELD_CX=W*0.5, FIELD_CY=H*0.60, FIELD_RX=W*0.46, FIELD_RY=H*0.37;
+    ctx.save(); ctx.beginPath(); ctx.rect(W*0.048,H*0.23,W*0.904,H*0.77); ctx.clip();
+    // Worn mud paths near walls
+    ctx.fillStyle='#4a3018';
+    ctx.fillRect(W*0.048,H*0.23,W*0.070,H*0.77);
+    ctx.fillRect(W*0.882,H*0.23,W*0.070,H*0.77);
+    // Grass tufts
+    ctx.strokeStyle='#2a4010'; ctx.lineWidth=1.5;
+    [[0.14,0.35],[0.12,0.55],[0.15,0.75],[0.88,0.40],[0.86,0.62],[0.89,0.80]].forEach(([fx,fy])=>{
+      const ex=(W*fx-FIELD_CX)/FIELD_RX, ey=(H*fy-FIELD_CY)/FIELD_RY;
+      if(ex*ex+ey*ey>1.05){
+        for(let g=-2;g<=2;g++){
+          ctx.beginPath(); ctx.moveTo(W*fx+g*W*0.006,H*fy); ctx.lineTo(W*fx+g*W*0.004,H*fy-H*0.014); ctx.stroke();
+        }
+      }
+    });
+    ctx.restore();
+  }
+
+  drawGroundRings('#3a5820','#2a4010','rgba(28,45,12,0.92)');
   drawSceneScoreboard();
 
-  // Stone walls on sides — crenellated
-  ctx.fillStyle='#8A8278';
-  ctx.fillRect(0,H*0.14,W*0.048,H*0.74);
-  ctx.fillRect(W*0.952,H*0.14,W*0.048,H*0.74);
-  // Crenellations
-  ctx.fillStyle='#7A7268';
-  for(let y=H*0.16;y<H*0.85;y+=H*0.072){
-    ctx.fillRect(0,y,W*0.048,H*0.034);
-    ctx.fillRect(W*0.952,y,W*0.048,H*0.034);
+  // ── SIDES: castle stone walls with arrow slits + torches ──
+  function stoneSide(x1,x2){
+    const sw=x2-x1;
+    // Stone fill
+    const stoneG=ctx.createLinearGradient(x1,0,x2,0);
+    stoneG.addColorStop(0,'#5a5248'); stoneG.addColorStop(0.5,'#6a6258'); stoneG.addColorStop(1,'#504840');
+    ctx.fillStyle=stoneG; ctx.fillRect(x1,H*0.23,sw,H*0.77);
+    // Horizontal mortar lines
+    ctx.strokeStyle='rgba(30,25,20,0.45)'; ctx.lineWidth=1;
+    for(let y=H*0.26;y<H;y+=H*0.048){ ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.stroke(); }
+    // Vertical mortar (staggered)
+    for(let row=0,y=H*0.23;y<H;y+=H*0.048,row++){
+      const offset=row%2===0?0:sw*0.5;
+      ctx.beginPath(); ctx.moveTo(x1+offset,y); ctx.lineTo(x1+offset,y+H*0.048); ctx.stroke();
+    }
+    // Arrow slits
+    ctx.fillStyle='#1a1410';
+    for(let y=H*0.30;y<H*0.88;y+=H*0.135){
+      const sx=x1+sw*0.5-W*0.005;
+      ctx.fillRect(sx,y,W*0.010,H*0.032);
+      // Cross slit
+      ctx.fillRect(sx-W*0.007,y+H*0.010,W*0.024,H*0.010);
+    }
+    // Wall torches with glow
+    for(let y=H*0.36;y<H*0.88;y+=H*0.18){
+      const tx2=x1+sw*0.5;
+      // Bracket
+      ctx.fillStyle='#6a5030'; ctx.fillRect(tx2-W*0.006,y-H*0.010,W*0.012,H*0.008);
+      // Flame
+      ctx.save(); ctx.shadowColor='#ff8820'; ctx.shadowBlur=16;
+      ctx.fillStyle='#ff6600';
+      ctx.beginPath(); ctx.moveTo(tx2,y-H*0.030); ctx.quadraticCurveTo(tx2+W*0.008,y-H*0.018,tx2+W*0.004,y-H*0.008); ctx.quadraticCurveTo(tx2,y-H*0.003,tx2-W*0.004,y-H*0.008); ctx.quadraticCurveTo(tx2-W*0.008,y-H*0.018,tx2,y-H*0.030); ctx.fill();
+      ctx.fillStyle='#ffcc00';
+      ctx.beginPath(); ctx.moveTo(tx2,y-H*0.028); ctx.quadraticCurveTo(tx2+W*0.004,y-H*0.018,tx2,y-H*0.010); ctx.quadraticCurveTo(tx2-W*0.004,y-H*0.018,tx2,y-H*0.028); ctx.fill();
+      // Warm glow spill on wall
+      const tg=ctx.createRadialGradient(tx2,y-H*0.018,0,tx2,y-H*0.018,W*0.030);
+      tg.addColorStop(0,'rgba(255,140,20,0.22)'); tg.addColorStop(1,'rgba(255,100,10,0)');
+      ctx.fillStyle=tg; ctx.beginPath(); ctx.arc(tx2,y-H*0.018,W*0.030,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
   }
-  // Stone texture lines
-  ctx.strokeStyle='rgba(60,55,45,0.25)'; ctx.lineWidth=0.7;
-  for(let y=H*0.18;y<H*0.88;y+=H*0.055){
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W*0.048,y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(W*0.952,y); ctx.lineTo(W,y); ctx.stroke();
-  }
+  stoneSide(0, W*0.048);
+  stoneSide(W*0.952, W);
 
-  // Arrow slits
-  ctx.fillStyle='#1A1818';
-  for(let y=H*0.22;y<H*0.80;y+=H*0.14){
-    ctx.fillRect(W*0.018,y,W*0.01,H*0.028);
-    ctx.fillRect(W*0.972,y,W*0.01,H*0.028);
+  // ── TOP CORNERS: crossed swords + shield ──
+  function cornerDeco(cx,cy,flip){
+    ctx.save(); ctx.translate(cx,cy); if(flip) ctx.scale(-1,1);
+    // Shield
+    ctx.fillStyle='#1a4a9a';
+    ctx.beginPath(); ctx.moveTo(0,-H*0.062); ctx.lineTo(W*0.038,-H*0.062); ctx.lineTo(W*0.038,-H*0.025); ctx.quadraticCurveTo(W*0.038,H*0.000,0,H*0.012); ctx.quadraticCurveTo(-W*0.038,H*0.000,-W*0.038,-H*0.025); ctx.lineTo(-W*0.038,-H*0.062); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#c8a030'; ctx.lineWidth=2; ctx.stroke();
+    // Cross on shield
+    ctx.fillStyle='#cc1010';
+    ctx.fillRect(-W*0.006,-H*0.058,W*0.012,H*0.062);
+    ctx.fillRect(-W*0.032,-H*0.042,W*0.064,H*0.014);
+    // Sword behind shield
+    ctx.strokeStyle='#c0c0c0'; ctx.lineWidth=W*0.008; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(-W*0.022,H*0.020); ctx.lineTo(W*0.010,-H*0.075); ctx.stroke();
+    ctx.strokeStyle='#c8a030'; ctx.lineWidth=W*0.012;
+    ctx.beginPath(); ctx.moveTo(-W*0.028,-H*0.015); ctx.lineTo(W*0.012,-H*0.015); ctx.stroke();
+    ctx.restore();
   }
+  cornerDeco(W*0.085, H*0.278, false);
+  cornerDeco(W*0.915, H*0.278, true);
 
-  // LEFT corner: tournament pavilion
+  // ── BOTTOM-LEFT: trebuchet ──
   {
-    const lx=W*0.16, ly=H*0.90;
-    // Pavilion tent
-    ctx.fillStyle='#CC2222';
-    ctx.beginPath(); ctx.moveTo(lx-W*0.07,ly-H*0.015); ctx.lineTo(lx,ly-H*0.075); ctx.lineTo(lx+W*0.07,ly-H*0.015); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='#FFFFFF';
-    ctx.beginPath(); ctx.moveTo(lx-W*0.055,ly-H*0.015); ctx.lineTo(lx-W*0.025,ly-H*0.06); ctx.lineTo(lx+W*0.005,ly-H*0.015); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(lx+W*0.005,ly-H*0.015); ctx.lineTo(lx+W*0.035,ly-H*0.06); ctx.lineTo(lx+W*0.065,ly-H*0.015); ctx.closePath(); ctx.fill();
-    // Tent body
-    ctx.fillStyle='#AA1818'; ctx.fillRect(lx-W*0.07,ly-H*0.015,W*0.14,H*0.04);
-    ctx.fillStyle='#EEEEEE'; ctx.fillRect(lx-W*0.07,ly-H*0.015,W*0.14,H*0.008);
-    // Central pennant
-    ctx.strokeStyle='#5A3010'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(lx,ly-H*0.075); ctx.lineTo(lx,ly-H*0.11); ctx.stroke();
-    ctx.fillStyle='#F4D030'; ctx.beginPath(); ctx.moveTo(lx,ly-H*0.11); ctx.lineTo(lx+W*0.025,ly-H*0.095); ctx.lineTo(lx,ly-H*0.08); ctx.closePath(); ctx.fill();
-    // Jousting lance leaning on tent
-    ctx.strokeStyle='#7A5020'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(lx+W*0.075,ly+H*0.025); ctx.lineTo(lx+W*0.042,ly-H*0.06); ctx.stroke();
-    ctx.fillStyle='#CC2222'; ctx.beginPath(); ctx.moveTo(lx+W*0.042,ly-H*0.06); ctx.lineTo(lx+W*0.05,ly-H*0.075); ctx.lineTo(lx+W*0.035,ly-H*0.072); ctx.closePath(); ctx.fill();
-  }
-
-  // RIGHT corner: stone tower with pennant + catapult
-  {
-    const rx=W*0.84, ry=H*0.90;
-    // Tower
-    ctx.fillStyle='#9A9080';
-    ctx.fillRect(rx-W*0.038,ry-H*0.1,W*0.076,H*0.1);
-    ctx.fillStyle='#8A8070';
-    // Battlements on tower
-    for(let b=0;b<5;b++) ctx.fillRect(rx-W*0.038+b*(W*0.015),ry-H*0.1-H*0.018,W*0.01,H*0.018);
-    // Tower window
-    ctx.fillStyle='#1A1620'; ctx.fillRect(rx-W*0.008,ry-H*0.065,W*0.016,H*0.025);
-    ctx.beginPath(); ctx.arc(rx,ry-H*0.065,W*0.008,Math.PI,0); ctx.fill();
-    // Pennant
-    ctx.strokeStyle='#5A3010'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(rx,ry-H*0.1); ctx.lineTo(rx,ry-H*0.138); ctx.stroke();
-    ctx.fillStyle='#1F5FA8'; ctx.beginPath(); ctx.moveTo(rx,ry-H*0.138); ctx.lineTo(rx+W*0.04,ry-H*0.122); ctx.lineTo(rx,ry-H*0.106); ctx.closePath(); ctx.fill();
-    // Catapult
-    ctx.strokeStyle='#6A4820'; ctx.lineWidth=2.5; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(rx-W*0.07,ry+H*0.005); ctx.lineTo(rx-W*0.04,ry-H*0.042); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(rx-W*0.08,ry-H*0.008); ctx.lineTo(rx-W*0.02,ry-H*0.008); ctx.stroke();
+    const tx=W*0.118, ty=H*0.952;
+    propShadow(tx,ty+H*0.007,W*0.110,H*0.012);
     // Wheels
-    ctx.strokeStyle='#5A3810'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(rx-W*0.07,ry+H*0.012,H*0.014,0,Math.PI*2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(rx-W*0.025,ry+H*0.012,H*0.014,0,Math.PI*2); ctx.stroke();
-    // Boulder in sling
-    ctx.fillStyle='#888480'; ctx.beginPath(); ctx.arc(rx-W*0.035,ry-H*0.055,H*0.01,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#5a3010'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(tx-W*0.044,ty,H*0.022,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(tx+W*0.020,ty,H*0.022,0,Math.PI*2); ctx.stroke();
+    // Axle
+    ctx.strokeStyle='#7a4820'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(tx-W*0.044,ty); ctx.lineTo(tx+W*0.020,ty); ctx.stroke();
+    // Frame A-frame
+    ctx.strokeStyle='#6a4010'; ctx.lineWidth=5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(tx-W*0.050,ty-H*0.005); ctx.lineTo(tx-W*0.010,ty-H*0.068); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx+W*0.028,ty-H*0.005); ctx.lineTo(tx-W*0.010,ty-H*0.068); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx-W*0.042,ty-H*0.032); ctx.lineTo(tx+W*0.020,ty-H*0.032); ctx.stroke();
+    // Long throwing arm
+    ctx.strokeStyle='#7a4820'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(tx-W*0.032,ty-H*0.030); ctx.lineTo(tx+W*0.050,ty-H*0.090); ctx.stroke();
+    // Counterweight
+    ctx.fillStyle='#4a3820';
+    ctx.beginPath(); ctx.arc(tx-W*0.038,ty-H*0.022,H*0.018,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#333'; ctx.lineWidth=1; ctx.stroke();
+    // Sling + projectile
+    ctx.strokeStyle='#8a6030'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(tx+W*0.050,ty-H*0.090); ctx.lineTo(tx+W*0.060,ty-H*0.060); ctx.stroke();
+    ctx.fillStyle='#888078'; ctx.beginPath(); ctx.arc(tx+W*0.062,ty-H*0.053,H*0.012,0,Math.PI*2); ctx.fill();
+  }
+
+  // ── BOTTOM-RIGHT: tournament pavilion tent ──
+  {
+    const px=W*0.876, py=H*0.950;
+    propShadow(px,py+H*0.007,W*0.105,H*0.012);
+    // Tent body (alternating red/white stripes — classic jousting pavilion)
+    const tw=W*0.095, th=H*0.055;
+    const stripes=6;
+    ctx.save(); ctx.beginPath();
+    ctx.moveTo(px,py-th-H*0.050); ctx.lineTo(px-tw/2,py-th); ctx.lineTo(px+tw/2,py-th); ctx.closePath();
+    ctx.rect(px-tw/2,py-th,tw,th); ctx.clip();
+    for(let s=0;s<stripes;s++){
+      ctx.fillStyle=s%2===0?'#cc1010':'#f0f0f0';
+      ctx.fillRect(px-tw/2+s*(tw/stripes),py-th-H*0.055,tw/stripes,th+H*0.055);
+    }
+    ctx.restore();
+    // Tent outline
+    ctx.strokeStyle='#8a2010'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(px,py-th-H*0.050); ctx.lineTo(px-tw/2,py-th); ctx.lineTo(px+tw/2,py-th); ctx.closePath(); ctx.stroke();
+    ctx.strokeRect(px-tw/2,py-th,tw,th);
+    // Pennant on top
+    ctx.strokeStyle='#5a3010'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(px,py-th-H*0.050); ctx.lineTo(px,py-th-H*0.082); ctx.stroke();
+    ctx.fillStyle='#ffd700';
+    ctx.beginPath(); ctx.moveTo(px,py-th-H*0.082); ctx.lineTo(px+W*0.028,py-th-H*0.066); ctx.lineTo(px,py-th-H*0.050); ctx.closePath(); ctx.fill();
+    // Entrance flap opening
+    ctx.fillStyle='rgba(20,10,5,0.70)';
+    ctx.beginPath(); ctx.moveTo(px-W*0.012,py); ctx.arc(px,py,W*0.012,Math.PI,0); ctx.lineTo(px+W*0.012,py); ctx.closePath(); ctx.fill();
+    // Two jousting lances leaning against tent
+    ctx.strokeStyle='#8a5020'; ctx.lineWidth=3; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(px+tw/2+W*0.002,py); ctx.lineTo(px+tw/2-W*0.015,py-H*0.085); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px+tw/2+W*0.014,py); ctx.lineTo(px+tw/2-W*0.004,py-H*0.090); ctx.stroke();
+    // Lance tips
+    ctx.fillStyle='#c0c0c0';
+    ctx.beginPath(); ctx.arc(px+tw/2-W*0.015,py-H*0.085,W*0.005,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px+tw/2-W*0.004,py-H*0.090,W*0.005,0,Math.PI*2); ctx.fill();
   }
 }
 
