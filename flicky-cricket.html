@@ -6023,185 +6023,268 @@ function drawChristmasScene() {
 }
 
 function drawSteampunkScene() {
-  // New York City skyline scene
-  // Sky — classic NYC blue-grey at dusk
-  const sg = ctx.createLinearGradient(0,0,0,H*0.16);
-  sg.addColorStop(0,'#1a2a4a'); sg.addColorStop(0.5,'#2e5080'); sg.addColorStop(1,'#6888aa');
-  ctx.fillStyle=sg; ctx.fillRect(0,0,W,H*0.16);
+  // Full warm copper-brown background
+  ctx.fillStyle='#2a1a08'; ctx.fillRect(0,0,W,H);
 
-  // Moon + a few stars
-  ctx.fillStyle='#ffffee'; ctx.beginPath(); ctx.arc(W*0.78,H*0.03,H*0.018,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#fff';
-  [[0.1,0.025],[0.25,0.015],[0.42,0.035],[0.6,0.02],[0.88,0.03],[0.95,0.018]].forEach(([fx,fy])=>{
-    ctx.beginPath(); ctx.arc(W*fx,H*fy,1.2,0,Math.PI*2); ctx.fill();
+  // ── BACKDROP clipped to H*0.23 ──
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
+
+  // Amber-sepia smoggy Victorian sky
+  const sg=ctx.createLinearGradient(0,0,0,H*0.23);
+  sg.addColorStop(0,'#1a0d00'); sg.addColorStop(0.4,'#3d1e00'); sg.addColorStop(0.75,'#7a3c08'); sg.addColorStop(1,'#c06010');
+  ctx.fillStyle=sg; ctx.fillRect(0,0,W,H*0.23);
+
+  // Hazy full moon glowing through smog
+  const mx=W*0.22, my=H*0.075;
+  const moonHaze=ctx.createRadialGradient(mx,my,H*0.020,mx,my,H*0.080);
+  moonHaze.addColorStop(0,'rgba(255,220,120,0.95)'); moonHaze.addColorStop(0.4,'rgba(255,180,60,0.35)'); moonHaze.addColorStop(1,'rgba(200,120,20,0)');
+  ctx.fillStyle=moonHaze; ctx.beginPath(); ctx.arc(mx,my,H*0.080,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#ffe890'; ctx.beginPath(); ctx.arc(mx,my,H*0.030,0,Math.PI*2); ctx.fill();
+
+  // Steam clouds drifting across sky
+  function steamCloud(cx,cy,r,alpha){
+    ctx.save(); ctx.globalAlpha=alpha;
+    const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+    cg.addColorStop(0,'rgba(200,160,80,0.9)'); cg.addColorStop(1,'rgba(120,80,20,0)');
+    ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  steamCloud(W*0.55,H*0.04,H*0.038,0.6);
+  steamCloud(W*0.62,H*0.06,H*0.028,0.5);
+  steamCloud(W*0.48,H*0.07,H*0.024,0.4);
+  steamCloud(W*0.80,H*0.05,H*0.032,0.45);
+  steamCloud(W*0.88,H*0.08,H*0.022,0.35);
+
+  // Victorian factory silhouettes on horizon
+  ctx.fillStyle='#150900';
+  [[0.05,0.10],[0.14,0.09],[0.28,0.12],[0.48,0.08],[0.65,0.11],[0.80,0.09],[0.92,0.10]].forEach(([fx,fh])=>{
+    ctx.fillRect(W*fx,H*(0.23-fh),W*0.07,H*fh);
+  });
+  // Factory chimneys (tall thin towers)
+  [[0.07,0.16],[0.16,0.15],[0.30,0.18],[0.44,0.14],[0.60,0.17],[0.75,0.15],[0.90,0.16]].forEach(([fx,fh])=>{
+    ctx.fillRect(W*fx-W*0.008,H*(0.23-fh),W*0.016,H*fh);
+  });
+  // Chimney smoke puffs
+  [[0.07,0.16],[0.30,0.18],[0.60,0.17],[0.90,0.16]].forEach(([fx,fh])=>{
+    steamCloud(W*fx,H*(0.23-fh)-H*0.012,H*0.018,0.7);
+    steamCloud(W*fx+W*0.012,H*(0.23-fh)-H*0.022,H*0.014,0.5);
   });
 
-  // NYC SKYLINE — iconic building silhouettes on the horizon
-  // Draw darkest first (background) then lighter foreground
-  function building(bx, bw, bh, col, hasSpire, spireH) {
-    ctx.fillStyle=col;
-    ctx.fillRect(W*bx-W*bw/2, H*(0.16-bh), W*bw, H*bh);
-    if(hasSpire) {
-      ctx.beginPath();
-      ctx.moveTo(W*bx-W*bw*.06, H*(0.16-bh));
-      ctx.lineTo(W*bx, H*(0.16-bh-spireH));
-      ctx.lineTo(W*bx+W*bw*.06, H*(0.16-bh));
-      ctx.closePath(); ctx.fill();
-    }
-    // Building windows (lit up at night — yellow dots)
-    ctx.fillStyle='rgba(255,240,120,0.8)';
-    const winCols=Math.max(2,Math.floor(W*bw/14));
-    const winRows=Math.max(2,Math.floor(H*bh/16));
-    for(let wc=0;wc<winCols;wc++) for(let wr=0;wr<winRows;wr++) {
-      if(Math.random()>0.35) {
-        const wx=W*bx-W*bw*.38+wc*(W*bw*.76/(winCols-1||1));
-        const wy=H*(0.16-bh)+H*0.008+wr*(H*bh*.85/(winRows-1||1));
-        ctx.beginPath(); ctx.arc(wx,wy,1.5,0,Math.PI*2); ctx.fill();
-      }
-    }
-  }
+  // Steampunk airship / zeppelin — large, right side
+  ctx.save(); ctx.translate(W*0.72,H*0.095);
+  // Envelope (balloon body)
+  const envG=ctx.createLinearGradient(0,-H*0.028,0,H*0.028);
+  envG.addColorStop(0,'#c87820'); envG.addColorStop(0.5,'#a05010'); envG.addColorStop(1,'#603008');
+  ctx.fillStyle=envG;
+  ctx.beginPath(); ctx.ellipse(0,0,W*0.120,H*0.028,0,0,Math.PI*2); ctx.fill();
+  // Ribs on envelope
+  ctx.strokeStyle='rgba(60,30,0,0.5)'; ctx.lineWidth=1.5;
+  [-W*0.06,-W*0.03,0,W*0.03,W*0.06].forEach(rx2=>{
+    ctx.beginPath(); ctx.ellipse(rx2,0,W*0.010,H*0.028,0,0,Math.PI*2); ctx.stroke();
+  });
+  // Gondola (hanging cabin)
+  ctx.fillStyle='#4a2808';
+  ctx.fillRect(-W*0.040,H*0.034,W*0.080,H*0.018);
+  ctx.strokeStyle='#8a5020'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(-W*0.025,H*0.028); ctx.lineTo(-W*0.025,H*0.034); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( W*0.025,H*0.028); ctx.lineTo( W*0.025,H*0.034); ctx.stroke();
+  // Porthole windows on gondola
+  ctx.fillStyle='#ffd060';
+  ctx.beginPath(); ctx.arc(-W*0.018,H*0.043,W*0.006,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc( W*0.018,H*0.043,W*0.006,0,Math.PI*2); ctx.fill();
+  // Propeller (rear)
+  ctx.save(); ctx.translate(-W*0.120,0);
+  ctx.strokeStyle='#8a5020'; ctx.lineWidth=3; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(0,-H*0.020); ctx.lineTo(0,H*0.020); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-W*0.012,0); ctx.lineTo(W*0.012,0); ctx.stroke();
+  ctx.restore();
+  ctx.restore();
 
-  // Back row (dark, distant)
-  building(0.12, 0.05, 0.08, '#1a2030', false, 0);
-  building(0.22, 0.04, 0.07, '#1a2030', false, 0);
-  building(0.38, 0.06, 0.085, '#202838', true, 0.032);  // Empire State style
-  building(0.5, 0.035, 0.065, '#1a2030', false, 0);
-  building(0.62, 0.05, 0.09, '#202838', true, 0.025);   // Chrysler style
-  building(0.75, 0.04, 0.07, '#1a2030', false, 0);
-  building(0.88, 0.05, 0.08, '#202838', true, 0.022);
+  // Horizon horizon band — cobblestone street top
+  ctx.fillStyle='#3a1e08';
+  ctx.beginPath(); ctx.moveTo(0,H*0.23); ctx.lineTo(0,H*0.20);
+  ctx.quadraticCurveTo(W*0.25,H*0.17,W*0.5,H*0.19);
+  ctx.quadraticCurveTo(W*0.75,H*0.17,W,H*0.20);
+  ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
 
-  // Front row (slightly lighter)
-  building(0.06, 0.045, 0.055, '#2a3848', false, 0);
-  building(0.18, 0.06, 0.07, '#2a3848', false, 0);
-  building(0.3, 0.04, 0.06, '#2a3848', false, 0);
-  building(0.44, 0.05, 0.065, '#2a3848', false, 0);
-  building(0.56, 0.045, 0.06, '#2a3848', false, 0);
-  building(0.7, 0.055, 0.075, '#2a3848', false, 0);
-  building(0.82, 0.04, 0.055, '#2a3848', false, 0);
-  building(0.94, 0.048, 0.065, '#2a3848', false, 0);
+  ctx.restore(); // end backdrop clip
 
-  // Road strip at base of skyline
-  ctx.fillStyle='#1e1e1e'; ctx.fillRect(0,H*0.13,W,H*0.03);
-  // Road markings (dashed yellow)
-  ctx.strokeStyle='#FFD700'; ctx.lineWidth=2; ctx.setLineDash([W*0.03,W*0.025]);
-  ctx.beginPath(); ctx.moveTo(0,H*0.145); ctx.lineTo(W,H*0.145); ctx.stroke();
-  ctx.setLineDash([]);
-
-  drawGroundRings('#4a5260','#3a4250','rgba(40,42,55,0.92)');
+  drawGroundRings('#7a5030','#5a3820','rgba(80,45,15,0.92)');
   drawSceneScoreboard();
 
-  // Side buildings (flanking the oval) — skyscraper facades
-  function sideBuilding(sx, sw, col) {
-    ctx.fillStyle=col; ctx.fillRect(sx, H*0.14, sw, H*0.74);
-    // Window grid
-    ctx.fillStyle='rgba(255,240,100,0.7)';
-    const cols=Math.max(1,Math.floor(sw/16)), rows=14;
-    for(let c=0;c<cols;c++) for(let r=0;r<rows;r++) {
-      if(Math.random()>0.3) {
-        ctx.fillRect(sx+8+c*14, H*0.18+r*H*0.046, 8, 6);
-      }
+  // ── Shared gear drawing function ──
+  function drawGear(gx,gy,outerR,innerR,teeth,col,rimCol){
+    ctx.save(); ctx.translate(gx,gy);
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    for(let t=0;t<teeth;t++){
+      const a0=(t/teeth)*Math.PI*2, a1=((t+0.4)/teeth)*Math.PI*2;
+      const a2=((t+0.6)/teeth)*Math.PI*2, a3=((t+1)/teeth)*Math.PI*2;
+      ctx.lineTo(Math.cos(a0)*outerR, Math.sin(a0)*outerR);
+      ctx.lineTo(Math.cos(a1)*(outerR+outerR*0.22), Math.sin(a1)*(outerR+outerR*0.22));
+      ctx.lineTo(Math.cos(a2)*(outerR+outerR*0.22), Math.sin(a2)*(outerR+outerR*0.22));
+      ctx.lineTo(Math.cos(a3)*outerR, Math.sin(a3)*outerR);
     }
-    // Concrete divider lines
-    ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=1;
-    for(let r=0;r<6;r++){
-      ctx.beginPath(); ctx.moveTo(sx,H*(0.22+r*0.12)); ctx.lineTo(sx+sw,H*(0.22+r*0.12)); ctx.stroke();
+    ctx.closePath(); ctx.fill();
+    // Rim
+    ctx.strokeStyle=rimCol; ctx.lineWidth=2; ctx.stroke();
+    // Hub
+    ctx.fillStyle=rimCol; ctx.beginPath(); ctx.arc(0,0,innerR,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(0,0,innerR*0.55,0,Math.PI*2); ctx.fill();
+    // Spokes
+    ctx.strokeStyle=rimCol; ctx.lineWidth=2.5;
+    for(let s=0;s<6;s++){
+      const sa=s/6*Math.PI*2;
+      ctx.beginPath(); ctx.moveTo(Math.cos(sa)*innerR,Math.sin(sa)*innerR);
+      ctx.lineTo(Math.cos(sa)*outerR*0.72,Math.sin(sa)*outerR*0.72); ctx.stroke();
     }
-  }
-  sideBuilding(0, W*0.04, '#2a3040');
-  sideBuilding(W*0.96, W*0.04, '#2a3040');
-
-  // Sidewalk at bottom outside the oval
-  ctx.fillStyle='#3a3a3a'; ctx.fillRect(0,H*0.85,W*0.04,H*0.15);
-  ctx.fillStyle='#3a3a3a'; ctx.fillRect(W*0.96,H*0.85,W*0.04,H*0.15);
-  // Pavement slabs
-  ctx.strokeStyle='rgba(80,80,80,0.6)'; ctx.lineWidth=1;
-  for(let y=H*0.87;y<H;y+=H*0.05){
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W*0.04,y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(W*0.96,y); ctx.lineTo(W,y); ctx.stroke();
+    ctx.restore();
   }
 
-  // LEFT CORNER: yellow taxi cab + lamppost
-  {
-    const lx=W*0.13, ly=H*0.91;
-    // Taxi body
-    ctx.fillStyle='#FFD700';
-    ctx.beginPath(); ctx.rect(lx-W*0.055,ly-H*0.042,W*0.11,H*0.042); ctx.fill();
-    // Taxi roof (slightly narrower)
-    ctx.fillStyle='#FFCC00';
-    ctx.beginPath(); ctx.rect(lx-W*0.035,ly-H*0.066,W*0.07,H*0.025); ctx.fill();
-    // Taxi sign on roof
-    ctx.fillStyle='#222'; ctx.font=`bold ${H*0.016}px Arial`;
-    ctx.textAlign='center'; ctx.fillText('TAXI',lx,ly-H*0.048);
-    // Windows
-    ctx.fillStyle='rgba(120,180,220,0.7)';
-    ctx.beginPath(); ctx.rect(lx-W*0.03,ly-H*0.062,W*0.028,H*0.018); ctx.fill();
-    ctx.beginPath(); ctx.rect(lx+W*0.003,ly-H*0.062,W*0.028,H*0.018); ctx.fill();
-    // Wheels
-    ctx.fillStyle='#222';
-    ctx.beginPath(); ctx.arc(lx-W*0.035,ly,H*0.014,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(lx+W*0.035,ly,H*0.014,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#888';
-    ctx.beginPath(); ctx.arc(lx-W*0.035,ly,H*0.007,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(lx+W*0.035,ly,H*0.007,0,Math.PI*2); ctx.fill();
-    // NYC lamppost
-    const lpx=lx-W*0.075, lpy=ly-H*0.08;
-    ctx.strokeStyle='#444'; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.moveTo(lpx,ly); ctx.lineTo(lpx,lpy); ctx.quadraticCurveTo(lpx,lpy-H*0.025,lpx+W*0.018,lpy-H*0.025); ctx.stroke();
-    ctx.fillStyle='#FFE060'; ctx.beginPath(); ctx.ellipse(lpx+W*0.018,lpy-H*0.032,W*0.01,H*0.014,0,0,Math.PI*2); ctx.fill();
-    // Glow
-    const glow=ctx.createRadialGradient(lpx+W*0.018,lpy-H*0.032,0,lpx+W*0.018,lpy-H*0.032,W*0.04);
-    glow.addColorStop(0,'rgba(255,240,80,0.3)'); glow.addColorStop(1,'rgba(255,240,80,0)');
-    ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(lpx+W*0.018,lpy-H*0.032,W*0.04,0,Math.PI*2); ctx.fill();
-  }
-
-  // RIGHT CORNER: newsstand + pedestrians
-  {
-    const rx=W*0.84, ry=H*0.91;
-    // Newsstand kiosk
-    ctx.fillStyle='#1a4a1a';
-    ctx.beginPath(); ctx.rect(rx-W*0.025,ry-H*0.055,W*0.055,H*0.06); ctx.fill();
-    // Awning
-    ctx.fillStyle='#CC2200';
-    ctx.beginPath(); ctx.moveTo(rx-W*0.03,ry-H*0.055); ctx.lineTo(rx+W*0.03,ry-H*0.055); ctx.lineTo(rx+W*0.028,ry-H*0.064); ctx.lineTo(rx-W*0.028,ry-H*0.064); ctx.closePath(); ctx.fill();
-    // White stripes on awning
-    ctx.fillStyle='#fff'; ctx.globalAlpha=0.3;
-    for(let i=0;i<4;i++){ ctx.fillRect(rx-W*0.027+i*W*0.013,ry-H*0.064,W*0.006,H*0.01); }
-    ctx.globalAlpha=1;
-    // Magazine covers (colourful)
-    [[W*0.008,H*0.01,'#FFD700'],[W*0.021,H*0.01,'#FF4444'],[W*0.008,H*0.023,'#44AAFF'],[-W*0.008,H*0.01,'#44BB44']].forEach(([dx,dy,col])=>{
-      ctx.fillStyle=col; ctx.fillRect(rx+dx-W*0.006,ry-H*0.048+dy,W*0.012,H*0.015);
+  // ── SIDES: exposed brass pipe + gear clusters ──
+  // Left side pipe column
+  const pipeCol='#7a4810', pipeBright='#c07828';
+  ctx.fillStyle=pipeCol;
+  ctx.fillRect(0, H*0.23, W*0.038, H*0.77);
+  // Pipe highlight
+  ctx.fillStyle='rgba(200,130,40,0.18)';
+  ctx.fillRect(W*0.010, H*0.23, W*0.010, H*0.77);
+  // Pipe bands/rivets left
+  for(let y=H*0.30;y<H*0.96;y+=H*0.085){
+    ctx.fillStyle=pipeBright; ctx.fillRect(0,y,W*0.038,H*0.012);
+    // Rivets
+    ctx.fillStyle='#e09040';
+    [W*0.006,W*0.018,W*0.030].forEach(rx3=>{
+      ctx.beginPath(); ctx.arc(rx3,y+H*0.006,2.5,0,Math.PI*2); ctx.fill();
     });
-    // "OPEN" sign
-    ctx.fillStyle='#AAFFAA'; ctx.font=`bold ${H*0.013}px Arial`;
-    ctx.textAlign='center'; ctx.fillText('OPEN',rx,ry-H*0.038);
-
-    // Pedestrians — little figures
-    function person(px,py,coat) {
-      ctx.fillStyle=coat;
-      // body
-      ctx.beginPath(); ctx.ellipse(px,py-H*0.018,W*0.007,H*0.016,0,0,Math.PI*2); ctx.fill();
-      // head
-      ctx.fillStyle='#FFCC99';
-      ctx.beginPath(); ctx.arc(px,py-H*0.038,W*0.007,0,Math.PI*2); ctx.fill();
-      // legs
-      ctx.strokeStyle='#333'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(px,py-H*0.005); ctx.lineTo(px-W*0.004,py+H*0.008); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(px,py-H*0.005); ctx.lineTo(px+W*0.004,py+H*0.01); ctx.stroke();
-    }
-    person(rx+W*0.04,ry,'#1a2a3a');
-    person(rx+W*0.055,ry,'#882222');
-    person(rx-W*0.04,ry,'#2a4a2a');
+  }
+  // Right side pipe column
+  ctx.fillStyle=pipeCol; ctx.fillRect(W*0.962, H*0.23, W*0.038, H*0.77);
+  ctx.fillStyle='rgba(200,130,40,0.18)';
+  ctx.fillRect(W*0.972, H*0.23, W*0.010, H*0.77);
+  for(let y=H*0.30;y<H*0.96;y+=H*0.085){
+    ctx.fillStyle=pipeBright; ctx.fillRect(W*0.962,y,W*0.038,H*0.012);
+    ctx.fillStyle='#e09040';
+    [W*0.968,W*0.980,W*0.992].forEach(rx3=>{
+      ctx.beginPath(); ctx.arc(rx3,y+H*0.006,2.5,0,Math.PI*2); ctx.fill();
+    });
   }
 
-  // Traffic light (right side, near oval edge)
+  // Large gear clusters on sides — outside oval
+  drawGear(W*0.019, H*0.36, W*0.048, W*0.018, 10, '#b06818', '#e09030');
+  drawGear(W*0.019, H*0.58, W*0.055, W*0.020, 12, '#c07828', '#f0aa40');
+  drawGear(W*0.019, H*0.78, W*0.042, W*0.015,  9, '#9a5818', '#d08828');
+
+  drawGear(W*0.981, H*0.32, W*0.050, W*0.018, 11, '#b06818', '#e09030');
+  drawGear(W*0.981, H*0.52, W*0.058, W*0.022, 12, '#c07828', '#f0aa40');
+  drawGear(W*0.981, H*0.72, W*0.044, W*0.016,  9, '#9a5818', '#d08828');
+
+  // Steam vents on sides (small pipe elbows venting steam)
+  function steamVent(vx,vy,facingRight){
+    const dir=facingRight?1:-1;
+    ctx.strokeStyle='#8a5820'; ctx.lineWidth=W*0.012; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(vx,vy); ctx.lineTo(vx+dir*W*0.020,vy);
+    ctx.lineTo(vx+dir*W*0.020,vy-H*0.020); ctx.stroke();
+    // steam puff
+    ctx.save(); ctx.globalAlpha=0.55;
+    steamCloud(vx+dir*W*0.020,vy-H*0.030,H*0.018,1);
+    ctx.restore();
+  }
+  steamVent(W*0.038, H*0.44, true);
+  steamVent(W*0.038, H*0.66, true);
+  steamVent(W*0.962, H*0.40, false);
+  steamVent(W*0.962, H*0.62, false);
+
+  // ── TOP CORNERS: large ornate cog + pressure gauge ──
+  // Left corner — big gear
+  drawGear(W*0.075, H*0.285, W*0.068, W*0.025, 12, '#b06818', '#f0a830');
+  // Pressure gauge face (circle with needle)
   {
-    const tlx=W*0.958, tly=H*0.45;
-    ctx.fillStyle='#333'; ctx.fillRect(tlx-W*0.006,tly-H*0.1,W*0.012,H*0.1);
-    ctx.fillStyle='#111'; ctx.beginPath(); ctx.rect(tlx-W*0.009,tly-H*0.105,W*0.018,H*0.06); ctx.fill();
-    // Red light (on)
-    ctx.fillStyle='#FF2200'; ctx.beginPath(); ctx.arc(tlx,tly-H*0.093,W*0.005,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#333';  ctx.beginPath(); ctx.arc(tlx,tly-H*0.078,W*0.005,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(tlx,tly-H*0.063,W*0.005,0,Math.PI*2); ctx.fill();
+    const gx=W*0.075, gy=H*0.285;
+    ctx.fillStyle='#e8d8a0'; ctx.beginPath(); ctx.arc(gx,gy,W*0.016,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#8a5818'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(gx,gy,W*0.016,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='#cc2200'; ctx.lineWidth=2; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(gx,gy); ctx.lineTo(gx+W*0.010,gy-W*0.010); ctx.stroke();
+    ctx.fillStyle='#333'; ctx.beginPath(); ctx.arc(gx,gy,2,0,Math.PI*2); ctx.fill();
+  }
+
+  // Right corner — big gear
+  drawGear(W*0.925, H*0.285, W*0.068, W*0.025, 12, '#b06818', '#f0a830');
+  {
+    const gx=W*0.925, gy=H*0.285;
+    ctx.fillStyle='#e8d8a0'; ctx.beginPath(); ctx.arc(gx,gy,W*0.016,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#8a5818'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(gx,gy,W*0.016,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='#cc2200'; ctx.lineWidth=2; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(gx,gy); ctx.lineTo(gx-W*0.008,gy-W*0.012); ctx.stroke();
+    ctx.fillStyle='#333'; ctx.beginPath(); ctx.arc(gx,gy,2,0,Math.PI*2); ctx.fill();
+  }
+
+  // ── BOTTOM CORNERS ──
+  // Bottom-left: brass diving helmet
+  {
+    const hx=W*0.115, hy=H*0.950;
+    propShadow(hx,hy+H*0.006,W*0.095,H*0.010);
+    // Collar/base plate
+    ctx.fillStyle='#8a5010';
+    ctx.beginPath(); ctx.ellipse(hx,hy,W*0.055,H*0.014,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#c07828'; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(hx,hy,W*0.055,H*0.014,0,0,Math.PI*2); ctx.stroke();
+    // Bolts on collar
+    for(let b=0;b<6;b++){
+      const ba=b/6*Math.PI*2;
+      ctx.fillStyle='#e09030';
+      ctx.beginPath(); ctx.arc(hx+Math.cos(ba)*W*0.048,hy+Math.sin(ba)*H*0.011,3,0,Math.PI*2); ctx.fill();
+    }
+    // Helmet dome
+    const helmG=ctx.createRadialGradient(hx-W*0.015,hy-H*0.060,0,hx,hy-H*0.035,W*0.055);
+    helmG.addColorStop(0,'#f0c060'); helmG.addColorStop(0.4,'#c07828'); helmG.addColorStop(1,'#6a3810');
+    ctx.fillStyle=helmG;
+    ctx.beginPath();
+    ctx.moveTo(hx-W*0.048,hy);
+    ctx.bezierCurveTo(hx-W*0.052,hy-H*0.045, hx-W*0.040,hy-H*0.100, hx,hy-H*0.095);
+    ctx.bezierCurveTo(hx+W*0.040,hy-H*0.100, hx+W*0.052,hy-H*0.045, hx+W*0.048,hy);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#d08828'; ctx.lineWidth=2; ctx.stroke();
+    // Visor window
+    ctx.fillStyle='rgba(80,160,200,0.65)';
+    ctx.beginPath(); ctx.ellipse(hx,hy-H*0.048,W*0.028,H*0.026,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#e09030'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.ellipse(hx,hy-H*0.048,W*0.028,H*0.026,0,0,Math.PI*2); ctx.stroke();
+    // Highlight on visor
+    ctx.fillStyle='rgba(255,255,255,0.30)';
+    ctx.beginPath(); ctx.ellipse(hx-W*0.010,hy-H*0.055,W*0.010,H*0.008,-0.4,0,Math.PI*2); ctx.fill();
+    // Side bolts on dome
+    ctx.fillStyle='#e09030';
+    [[-W*0.042,H*0.020],[W*0.042,H*0.020],[-W*0.030,H*0.004],[W*0.030,H*0.004]].forEach(([dx,dy])=>{
+      ctx.beginPath(); ctx.arc(hx+dx,hy-H*0.048+dy,3.5,0,Math.PI*2); ctx.fill();
+    });
+  }
+
+  // Bottom-right: clockwork contraption (small clock tower + gears)
+  {
+    const cx=W*0.880, cy=H*0.950;
+    propShadow(cx,cy+H*0.006,W*0.090,H*0.010);
+    // Tower base
+    ctx.fillStyle='#5a3010';
+    ctx.fillRect(cx-W*0.022,cy-H*0.085,W*0.044,H*0.086);
+    ctx.strokeStyle='#9a6020'; ctx.lineWidth=1.5; ctx.strokeRect(cx-W*0.022,cy-H*0.085,W*0.044,H*0.086);
+    // Stone block lines
+    ctx.strokeStyle='rgba(80,40,10,0.6)'; ctx.lineWidth=1;
+    for(let r=1;r<4;r++){ ctx.beginPath(); ctx.moveTo(cx-W*0.022,cy-H*r*0.022); ctx.lineTo(cx+W*0.022,cy-H*r*0.022); ctx.stroke(); }
+    // Tower top arch
+    ctx.fillStyle='#7a4818';
+    ctx.beginPath(); ctx.moveTo(cx-W*0.026,cy-H*0.085); ctx.lineTo(cx-W*0.026,cy-H*0.100); ctx.arc(cx,cy-H*0.100,W*0.026,Math.PI,0,false); ctx.lineTo(cx+W*0.026,cy-H*0.085); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#b07030'; ctx.lineWidth=1.5; ctx.stroke();
+    // Clock face
+    ctx.fillStyle='#f0e0a0'; ctx.beginPath(); ctx.arc(cx,cy-H*0.060,W*0.018,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#8a5010'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(cx,cy-H*0.060,W*0.018,0,Math.PI*2); ctx.stroke();
+    // Clock hands
+    ctx.strokeStyle='#2a1000'; ctx.lineWidth=2; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(cx,cy-H*0.060); ctx.lineTo(cx+W*0.012,cy-H*0.068); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy-H*0.060); ctx.lineTo(cx-W*0.005,cy-H*0.050); ctx.stroke();
+    ctx.fillStyle='#cc2200'; ctx.beginPath(); ctx.arc(cx,cy-H*0.060,2.5,0,Math.PI*2); ctx.fill();
+    // Small decorative gears flanking tower
+    drawGear(cx-W*0.042, cy-H*0.030, W*0.022, W*0.008, 8, '#a06018', '#d08828');
+    drawGear(cx+W*0.042, cy-H*0.030, W*0.022, W*0.008, 8, '#a06018', '#d08828');
   }
 }
 
