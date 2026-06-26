@@ -6602,26 +6602,91 @@ function drawConstructionScene() {
 
   // ── TOP CORNERS: large orange traffic cones ──
   function bigCone(cx,cy){
-    propShadow(cx,cy+H*0.008,W*0.040,H*0.008);
-    // Cone body
+    const cH=H*0.080, baseHW=W*0.028, tipHW=W*0.004;
+    propShadow(cx+W*0.006,cy+H*0.008,W*0.044,H*0.009);
+    // Base plate (flat ellipse on ground)
+    ctx.fillStyle='#c02808';
+    ctx.beginPath(); ctx.ellipse(cx,cy,baseHW+W*0.006,H*0.009,0,0,Math.PI*2); ctx.fill();
+    // Helper: width of cone at fractional height t from base (0=base,1=tip)
+    const coneHW=(t)=> tipHW+(baseHW-tipHW)*(1-t);
+    // Draw cone as solid orange trapezoid first
     ctx.fillStyle='#f04010';
-    ctx.beginPath(); ctx.moveTo(cx,cy-H*0.075); ctx.lineTo(cx-W*0.030,cy); ctx.lineTo(cx+W*0.030,cy); ctx.closePath(); ctx.fill();
-    // White bands
-    ctx.fillStyle='rgba(255,255,255,0.90)';
-    [[0.30,0.10],[0.58,0.10]].forEach(([t,bh2])=>{
-      const ty=cy-H*0.075+H*0.075*t;
-      const hw=W*0.030*(1-(cy-H*0.075*t-cy+H*0.075)/(H*0.075));
-      const hw2=W*0.030*(t+bh2);
-      ctx.beginPath(); ctx.moveTo(cx-hw2,ty); ctx.lineTo(cx+hw2,ty); ctx.lineTo(cx+hw2+W*0.004,ty+H*0.075*bh2); ctx.lineTo(cx-hw2-W*0.004,ty+H*0.075*bh2); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx-tipHW, cy-cH);
+    ctx.lineTo(cx+tipHW, cy-cH);
+    ctx.lineTo(cx+baseHW, cy);
+    ctx.lineTo(cx-baseHW, cy);
+    ctx.closePath(); ctx.fill();
+    // White reflective bands — trapezoid slices at t=0.30 and t=0.56
+    ctx.fillStyle='rgba(255,255,255,0.92)';
+    [[0.30,0.13],[0.56,0.13]].forEach(([t,bw])=>{
+      const y0=cy-cH*t, y1=cy-cH*(t+bw);
+      const hw0=coneHW(t), hw1=coneHW(t+bw);
+      ctx.beginPath();
+      ctx.moveTo(cx-hw0,y0); ctx.lineTo(cx+hw0,y0);
+      ctx.lineTo(cx+hw1,y1); ctx.lineTo(cx-hw1,y1);
+      ctx.closePath(); ctx.fill();
     });
-    // Base plate
-    ctx.fillStyle='#d03008';
-    ctx.beginPath(); ctx.ellipse(cx,cy,W*0.032,H*0.008,0,0,Math.PI*2); ctx.fill();
+    // Subtle shading on right side to give 3D roundness
+    const shade=ctx.createLinearGradient(cx-baseHW,0,cx+baseHW,0);
+    shade.addColorStop(0,'rgba(0,0,0,0.18)'); shade.addColorStop(0.45,'rgba(0,0,0,0)'); shade.addColorStop(1,'rgba(0,0,0,0.22)');
+    ctx.fillStyle=shade;
+    ctx.beginPath();
+    ctx.moveTo(cx-tipHW,cy-cH); ctx.lineTo(cx+tipHW,cy-cH);
+    ctx.lineTo(cx+baseHW,cy); ctx.lineTo(cx-baseHW,cy);
+    ctx.closePath(); ctx.fill();
+    // Tiny tip cap
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.ellipse(cx,cy-cH,tipHW,H*0.004,0,0,Math.PI*2); ctx.fill();
   }
-  bigCone(W*0.070, H*0.278);
-  bigCone(W*0.112, H*0.278);
-  bigCone(W*0.930, H*0.278);
-  bigCone(W*0.888, H*0.278);
+  bigCone(W*0.068, H*0.278);
+  bigCone(W*0.113, H*0.278);
+  bigCone(W*0.932, H*0.278);
+  bigCone(W*0.887, H*0.278);
+
+  // ── Floodlights mounted on scaffold sides ──
+  function floodlight(lx,ly,beamDir){
+    // Light body bracket
+    ctx.fillStyle='#444030';
+    ctx.fillRect(lx-W*0.008,ly-H*0.012,W*0.016,H*0.020);
+    // Lamp housing
+    ctx.fillStyle='#666050';
+    ctx.beginPath(); ctx.ellipse(lx+beamDir*W*0.008,ly,W*0.018,H*0.012,0,0,Math.PI*2); ctx.fill();
+    // Lamp lens glow
+    ctx.save(); ctx.shadowColor='#ffe060'; ctx.shadowBlur=14;
+    ctx.fillStyle='#fffacc';
+    ctx.beginPath(); ctx.ellipse(lx+beamDir*W*0.016,ly,W*0.008,H*0.007,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    // Light beam cone
+    const beamG=ctx.createRadialGradient(lx+beamDir*W*0.016,ly,0,lx+beamDir*W*0.016,ly,W*0.18);
+    beamG.addColorStop(0,'rgba(255,240,120,0.18)'); beamG.addColorStop(1,'rgba(255,220,80,0)');
+    ctx.fillStyle=beamG;
+    ctx.beginPath();
+    ctx.moveTo(lx+beamDir*W*0.016,ly);
+    ctx.lineTo(lx+beamDir*W*0.18,ly-H*0.06);
+    ctx.lineTo(lx+beamDir*W*0.18,ly+H*0.06);
+    ctx.closePath(); ctx.fill();
+  }
+  floodlight(W*0.036, H*0.380, 1);
+  floodlight(W*0.036, H*0.620, 1);
+  floodlight(W*0.964, H*0.380, -1);
+  floodlight(W*0.964, H*0.620, -1);
+
+  // ── Danger barrier boards between corner cones ──
+  function dangerBoard(x1,x2,y){
+    const bw=x2-x1, bh=H*0.018;
+    // Board body — alternating yellow/black stripes
+    ctx.save(); ctx.beginPath(); ctx.rect(x1,y-bh,bw,bh); ctx.clip();
+    const stripeW=bw/7;
+    for(let s=0;s<8;s++){
+      ctx.fillStyle=s%2===0?'#f4c000':'#222222';
+      ctx.fillRect(x1+s*stripeW,y-bh,stripeW,bh);
+    }
+    ctx.restore();
+    ctx.strokeStyle='#333'; ctx.lineWidth=1; ctx.strokeRect(x1,y-bh,bw,bh);
+  }
+  dangerBoard(W*0.075, W*0.108, H*0.272);
+  dangerBoard(W*0.892, W*0.925, H*0.272);
 
   // ── BOTTOM-LEFT: JCB excavator bucket ──
   {
