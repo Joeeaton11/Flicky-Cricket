@@ -6056,19 +6056,60 @@ function drawSteampunkScene() {
   steamCloud(W*0.80,H*0.05,H*0.032,0.45);
   steamCloud(W*0.88,H*0.08,H*0.022,0.35);
 
-  // Victorian factory silhouettes on horizon
-  ctx.fillStyle='#150900';
-  [[0.05,0.10],[0.14,0.09],[0.28,0.12],[0.48,0.08],[0.65,0.11],[0.80,0.09],[0.92,0.10]].forEach(([fx,fh])=>{
-    ctx.fillRect(W*fx,H*(0.23-fh),W*0.07,H*fh);
+  // Victorian factory/rooftop silhouette — detailed, layered
+  // Back layer (darkest, distant)
+  ctx.fillStyle='#0d0600';
+  const backBuildings=[
+    [0.00,0.070,0.10],[0.10,0.060,0.08],[0.18,0.090,0.09],[0.27,0.055,0.07],
+    [0.34,0.100,0.11],[0.45,0.065,0.08],[0.52,0.080,0.10],[0.62,0.055,0.07],
+    [0.69,0.095,0.09],[0.78,0.060,0.08],[0.86,0.085,0.10],[0.94,0.065,0.07]
+  ];
+  backBuildings.forEach(([fx,fw,fh])=>{
+    ctx.fillRect(W*fx, H*(0.23-fh), W*fw, H*fh);
   });
-  // Factory chimneys (tall thin towers)
-  [[0.07,0.16],[0.16,0.15],[0.30,0.18],[0.44,0.14],[0.60,0.17],[0.75,0.15],[0.90,0.16]].forEach(([fx,fh])=>{
-    ctx.fillRect(W*fx-W*0.008,H*(0.23-fh),W*0.016,H*fh);
+  // Arched windows on back buildings
+  ctx.fillStyle='rgba(200,120,20,0.25)';
+  backBuildings.forEach(([fx,fw,fh])=>{
+    const bx=W*(fx+fw*0.5), by=H*(0.23-fh);
+    for(let wi=0;wi<Math.floor(fw*12);wi++){
+      const wx=W*fx+W*fw*0.15+wi*W*fw*0.28;
+      const wy=by+H*fh*0.25;
+      ctx.beginPath(); ctx.arc(wx,wy,W*fw*0.06,Math.PI,0,false);
+      ctx.lineTo(wx+W*fw*0.06,wy+H*0.012); ctx.lineTo(wx-W*fw*0.06,wy+H*0.012);
+      ctx.closePath(); ctx.fill();
+    }
+  });
+  // Mid layer
+  ctx.fillStyle='#160b02';
+  [
+    [0.00,0.080,0.07],[0.08,0.065,0.06],[0.16,0.075,0.085],[0.24,0.060,0.065],
+    [0.31,0.085,0.095],[0.40,0.070,0.075],[0.48,0.090,0.080],[0.58,0.065,0.070],
+    [0.65,0.080,0.090],[0.74,0.060,0.065],[0.81,0.090,0.085],[0.92,0.070,0.070]
+  ].forEach(([fx,fw,fh])=>{
+    ctx.fillRect(W*fx, H*(0.23-fh), W*fw, H*fh);
+    // Rooftop detail: crenellations on some
+    if(fh>0.08){
+      ctx.fillStyle='#0d0600';
+      for(let c=0;c<3;c++) ctx.fillRect(W*fx+W*fw*0.1+c*W*fw*0.28, H*(0.23-fh)-H*0.008, W*fw*0.12, H*0.008);
+      ctx.fillStyle='#160b02';
+    }
+  });
+  // Factory chimneys — varied heights, some with bands
+  const chimneys=[[0.06,0.165],[0.15,0.155],[0.29,0.185],[0.43,0.145],[0.57,0.175],[0.72,0.158],[0.88,0.168],[0.96,0.150]];
+  chimneys.forEach(([fx,fh])=>{
+    ctx.fillStyle='#1a0a02';
+    ctx.fillRect(W*fx-W*0.009,H*(0.23-fh),W*0.018,H*fh);
+    // Chimney bands
+    ctx.fillStyle='#2a1204';
+    [0.3,0.6].forEach(p=>ctx.fillRect(W*fx-W*0.010,H*(0.23-fh)+H*fh*p,W*0.020,H*0.004));
+    // Flared top
+    ctx.fillStyle='#1a0a02';
+    ctx.fillRect(W*fx-W*0.012,H*(0.23-fh)-H*0.005,W*0.024,H*0.008);
   });
   // Chimney smoke puffs
-  [[0.07,0.16],[0.30,0.18],[0.60,0.17],[0.90,0.16]].forEach(([fx,fh])=>{
+  [[0.06,0.165],[0.29,0.185],[0.57,0.175],[0.88,0.168]].forEach(([fx,fh])=>{
     steamCloud(W*fx,H*(0.23-fh)-H*0.012,H*0.018,0.7);
-    steamCloud(W*fx+W*0.012,H*(0.23-fh)-H*0.022,H*0.014,0.5);
+    steamCloud(W*fx+W*0.013,H*(0.23-fh)-H*0.024,H*0.013,0.5);
   });
 
   // Steampunk airship / zeppelin — large, right side
@@ -6110,7 +6151,56 @@ function drawSteampunkScene() {
 
   ctx.restore(); // end backdrop clip
 
+  // ── Cobblestone ground texture (outside oval, inside side pipes) ──
+  {
+    const stoneW=W*0.028, stoneH=H*0.022;
+    ctx.save();
+    // Clip to the full canvas minus the side pipes
+    ctx.beginPath(); ctx.rect(W*0.038,H*0.23,W*0.924,H*0.77); ctx.clip();
+    // Clip OUT the oval — draw stones only outside it
+    const FIELD_CX=W*0.5, FIELD_CY=H*0.60, FIELD_RX=W*0.46, FIELD_RY=H*0.37;
+    for(let row=0,y=H*0.23;y<H;y+=stoneH,row++){
+      for(let x=W*0.038+(row%2)*stoneW*0.5;x<W*0.962;x+=stoneW){
+        const cx2=x+stoneW/2, cy2=y+stoneH/2;
+        const ex=(cx2-FIELD_CX)/FIELD_RX, ey=(cy2-FIELD_CY)/FIELD_RY;
+        if(ex*ex+ey*ey<=1.04) continue; // inside oval — skip
+        const shade=((row+Math.floor((x-W*0.038)/stoneW))%2===0)?'#3a1e0a':'#2e1606';
+        ctx.fillStyle=shade; ctx.fillRect(x+1,y+1,stoneW-2,stoneH-2);
+        ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=1;
+        ctx.strokeRect(x+1,y+1,stoneW-2,stoneH-2);
+      }
+    }
+    ctx.restore();
+  }
+
   drawGroundRings('#7a5030','#5a3820','rgba(80,45,15,0.92)');
+
+  // ── Rivet ring around oval edge ──
+  {
+    const FIELD_CX=W*0.5, FIELD_CY=H*0.60, FIELD_RX=W*0.46, FIELD_RY=H*0.37;
+    const numRivets=36;
+    ctx.fillStyle='#d08828';
+    ctx.strokeStyle='#8a5010'; ctx.lineWidth=1.5;
+    for(let i=0;i<numRivets;i++){
+      const a=i/numRivets*Math.PI*2;
+      const rx2=FIELD_RX+W*0.008, ry2=FIELD_RY+H*0.006;
+      const rx3=FIELD_RX-W*0.008, ry3=FIELD_RY-H*0.006;
+      // Outer ring
+      const ox=FIELD_CX+Math.cos(a)*rx2, oy=FIELD_CY+Math.sin(a)*ry2;
+      ctx.beginPath(); ctx.arc(ox,oy,3.5,0,Math.PI*2);
+      ctx.fill(); ctx.stroke();
+      // Inner ring (alternating)
+      if(i%2===0){
+        const ix=FIELD_CX+Math.cos(a)*rx3, iy=FIELD_CY+Math.sin(a)*ry3;
+        ctx.beginPath(); ctx.arc(ix,iy,2.5,0,Math.PI*2);
+        ctx.fill(); ctx.stroke();
+      }
+    }
+    // Bold brass rim stroke over the oval edge
+    ctx.strokeStyle='rgba(180,100,20,0.55)'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.ellipse(FIELD_CX,FIELD_CY,FIELD_RX,FIELD_RY,0,0,Math.PI*2); ctx.stroke();
+  }
+
   drawSceneScoreboard();
 
   // ── Gear style A: flat-top teeth, 6 spokes ──
