@@ -4472,181 +4472,379 @@ function drawArcticScene() {
 }
 
 function drawJungleScene() {
-  // ── BACKDROP: clipped to top strip H*0.23 ──
+  const CX=W/2, CY=H*FIELD_CY, RX=W*FIELD_RX, RY=H*FIELD_RY;
+
+  // ── BACKDROP clipped to H*0.23 ──
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Bright tropical sky — vivid blue fading to hazy green at horizon
-  const sg = ctx.createLinearGradient(0,0,0,H*0.23);
-  sg.addColorStop(0,'#3ab8f0'); sg.addColorStop(0.55,'#60d0a8'); sg.addColorStop(1,'#78d870');
-  ctx.fillStyle = sg; ctx.fillRect(0,0,W,H*0.23);
+  // Deep jungle sky — dark emerald at top, hazy golden-green at horizon
+  const skyG=ctx.createLinearGradient(0,0,0,H*0.23);
+  skyG.addColorStop(0,'#0a1a08'); skyG.addColorStop(0.30,'#0e2e10'); skyG.addColorStop(0.65,'#1a5018'); skyG.addColorStop(0.85,'#4a8828'); skyG.addColorStop(1,'#88b840');
+  ctx.fillStyle=skyG; ctx.fillRect(0,0,W,H*0.23);
 
-  // Sun — blazing white-yellow in upper right
-  const sunX=W*0.82, sunY=H*0.055, sunR=W*0.055;
-  const sunG=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR*2.2);
-  sunG.addColorStop(0,'rgba(255,255,200,1)'); sunG.addColorStop(0.3,'rgba(255,230,80,0.7)');
-  sunG.addColorStop(1,'rgba(255,210,50,0)');
-  ctx.fillStyle=sunG; ctx.beginPath(); ctx.arc(sunX,sunY,sunR*2.2,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#fffff0'; ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI*2); ctx.fill();
-
-  // Distant misty jungle hills — soft blue-green
-  ctx.fillStyle='rgba(60,140,80,0.45)';
-  ctx.beginPath(); ctx.moveTo(0,H*0.23);
-  [0,0.1,0.2,0.32,0.44,0.56,0.66,0.76,0.88,1.0].forEach((fx,i)=>{
-    const hy=[0.23,0.14,0.18,0.11,0.16,0.10,0.15,0.12,0.17,0.23][i];
-    ctx.lineTo(W*fx,H*hy);
+  // God-rays — shafts of golden light breaking through canopy
+  ctx.save();
+  [[-0.12,0.55],[0.02,0.80],[0.18,0.60],[0.36,0.90],[0.58,0.70],[0.72,0.85],[0.88,0.65]].forEach(function(r){
+    const gx=W*r[0]+W*0.10, bw=W*r[1]*0.06;
+    const rg=ctx.createLinearGradient(gx,0,gx,H*0.23);
+    rg.addColorStop(0,'rgba(220,200,60,0.18)'); rg.addColorStop(0.6,'rgba(180,160,30,0.07)'); rg.addColorStop(1,'rgba(180,160,30,0)');
+    ctx.fillStyle=rg;
+    ctx.beginPath(); ctx.moveTo(gx-bw*0.2,0); ctx.lineTo(gx+bw*0.2,0); ctx.lineTo(gx+bw,H*0.23); ctx.lineTo(gx-bw,H*0.23); ctx.closePath(); ctx.fill();
   });
+  ctx.restore();
+
+  // Blazing sun — top-right, punching through the canopy
+  const sunX=W*0.78, sunY=H*0.065, sunR=W*0.040;
+  const sunHalo=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR*4.5);
+  sunHalo.addColorStop(0,'rgba(255,240,120,0.90)'); sunHalo.addColorStop(0.25,'rgba(255,210,60,0.50)');
+  sunHalo.addColorStop(0.55,'rgba(200,160,20,0.18)'); sunHalo.addColorStop(1,'rgba(200,160,20,0)');
+  ctx.fillStyle=sunHalo; ctx.beginPath(); ctx.arc(sunX,sunY,sunR*4.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff8d0'; ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI*2); ctx.fill();
+
+  // Ancient Mayan step-pyramid — centre of backdrop, half-hidden in mist
+  {
+    const px=W*0.50, py=H*0.23;
+    // Misty silhouette behind
+    ctx.fillStyle='rgba(20,55,15,0.35)';
+    ctx.beginPath(); ctx.moveTo(px-W*0.12,py); ctx.lineTo(px,H*0.09); ctx.lineTo(px+W*0.12,py); ctx.closePath(); ctx.fill();
+    // Pyramid steps — three tiers, dark stone
+    const steps=[[W*0.115,H*0.065],[W*0.080,H*0.048],[W*0.048,H*0.032]];
+    steps.forEach(function(s,i){
+      const sw=s[0], sh=s[1], sy=py-sh*(i+1);
+      ctx.fillStyle=i===0?'rgba(25,45,20,0.85)':i===1?'rgba(30,55,22,0.80)':'rgba(35,62,25,0.75)';
+      ctx.fillRect(px-sw, sy, sw*2, sh);
+      // Step ledge highlight
+      ctx.fillStyle='rgba(80,140,50,0.20)';
+      ctx.fillRect(px-sw, sy, sw*2, sh*0.18);
+    });
+    // Temple top — small platform
+    ctx.fillStyle='rgba(40,70,28,0.80)';
+    ctx.fillRect(px-W*0.028, py-H*0.173, W*0.056, H*0.028);
+    // Temple doorway — dark arch
+    ctx.fillStyle='rgba(0,0,0,0.70)';
+    ctx.beginPath(); ctx.moveTo(px-W*0.012,py-H*0.146); ctx.lineTo(px-W*0.012,py-H*0.160); ctx.quadraticCurveTo(px,py-H*0.168,px+W*0.012,py-H*0.160); ctx.lineTo(px+W*0.012,py-H*0.146); ctx.closePath(); ctx.fill();
+    // Mist around base
+    const mist=ctx.createRadialGradient(px,py,W*0.02,px,py,W*0.18);
+    mist.addColorStop(0,'rgba(100,200,80,0.25)'); mist.addColorStop(0.5,'rgba(80,160,60,0.12)'); mist.addColorStop(1,'rgba(80,160,60,0)');
+    ctx.fillStyle=mist; ctx.beginPath(); ctx.arc(px,py,W*0.18,0,Math.PI*2); ctx.fill();
+  }
+
+  // Dramatic waterfall — left of centre, plunging ribbon with rainbow
+  {
+    const wfx=W*0.28, wft=H*0.09, wfb=H*0.23;
+    // Water column
+    const wg=ctx.createLinearGradient(wfx-W*0.010,0,wfx+W*0.010,0);
+    wg.addColorStop(0,'rgba(160,220,255,0.55)'); wg.addColorStop(0.4,'rgba(220,245,255,0.90)'); wg.addColorStop(1,'rgba(160,220,255,0.55)');
+    ctx.fillStyle=wg;
+    ctx.beginPath(); ctx.moveTo(wfx-W*0.010,wft); ctx.lineTo(wfx-W*0.008,wfb); ctx.lineTo(wfx+W*0.008,wfb); ctx.lineTo(wfx+W*0.010,wft); ctx.closePath(); ctx.fill();
+    // Inner bright rush
+    ctx.fillStyle='rgba(240,252,255,0.85)';
+    ctx.beginPath(); ctx.moveTo(wfx-W*0.004,wft); ctx.lineTo(wfx-W*0.003,wfb); ctx.lineTo(wfx+W*0.003,wfb); ctx.lineTo(wfx+W*0.004,wft); ctx.closePath(); ctx.fill();
+    // Rainbow arc above mist
+    const rbCols=['rgba(255,60,60,0.50)','rgba(255,160,30,0.45)','rgba(240,230,30,0.45)','rgba(50,200,60,0.45)','rgba(30,130,255,0.45)','rgba(130,60,220,0.40)'];
+    rbCols.forEach(function(col,i){
+      ctx.strokeStyle=col; ctx.lineWidth=W*0.008;
+      ctx.beginPath(); ctx.arc(wfx, wfb, W*(0.055+i*0.012), Math.PI*0.72, Math.PI*0.28, true); ctx.stroke();
+    });
+    // Mist plume
+    const mg=ctx.createRadialGradient(wfx,wfb,0,wfx,wfb,W*0.10);
+    mg.addColorStop(0,'rgba(210,240,255,0.70)'); mg.addColorStop(0.5,'rgba(190,230,250,0.30)'); mg.addColorStop(1,'rgba(190,230,250,0)');
+    ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(wfx,wfb,W*0.10,0,Math.PI*2); ctx.fill();
+  }
+
+  // Dense jungle canopy — layered silhouettes filling the frame
+  // Far layer — misty blue-green
+  ctx.fillStyle='rgba(18,60,22,0.55)';
+  ctx.beginPath(); ctx.moveTo(0,H*0.23);
+  [[0.00,0.17],[0.06,0.13],[0.13,0.15],[0.20,0.11],[0.28,0.14],[0.35,0.10],[0.43,0.13],[0.50,0.09],
+   [0.57,0.12],[0.64,0.10],[0.71,0.13],[0.78,0.11],[0.85,0.14],[0.92,0.12],[1.00,0.16]].forEach(function(p){
+    ctx.lineTo(W*p[0],H*p[1]);
+  });
+  ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
+
+  // Mid canopy — richer green with rounded treetop bumps
+  ctx.fillStyle='rgba(12,48,16,0.82)';
+  ctx.beginPath(); ctx.moveTo(0,H*0.23);
+  [[0.00,0.20],[0.04,0.17],[0.09,0.19],[0.14,0.155],[0.20,0.17],[0.26,0.145],[0.32,0.165],[0.38,0.14],
+   [0.44,0.16],[0.50,0.145],[0.56,0.165],[0.62,0.14],[0.68,0.16],[0.74,0.145],[0.80,0.17],[0.86,0.155],[0.92,0.175],[1.00,0.20]].forEach(function(p){
+    ctx.lineTo(W*p[0],H*p[1]);
+  });
+  ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
+
+  // Near canopy — darkest, framing both sides dramatically
+  // Left framing foliage — bursting from corner
+  ctx.fillStyle='#061408';
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(W*0.24,0); ctx.lineTo(W*0.22,H*0.04);
+  ctx.quadraticCurveTo(W*0.18,H*0.08,W*0.14,H*0.12); ctx.quadraticCurveTo(W*0.08,H*0.16,W*0.00,H*0.23);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#0a2010';
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(W*0.16,0); ctx.lineTo(W*0.14,H*0.05);
+  ctx.quadraticCurveTo(W*0.10,H*0.10,W*0.05,H*0.17); ctx.quadraticCurveTo(W*0.02,H*0.20,0,H*0.23);
+  ctx.closePath(); ctx.fill();
+  // Right framing foliage
+  ctx.fillStyle='#061408';
+  ctx.beginPath(); ctx.moveTo(W,0); ctx.lineTo(W*0.76,0); ctx.lineTo(W*0.78,H*0.04);
+  ctx.quadraticCurveTo(W*0.82,H*0.08,W*0.86,H*0.12); ctx.quadraticCurveTo(W*0.92,H*0.16,W,H*0.23);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#0a2010';
+  ctx.beginPath(); ctx.moveTo(W,0); ctx.lineTo(W*0.84,0); ctx.lineTo(W*0.86,H*0.05);
+  ctx.quadraticCurveTo(W*0.90,H*0.10,W*0.95,H*0.17); ctx.quadraticCurveTo(W*0.98,H*0.20,W,H*0.23);
   ctx.closePath(); ctx.fill();
 
-  // Mid jungle ridge — richer green
-  ctx.fillStyle='rgba(30,110,40,0.80)';
-  ctx.beginPath(); ctx.moveTo(0,H*0.23);
-  [0,0.08,0.18,0.28,0.38,0.50,0.60,0.70,0.80,0.90,1.0].forEach((fx,i)=>{
-    const hy=[0.23,0.17,0.20,0.15,0.19,0.14,0.18,0.16,0.21,0.17,0.23][i];
-    ctx.lineTo(W*fx,H*hy);
+  // Foliage fringe along bottom of backdrop — lush layered leaves
+  ['#0e3c12','#145818','#1a6e20'].forEach(function(col,li){
+    ctx.fillStyle=col;
+    const offsets=[0.03,0.09,0.15,0.21,0.35,0.42,0.48,0.56,0.64,0.71,0.79,0.85,0.91,0.97];
+    offsets.forEach(function(fx){
+      const r=W*(0.040-li*0.005);
+      ctx.beginPath(); ctx.arc(W*fx, H*(0.232-li*0.003), r, Math.PI, 0); ctx.fill();
+    });
   });
-  ctx.closePath(); ctx.fill();
 
-  // Waterfall — left-centre, bright white ribbon dropping into mist
-  const wfx=W*0.35;
-  ctx.fillStyle='rgba(200,240,255,0.85)';
-  ctx.beginPath(); ctx.moveTo(wfx-W*0.012,H*0.11); ctx.lineTo(wfx-W*0.006,H*0.23); ctx.lineTo(wfx+W*0.006,H*0.23); ctx.lineTo(wfx+W*0.012,H*0.11); ctx.closePath(); ctx.fill();
-  // Mist pool at base
-  const mistG=ctx.createRadialGradient(wfx,H*0.225,0,wfx,H*0.225,W*0.07);
-  mistG.addColorStop(0,'rgba(220,245,255,0.75)'); mistG.addColorStop(1,'rgba(220,245,255,0)');
-  ctx.fillStyle=mistG; ctx.beginPath(); ctx.ellipse(wfx,H*0.225,W*0.07,H*0.018,0,0,Math.PI*2); ctx.fill();
-
-  // Foreground tree silhouettes — bold dark shapes, clearly readable
-  // Left trees
-  ctx.fillStyle='#0a2808';
-  ctx.beginPath(); ctx.moveTo(0,H*0.23); ctx.lineTo(0,H*0.10);
-  ctx.quadraticCurveTo(W*0.04,H*0.03,W*0.08,H*0.08); ctx.quadraticCurveTo(W*0.10,H*0.13,W*0.12,H*0.23); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#0e3210';
-  ctx.beginPath(); ctx.moveTo(W*0.09,H*0.23); ctx.lineTo(W*0.10,H*0.12);
-  ctx.quadraticCurveTo(W*0.145,H*0.06,W*0.18,H*0.11); ctx.quadraticCurveTo(W*0.19,H*0.16,W*0.20,H*0.23); ctx.closePath(); ctx.fill();
-  // Right trees
-  ctx.fillStyle='#0a2808';
-  ctx.beginPath(); ctx.moveTo(W,H*0.23); ctx.lineTo(W,H*0.10);
-  ctx.quadraticCurveTo(W*0.96,H*0.03,W*0.92,H*0.08); ctx.quadraticCurveTo(W*0.90,H*0.13,W*0.88,H*0.23); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#0e3210';
-  ctx.beginPath(); ctx.moveTo(W*0.91,H*0.23); ctx.lineTo(W*0.90,H*0.12);
-  ctx.quadraticCurveTo(W*0.855,H*0.06,W*0.82,H*0.11); ctx.quadraticCurveTo(W*0.81,H*0.16,W*0.80,H*0.23); ctx.closePath(); ctx.fill();
-
-  // Bright tropical foliage fringe along the bottom edge
-  ctx.fillStyle='#145c18';
-  [0.04,0.13,0.22,0.46,0.54,0.64,0.73].forEach(fx=>{
-    ctx.beginPath(); ctx.arc(W*fx,H*0.228,W*0.048,Math.PI,0); ctx.fill();
-  });
-  ctx.fillStyle='#228c2a';
-  [0.07,0.17,0.27,0.50,0.59,0.68,0.77].forEach(fx=>{
-    ctx.beginPath(); ctx.arc(W*fx,H*0.232,W*0.038,Math.PI,0); ctx.fill();
+  // Two macaw birds visible in canopy — left side
+  [[W*0.08,H*0.07,'#e82020','#1a90e0','#f0d020'],[W*0.14,H*0.055,'#1a80d8','#22c040','#f0a020']].forEach(function(b){
+    const bx=b[0],by=b[1],bc=b[2],wc=b[3],tc=b[4];
+    // body
+    ctx.fillStyle=bc; ctx.beginPath(); ctx.ellipse(bx,by,W*0.016,H*0.012,-0.3,0,Math.PI*2); ctx.fill();
+    // wing
+    ctx.fillStyle=wc; ctx.beginPath(); ctx.ellipse(bx-W*0.008,by+H*0.006,W*0.020,H*0.008,0.4,0,Math.PI*2); ctx.fill();
+    // tail
+    ctx.fillStyle=tc; ctx.beginPath(); ctx.moveTo(bx-W*0.018,by+H*0.002); ctx.lineTo(bx-W*0.038,by+H*0.010); ctx.lineTo(bx-W*0.016,by+H*0.010); ctx.closePath(); ctx.fill();
+    // head
+    ctx.fillStyle=bc; ctx.beginPath(); ctx.arc(bx+W*0.014,by-H*0.007,W*0.009,0,Math.PI*2); ctx.fill();
+    // beak
+    ctx.fillStyle='#c8a020'; ctx.beginPath(); ctx.moveTo(bx+W*0.022,by-H*0.007); ctx.lineTo(bx+W*0.030,by-H*0.004); ctx.lineTo(bx+W*0.022,by-H*0.002); ctx.closePath(); ctx.fill();
   });
 
   ctx.restore(); // end backdrop clip
 
-  drawGroundRings('#2a6820','#1a4a18','rgba(12,30,8,0.92)');
+  // ── GROUND — dark jungle green ──
+  drawGroundRings('#2a6820','#1a4a18','rgba(10,28,6,0.92)');
   drawSceneScoreboard();
 
-  // ── SIDE TREE TRUNKS: narrow, stay within x<W*0.038 and x>W*0.962 ──
-  // Left trunk
-  ctx.fillStyle='#3a2410';
-  ctx.beginPath();
-  ctx.moveTo(W*0.000,H*0.23); ctx.quadraticCurveTo(W*0.010,H*0.38,W*0.005,H*0.55);
-  ctx.quadraticCurveTo(W*0.008,H*0.70,W*0.002,H*0.88);
-  ctx.lineTo(W*0.028,H*0.88); ctx.quadraticCurveTo(W*0.024,H*0.68,W*0.028,H*0.52);
-  ctx.quadraticCurveTo(W*0.030,H*0.36,W*0.022,H*0.23);
-  ctx.closePath(); ctx.fill();
-  // bark texture
-  ctx.strokeStyle='#5a3a1a'; ctx.lineWidth=1; ctx.globalAlpha=0.5;
-  ctx.beginPath(); ctx.moveTo(W*0.010,H*0.25); ctx.lineTo(W*0.012,H*0.50);
-  ctx.moveTo(W*0.018,H*0.27); ctx.lineTo(W*0.016,H*0.52); ctx.stroke();
-  ctx.globalAlpha=1;
-  // Root flare left
-  ctx.fillStyle='#3a2410';
-  ctx.beginPath(); ctx.moveTo(W*0.000,H*0.88); ctx.quadraticCurveTo(-4,H*0.93,-4,H*0.98); ctx.quadraticCurveTo(W*0.010,H*0.93,W*0.015,H*0.89); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(W*0.028,H*0.88); ctx.quadraticCurveTo(W*0.038,H*0.92,W*0.038,H*0.97); ctx.quadraticCurveTo(W*0.025,H*0.92,W*0.020,H*0.89); ctx.closePath(); ctx.fill();
-
-  // Right trunk (mirror)
-  ctx.fillStyle='#2e4010';
-  ctx.beginPath();
-  ctx.moveTo(W,H*0.23); ctx.quadraticCurveTo(W*0.990,H*0.38,W*0.995,H*0.55);
-  ctx.quadraticCurveTo(W*0.992,H*0.70,W*0.998,H*0.88);
-  ctx.lineTo(W*0.972,H*0.88); ctx.quadraticCurveTo(W*0.976,H*0.68,W*0.972,H*0.52);
-  ctx.quadraticCurveTo(W*0.970,H*0.36,W*0.978,H*0.23);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle='#4a601a'; ctx.lineWidth=1; ctx.globalAlpha=0.5;
-  ctx.beginPath(); ctx.moveTo(W*0.990,H*0.25); ctx.lineTo(W*0.988,H*0.50);
-  ctx.moveTo(W*0.982,H*0.27); ctx.lineTo(W*0.984,H*0.52); ctx.stroke();
-  ctx.globalAlpha=1;
-  ctx.fillStyle='#2e4010';
-  ctx.beginPath(); ctx.moveTo(W,H*0.88); ctx.quadraticCurveTo(W+4,H*0.93,W+4,H*0.98); ctx.quadraticCurveTo(W*0.990,H*0.93,W*0.985,H*0.89); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(W*0.972,H*0.88); ctx.quadraticCurveTo(W*0.962,H*0.92,W*0.962,H*0.97); ctx.quadraticCurveTo(W*0.975,H*0.92,W*0.980,H*0.89); ctx.closePath(); ctx.fill();
-
-  // ── HANGING VINES: cascade from canopy edge, hug narrow side margins ──
-  ctx.strokeStyle='#1e5010'; ctx.lineWidth=3; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(W*0.015,H*0.23); ctx.quadraticCurveTo(W*0.022,H*0.46,W*0.012,H*0.72); ctx.stroke();
-  ctx.strokeStyle='#2a6818'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(W*0.985,H*0.23); ctx.quadraticCurveTo(W*0.978,H*0.46,W*0.988,H*0.72); ctx.stroke();
-  // Leaf clusters on vines — kept to x<W*0.035 and x>W*0.965
-  ctx.fillStyle='#1a5014';
-  for(let y=H*0.30;y<H*0.68;y+=H*0.10){
-    ctx.beginPath(); ctx.ellipse(W*0.015,y,W*0.020,H*0.010,0,0,Math.PI*2); ctx.fill();
-  }
-  ctx.fillStyle='#246c1a';
-  for(let y=H*0.32;y<H*0.70;y+=H*0.11){
-    ctx.beginPath(); ctx.ellipse(W*0.985,y,W*0.018,H*0.009,0,0,Math.PI*2); ctx.fill();
+  // ── LEFT TRUNK — thick mossy tree, full height side margin ──
+  {
+    const tg=ctx.createLinearGradient(0,0,W*0.036,0);
+    tg.addColorStop(0,'#1a0e06'); tg.addColorStop(0.4,'#3a2010'); tg.addColorStop(0.75,'#2e1a0a'); tg.addColorStop(1,'#1a0e06');
+    ctx.fillStyle=tg;
+    ctx.beginPath();
+    ctx.moveTo(0,H*0.23);
+    ctx.bezierCurveTo(W*0.028,H*0.35,W*0.022,H*0.50,W*0.026,H*0.65);
+    ctx.bezierCurveTo(W*0.024,H*0.78,W*0.030,H*0.88,W*0.024,H);
+    ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
+    // Bark ridges
+    ctx.strokeStyle='rgba(90,55,20,0.50)'; ctx.lineWidth=1.5;
+    [[H*0.26,H*0.48],[H*0.52,H*0.72],[H*0.76,H*0.95]].forEach(function(seg){
+      ctx.beginPath(); ctx.moveTo(W*0.008,seg[0]); ctx.quadraticCurveTo(W*0.018,seg[0]+H*0.06,W*0.012,seg[1]); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(W*0.020,seg[0]+H*0.01); ctx.quadraticCurveTo(W*0.028,seg[0]+H*0.07,W*0.022,seg[1]+H*0.01); ctx.stroke();
+    });
+    // Moss patches
+    ctx.fillStyle='rgba(40,100,20,0.55)';
+    [[W*0.010,H*0.38],[W*0.016,H*0.55],[W*0.012,H*0.72]].forEach(function(m){
+      ctx.beginPath(); ctx.ellipse(m[0],m[1],W*0.016,H*0.022,0.3,0,Math.PI*2); ctx.fill();
+    });
+    // Root flares
+    ctx.fillStyle='#2a1808';
+    ctx.beginPath(); ctx.moveTo(0,H*0.88); ctx.quadraticCurveTo(W*0.018,H*0.92,W*0.024,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(W*0.028,H*0.90); ctx.quadraticCurveTo(W*0.040,H*0.94,W*0.042,H); ctx.lineTo(W*0.024,H); ctx.closePath(); ctx.fill();
   }
 
-  // Tree frog on left trunk (x=W*0.018, safe — oval edge at y=H*0.52 is x=W*0.057)
-  ctx.fillStyle='#3ab830'; ctx.beginPath(); ctx.ellipse(W*0.018,H*0.50,4,3,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(W*0.018-2.5,H*0.497,1.5,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(W*0.018+2.5,H*0.497,1.5,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#0a0a0a'; ctx.beginPath(); ctx.arc(W*0.018-2.5,H*0.496,0.6,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(W*0.018+2.5,H*0.496,0.6,0,Math.PI*2); ctx.fill();
+  // ── RIGHT TRUNK ──
+  {
+    const tg=ctx.createLinearGradient(W*0.964,0,W,0);
+    tg.addColorStop(0,'#1a0e06'); tg.addColorStop(0.25,'#2e1a0a'); tg.addColorStop(0.6,'#3a2010'); tg.addColorStop(1,'#1a0e06');
+    ctx.fillStyle=tg;
+    ctx.beginPath();
+    ctx.moveTo(W,H*0.23);
+    ctx.bezierCurveTo(W*0.972,H*0.35,W*0.978,H*0.50,W*0.974,H*0.65);
+    ctx.bezierCurveTo(W*0.976,H*0.78,W*0.970,H*0.88,W*0.976,H);
+    ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(90,55,20,0.50)'; ctx.lineWidth=1.5;
+    [[H*0.27,H*0.49],[H*0.53,H*0.73]].forEach(function(seg){
+      ctx.beginPath(); ctx.moveTo(W*0.992,seg[0]); ctx.quadraticCurveTo(W*0.982,seg[0]+H*0.06,W*0.988,seg[1]); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(W*0.980,seg[0]+H*0.01); ctx.quadraticCurveTo(W*0.972,seg[0]+H*0.07,W*0.978,seg[1]+H*0.01); ctx.stroke();
+    });
+    ctx.fillStyle='rgba(40,100,20,0.55)';
+    [[W*0.990,H*0.40],[W*0.984,H*0.58],[W*0.988,H*0.74]].forEach(function(m){
+      ctx.beginPath(); ctx.ellipse(m[0],m[1],W*0.016,H*0.022,0.3,0,Math.PI*2); ctx.fill();
+    });
+    ctx.fillStyle='#2a1808';
+    ctx.beginPath(); ctx.moveTo(W,H*0.88); ctx.quadraticCurveTo(W*0.982,H*0.92,W*0.976,H); ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(W*0.972,H*0.90); ctx.quadraticCurveTo(W*0.960,H*0.94,W*0.958,H); ctx.lineTo(W*0.976,H); ctx.closePath(); ctx.fill();
+  }
 
-  // ── PROPS: tiki totem bottom-left, jungle drum bottom-right ──
-  // Verify outside oval: totem W*0.13,H*0.93 → ((0.13-0.5)/0.46)²+((0.93-0.60)/0.37)²=0.638+0.795=1.43 ✓
-  const lx=W*0.13, ly=H*0.93;
-  // Monstera leaves around totem base
-  ctx.fillStyle='#1a5012';
-  ctx.save(); ctx.translate(lx-W*0.06,ly+H*0.008);
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-6,-4,-9,-14,-5,-22); ctx.bezierCurveTo(-1,-15,3,-16,6,-24); ctx.bezierCurveTo(8,-14,8,-6,3,0); ctx.closePath(); ctx.fill();
-  ctx.restore();
-  ctx.fillStyle='#256818';
-  ctx.save(); ctx.translate(lx+W*0.06,ly+H*0.008); ctx.scale(-1,1);
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-6,-4,-9,-14,-5,-22); ctx.bezierCurveTo(-1,-15,3,-16,6,-24); ctx.bezierCurveTo(8,-14,8,-6,3,0); ctx.closePath(); ctx.fill();
-  ctx.restore();
-  propShadow(lx,ly+H*0.012,W*0.065,H*0.010);
-  // Tiki totem stack
-  ['#9a6c34','#c0392b','#caa040','#8a3828'].forEach((c,i)=>{
-    ctx.fillStyle=c; ctx.fillRect(lx-W*0.032,ly-H*0.105+i*H*0.027,W*0.064,H*0.027);
+  // ── VINES with tropical orchid flowers ──
+  // Left vine
+  ctx.strokeStyle='#1a5010'; ctx.lineWidth=3.5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(W*0.012,H*0.23); ctx.bezierCurveTo(W*0.028,H*0.42,W*0.008,H*0.58,W*0.018,H*0.78); ctx.stroke();
+  ctx.strokeStyle='#246016'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(W*0.022,H*0.25); ctx.bezierCurveTo(W*0.034,H*0.40,W*0.014,H*0.55,W*0.020,H*0.70); ctx.stroke();
+  // Right vine
+  ctx.strokeStyle='#1a5010'; ctx.lineWidth=3.5;
+  ctx.beginPath(); ctx.moveTo(W*0.988,H*0.23); ctx.bezierCurveTo(W*0.972,H*0.42,W*0.992,H*0.58,W*0.982,H*0.78); ctx.stroke();
+  ctx.strokeStyle='#246016'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(W*0.978,H*0.25); ctx.bezierCurveTo(W*0.966,H*0.40,W*0.986,H*0.55,W*0.980,H*0.70); ctx.stroke();
+
+  // Leaf + orchid clusters on vines
+  [[W*0.014,H*0.32],[W*0.020,H*0.50],[W*0.016,H*0.66]].forEach(function(pt,i){
+    // Big leaf
+    ctx.fillStyle=i%2===0?'#1a5814':'#226020';
+    ctx.save(); ctx.translate(pt[0],pt[1]); ctx.rotate(-0.4);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(W*0.024,-H*0.018,W*0.040,-H*0.022,W*0.040,-H*0.012); ctx.bezierCurveTo(W*0.040,-H*0.002,W*0.020,H*0.005,0,0); ctx.fill();
+    ctx.restore();
+    // Orchid flower
+    if(i===1){
+      ctx.fillStyle='#d040a0';
+      ctx.beginPath(); ctx.arc(pt[0]+W*0.018,pt[1]-H*0.015,W*0.009,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#f080c0';
+      [[W*0.006,0],[0,W*0.006],[-W*0.006,0],[0,-W*0.006]].forEach(function(o){
+        ctx.beginPath(); ctx.ellipse(pt[0]+W*0.018+o[0],pt[1]-H*0.015+o[1],W*0.006,W*0.003,0,0,Math.PI*2); ctx.fill();
+      });
+      ctx.fillStyle='#ffe060'; ctx.beginPath(); ctx.arc(pt[0]+W*0.018,pt[1]-H*0.015,W*0.003,0,Math.PI*2); ctx.fill();
+    }
   });
-  // Totem face
-  ctx.fillStyle='#1a1008'; ctx.beginPath(); ctx.arc(lx-W*0.012,ly-H*0.09,2,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(lx+W*0.012,ly-H*0.09,2,0,Math.PI*2); ctx.fill();
-
-  // Jungle drum bottom-right
-  // Verify: drum W*0.87,H*0.92 → ((0.87-0.5)/0.46)²+((0.92-0.60)/0.37)²=0.647+0.748=1.40 ✓
-  const drx=W*0.87, dry=H*0.92;
-  ctx.fillStyle='#246818';
-  ctx.save(); ctx.translate(drx-W*0.065,dry+H*0.008);
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-6,-4,-9,-14,-5,-22); ctx.bezierCurveTo(-1,-15,3,-16,6,-24); ctx.bezierCurveTo(8,-14,8,-6,3,0); ctx.closePath(); ctx.fill();
-  ctx.restore();
-  propShadow(drx,dry+H*0.016,W*0.062,H*0.010);
-  ctx.fillStyle='#7a4a1c';
-  ctx.beginPath(); ctx.moveTo(drx-W*0.034,dry+H*0.018); ctx.lineTo(drx-W*0.038,dry-H*0.020); ctx.quadraticCurveTo(drx,dry-H*0.032,drx+W*0.038,dry-H*0.020); ctx.lineTo(drx+W*0.034,dry+H*0.018); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='#c09858'; ctx.beginPath(); ctx.ellipse(drx,dry-H*0.020,W*0.038,H*0.013,0,0,Math.PI*2); ctx.fill();
-  // Drum straps
-  ctx.strokeStyle='#4a2a08'; ctx.lineWidth=2;
-  for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.moveTo(drx+i*W*0.02,dry-H*0.020); ctx.lineTo(drx+i*W*0.018,dry+H*0.018); ctx.stroke(); }
-
-  // Fireflies: only along side margins, outside oval
-  ctx.fillStyle='#f8f060'; ctx.globalAlpha=0.75;
-  // Left side: x=W*0.025, y=H*0.40 → ((0.025-0.5)/0.46)²+((0.4-0.6)/0.37)²=1.065+0.292=1.36 ✓
-  [[0.025,0.40],[0.028,0.62],[0.972,0.45],[0.975,0.67]].forEach(([fx,fy])=>{
-    ctx.beginPath(); ctx.arc(W*fx,H*fy,1.8,0,Math.PI*2); ctx.fill();
+  [[W*0.986,H*0.34],[W*0.980,H*0.52],[W*0.984,H*0.68]].forEach(function(pt,i){
+    ctx.fillStyle=i%2===0?'#226020':'#1a5814';
+    ctx.save(); ctx.translate(pt[0],pt[1]); ctx.rotate(0.4);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-W*0.024,-H*0.018,-W*0.040,-H*0.022,-W*0.040,-H*0.012); ctx.bezierCurveTo(-W*0.040,-H*0.002,-W*0.020,H*0.005,0,0); ctx.fill();
+    ctx.restore();
+    if(i===1){
+      ctx.fillStyle='#e05010';
+      ctx.beginPath(); ctx.arc(pt[0]-W*0.018,pt[1]-H*0.015,W*0.009,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#f07840';
+      [[-W*0.006,0],[0,W*0.006],[W*0.006,0],[0,-W*0.006]].forEach(function(o){
+        ctx.beginPath(); ctx.ellipse(pt[0]-W*0.018+o[0],pt[1]-H*0.015+o[1],W*0.006,W*0.003,0,0,Math.PI*2); ctx.fill();
+      });
+      ctx.fillStyle='#ffe060'; ctx.beginPath(); ctx.arc(pt[0]-W*0.018,pt[1]-H*0.015,W*0.003,0,Math.PI*2); ctx.fill();
+    }
   });
-  ctx.globalAlpha=1;
+
+  // ── SNAKE coiled on left trunk ──
+  {
+    const sx=W*0.016, sy=H*0.440;
+    ctx.strokeStyle='#2a7a18'; ctx.lineWidth=W*0.014; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(sx,sy-H*0.040); ctx.bezierCurveTo(sx+W*0.018,sy-H*0.020,sx-W*0.010,sy+H*0.010,sx+W*0.012,sy+H*0.030); ctx.stroke();
+    ctx.strokeStyle='#48a82a'; ctx.lineWidth=W*0.008;
+    ctx.beginPath(); ctx.moveTo(sx,sy-H*0.040); ctx.bezierCurveTo(sx+W*0.018,sy-H*0.020,sx-W*0.010,sy+H*0.010,sx+W*0.012,sy+H*0.030); ctx.stroke();
+    // Yellow stripe
+    ctx.strokeStyle='rgba(220,200,20,0.70)'; ctx.lineWidth=W*0.003;
+    ctx.beginPath(); ctx.moveTo(sx,sy-H*0.038); ctx.bezierCurveTo(sx+W*0.016,sy-H*0.018,sx-W*0.008,sy+H*0.012,sx+W*0.010,sy+H*0.028); ctx.stroke();
+    // Head
+    ctx.fillStyle='#2a7a18';
+    ctx.beginPath(); ctx.ellipse(sx+W*0.016,sy+H*0.034,W*0.010,W*0.007,0.6,0,Math.PI*2); ctx.fill();
+    // Forked tongue
+    ctx.strokeStyle='#e03030'; ctx.lineWidth=1.0;
+    ctx.beginPath(); ctx.moveTo(sx+W*0.024,sy+H*0.034); ctx.lineTo(sx+W*0.030,sy+H*0.030); ctx.moveTo(sx+W*0.024,sy+H*0.034); ctx.lineTo(sx+W*0.030,sy+H*0.038); ctx.stroke();
+    // Eye
+    ctx.fillStyle='#f0c020'; ctx.beginPath(); ctx.arc(sx+W*0.018,sy+H*0.031,W*0.003,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#0a0a0a'; ctx.beginPath(); ctx.arc(sx+W*0.018,sy+H*0.031,W*0.0015,0,Math.PI*2); ctx.fill();
+  }
+
+  // ── GORILLA — bottom-left corner ──
+  // Position: W*0.11, H*0.895. Check oval: ((0.11-0.5)/0.46)²+((0.895-0.60)/0.37)²=0.716+0.635=1.35 ✓
+  {
+    const gx=W*0.115, gy=H*0.900, sc=H*0.052;
+    propShadow(gx, gy+sc*0.38, sc*1.2, sc*0.18);
+    // Crouching body
+    ctx.fillStyle='#1a1410';
+    ctx.beginPath(); ctx.ellipse(gx, gy, sc*0.60, sc*0.45, 0, 0, Math.PI*2); ctx.fill();
+    // Silver-back patch
+    ctx.fillStyle='rgba(160,150,140,0.40)';
+    ctx.beginPath(); ctx.ellipse(gx, gy-sc*0.10, sc*0.30, sc*0.22, 0, 0, Math.PI*2); ctx.fill();
+    // Long arms reaching forward (knuckle-walk pose)
+    ctx.fillStyle='#1a1410';
+    // Left arm
+    ctx.beginPath(); ctx.moveTo(gx-sc*0.50,gy-sc*0.10); ctx.bezierCurveTo(gx-sc*0.70,gy+sc*0.10,gx-sc*0.75,gy+sc*0.35,gx-sc*0.65,gy+sc*0.40); ctx.lineTo(gx-sc*0.52,gy+sc*0.36); ctx.bezierCurveTo(gx-sc*0.58,gy+sc*0.18,gx-sc*0.52,gy+sc*0.02,gx-sc*0.36,gy-sc*0.04); ctx.closePath(); ctx.fill();
+    // Right arm
+    ctx.beginPath(); ctx.moveTo(gx+sc*0.42,gy-sc*0.08); ctx.bezierCurveTo(gx+sc*0.62,gy+sc*0.12,gx+sc*0.68,gy+sc*0.36,gx+sc*0.58,gy+sc*0.40); ctx.lineTo(gx+sc*0.46,gy+sc*0.36); ctx.bezierCurveTo(gx+sc*0.52,gy+sc*0.16,gx+sc*0.46,gy+sc*0.00,gx+sc*0.30,gy-sc*0.04); ctx.closePath(); ctx.fill();
+    // Head
+    ctx.fillStyle='#1a1410';
+    ctx.beginPath(); ctx.arc(gx+sc*0.12, gy-sc*0.48, sc*0.36, 0, Math.PI*2); ctx.fill();
+    // Brow ridge
+    ctx.fillStyle='#0e0c08';
+    ctx.beginPath(); ctx.ellipse(gx+sc*0.12, gy-sc*0.60, sc*0.30, sc*0.10, 0, 0, Math.PI*2); ctx.fill();
+    // Face — lighter
+    ctx.fillStyle='#3a2e24';
+    ctx.beginPath(); ctx.ellipse(gx+sc*0.16, gy-sc*0.45, sc*0.22, sc*0.26, 0.1, 0, Math.PI*2); ctx.fill();
+    // Eyes
+    ctx.fillStyle='#0a0806'; ctx.beginPath(); ctx.arc(gx+sc*0.04,gy-sc*0.52,sc*0.055,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(gx+sc*0.26,gy-sc*0.52,sc*0.055,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(gx+sc*0.02,gy-sc*0.54,sc*0.020,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(gx+sc*0.24,gy-sc*0.54,sc*0.020,0,Math.PI*2); ctx.fill();
+    // Nostrils
+    ctx.fillStyle='#0e0c08'; ctx.beginPath(); ctx.arc(gx+sc*0.10,gy-sc*0.40,sc*0.030,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(gx+sc*0.22,gy-sc*0.40,sc*0.030,0,Math.PI*2); ctx.fill();
+    // Knuckles on ground
+    ctx.fillStyle='#2a2018';
+    ctx.beginPath(); ctx.ellipse(gx-sc*0.62,gy+sc*0.40,sc*0.16,sc*0.08,0.2,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(gx+sc*0.56,gy+sc*0.40,sc*0.16,sc*0.08,-0.2,0,Math.PI*2); ctx.fill();
+  }
+
+  // ── JAGUAR — bottom-right corner, prowling ──
+  // Position: W*0.880, H*0.910. Check: ((0.88-0.5)/0.46)²+((0.91-0.60)/0.37)²=0.682+0.703=1.39 ✓
+  {
+    const jx=W*0.875, jy=H*0.905, sc=H*0.038;
+    propShadow(jx, jy+sc*0.45, sc*1.6, sc*0.16);
+    // Body — long sleek cat
+    const jbG=ctx.createLinearGradient(jx-sc*1.0,jy-sc*0.3,jx-sc*1.0,jy+sc*0.3);
+    jbG.addColorStop(0,'#c88020'); jbG.addColorStop(0.5,'#e8a030'); jbG.addColorStop(1,'#b07018');
+    ctx.fillStyle=jbG;
+    ctx.beginPath(); ctx.ellipse(jx, jy, sc*1.05, sc*0.34, -0.15, 0, Math.PI*2); ctx.fill();
+    // Spots — irregular dark rosettes
+    ctx.fillStyle='rgba(40,20,0,0.65)';
+    [[jx-sc*0.60,jy-sc*0.05,sc*0.12,sc*0.09],
+     [jx-sc*0.20,jy-sc*0.12,sc*0.10,sc*0.08],
+     [jx+sc*0.20,jy-sc*0.08,sc*0.11,sc*0.09],
+     [jx+sc*0.60,jy-sc*0.04,sc*0.10,sc*0.08],
+     [jx-sc*0.42,jy+sc*0.08,sc*0.09,sc*0.07],
+     [jx+sc*0.38,jy+sc*0.10,sc*0.09,sc*0.07]].forEach(function(s){
+       ctx.beginPath(); ctx.ellipse(s[0],s[1],s[2],s[3],0,0,Math.PI*2); ctx.fill();
+     });
+    // Head
+    const jhG=ctx.createRadialGradient(jx+sc*0.90,jy-sc*0.25,0,jx+sc*0.90,jy-sc*0.20,sc*0.45);
+    jhG.addColorStop(0,'#f0b040'); jhG.addColorStop(0.7,'#d09030'); jhG.addColorStop(1,'#a87020');
+    ctx.fillStyle=jhG;
+    ctx.beginPath(); ctx.ellipse(jx+sc*0.90, jy-sc*0.20, sc*0.42, sc*0.36, 0.20, 0, Math.PI*2); ctx.fill();
+    // Ears
+    ctx.fillStyle='#c08028';
+    ctx.beginPath(); ctx.moveTo(jx+sc*0.80,jy-sc*0.50); ctx.lineTo(jx+sc*0.70,jy-sc*0.68); ctx.lineTo(jx+sc*0.95,jy-sc*0.54); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(jx+sc*1.02,jy-sc*0.48); ctx.lineTo(jx+sc*0.98,jy-sc*0.68); ctx.lineTo(jx+sc*1.14,jy-sc*0.52); ctx.closePath(); ctx.fill();
+    // Muzzle
+    ctx.fillStyle='#f0d080';
+    ctx.beginPath(); ctx.ellipse(jx+sc*1.08,jy-sc*0.14,sc*0.22,sc*0.18,0,0,Math.PI*2); ctx.fill();
+    // Eyes — vivid amber
+    ctx.fillStyle='#e8c020'; ctx.beginPath(); ctx.arc(jx+sc*0.82,jy-sc*0.28,sc*0.075,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(jx+sc*1.02,jy-sc*0.28,sc*0.075,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#0a0806'; ctx.beginPath(); ctx.arc(jx+sc*0.83,jy-sc*0.28,sc*0.040,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(jx+sc*1.03,jy-sc*0.28,sc*0.040,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.beginPath(); ctx.arc(jx+sc*0.81,jy-sc*0.30,sc*0.018,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(jx+sc*1.01,jy-sc*0.30,sc*0.018,0,Math.PI*2); ctx.fill();
+    // Nose
+    ctx.fillStyle='#c05030'; ctx.beginPath(); ctx.arc(jx+sc*1.12,jy-sc*0.18,sc*0.040,0,Math.PI*2); ctx.fill();
+    // Tail — curving up and back
+    ctx.strokeStyle='#d09030'; ctx.lineWidth=W*0.016; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(jx-sc*0.98,jy); ctx.bezierCurveTo(jx-sc*1.20,jy-sc*0.10,jx-sc*1.35,jy-sc*0.40,jx-sc*1.25,jy-sc*0.60); ctx.stroke();
+    ctx.strokeStyle='rgba(40,20,0,0.45)'; ctx.lineWidth=W*0.005;
+    ctx.beginPath(); ctx.moveTo(jx-sc*0.98,jy); ctx.bezierCurveTo(jx-sc*1.20,jy-sc*0.10,jx-sc*1.35,jy-sc*0.40,jx-sc*1.25,jy-sc*0.60); ctx.stroke();
+    // Paws
+    ctx.fillStyle='#c88028';
+    [[jx-sc*0.55,jy+sc*0.35],[jx-sc*0.10,jy+sc*0.38],[jx+sc*0.35,jy+sc*0.34],[jx+sc*0.68,jy+sc*0.20]].forEach(function(p){
+      ctx.beginPath(); ctx.ellipse(p[0],p[1],sc*0.14,sc*0.09,0,0,Math.PI*2); ctx.fill();
+    });
+  }
+
+  // ── GLOWING FIREFLY CLUSTERS — side margins ──
+  const ffPositions=[[W*0.020,H*0.38],[W*0.026,H*0.46],[W*0.018,H*0.54],[W*0.024,H*0.62],[W*0.020,H*0.70],
+                     [W*0.980,H*0.40],[W*0.974,H*0.48],[W*0.982,H*0.56],[W*0.976,H*0.64],[W*0.980,H*0.72]];
+  ffPositions.forEach(function(ff){
+    // Glow halo
+    const fg=ctx.createRadialGradient(ff[0],ff[1],0,ff[0],ff[1],W*0.015);
+    fg.addColorStop(0,'rgba(200,240,60,0.55)'); fg.addColorStop(1,'rgba(200,240,60,0)');
+    ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(ff[0],ff[1],W*0.015,0,Math.PI*2); ctx.fill();
+    // Bright core
+    ctx.fillStyle='#e8f840'; ctx.beginPath(); ctx.arc(ff[0],ff[1],1.8,0,Math.PI*2); ctx.fill();
+  });
 }
 
 function drawWestwildScene() {
