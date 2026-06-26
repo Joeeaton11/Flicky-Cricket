@@ -5040,54 +5040,181 @@ function drawCyberpunkScene() {
 
 function drawCarnivalScene() {
   const CX=W/2, CY=H*FIELD_CY;
-  // big top dome converging near the top
-  ctx.fillStyle='#3a1448'; ctx.fillRect(0,0,W,H*0.16);
-  const apex = {x:CX,y:-H*0.02};
-  const cols=['#c0392b','#f0ece0'];
-  const n=9;
-  for(let i=0;i<n;i++){
-    ctx.fillStyle = cols[i%2];
-    const a1 = i/n*W, a2=(i+1)/n*W;
-    ctx.beginPath(); ctx.moveTo(apex.x,apex.y); ctx.lineTo(a1,H*0.16); ctx.lineTo(a2,H*0.16); ctx.closePath(); ctx.fill();
+
+  // ── BACKDROP (clipped to H*0.23) ──
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
+
+  // Deep crimson night sky behind the big top
+  const skyG=ctx.createLinearGradient(0,0,0,H*0.23);
+  skyG.addColorStop(0,'#1a0010'); skyG.addColorStop(0.5,'#3a0820'); skyG.addColorStop(1,'#1e0420');
+  ctx.fillStyle=skyG; ctx.fillRect(0,0,W,H*0.23);
+
+  // Big top tent stripes radiating from apex above canvas
+  const apex={x:CX,y:-H*0.12};
+  const stripeColors=['#c0392b','#f5f0e8','#c0392b','#f4d03f','#c0392b','#f5f0e8','#c0392b','#f4d03f','#c0392b','#f5f0e8'];
+  const nStripes=10;
+  for(let i=0;i<nStripes;i++){
+    ctx.fillStyle=stripeColors[i];
+    const a1=i/nStripes*W, a2=(i+1)/nStripes*W;
+    ctx.beginPath(); ctx.moveTo(apex.x,apex.y); ctx.lineTo(a1,H*0.23); ctx.lineTo(a2,H*0.23); ctx.closePath(); ctx.fill();
   }
-  ctx.fillStyle='#7a2a1e'; ctx.beginPath(); ctx.arc(apex.x,apex.y+6,5,0,Math.PI*2); ctx.fill();
-  // hanging bulbs
-  ctx.fillStyle='#ffe070'; [-10,0,10].forEach(dx=>{ ctx.beginPath(); ctx.arc(CX+dx,H*0.06,3,0,Math.PI*2); ctx.fill(); });
-  // tent flap reveals ferris wheel
-  ctx.fillStyle='#1a2840'; ctx.fillRect(W*0.32,H*0.07,W*0.1,H*0.09);
-  ctx.strokeStyle='#f4d03f'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(W*0.37,H*0.1,H*0.025,0,Math.PI*2); ctx.stroke();
-  ctx.fillStyle='#e74c3c'; [0,90,180,270].forEach(a=>{ const r=a*Math.PI/180; ctx.beginPath(); ctx.arc(W*0.37+Math.cos(r)*H*0.025,H*0.1+Math.sin(r)*H*0.025,1.6,0,Math.PI*2); ctx.fill(); });
-  drawGroundRings('#caa468','#9a7c44','rgba(168,130,70,0.88)');
+
+  // Tent scallop edge at horizon
+  ctx.fillStyle='#c0392b';
+  for(let i=0;i<12;i++){
+    const sx=i/12*W, sw=W/12;
+    ctx.beginPath(); ctx.arc(sx+sw/2,H*0.23,sw*0.55,Math.PI,0); ctx.fill();
+  }
+  ctx.fillStyle='#f4d03f';
+  for(let i=0;i<12;i++){
+    const sx=i/12*W, sw=W/12;
+    ctx.beginPath(); ctx.arc(sx+sw/2,H*0.23,sw*0.30,Math.PI,0); ctx.fill();
+  }
+
+  // Ferris wheel — left of centre in sky
+  {
+    const fw={x:W*0.22,y:H*0.11,r:H*0.068};
+    // Spokes + rim
+    ctx.strokeStyle='#f4d03f'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(fw.x,fw.y,fw.r,0,Math.PI*2); ctx.stroke();
+    for(let a=0;a<8;a++){
+      const ang=a*Math.PI/4;
+      ctx.beginPath(); ctx.moveTo(fw.x,fw.y); ctx.lineTo(fw.x+Math.cos(ang)*fw.r,fw.y+Math.sin(ang)*fw.r); ctx.stroke();
+    }
+    // Gondolas
+    ['#e74c3c','#3498db','#f4d03f','#2ecc71','#e74c3c','#9b59b6','#e67e22','#e74c3c'].forEach((c,a)=>{
+      const ang=a*Math.PI/4;
+      ctx.fillStyle=c; ctx.beginPath(); ctx.rect(fw.x+Math.cos(ang)*fw.r-3,fw.y+Math.sin(ang)*fw.r-3,6,6); ctx.fill();
+    });
+    ctx.fillStyle='#c0a020'; ctx.beginPath(); ctx.arc(fw.x,fw.y,4,0,Math.PI*2); ctx.fill();
+  }
+
+  // Big top centre pole finial
+  ctx.fillStyle='#f4d03f'; ctx.beginPath(); ctx.arc(CX,apex.y+H*0.01,6,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#f4d03f'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(CX,apex.y+H*0.01); ctx.lineTo(CX,apex.y-H*0.02); ctx.stroke();
+  // Flag
+  ctx.fillStyle='#e74c3c';
+  ctx.beginPath(); ctx.moveTo(CX,apex.y-H*0.02); ctx.lineTo(CX+W*0.04,apex.y-H*0.015); ctx.lineTo(CX,apex.y-H*0.010); ctx.closePath(); ctx.fill();
+
+  // Hanging fairy lights
+  ctx.strokeStyle='rgba(255,220,80,0.5)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,H*0.20); ctx.quadraticCurveTo(CX,H*0.16,W,H*0.20); ctx.stroke();
+  ['#ffe070','#ff8040','#40d0ff','#ff40a0','#80ff40'].forEach((c,i)=>{
+    const lx2=W*(0.10+i*0.20), ly2=H*0.185+(i%2?0.006:-0.002)*H;
+    ctx.fillStyle=c; ctx.beginPath(); ctx.arc(lx2,ly2,3,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,200,0.25)'; ctx.beginPath(); ctx.arc(lx2,ly2,5,0,Math.PI*2); ctx.stroke();
+  });
+
+  ctx.restore(); // end backdrop clip
+
+  // ── FIELD ──
+  drawGroundRings('#e8c878','#d4a840','rgba(220,180,60,0.90)');
   drawSceneScoreboard();
-  // striped poles
-  ctx.fillStyle='#fff'; ctx.fillRect(W*0.05,H*0.15,W*0.018,H*0.7);
-  ctx.fillStyle='#e74c3c'; for(let y=H*0.16;y<H*0.82;y+=H*0.08){ ctx.fillRect(W*0.05,y,W*0.018,H*0.04); }
-  ctx.fillStyle='#fff'; ctx.fillRect(W*0.93,H*0.16,W*0.018,H*0.7);
-  ctx.fillStyle='#f4d03f'; for(let y=H*0.17;y<H*0.83;y+=H*0.08){ ctx.fillRect(W*0.93,y,W*0.018,H*0.04); }
-  // corners: popcorn cart + carousel horse
-  const lx=W*0.15,ly=H*0.92;
-  // bulb-light string continues down from the striped pole to the cart's awning
-  ctx.strokeStyle='#caa030'; ctx.lineWidth=1; ctx.globalAlpha=0.5;
-  ctx.beginPath(); ctx.moveTo(W*0.06,H*0.7); ctx.quadraticCurveTo(W*0.1,H*0.85,lx,ly-H*0.075); ctx.stroke();
+
+  // Confetti dots scattered on the field
+  const confettiCols=['#e74c3c','#3498db','#f4d03f','#2ecc71','#9b59b6','#e67e22'];
+  [[0.18,0.32],[0.80,0.35],[0.12,0.50],[0.88,0.48],[0.15,0.70],[0.84,0.68],
+   [0.22,0.82],[0.78,0.80],[0.30,0.28],[0.70,0.30]].forEach(([fx,fy],i)=>{
+    // verify outside oval
+    const ox=(fx-0.5)/FIELD_RX, oy=(fy-FIELD_CY)/FIELD_RY;
+    if(ox*ox+oy*oy>1){
+      ctx.fillStyle=confettiCols[i%6]; ctx.globalAlpha=0.7;
+      ctx.beginPath(); ctx.ellipse(W*fx,H*fy,3,2,i*0.5,0,Math.PI*2); ctx.fill();
+    }
+  });
   ctx.globalAlpha=1;
-  ctx.fillStyle='#ffe070'; ctx.beginPath(); ctx.arc(lx,ly-H*0.075,2.4,0,Math.PI*2); ctx.fill();
-  // footprints in the trampled sawdust leading toward the ring
-  ctx.fillStyle='#8a6c38'; ctx.globalAlpha=0.4;
-  [[0.22,0.82],[0.25,0.78]].forEach(([fx,fy])=>{ ctx.beginPath(); ctx.ellipse(W*fx,H*fy,2.6,3.8,0.3,0,Math.PI*2); ctx.fill(); });
-  ctx.globalAlpha=1;
-  propShadow(lx,ly+H*0.012,W*0.1,H*0.012);
-  ctx.fillStyle='#e74c3c'; ctx.fillRect(lx-W*0.08,ly-H*0.05,W*0.16,H*0.05);
-  ctx.fillStyle='#fff'; for(let i=0;i<4;i++) ctx.fillRect(lx-W*0.08+i*W*0.04,ly-H*0.05,W*0.02,H*0.05);
-  ctx.fillStyle='#f4d03f'; ctx.beginPath(); ctx.moveTo(lx-W*0.09,ly-H*0.05); ctx.lineTo(lx+W*0.09,ly-H*0.05); ctx.lineTo(lx+W*0.07,ly-H*0.075); ctx.lineTo(lx-W*0.07,ly-H*0.075); ctx.closePath(); ctx.fill();
-  const rx=W*0.82,ry=H*0.9;
-  // banner streamer ties the carousel pole back to the striped pole on this side
-  ctx.strokeStyle='#f4d03f'; ctx.lineWidth=1; ctx.globalAlpha=0.45;
-  ctx.beginPath(); ctx.moveTo(W*0.94,H*0.72); ctx.quadraticCurveTo(W*0.88,H*0.84,rx,ry-H*0.04); ctx.stroke();
-  ctx.globalAlpha=1;
-  propShadow(rx,ry+H*0.07,W*0.06,H*0.012);
-  ctx.strokeStyle='#caa040'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(rx,ry-H*0.06); ctx.lineTo(rx,ry+H*0.07); ctx.stroke();
-  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(rx,ry,W*0.045,H*0.035,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#c0392b'; ctx.beginPath(); ctx.ellipse(rx-W*0.03,ry-H*0.025,W*0.018,H*0.018,0,0,Math.PI*2); ctx.fill();
+
+  // ── SIDE TENT POLES with red-&-white stripes ──
+  // Left pole at x=W*0.022 (thin margin)
+  const poleW=W*0.022;
+  for(let y=H*0.23;y<H*0.92;y+=H*0.06){
+    ctx.fillStyle=(Math.floor((y-H*0.23)/(H*0.06))%2===0)?'#c0392b':'#f5f0e8';
+    ctx.fillRect(0,y,poleW,H*0.06);
+  }
+  // Right pole
+  for(let y=H*0.23;y<H*0.92;y+=H*0.06){
+    ctx.fillStyle=(Math.floor((y-H*0.23)/(H*0.06))%2===0)?'#f4d03f':'#f5f0e8';
+    ctx.fillRect(W-poleW,y,poleW,H*0.06);
+  }
+
+  // Fairy-light strings from poles down the sides
+  ctx.strokeStyle='rgba(255,220,80,0.35)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(poleW,H*0.30); ctx.quadraticCurveTo(W*0.08,H*0.60,poleW,H*0.88); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W-poleW,H*0.30); ctx.quadraticCurveTo(W*0.92,H*0.60,W-poleW,H*0.88); ctx.stroke();
+  // Bulbs on strings
+  for(let t=0;t<=1;t+=0.2){
+    const lbx=poleW + (W*0.08-poleW)*Math.sin(t*Math.PI)*0.5;
+    const lby=H*0.30+t*(H*0.88-H*0.30);
+    ctx.fillStyle=confettiCols[Math.floor(t*5)%6];
+    ctx.beginPath(); ctx.arc(lbx,lby,2.5,0,Math.PI*2); ctx.fill();
+    const rbx=W-poleW-(W*0.08-poleW)*Math.sin(t*Math.PI)*0.5;
+    ctx.fillStyle=confettiCols[(Math.floor(t*5)+2)%6];
+    ctx.beginPath(); ctx.arc(rbx,lby,2.5,0,Math.PI*2); ctx.fill();
+  }
+
+  // ── CORNER PROPS ──
+
+  // Popcorn cart — bottom-left: W*0.13, H*0.91 (outside oval ✓)
+  {
+    const lx=W*0.13, ly=H*0.91;
+    propShadow(lx,ly+H*0.014,W*0.095,H*0.012);
+    // Wheels
+    ctx.fillStyle='#5a3a10'; [lx-W*0.06,lx+W*0.06].forEach(wx=>{
+      ctx.beginPath(); ctx.arc(wx,ly+H*0.005,H*0.016,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#c0a020'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(wx,ly+H*0.005,H*0.013,0,Math.PI*2); ctx.stroke();
+    });
+    // Cart body — red stripes
+    ctx.fillStyle='#c0392b'; ctx.fillRect(lx-W*0.075,ly-H*0.075,W*0.150,H*0.080);
+    ctx.fillStyle='#f5f0e8';
+    for(let i=0;i<3;i++) ctx.fillRect(lx-W*0.075+i*W*0.050,ly-H*0.075,W*0.025,H*0.080);
+    // Glass dome top
+    ctx.fillStyle='rgba(255,255,200,0.55)';
+    ctx.beginPath(); ctx.ellipse(lx,ly-H*0.075,W*0.060,H*0.030,0,Math.PI,0); ctx.fill();
+    ctx.strokeStyle='#c0a020'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.ellipse(lx,ly-H*0.075,W*0.060,H*0.030,0,Math.PI,0); ctx.stroke();
+    // Popcorn inside dome
+    ctx.fillStyle='#ffe080';
+    [[0,0],[W*0.02,H*0.01],[W*-0.02,H*0.01],[W*0.01,-H*0.015],[W*-0.01,-H*0.015]].forEach(([ox,oy])=>{
+      ctx.beginPath(); ctx.arc(lx+ox,ly-H*0.085+oy,3.5,0,Math.PI*2); ctx.fill();
+    });
+    // Awning fringe
+    ctx.fillStyle='#f4d03f';
+    ctx.beginPath(); ctx.moveTo(lx-W*0.080,ly-H*0.108); ctx.lineTo(lx+W*0.080,ly-H*0.108); ctx.lineTo(lx+W*0.075,ly-H*0.075); ctx.lineTo(lx-W*0.075,ly-H*0.075); ctx.closePath(); ctx.fill();
+    for(let i=0;i<6;i++){
+      ctx.fillStyle=i%2===0?'#c0392b':'#f4d03f';
+      ctx.beginPath(); ctx.arc(lx-W*0.075+i*W*0.030,ly-H*0.075,W*0.012,0,Math.PI); ctx.fill();
+    }
+  }
+
+  // Balloon bouquet — bottom-right: W*0.86, H*0.88 (outside oval ✓)
+  {
+    const bx=W*0.86, by=H*0.88;
+    propShadow(bx,by+H*0.020,W*0.050,H*0.010);
+    // Stick
+    ctx.strokeStyle='#8a6a20'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(bx,by+H*0.018); ctx.lineTo(bx,by-H*0.020); ctx.stroke();
+    // Strings + balloons
+    const bData=[
+      {ox:-W*0.030,oy:-H*0.090,c:'#e74c3c'},
+      {ox:W*0.028,oy:-H*0.100,c:'#3498db'},
+      {ox:-W*0.008,oy:-H*0.120,c:'#f4d03f'},
+      {ox:W*0.012,oy:-H*0.075,c:'#2ecc71'},
+      {ox:-W*0.022,oy:-H*0.055,c:'#9b59b6'},
+    ];
+    bData.forEach(({ox,oy,c})=>{
+      ctx.strokeStyle='rgba(180,160,80,0.6)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(bx,by-H*0.020); ctx.quadraticCurveTo(bx+ox*0.3,by+oy*0.5,bx+ox,by+oy); ctx.stroke();
+      ctx.fillStyle=c;
+      ctx.beginPath(); ctx.ellipse(bx+ox,by+oy,W*0.022,H*0.030,0,0,Math.PI*2); ctx.fill();
+      // Highlight
+      ctx.fillStyle='rgba(255,255,255,0.35)';
+      ctx.beginPath(); ctx.ellipse(bx+ox-W*0.007,by+oy-H*0.008,W*0.007,H*0.010,0,0,Math.PI*2); ctx.fill();
+      // Knot
+      ctx.fillStyle=c; ctx.beginPath(); ctx.arc(bx+ox,by+oy+H*0.030,2,0,Math.PI*2); ctx.fill();
+    });
+  }
 }
 
 function drawHalloweenScene() {
