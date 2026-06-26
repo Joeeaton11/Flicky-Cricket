@@ -5126,32 +5126,97 @@ function drawCarnivalScene() {
   });
   ctx.globalAlpha=1;
 
-  // ── SIDE TENT POLES with red-&-white stripes ──
-  // Left pole at x=W*0.022 (thin margin)
-  const poleW=W*0.022;
-  for(let y=H*0.23;y<H*0.92;y+=H*0.06){
-    ctx.fillStyle=(Math.floor((y-H*0.23)/(H*0.06))%2===0)?'#c0392b':'#f5f0e8';
-    ctx.fillRect(0,y,poleW,H*0.06);
-  }
-  // Right pole
-  for(let y=H*0.23;y<H*0.92;y+=H*0.06){
-    ctx.fillStyle=(Math.floor((y-H*0.23)/(H*0.06))%2===0)?'#f4d03f':'#f5f0e8';
-    ctx.fillRect(W-poleW,y,poleW,H*0.06);
-  }
+  // ── TENT SIDE WALLS ──
+  const wallW=W*0.055; // width of each side wall panel
+  const wallTop=H*0.23, wallBot=H*0.92;
+  const stripeH=H*0.055;
+  const lCols=['#c0392b','#f5f0e8']; // left wall: red & cream
+  const rCols=['#f4d03f','#f5f0e8']; // right wall: yellow & cream
 
-  // Fairy-light strings from poles down the sides
-  ctx.strokeStyle='rgba(255,220,80,0.35)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(poleW,H*0.30); ctx.quadraticCurveTo(W*0.08,H*0.60,poleW,H*0.88); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(W-poleW,H*0.30); ctx.quadraticCurveTo(W*0.92,H*0.60,W-poleW,H*0.88); ctx.stroke();
-  // Bulbs on strings
+  // Left wall — horizontal stripes
+  for(let y=wallTop;y<wallBot;y+=stripeH){
+    const idx=Math.floor((y-wallTop)/stripeH);
+    ctx.fillStyle=lCols[idx%2];
+    ctx.fillRect(0,y,wallW,Math.min(stripeH,wallBot-y));
+  }
+  // Left wall scallop inner edge
+  ctx.fillStyle='#3a0820'; // match sky for cutout effect
+  const scW=wallW*0.7;
+  for(let y=wallTop;y<wallBot;y+=stripeH*0.9){
+    ctx.beginPath(); ctx.arc(wallW,y+stripeH*0.45,scW*0.5,Math.PI*0.5,Math.PI*1.5); ctx.fill();
+  }
+  // Left wall outer edge line
+  ctx.strokeStyle='#8a2010'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(wallW,wallTop); ctx.lineTo(wallW,wallBot); ctx.stroke();
+
+  // Right wall — horizontal stripes
+  for(let y=wallTop;y<wallBot;y+=stripeH){
+    const idx=Math.floor((y-wallTop)/stripeH);
+    ctx.fillStyle=rCols[idx%2];
+    ctx.fillRect(W-wallW,y,wallW,Math.min(stripeH,wallBot-y));
+  }
+  // Right wall scallop inner edge
+  ctx.fillStyle='#3a0820';
+  for(let y=wallTop;y<wallBot;y+=stripeH*0.9){
+    ctx.beginPath(); ctx.arc(W-wallW,y+stripeH*0.45,scW*0.5,Math.PI*1.5,Math.PI*0.5); ctx.fill();
+  }
+  ctx.strokeStyle='#8a7000'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(W-wallW,wallTop); ctx.lineTo(W-wallW,wallBot); ctx.stroke();
+
+  // Fairy-light strings from walls down the sides
+  ctx.strokeStyle='rgba(255,220,80,0.45)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(wallW,H*0.28); ctx.quadraticCurveTo(wallW*2,H*0.60,wallW,H*0.88); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W-wallW,H*0.28); ctx.quadraticCurveTo(W-wallW*2,H*0.60,W-wallW,H*0.88); ctx.stroke();
   for(let t=0;t<=1;t+=0.2){
-    const lbx=poleW + (W*0.08-poleW)*Math.sin(t*Math.PI)*0.5;
-    const lby=H*0.30+t*(H*0.88-H*0.30);
+    const lbx=wallW+(wallW)*Math.sin(t*Math.PI)*0.4;
+    const lby=H*0.28+t*(H*0.88-H*0.28);
     ctx.fillStyle=confettiCols[Math.floor(t*5)%6];
     ctx.beginPath(); ctx.arc(lbx,lby,2.5,0,Math.PI*2); ctx.fill();
-    const rbx=W-poleW-(W*0.08-poleW)*Math.sin(t*Math.PI)*0.5;
+    const rbx=W-wallW-(wallW)*Math.sin(t*Math.PI)*0.4;
     ctx.fillStyle=confettiCols[(Math.floor(t*5)+2)%6];
     ctx.beginPath(); ctx.arc(rbx,lby,2.5,0,Math.PI*2); ctx.fill();
+  }
+
+  // ── ENTRANCE ARCH at bottom centre (outside oval ✓ — oval bottom is H*0.97) ──
+  {
+    const ex=CX, ey=H*0.925, ew=W*0.22, eh=H*0.075;
+    // Arch opening — dark interior
+    ctx.fillStyle='#1a0010';
+    ctx.beginPath();
+    ctx.arc(ex,ey,ew*0.5,Math.PI,0);
+    ctx.lineTo(ex+ew*0.5,ey+eh); ctx.lineTo(ex-ew*0.5,ey+eh);
+    ctx.closePath(); ctx.fill();
+    // Arch frame — alternating red/cream voussoir blocks
+    const nBlocks=8;
+    for(let i=0;i<nBlocks;i++){
+      const a1=Math.PI+(i/nBlocks)*Math.PI;
+      const a2=Math.PI+((i+1)/nBlocks)*Math.PI;
+      ctx.fillStyle=i%2===0?'#c0392b':'#f5f0e8';
+      ctx.beginPath();
+      ctx.arc(ex,ey,ew*0.5+W*0.018,a1,a2);
+      ctx.arc(ex,ey,ew*0.5,a2,a1,true);
+      ctx.closePath(); ctx.fill();
+    }
+    // Flag / banner above arch
+    ctx.fillStyle='#f4d03f';
+    ctx.beginPath(); ctx.moveTo(ex-ew*0.38,ey-ew*0.5-H*0.002); ctx.lineTo(ex+ew*0.38,ey-ew*0.5-H*0.002); ctx.lineTo(ex+ew*0.34,ey-ew*0.5+H*0.018); ctx.lineTo(ex-ew*0.34,ey-ew*0.5+H*0.018); ctx.closePath(); ctx.fill();
+    ctx.font=`bold ${Math.max(7,H*0.013)}px serif`; ctx.textAlign='center';
+    ctx.fillStyle='#c0392b'; ctx.fillText('ENTER',ex,ey-ew*0.5+H*0.013);
+    ctx.textAlign='left';
+    // Two flanking poles
+    ctx.strokeStyle='#8a2010'; ctx.lineWidth=W*0.010;
+    [ex-ew*0.5-W*0.009, ex+ew*0.5+W*0.009].forEach(px=>{
+      ctx.strokeStyle=px<ex?'#c0392b':'#f4d03f';
+      ctx.lineWidth=W*0.010;
+      ctx.beginPath(); ctx.moveTo(px,ey+eh); ctx.lineTo(px,ey-ew*0.45); ctx.stroke();
+    });
+    // Bunting across entrance
+    ctx.strokeStyle='rgba(180,140,20,0.6)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(ex-ew*0.5,ey-ew*0.42); ctx.quadraticCurveTo(ex,ey-ew*0.55,ex+ew*0.5,ey-ew*0.42); ctx.stroke();
+    confettiCols.forEach((c,i)=>{
+      const t=i/5, bx2=ex-ew*0.5+t*ew, by2=ey-ew*0.42+Math.sin(t*Math.PI)*-H*0.008;
+      ctx.fillStyle=c; ctx.beginPath(); ctx.arc(bx2,by2,2.5,0,Math.PI*2); ctx.fill();
+    });
   }
 
   // ── CORNER PROPS ──
