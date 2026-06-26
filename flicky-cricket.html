@@ -3648,63 +3648,188 @@ function drawPirateScene() {
   function palm(bx, by, leanX, trunkH) {
     const tx = bx + leanX;
     const ty = by - trunkH;
-    const cpx = bx + leanX * 0.38;
-    const cpy = by - trunkH * 0.58;
-    ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = W*0.030; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(bx+W*0.010, by); ctx.quadraticCurveTo(cpx+W*0.010, cpy, tx+W*0.010, ty); ctx.stroke();
-    const tG = ctx.createLinearGradient(bx, by, tx, ty);
-    tG.addColorStop(0, '#7a4e1a'); tG.addColorStop(0.4, '#9a6628'); tG.addColorStop(0.75, '#8a5820'); tG.addColorStop(1, '#6a4214');
-    ctx.strokeStyle = tG; ctx.lineWidth = W*0.022;
-    ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(cpx, cpy, tx, ty); ctx.stroke();
-    ctx.strokeStyle = 'rgba(40,18,4,0.45)'; ctx.lineWidth = W*0.014; ctx.lineCap = 'round';
-    for (let t = 0.12; t < 0.92; t += 0.11) {
-      const px = bx*(1-t)*(1-t) + 2*cpx*t*(1-t) + tx*t*t;
-      const py = by*(1-t)*(1-t) + 2*cpy*t*(1-t) + ty*t*t;
-      ctx.beginPath(); ctx.arc(px, py, W*0.011, 0, Math.PI*2); ctx.stroke();
+    const cpx = bx + leanX * 0.42;
+    const cpy = by - trunkH * 0.55;
+
+    // Helper: point on the quadratic bezier at parameter t
+    function qb(t) {
+      return {
+        x: (1-t)*(1-t)*bx + 2*(1-t)*t*cpx + t*t*tx,
+        y: (1-t)*(1-t)*by + 2*(1-t)*t*cpy + t*t*ty
+      };
     }
+    // Tangent direction at t (normalised)
+    function qbTang(t) {
+      const dx = 2*(1-t)*(cpx-bx) + 2*t*(tx-cpx);
+      const dy = 2*(1-t)*(cpy-by) + 2*t*(ty-cpy);
+      const len2 = Math.sqrt(dx*dx+dy*dy);
+      return {x: dx/len2, y: dy/len2};
+    }
+
+    // ── Trunk shadow ──
+    ctx.save(); ctx.globalAlpha=0.22;
+    ctx.strokeStyle='#000'; ctx.lineWidth=W*0.048; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(bx+W*0.012, by); ctx.quadraticCurveTo(cpx+W*0.012, cpy+H*0.015, tx+W*0.012, ty+H*0.012); ctx.stroke();
+    ctx.restore();
+
+    // ── Trunk as tapered filled shape ──
+    // Build left & right edges by walking along the bezier with varying width
+    const steps = 24;
+    const baseW = W*0.028, topW = W*0.012;
+    const leftPts = [], rightPts = [];
+    for (let i=0; i<=steps; i++) {
+      const t = i/steps;
+      const p = qb(t);
+      const tang = qbTang(t);
+      const norm = {x: -tang.y, y: tang.x};
+      const hw = (baseW*(1-t) + topW*t) * 0.5;
+      leftPts.push({x: p.x - norm.x*hw, y: p.y - norm.y*hw});
+      rightPts.push({x: p.x + norm.x*hw, y: p.y + norm.y*hw});
+    }
+    // Draw trunk shape
+    const tG = ctx.createLinearGradient(bx, by, tx, ty);
+    tG.addColorStop(0,'#5a3410'); tG.addColorStop(0.2,'#8a5a20'); tG.addColorStop(0.5,'#7a4e1a');
+    tG.addColorStop(0.75,'#6a4216'); tG.addColorStop(1,'#4e3010');
+    ctx.fillStyle = tG;
+    ctx.beginPath();
+    ctx.moveTo(leftPts[0].x, leftPts[0].y);
+    leftPts.forEach(p => ctx.lineTo(p.x, p.y));
+    for (let i=rightPts.length-1; i>=0; i--) ctx.lineTo(rightPts[i].x, rightPts[i].y);
+    ctx.closePath(); ctx.fill();
+
+    // Trunk highlight (left-facing light)
+    const hiG = ctx.createLinearGradient(bx-W*0.02, by, bx+W*0.02, by);
+    hiG.addColorStop(0,'rgba(255,200,100,0.20)'); hiG.addColorStop(0.4,'rgba(255,200,100,0.08)'); hiG.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = hiG;
+    ctx.beginPath();
+    ctx.moveTo(leftPts[0].x, leftPts[0].y);
+    leftPts.forEach(p => ctx.lineTo(p.x, p.y));
+    for (let i=rightPts.length-1; i>=0; i--) ctx.lineTo(rightPts[i].x, rightPts[i].y);
+    ctx.closePath(); ctx.fill();
+
+    // Trunk segment rings (horizontal notches)
+    ctx.strokeStyle='rgba(30,12,4,0.40)'; ctx.lineWidth=1.5; ctx.lineCap='round';
+    for (let i=1; i<10; i++) {
+      const t = i/10;
+      const p = qb(t);
+      const tang = qbTang(t);
+      const norm = {x: -tang.y, y: tang.x};
+      const hw = (baseW*(1-t) + topW*t)*0.52;
+      ctx.beginPath();
+      ctx.moveTo(p.x - norm.x*hw, p.y - norm.y*hw);
+      ctx.lineTo(p.x + norm.x*hw, p.y + norm.y*hw);
+      ctx.stroke();
+    }
+
+    // ── Fronds ──
     const fronds = [
-      {a:-175, len:1.10, droop:0.55},{a:-140, len:1.20, droop:0.50},{a:-105, len:1.30, droop:0.42},
-      {a: -70, len:1.25, droop:0.35},{a: -35, len:1.15, droop:0.30},{a:   0, len:1.05, droop:0.28},
-      {a:  35, len:1.15, droop:0.30},{a:  70, len:1.25, droop:0.40},{a: 105, len:1.30, droop:0.48},
-      {a: 140, len:1.20, droop:0.52},
+      {a:-170, len:1.35, droop:0.60, w:1.0},
+      {a:-145, len:1.45, droop:0.52, w:1.1},
+      {a:-118, len:1.55, droop:0.44, w:1.2},
+      {a: -88, len:1.50, droop:0.36, w:1.2},
+      {a: -58, len:1.40, droop:0.30, w:1.1},
+      {a: -28, len:1.30, droop:0.26, w:1.0},
+      {a:   5, len:1.30, droop:0.26, w:1.0},
+      {a:  35, len:1.40, droop:0.30, w:1.1},
+      {a:  65, len:1.50, droop:0.38, w:1.2},
+      {a:  95, len:1.55, droop:0.46, w:1.2},
+      {a: 122, len:1.45, droop:0.54, w:1.1},
+      {a: 148, len:1.35, droop:0.60, w:1.0},
     ];
-    fronds.forEach(({a, len, droop}) => {
+
+    fronds.forEach(({a, len, droop, w}) => {
       const rad = a * Math.PI / 180;
-      const fl = W * 0.095 * len;
-      const ex = tx + Math.cos(rad) * fl;
-      const ey = ty + Math.sin(rad) * fl + fl * droop;
-      const cx2 = tx + Math.cos(rad) * fl * 0.5;
-      const cy2 = ty + Math.sin(rad) * fl * 0.5 + fl * droop * 0.6;
-      ctx.strokeStyle = '#1a5c08'; ctx.lineWidth = 2.0; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.quadraticCurveTo(cx2, cy2, ex, ey); ctx.stroke();
-      const steps = 7;
-      for (let s = 2; s <= steps; s++) {
-        const st = s / (steps + 1);
-        const lx2 = tx*(1-st)*(1-st) + 2*cx2*st*(1-st) + ex*st*st;
-        const ly2 = ty*(1-st)*(1-st) + 2*cy2*st*(1-st) + ey*st*st;
-        const tang = Math.atan2(ey - ty, ex - tx);
-        const blen = W * 0.028 * (1 - st * 0.4);
-        const col = s % 2 === 0 ? '#1a6e0a' : '#137006';
-        ctx.fillStyle = col;
-        ctx.save(); ctx.translate(lx2, ly2); ctx.rotate(tang - Math.PI*0.38);
-        ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(blen*0.4,-blen*0.3,blen*0.8,-blen*0.1,blen,0);
-        ctx.bezierCurveTo(blen*0.8,blen*0.15,blen*0.4,blen*0.1,0,0); ctx.closePath(); ctx.fill(); ctx.restore();
-        ctx.save(); ctx.translate(lx2, ly2); ctx.rotate(tang + Math.PI*0.38);
-        ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(blen*0.4,-blen*0.3,blen*0.8,-blen*0.1,blen,0);
-        ctx.bezierCurveTo(blen*0.8,blen*0.15,blen*0.4,blen*0.1,0,0); ctx.closePath(); ctx.fill(); ctx.restore();
+      const fl = W * 0.088 * len;
+      // tip with gravity droop
+      const ex = tx + Math.cos(rad)*fl;
+      const ey = ty + Math.sin(rad)*fl + fl*droop;
+      // control pt — arc out then drop
+      const cx2 = tx + Math.cos(rad)*fl*0.55;
+      const cy2 = ty + Math.sin(rad)*fl*0.55 + fl*droop*0.45;
+
+      // Frond midrib — drawn as a filled tapered shape for thickness
+      const fSteps = 18;
+      const fLeft=[], fRight=[];
+      for (let i=0; i<=fSteps; i++) {
+        const ft = i/fSteps;
+        const fx2 = (1-ft)*(1-ft)*tx + 2*(1-ft)*ft*cx2 + ft*ft*ex;
+        const fy2 = (1-ft)*(1-ft)*ty + 2*(1-ft)*ft*cy2 + ft*ft*ey;
+        const fdx = 2*(1-ft)*(cx2-tx)+2*ft*(ex-cx2);
+        const fdy = 2*(1-ft)*(cy2-ty)+2*ft*(ey-cy2);
+        const flen2 = Math.sqrt(fdx*fdx+fdy*fdy)||1;
+        const fn = {x:-fdy/flen2, y:fdx/flen2};
+        const fhw = (W*0.007*w*(1-ft*0.85));
+        fLeft.push({x:fx2-fn.x*fhw, y:fy2-fn.y*fhw, tx:fx2, ty:fy2, tang:{x:fdx/flen2,y:fdy/flen2}});
+        fRight.push({x:fx2+fn.x*fhw, y:fy2+fn.y*fhw});
+      }
+      // Shade frond darker on underside
+      const fG = ctx.createLinearGradient(tx,ty,ex,ey);
+      fG.addColorStop(0,'#1a6c0a'); fG.addColorStop(0.5,'#228810'); fG.addColorStop(1,'#0e4806');
+      ctx.fillStyle=fG;
+      ctx.beginPath();
+      fLeft.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+      for (let i=fRight.length-1;i>=0;i--) ctx.lineTo(fRight[i].x,fRight[i].y);
+      ctx.closePath(); ctx.fill();
+
+      // Leaflets — wider, proper blade shape following frond tangent
+      const leafSteps = 9;
+      for (let s=1; s<=leafSteps; s++) {
+        const ft = s/(leafSteps+1);
+        const pt = fLeft[Math.round(ft*(fSteps))];
+        if (!pt) continue;
+        const tang2 = pt.tang;
+        const norm2 = {x:-tang2.y, y:tang2.x};
+        const bl = W*0.052*w*(1-ft*0.55);
+        const col = s%2===0 ? '#1e7a0c' : '#156008';
+        ctx.fillStyle=col;
+        // Left leaflet
+        ctx.save(); ctx.translate(pt.tx, pt.ty);
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.bezierCurveTo(
+          -norm2.x*bl*0.5 + tang2.x*bl*0.3, -norm2.y*bl*0.5 + tang2.y*bl*0.3,
+          -norm2.x*bl*0.9 + tang2.x*bl*0.6, -norm2.y*bl*0.9 + tang2.y*bl*0.6,
+          -norm2.x*bl, -norm2.y*bl
+        );
+        ctx.bezierCurveTo(
+          -norm2.x*bl*0.85 - tang2.x*bl*0.15, -norm2.y*bl*0.85 - tang2.y*bl*0.15,
+          -norm2.x*bl*0.4 - tang2.x*bl*0.05, -norm2.y*bl*0.4 - tang2.y*bl*0.05,
+          0,0
+        );
+        ctx.closePath(); ctx.fill(); ctx.restore();
+        // Right leaflet
+        ctx.save(); ctx.translate(pt.tx, pt.ty);
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.bezierCurveTo(
+          norm2.x*bl*0.5 + tang2.x*bl*0.3, norm2.y*bl*0.5 + tang2.y*bl*0.3,
+          norm2.x*bl*0.9 + tang2.x*bl*0.6, norm2.y*bl*0.9 + tang2.y*bl*0.6,
+          norm2.x*bl, norm2.y*bl
+        );
+        ctx.bezierCurveTo(
+          norm2.x*bl*0.85 - tang2.x*bl*0.15, norm2.y*bl*0.85 - tang2.y*bl*0.15,
+          norm2.x*bl*0.4 - tang2.x*bl*0.05, norm2.y*bl*0.4 - tang2.y*bl*0.05,
+          0,0
+        );
+        ctx.closePath(); ctx.fill(); ctx.restore();
       }
     });
-    ctx.fillStyle = '#2e1606';
-    ctx.beginPath(); ctx.arc(tx, ty, W*0.020, 0, Math.PI*2); ctx.fill();
-    [[W*0.014, W*0.010], [-W*0.016, W*0.008], [W*0.004, W*0.018]].forEach(([ox, oy]) => {
-      ctx.fillStyle = '#4a2e0c';
-      ctx.beginPath(); ctx.arc(tx+ox, ty+oy, W*0.014, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,200,100,0.12)';
-      ctx.beginPath(); ctx.arc(tx+ox-W*0.004, ty+oy-W*0.004, W*0.005, 0, Math.PI*2); ctx.fill();
+
+    // Crown knot
+    ctx.fillStyle='#2a1206';
+    ctx.beginPath(); ctx.arc(tx, ty, W*0.022, 0, Math.PI*2); ctx.fill();
+
+    // Coconuts
+    [[W*0.016,W*0.012,'#5a380e'],[-W*0.018,W*0.010,'#4e2e08'],[W*0.005,W*0.022,'#523410']].forEach(([ox,oy,col])=>{
+      ctx.fillStyle=col;
+      ctx.beginPath(); ctx.arc(tx+ox, ty+oy, W*0.016, 0, Math.PI*2); ctx.fill();
+      // highlight
+      ctx.fillStyle='rgba(255,210,120,0.18)';
+      ctx.beginPath(); ctx.arc(tx+ox-W*0.005, ty+oy-W*0.005, W*0.006, 0, Math.PI*2); ctx.fill();
     });
   }
-  palm(W*0.02, H*0.94, W*0.07, H*0.50);
-  palm(W*0.98, H*0.94, -W*0.07, H*0.50);
+  palm(W*0.022, H*0.94, W*0.08, H*0.52);
+  palm(W*0.978, H*0.94, -W*0.08, H*0.52);
 
   drawGroundRings('#e8c870','#d4a038','rgba(220,168,60,0.88)');
 
