@@ -5494,8 +5494,10 @@ function drawHalloweenScene() {
   ctx.globalAlpha=1;
 }
 function drawReefScene() {
-  // Full deep ocean background
-  ctx.fillStyle='#001428'; ctx.fillRect(0,0,W,H);
+  // Full underwater background — murky deep blue-green
+  const bgG=ctx.createLinearGradient(0,0,0,H);
+  bgG.addColorStop(0,'#001c3a'); bgG.addColorStop(0.5,'#002d4a'); bgG.addColorStop(1,'#003040');
+  ctx.fillStyle=bgG; ctx.fillRect(0,0,W,H);
 
   // ── BACKDROP clipped to H*0.23 ──
   ctx.save();
@@ -5554,9 +5556,35 @@ function drawReefScene() {
 
   ctx.restore(); // end backdrop clip
 
-  // ── FIELD ──
-  drawGroundRings('#d4c090','#b8a060','rgba(180,155,80,0.88)');
+  // ── FIELD — sandy seabed with blue tint ──
+  drawGroundRings('#a8c4b8','#7aa098','rgba(60,130,140,0.85)');
   drawSceneScoreboard();
+
+  // Caustic light ripples over entire scene — makes it look submerged
+  ctx.save(); ctx.globalAlpha=0.07;
+  for(let i=0;i<12;i++){
+    const cx2=W*(0.1+((i*83)%80)/100), cy2=H*(0.28+((i*61)%68)/100);
+    const cr=W*(0.04+((i*37)%4)/100);
+    const cg2=ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,cr);
+    cg2.addColorStop(0,'rgba(100,220,255,1)'); cg2.addColorStop(1,'rgba(0,100,180,0)');
+    ctx.fillStyle=cg2; ctx.beginPath(); ctx.ellipse(cx2,cy2,cr,cr*0.6,i*0.5,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+
+  // Blue water tint over the whole scene to unify it underwater
+  const waterTint=ctx.createLinearGradient(0,H*0.23,0,H);
+  waterTint.addColorStop(0,'rgba(0,60,100,0.32)'); waterTint.addColorStop(1,'rgba(0,30,60,0.18)');
+  ctx.fillStyle=waterTint; ctx.fillRect(0,H*0.23,W,H*0.77);
+
+  // Bubble columns drifting up side margins
+  ctx.save(); ctx.globalAlpha=0.45;
+  [[0.03,0.42,0.55,0.70,0.88],[0.97,0.58,0.45,0.30,0.82]].forEach(([bx,...ys])=>{
+    ys.forEach((by,i)=>{
+      ctx.fillStyle='rgba(160,230,255,0.7)';
+      ctx.beginPath(); ctx.arc(W*bx+(i%2)*4,H*by,1.5+i*0.4,0,Math.PI*2); ctx.fill();
+    });
+  });
+  ctx.restore();
 
   // ── KELP — rooted at bottom, far left and right edges only ──
   function drawKelp(kx,waveDir){
