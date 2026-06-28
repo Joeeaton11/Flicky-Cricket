@@ -158,7 +158,8 @@
 
   #customiseScreen {
     position:absolute; top:0; left:0; width:100%; height:100%;
-    background:rgba(0,0,0,0.85); display:flex; flex-direction:column;
+    background:linear-gradient(160deg,#0d1f13 0%,#071209 100%);
+    display:flex; flex-direction:column;
     align-items:center; justify-content:flex-start; color:#fff; text-align:center;
     padding:12px 16px; gap:6px; overflow-y:auto; box-sizing:border-box;
   }
@@ -228,10 +229,8 @@
 
   #equipContent {
     width:100%; max-width:400px; overflow-y:auto; flex:1;
-    display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:2px 2px 12px;
-    align-content:start;
+    display:block; padding:0; box-sizing:border-box;
   }
-  #equipContent.single-col { grid-template-columns:1fr; }
 
   /* Item cards — visual, large */
   .equipCard {
@@ -253,16 +252,21 @@
   .equipCardArt canvas { width:100%; height:100%; }
 
   .equipCardLocked {
-    position:absolute; inset:0; background:rgba(0,0,0,0.65);
-    display:flex; align-items:center; justify-content:center;
-    font-size:28px;
+    position:absolute; inset:0; background:rgba(0,0,0,0.70);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:4px;
+  }
+  .equipCardLocked .lockIcon { font-size:26px; line-height:1; }
+  .equipCardLocked .lockLabel {
+    font-family:'Courier New',monospace; font-size:8px; font-weight:bold;
+    letter-spacing:2px; color:rgba(255,255,255,0.55);
   }
 
   .equipCardBody { padding:8px; display:flex; flex-direction:column; gap:5px; }
 
   .equipCardName {
-    font-family:'Courier New',monospace; font-size:10px; font-weight:bold;
-    letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    font-family:'Courier New',monospace; font-size:9px; font-weight:bold;
+    letter-spacing:0.3px; line-height:1.2;
   }
   .equipCardRarityBadge {
     font-family:'Courier New',monospace; font-size:8px; font-weight:bold;
@@ -2197,209 +2201,180 @@ function drawEquipArt(canvas, slot, item, owned) {
   const cx = sz / 2, cy = sz / 2;
   const col = item.color;
 
-  // dark radial bg
-  const bg = ctx2.createRadialGradient(cx, cy, 0, cx, cy, sz * 0.7);
-  bg.addColorStop(0, 'rgba(255,255,255,0.07)');
-  bg.addColorStop(1, 'rgba(0,0,0,0)');
+  // subtle vignette bg
+  const bg = ctx2.createRadialGradient(cx, cy*0.7, 0, cx, cy, sz*0.75);
+  bg.addColorStop(0, 'rgba(255,255,255,0.08)');
+  bg.addColorStop(1, 'rgba(0,0,0,0.3)');
   ctx2.fillStyle = bg;
   ctx2.fillRect(0, 0, sz, sz);
 
-  if (!owned) {
-    ctx2.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx2.font = 'bold ' + (sz * 0.38) + 'px Arial';
-    ctx2.textAlign = 'center';
-    ctx2.textBaseline = 'middle';
-    ctx2.fillText('🔒', cx, cy);
-    return;
-  }
+  if (!owned) return; // lock overlay handled in HTML
 
   ctx2.save();
+  ctx2.lineCap = 'round'; ctx2.lineJoin = 'round';
+
   if (slot === 'bat') {
-    // handle
-    ctx2.fillStyle = '#8b5e3c';
-    ctx2.beginPath();
-    ctx2.roundRect(cx - sz*0.06, cy + sz*0.08, sz*0.12, sz*0.36, sz*0.03);
-    ctx2.fill();
-    // grip tape lines
-    ctx2.strokeStyle = 'rgba(0,0,0,0.35)';
-    ctx2.lineWidth = sz * 0.012;
-    for (let i = 0; i < 4; i++) {
-      const yy = cy + sz*0.10 + i * sz*0.076;
-      ctx2.beginPath(); ctx2.moveTo(cx - sz*0.06, yy); ctx2.lineTo(cx + sz*0.06, yy); ctx2.stroke();
-    }
+    // rotate slightly for dynamism
+    ctx2.translate(cx, cy); ctx2.rotate(-0.18); ctx2.translate(-cx, -cy);
+    // handle – dark grip
+    const hx = cx + sz*0.10, hy = cy + sz*0.04;
+    const hg = ctx2.createLinearGradient(hx-sz*0.06,0,hx+sz*0.06,0);
+    hg.addColorStop(0,'#5a3a1a'); hg.addColorStop(0.5,'#8b5e3c'); hg.addColorStop(1,'#3a2010');
+    ctx2.fillStyle = hg;
+    ctx2.beginPath(); ctx2.roundRect(hx-sz*0.055, hy+sz*0.02, sz*0.11, sz*0.40, sz*0.025); ctx2.fill();
+    // grip wrapping
+    ctx2.strokeStyle = 'rgba(0,0,0,0.4)'; ctx2.lineWidth = sz*0.013;
+    for (let i=0;i<5;i++) { const yy=hy+sz*0.05+i*sz*0.072; ctx2.beginPath(); ctx2.moveTo(hx-sz*0.055,yy); ctx2.lineTo(hx+sz*0.055,yy); ctx2.stroke(); }
     // blade
-    const grad = ctx2.createLinearGradient(cx - sz*0.18, 0, cx + sz*0.18, 0);
-    grad.addColorStop(0, shadeColor(col, -30));
-    grad.addColorStop(0.3, lightenColor(col, 30));
-    grad.addColorStop(0.7, col);
-    grad.addColorStop(1, shadeColor(col, -20));
+    const bx = cx - sz*0.04;
+    const grad = ctx2.createLinearGradient(bx-sz*0.20,0,bx+sz*0.20,0);
+    grad.addColorStop(0,shadeColor(col,-35)); grad.addColorStop(0.25,lightenColor(col,35));
+    grad.addColorStop(0.6,col); grad.addColorStop(1,shadeColor(col,-25));
     ctx2.fillStyle = grad;
     ctx2.beginPath();
-    ctx2.moveTo(cx - sz*0.18, cy + sz*0.10);
-    ctx2.lineTo(cx + sz*0.18, cy + sz*0.10);
-    ctx2.lineTo(cx + sz*0.14, cy - sz*0.38);
-    ctx2.lineTo(cx, cy - sz*0.44);
-    ctx2.lineTo(cx - sz*0.14, cy - sz*0.38);
-    ctx2.closePath();
-    ctx2.fill();
-    // ridge down centre
-    ctx2.strokeStyle = shadeColor(col, -40);
-    ctx2.lineWidth = sz * 0.022;
-    ctx2.beginPath();
-    ctx2.moveTo(cx, cy + sz*0.10);
-    ctx2.lineTo(cx, cy - sz*0.42);
-    ctx2.stroke();
+    ctx2.moveTo(bx-sz*0.20, hy+sz*0.06);
+    ctx2.lineTo(bx+sz*0.20, hy+sz*0.06);
+    ctx2.quadraticCurveTo(bx+sz*0.22, hy, bx+sz*0.18, cy-sz*0.40);
+    ctx2.quadraticCurveTo(bx, cy-sz*0.48, bx-sz*0.18, cy-sz*0.40);
+    ctx2.quadraticCurveTo(bx-sz*0.22, hy, bx-sz*0.20, hy+sz*0.06);
+    ctx2.closePath(); ctx2.fill();
+    // centre ridge
+    ctx2.strokeStyle = shadeColor(col,-45); ctx2.lineWidth = sz*0.025;
+    ctx2.beginPath(); ctx2.moveTo(bx, hy+sz*0.06); ctx2.lineTo(bx, cy-sz*0.44); ctx2.stroke();
+    // edge bevel
+    ctx2.strokeStyle = lightenColor(col,40); ctx2.lineWidth = sz*0.012;
+    ctx2.beginPath(); ctx2.moveTo(bx-sz*0.195,hy+sz*0.05); ctx2.lineTo(bx-sz*0.17,cy-sz*0.39); ctx2.stroke();
+    ctx2.beginPath(); ctx2.moveTo(bx+sz*0.195,hy+sz*0.05); ctx2.lineTo(bx+sz*0.17,cy-sz*0.39); ctx2.stroke();
     // shine
-    ctx2.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx2.beginPath();
-    ctx2.ellipse(cx - sz*0.05, cy - sz*0.12, sz*0.04, sz*0.18, -0.2, 0, Math.PI*2);
-    ctx2.fill();
+    const sh = ctx2.createRadialGradient(bx-sz*0.08,cy-sz*0.15,0,bx-sz*0.05,cy-sz*0.10,sz*0.20);
+    sh.addColorStop(0,'rgba(255,255,255,0.30)'); sh.addColorStop(1,'rgba(255,255,255,0)');
+    ctx2.fillStyle=sh; ctx2.beginPath(); ctx2.arc(bx,cy,sz*0.50,0,Math.PI*2); ctx2.fill();
+
   } else if (slot === 'gloves') {
-    // draw two mitts side by side
-    [[-0.18, 0], [0.06, 0]].forEach(([ox]) => {
-      const gx = cx + sz * ox;
-      const gy = cy + sz * 0.04;
-      // palm
-      const gg = ctx2.createRadialGradient(gx, gy, 0, gx, gy, sz * 0.22);
-      gg.addColorStop(0, lightenColor(col, 20));
-      gg.addColorStop(1, shadeColor(col, -20));
-      ctx2.fillStyle = gg;
-      ctx2.beginPath();
-      ctx2.roundRect(gx - sz*0.10, gy - sz*0.22, sz*0.20, sz*0.32, sz*0.06);
-      ctx2.fill();
-      // fingers
-      ctx2.fillStyle = lightenColor(col, 10);
-      for (let f = 0; f < 3; f++) {
-        const fx = gx - sz*0.07 + f * sz*0.07;
-        ctx2.beginPath();
-        ctx2.roundRect(fx - sz*0.025, gy - sz*0.36, sz*0.05, sz*0.16, sz*0.025);
-        ctx2.fill();
-      }
-      // thumb
-      ctx2.beginPath();
-      ctx2.ellipse(gx + sz*0.12, gy - sz*0.10, sz*0.04, sz*0.08, 0.4, 0, Math.PI*2);
-      ctx2.fill();
-      // knuckle stripe
-      ctx2.strokeStyle = shadeColor(col, -35);
-      ctx2.lineWidth = sz*0.012;
-      ctx2.beginPath();
-      ctx2.moveTo(gx - sz*0.10, gy - sz*0.05);
-      ctx2.lineTo(gx + sz*0.10, gy - sz*0.05);
-      ctx2.stroke();
-    });
+    // single glove, centred, larger
+    const gx = cx - sz*0.02, gy = cy + sz*0.08;
+    const gg = ctx2.createLinearGradient(gx-sz*0.22,0,gx+sz*0.22,0);
+    gg.addColorStop(0,shadeColor(col,-25)); gg.addColorStop(0.5,lightenColor(col,20)); gg.addColorStop(1,shadeColor(col,-20));
+    // palm body
+    ctx2.fillStyle = gg;
+    ctx2.beginPath(); ctx2.roundRect(gx-sz*0.22, gy-sz*0.28, sz*0.44, sz*0.42, sz*0.08); ctx2.fill();
+    // four fingers
+    const fingerW = sz*0.085, fingerH = sz*0.26, fingerR = sz*0.04;
+    const fingerStartX = gx - sz*0.185;
+    ctx2.fillStyle = lightenColor(col,12);
+    for (let f=0;f<4;f++) {
+      const fx = fingerStartX + f*sz*0.10;
+      ctx2.beginPath(); ctx2.roundRect(fx, gy-sz*0.50, fingerW, fingerH, fingerR); ctx2.fill();
+      // knuckle line
+      ctx2.strokeStyle = shadeColor(col,-30); ctx2.lineWidth = sz*0.012;
+      ctx2.beginPath(); ctx2.moveTo(fx+sz*0.01,gy-sz*0.27); ctx2.lineTo(fx+fingerW-sz*0.01,gy-sz*0.27); ctx2.stroke();
+    }
+    // thumb
+    ctx2.fillStyle = lightenColor(col,8);
+    ctx2.beginPath(); ctx2.ellipse(gx+sz*0.26, gy-sz*0.12, sz*0.10, sz*0.18, 0.5, 0, Math.PI*2); ctx2.fill();
+    // wrist strap
+    ctx2.fillStyle = shadeColor(col,-20);
+    ctx2.beginPath(); ctx2.roundRect(gx-sz*0.22, gy+sz*0.14, sz*0.44, sz*0.11, sz*0.03); ctx2.fill();
+    ctx2.strokeStyle = lightenColor(col,30); ctx2.lineWidth = sz*0.014;
+    ctx2.beginPath(); ctx2.moveTo(gx-sz*0.10,gy+sz*0.195); ctx2.lineTo(gx+sz*0.10,gy+sz*0.195); ctx2.stroke();
+    // shine
+    ctx2.fillStyle='rgba(255,255,255,0.18)';
+    ctx2.beginPath(); ctx2.ellipse(gx-sz*0.08,gy-sz*0.08,sz*0.10,sz*0.20,-0.2,0,Math.PI*2); ctx2.fill();
+
   } else if (slot === 'pads') {
-    // two vertical pad rectangles
-    [[-0.20, 0], [0.04, 0]].forEach(([ox]) => {
-      const px = cx + sz*ox;
-      const py = cy;
-      const pg = ctx2.createLinearGradient(px - sz*0.13, 0, px + sz*0.13, 0);
-      pg.addColorStop(0, shadeColor(col, -20));
-      pg.addColorStop(0.4, lightenColor(col, 25));
-      pg.addColorStop(1, shadeColor(col, -15));
-      ctx2.fillStyle = pg;
-      ctx2.beginPath();
-      ctx2.roundRect(px - sz*0.11, py - sz*0.42, sz*0.22, sz*0.78, sz*0.04);
-      ctx2.fill();
-      // horizontal strap lines
-      ctx2.strokeStyle = shadeColor(col, -40);
-      ctx2.lineWidth = sz*0.014;
-      [-0.22, 0, 0.22].forEach(ry => {
-        ctx2.beginPath();
-        ctx2.moveTo(px - sz*0.11, py + sz*ry);
-        ctx2.lineTo(px + sz*0.11, py + sz*ry);
-        ctx2.stroke();
-      });
-      // knee bulge
-      ctx2.fillStyle = lightenColor(col, 15);
-      ctx2.beginPath();
-      ctx2.ellipse(px, py - sz*0.10, sz*0.09, sz*0.11, 0, 0, Math.PI*2);
-      ctx2.fill();
+    // one pad centred, prominent
+    const px = cx, py = cy + sz*0.02;
+    const pg = ctx2.createLinearGradient(px-sz*0.22,0,px+sz*0.22,0);
+    pg.addColorStop(0,shadeColor(col,-25)); pg.addColorStop(0.35,lightenColor(col,30));
+    pg.addColorStop(0.65,col); pg.addColorStop(1,shadeColor(col,-20));
+    ctx2.fillStyle = pg;
+    ctx2.beginPath(); ctx2.roundRect(px-sz*0.21, py-sz*0.44, sz*0.42, sz*0.82, sz*0.06); ctx2.fill();
+    // knee roll – elliptical bulge
+    ctx2.fillStyle = lightenColor(col,18);
+    ctx2.beginPath(); ctx2.ellipse(px, py-sz*0.14, sz*0.18, sz*0.14, 0, 0, Math.PI*2); ctx2.fill();
+    // panel lines (horizontal)
+    ctx2.strokeStyle = shadeColor(col,-35); ctx2.lineWidth = sz*0.016;
+    [-0.30, -0.01, 0.28].forEach(ry => {
+      ctx2.beginPath(); ctx2.moveTo(px-sz*0.20, py+sz*ry); ctx2.lineTo(px+sz*0.20, py+sz*ry); ctx2.stroke();
     });
+    // strap buckles
+    [py-sz*0.33, py+sz*0.12].forEach(sy => {
+      ctx2.fillStyle = '#f4d03f';
+      ctx2.beginPath(); ctx2.roundRect(px-sz*0.06, sy-sz*0.025, sz*0.12, sz*0.05, sz*0.01); ctx2.fill();
+    });
+    // shine
+    ctx2.fillStyle='rgba(255,255,255,0.16)';
+    ctx2.beginPath(); ctx2.ellipse(px-sz*0.07,py-sz*0.18,sz*0.07,sz*0.22,0,0,Math.PI*2); ctx2.fill();
+
   } else if (slot === 'helmet') {
-    // dome
-    const hg = ctx2.createRadialGradient(cx - sz*0.08, cy - sz*0.18, 0, cx, cy - sz*0.08, sz*0.38);
-    hg.addColorStop(0, lightenColor(col, 30));
-    hg.addColorStop(0.5, col);
-    hg.addColorStop(1, shadeColor(col, -25));
+    const hg = ctx2.createRadialGradient(cx-sz*0.10, cy-sz*0.22, 0, cx, cy-sz*0.05, sz*0.44);
+    hg.addColorStop(0,lightenColor(col,40)); hg.addColorStop(0.45,col); hg.addColorStop(1,shadeColor(col,-30));
+    // shell
     ctx2.fillStyle = hg;
     ctx2.beginPath();
-    ctx2.arc(cx, cy - sz*0.08, sz*0.34, Math.PI, 0);
-    ctx2.lineTo(cx + sz*0.34, cy + sz*0.04);
-    ctx2.lineTo(cx - sz*0.34, cy + sz*0.04);
-    ctx2.closePath();
-    ctx2.fill();
-    // brim
-    ctx2.fillStyle = shadeColor(col, -30);
-    ctx2.beginPath();
-    ctx2.ellipse(cx, cy + sz*0.04, sz*0.38, sz*0.07, 0, 0, Math.PI*2);
-    ctx2.fill();
-    // grille bars
-    ctx2.strokeStyle = '#888';
-    ctx2.lineWidth = sz*0.016;
-    ctx2.lineCap = 'round';
-    const grillY = cy + sz*0.05;
-    for (let g = -1; g <= 1; g++) {
-      ctx2.beginPath();
-      ctx2.moveTo(cx + g*sz*0.10, grillY);
-      ctx2.lineTo(cx + g*sz*0.10, grillY + sz*0.24);
-      ctx2.stroke();
-    }
-    ctx2.beginPath();
-    ctx2.moveTo(cx - sz*0.12, grillY + sz*0.12);
-    ctx2.lineTo(cx + sz*0.12, grillY + sz*0.12);
-    ctx2.stroke();
+    ctx2.moveTo(cx-sz*0.40, cy+sz*0.06);
+    ctx2.arc(cx, cy-sz*0.06, sz*0.40, Math.PI, 0);
+    ctx2.lineTo(cx+sz*0.40, cy+sz*0.06);
+    ctx2.closePath(); ctx2.fill();
+    // peak/brim
+    ctx2.fillStyle = shadeColor(col,-35);
+    ctx2.beginPath(); ctx2.ellipse(cx, cy+sz*0.06, sz*0.42, sz*0.08, 0, 0, Math.PI*2); ctx2.fill();
+    // ear guard
+    ctx2.fillStyle = shadeColor(col,-20);
+    ctx2.beginPath(); ctx2.ellipse(cx+sz*0.34, cy+sz*0.00, sz*0.10, sz*0.18, 0.2, 0, Math.PI*2); ctx2.fill();
+    ctx2.beginPath(); ctx2.ellipse(cx-sz*0.34, cy+sz*0.00, sz*0.10, sz*0.18, -0.2, 0, Math.PI*2); ctx2.fill();
+    // grille
+    ctx2.strokeStyle = '#999'; ctx2.lineWidth = sz*0.018;
+    const gy2 = cy + sz*0.07;
+    for (let g=-2;g<=2;g++) { ctx2.beginPath(); ctx2.moveTo(cx+g*sz*0.09,gy2); ctx2.lineTo(cx+g*sz*0.09,gy2+sz*0.28); ctx2.stroke(); }
+    [gy2+sz*0.09, gy2+sz*0.20].forEach(hy2 => { ctx2.beginPath(); ctx2.moveTo(cx-sz*0.20,hy2); ctx2.lineTo(cx+sz*0.20,hy2); ctx2.stroke(); });
+    // logo stripe
+    ctx2.strokeStyle = '#f4d03f'; ctx2.lineWidth = sz*0.022;
+    ctx2.beginPath(); ctx2.moveTo(cx-sz*0.28,cy-sz*0.22); ctx2.lineTo(cx+sz*0.28,cy-sz*0.22); ctx2.stroke();
     // shine
-    ctx2.fillStyle = 'rgba(255,255,255,0.20)';
-    ctx2.beginPath();
-    ctx2.ellipse(cx - sz*0.08, cy - sz*0.22, sz*0.08, sz*0.06, -0.5, 0, Math.PI*2);
-    ctx2.fill();
+    ctx2.fillStyle='rgba(255,255,255,0.22)';
+    ctx2.beginPath(); ctx2.ellipse(cx-sz*0.12,cy-sz*0.26,sz*0.12,sz*0.07,-0.4,0,Math.PI*2); ctx2.fill();
+
   } else if (slot === 'shoes') {
-    // draw one shoe
-    const sg = ctx2.createLinearGradient(cx - sz*0.32, 0, cx + sz*0.30, 0);
-    sg.addColorStop(0, shadeColor(col, -20));
-    sg.addColorStop(0.4, lightenColor(col, 20));
-    sg.addColorStop(1, shadeColor(col, -15));
-    ctx2.fillStyle = sg;
+    // cricket boot, profile view facing left, filling canvas nicely
+    ctx2.translate(cx, cy); ctx2.rotate(0.08); ctx2.translate(-cx, -cy);
+    const sg = ctx2.createLinearGradient(cx-sz*0.36,0,cx+sz*0.36,0);
+    sg.addColorStop(0,shadeColor(col,-25)); sg.addColorStop(0.4,lightenColor(col,22)); sg.addColorStop(1,shadeColor(col,-18));
     // sole
-    ctx2.fillStyle = '#333';
-    ctx2.beginPath();
-    ctx2.roundRect(cx - sz*0.32, cy + sz*0.18, sz*0.64, sz*0.12, sz*0.04);
-    ctx2.fill();
+    ctx2.fillStyle = '#222';
+    ctx2.beginPath(); ctx2.roundRect(cx-sz*0.36, cy+sz*0.20, sz*0.72, sz*0.14, sz*0.04); ctx2.fill();
     // spikes
     ctx2.fillStyle = '#555';
-    [-0.22, -0.08, 0.08, 0.22].forEach(sx => {
-      ctx2.beginPath();
-      ctx2.moveTo(cx + sx*sz, cy + sz*0.30);
-      ctx2.lineTo(cx + sx*sz - sz*0.025, cy + sz*0.37);
-      ctx2.lineTo(cx + sx*sz + sz*0.025, cy + sz*0.37);
-      ctx2.fill();
+    [-0.28,-0.14,0,0.14,0.28].forEach(sx => {
+      const spx = cx+sx*sz;
+      ctx2.beginPath(); ctx2.moveTo(spx-sz*0.022,cy+sz*0.34); ctx2.lineTo(spx,cy+sz*0.42); ctx2.lineTo(spx+sz*0.022,cy+sz*0.34); ctx2.fill();
     });
-    // upper
+    // upper shoe body
     ctx2.fillStyle = sg;
     ctx2.beginPath();
-    ctx2.moveTo(cx - sz*0.32, cy + sz*0.18);
-    ctx2.lineTo(cx - sz*0.28, cy - sz*0.10);
-    ctx2.quadraticCurveTo(cx - sz*0.12, cy - sz*0.22, cx + sz*0.10, cy - sz*0.18);
-    ctx2.lineTo(cx + sz*0.32, cy + sz*0.00);
-    ctx2.lineTo(cx + sz*0.32, cy + sz*0.18);
-    ctx2.closePath();
-    ctx2.fill();
-    // laces
-    ctx2.strokeStyle = lightenColor(col, 50);
-    ctx2.lineWidth = sz*0.016;
-    ctx2.lineCap = 'round';
-    for (let l = 0; l < 3; l++) {
-      const lx = cx - sz*0.15 + l * sz*0.13;
-      ctx2.beginPath();
-      ctx2.moveTo(lx, cy - sz*0.08);
-      ctx2.lineTo(lx + sz*0.08, cy - sz*0.00);
-      ctx2.stroke();
-    }
+    ctx2.moveTo(cx-sz*0.36, cy+sz*0.20);
+    ctx2.bezierCurveTo(cx-sz*0.36,cy-sz*0.02, cx-sz*0.20,cy-sz*0.22, cx,cy-sz*0.22);
+    ctx2.bezierCurveTo(cx+sz*0.18,cy-sz*0.22, cx+sz*0.38,cy-sz*0.08, cx+sz*0.38,cy+sz*0.12);
+    ctx2.lineTo(cx+sz*0.36, cy+sz*0.20);
+    ctx2.closePath(); ctx2.fill();
     // toe cap
-    ctx2.fillStyle = shadeColor(col, -30);
-    ctx2.beginPath();
-    ctx2.ellipse(cx + sz*0.26, cy + sz*0.06, sz*0.10, sz*0.08, 0.3, 0, Math.PI*2);
-    ctx2.fill();
+    ctx2.fillStyle = shadeColor(col,-30);
+    ctx2.beginPath(); ctx2.ellipse(cx+sz*0.28,cy+sz*0.04,sz*0.12,sz*0.10,0.3,0,Math.PI*2); ctx2.fill();
+    // tongue
+    ctx2.fillStyle = lightenColor(col,15);
+    ctx2.beginPath(); ctx2.roundRect(cx-sz*0.06,cy-sz*0.22,sz*0.18,sz*0.18,sz*0.03); ctx2.fill();
+    // lace eyelets + laces
+    ctx2.strokeStyle = 'rgba(255,255,255,0.7)'; ctx2.lineWidth = sz*0.018;
+    for (let l=0;l<3;l++) {
+      const ly = cy-sz*0.16+l*sz*0.08;
+      ctx2.beginPath(); ctx2.moveTo(cx-sz*0.04,ly); ctx2.lineTo(cx+sz*0.10,ly); ctx2.stroke();
+    }
+    // ankle padding
+    ctx2.fillStyle = lightenColor(col,10);
+    ctx2.beginPath(); ctx2.ellipse(cx-sz*0.26,cy+sz*0.06,sz*0.10,sz*0.14,0.1,0,Math.PI*2); ctx2.fill();
+    // shine
+    ctx2.fillStyle='rgba(255,255,255,0.20)';
+    ctx2.beginPath(); ctx2.ellipse(cx+sz*0.04,cy-sz*0.10,sz*0.09,sz*0.05,-0.3,0,Math.PI*2); ctx2.fill();
   }
   ctx2.restore();
 }
@@ -2432,7 +2407,7 @@ function renderEquipSlotTab(slot, container) {
     const artDiv = document.createElement('div');
     artDiv.className = 'equipCardArt';
     const artCanvas = document.createElement('canvas');
-    artCanvas.width = 120; artCanvas.height = 120;
+    artCanvas.width = 200; artCanvas.height = 200;
     artDiv.appendChild(artCanvas);
     card.appendChild(artDiv);
 
@@ -2440,7 +2415,11 @@ function renderEquipSlotTab(slot, container) {
     if (!owned) {
       const lockDiv = document.createElement('div');
       lockDiv.className = 'equipCardLocked';
-      lockDiv.textContent = 'LOCKED';
+      const lockIcon = document.createElement('span');
+      lockIcon.className = 'lockIcon'; lockIcon.textContent = '🔒';
+      const lockLabel = document.createElement('span');
+      lockLabel.className = 'lockLabel'; lockLabel.textContent = 'LOCKED';
+      lockDiv.appendChild(lockIcon); lockDiv.appendChild(lockLabel);
       artDiv.appendChild(lockDiv);
     }
 
@@ -2565,162 +2544,183 @@ function formatTimer(seconds) {
 }
 
 function drawChestArt(canvas, type, pct) {
-  const sz = canvas.width;
+  const W = canvas.width, H = canvas.height;
   const ctx2 = canvas.getContext('2d');
-  ctx2.clearRect(0, 0, sz, sz);
-  const cx = sz/2, cy = sz/2;
+  ctx2.clearRect(0, 0, W, H);
+  const cx = W/2, cy = H*0.46;
 
   const colors = {
-    bronze: { base:'#cd7f32', shine:'#e8a44a', dark:'#7a4510' },
-    silver: { base:'#b0b0b0', shine:'#e0e0e0', dark:'#606060' },
-    gold:   { base:'#d4a830', shine:'#f4d03f', dark:'#8b6914' },
-    elite:  { base:'#a855f7', shine:'#d580ff', dark:'#5b21b6' },
+    bronze: { base:'#cd7f32', shine:'#f0b060', dark:'#7a4510', mid:'#e09040' },
+    silver: { base:'#a8a8a8', shine:'#e8e8e8', dark:'#505050', mid:'#c8c8c8' },
+    gold:   { base:'#c8960c', shine:'#f4d03f', dark:'#7a5a04', mid:'#e0b020' },
+    elite:  { base:'#8b30e0', shine:'#d580ff', dark:'#4a1090', mid:'#b050f8' },
   };
   const c = colors[type] || colors.bronze;
 
-  // glow aura
-  const glow = ctx2.createRadialGradient(cx, cy, sz*0.1, cx, cy, sz*0.6);
-  glow.addColorStop(0, c.shine + '44');
-  glow.addColorStop(1, 'transparent');
-  ctx2.fillStyle = glow;
-  ctx2.fillRect(0, 0, sz, sz);
+  // background glow
+  const glow = ctx2.createRadialGradient(cx, cy, 10, cx, cy, W*0.65);
+  glow.addColorStop(0, c.shine + '55'); glow.addColorStop(1, 'transparent');
+  ctx2.fillStyle = glow; ctx2.fillRect(0, 0, W, H);
 
-  // lid
-  const lidG = ctx2.createLinearGradient(cx-sz*0.30, cy-sz*0.32, cx+sz*0.30, cy-sz*0.06);
-  lidG.addColorStop(0, c.shine); lidG.addColorStop(0.5, c.base); lidG.addColorStop(1, c.dark);
-  ctx2.fillStyle = lidG;
-  ctx2.beginPath();
-  ctx2.roundRect(cx - sz*0.30, cy - sz*0.38, sz*0.60, sz*0.22, [sz*0.06, sz*0.06, 0, 0]);
-  ctx2.fill();
+  const bw = W*0.76, bh = H*0.44, bx = cx-bw/2, by = cy;
+  const lh = H*0.28, lx = cx-bw/2-4, ly = cy-lh+4;
+
+  // shadow
+  ctx2.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx2.beginPath(); ctx2.ellipse(cx, by+bh+6, bw*0.45, 8, 0, 0, Math.PI*2); ctx2.fill();
 
   // body
-  const bodyG = ctx2.createLinearGradient(cx-sz*0.28, cy-sz*0.18, cx+sz*0.28, cy+sz*0.30);
-  bodyG.addColorStop(0, c.base); bodyG.addColorStop(0.5, c.shine); bodyG.addColorStop(1, c.dark);
+  const bodyG = ctx2.createLinearGradient(bx, by, bx+bw, by+bh);
+  bodyG.addColorStop(0, c.shine); bodyG.addColorStop(0.4, c.mid); bodyG.addColorStop(1, c.dark);
   ctx2.fillStyle = bodyG;
-  ctx2.beginPath();
-  ctx2.roundRect(cx - sz*0.28, cy - sz*0.16, sz*0.56, sz*0.44, [0, 0, sz*0.05, sz*0.05]);
-  ctx2.fill();
+  ctx2.beginPath(); ctx2.roundRect(bx, by, bw, bh, [0,0,8,8]); ctx2.fill();
 
-  // latch
-  ctx2.fillStyle = c.shine;
-  ctx2.beginPath();
-  ctx2.roundRect(cx - sz*0.06, cy - sz*0.02, sz*0.12, sz*0.10, sz*0.02);
-  ctx2.fill();
-  ctx2.fillStyle = c.dark;
-  ctx2.beginPath();
-  ctx2.arc(cx, cy + sz*0.04, sz*0.032, 0, Math.PI*2);
-  ctx2.fill();
-
-  // dividing line between lid and body
-  ctx2.strokeStyle = c.dark;
-  ctx2.lineWidth = sz*0.018;
-  ctx2.beginPath();
-  ctx2.moveTo(cx - sz*0.28, cy - sz*0.16);
-  ctx2.lineTo(cx + sz*0.28, cy - sz*0.16);
-  ctx2.stroke();
-
-  // corner rivets
-  [[- 0.22, -0.28],[0.22,-0.28],[-0.22,0.22],[0.22,0.22]].forEach(([rx,ry]) => {
-    ctx2.fillStyle = c.shine;
-    ctx2.beginPath();
-    ctx2.arc(cx + rx*sz, cy + ry*sz, sz*0.028, 0, Math.PI*2);
-    ctx2.fill();
+  // body wood grain lines
+  ctx2.strokeStyle = c.dark + 'aa'; ctx2.lineWidth = 1.5;
+  [0.25, 0.55, 0.80].forEach(t => {
+    ctx2.beginPath(); ctx2.moveTo(bx+8, by+bh*t); ctx2.lineTo(bx+bw-8, by+bh*t); ctx2.stroke();
   });
 
-  // timer arc if opening
-  if (pct !== null) {
-    ctx2.strokeStyle = 'rgba(0,0,0,0.25)';
-    ctx2.lineWidth = sz*0.07;
-    ctx2.lineCap = 'round';
-    ctx2.beginPath();
-    ctx2.arc(cx, cy + sz*0.55, sz*0.22, -Math.PI/2, Math.PI*1.5);
-    ctx2.stroke();
+  // vertical corner strips
+  [bx+12, bx+bw-12].forEach(sx => {
+    ctx2.fillStyle = c.dark;
+    ctx2.beginPath(); ctx2.roundRect(sx-4, by, 8, bh, 2); ctx2.fill();
+    // rivets
+    [0.20, 0.65].forEach(ry => {
+      ctx2.fillStyle = c.shine;
+      ctx2.beginPath(); ctx2.arc(sx, by+bh*ry, 4, 0, Math.PI*2); ctx2.fill();
+    });
+  });
+
+  // lid
+  const lidG = ctx2.createLinearGradient(lx, ly, lx+bw+8, ly+lh);
+  lidG.addColorStop(0, c.shine); lidG.addColorStop(0.45, c.mid); lidG.addColorStop(1, c.dark);
+  ctx2.fillStyle = lidG;
+  ctx2.beginPath(); ctx2.roundRect(lx, ly, bw+8, lh, [8,8,0,0]); ctx2.fill();
+
+  // lid arch curve at bottom
+  ctx2.fillStyle = c.mid;
+  ctx2.beginPath();
+  ctx2.moveTo(lx, ly+lh);
+  ctx2.quadraticCurveTo(cx, ly+lh+10, lx+bw+8, ly+lh);
+  ctx2.lineTo(lx+bw+8, ly+lh+6); ctx2.lineTo(lx, ly+lh+6); ctx2.closePath(); ctx2.fill();
+
+  // lid wood grain
+  ctx2.strokeStyle = c.dark + '88'; ctx2.lineWidth = 1.5;
+  [0.35, 0.70].forEach(t => {
+    ctx2.beginPath(); ctx2.moveTo(lx+8,ly+lh*t); ctx2.lineTo(lx+bw,ly+lh*t); ctx2.stroke();
+  });
+
+  // lid corner strips
+  [lx+12, lx+bw-4].forEach(sx => {
+    ctx2.fillStyle = c.dark;
+    ctx2.beginPath(); ctx2.roundRect(sx-4, ly+4, 8, lh-4, 2); ctx2.fill();
+    ctx2.fillStyle = c.shine;
+    ctx2.beginPath(); ctx2.arc(sx, ly+lh*0.4, 4, 0, Math.PI*2); ctx2.fill();
+  });
+
+  // latch plate
+  ctx2.fillStyle = c.dark;
+  ctx2.beginPath(); ctx2.roundRect(cx-14, cy-8, 28, 20, 4); ctx2.fill();
+  ctx2.fillStyle = c.shine;
+  ctx2.beginPath(); ctx2.roundRect(cx-10, cy-4, 20, 13, 3); ctx2.fill();
+  ctx2.fillStyle = c.dark;
+  ctx2.beginPath(); ctx2.arc(cx, cy+3, 4, 0, Math.PI*2); ctx2.fill();
+
+  // lock icon (if not yet opening)
+  if (pct === 0) {
+    ctx2.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx2.beginPath(); ctx2.roundRect(cx-9, cy-20, 18, 14, 3); ctx2.fill();
+    ctx2.strokeStyle = 'rgba(0,0,0,0.55)'; ctx2.lineWidth = 3; ctx2.lineCap = 'round';
+    ctx2.beginPath(); ctx2.arc(cx, cy-16, 5, Math.PI, 0); ctx2.stroke();
+  }
+
+  // lid shine
+  const sh = ctx2.createLinearGradient(lx, ly+4, lx, ly+lh*0.5);
+  sh.addColorStop(0,'rgba(255,255,255,0.30)'); sh.addColorStop(1,'rgba(255,255,255,0)');
+  ctx2.fillStyle = sh;
+  ctx2.beginPath(); ctx2.roundRect(lx+8, ly+4, bw-8, lh*0.45, [6,6,0,0]); ctx2.fill();
+
+  // timer arc if opening (bottom of canvas)
+  if (pct !== null && pct > 0) {
+    const arcCy = H*0.92, arcR = H*0.07;
+    ctx2.strokeStyle = 'rgba(0,0,0,0.3)'; ctx2.lineWidth = 6; ctx2.lineCap = 'round';
+    ctx2.beginPath(); ctx2.arc(cx, arcCy, arcR, -Math.PI/2, Math.PI*1.5); ctx2.stroke();
     ctx2.strokeStyle = pct >= 1 ? '#39ff6a' : c.shine;
-    ctx2.beginPath();
-    ctx2.arc(cx, cy + sz*0.55, sz*0.22, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct);
-    ctx2.stroke();
+    ctx2.beginPath(); ctx2.arc(cx, arcCy, arcR, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct); ctx2.stroke();
   }
 }
 
 function renderChestTab(container) {
   const slotsDiv = document.createElement('div');
-  slotsDiv.id = 'chestSlots';
-  slotsDiv.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px;';
+  slotsDiv.id = 'chestSlotsGrid';
 
   function renderSlots() {
     slotsDiv.innerHTML = '';
     chestSlots.forEach((chest, idx) => {
       const slot = document.createElement('div');
-      slot.className = 'chestSlot';
+      slot.className = 'chestSlot' + (!chest ? ' empty' : '');
 
       const artCanvas = document.createElement('canvas');
-      artCanvas.width = 120; artCanvas.height = 120;
-      artCanvas.style.cssText = 'width:100%;aspect-ratio:1/1;display:block;';
+      artCanvas.width = 200; artCanvas.height = 160;
+      artCanvas.className = 'chestSlotCanvas';
+      artCanvas.style.cssText = 'width:100%;display:block;';
       slot.appendChild(artCanvas);
 
       if (!chest) {
-        slot.classList.add('empty');
-        drawChestArt(artCanvas, 'bronze', null);
-        artCanvas.style.opacity = '0.18';
+        // draw dotted empty outline inside canvas
+        const ec = artCanvas.getContext('2d');
+        ec.strokeStyle = 'rgba(255,255,255,0.15)';
+        ec.lineWidth = 3; ec.setLineDash([8,6]);
+        ec.beginPath(); ec.roundRect(10,10,180,140,12); ec.stroke();
+        ec.setLineDash([]);
+        ec.fillStyle='rgba(255,255,255,0.12)';
+        ec.font='bold 36px Arial'; ec.textAlign='center'; ec.textBaseline='middle';
+        ec.fillText('+', 100, 80);
         const lbl = document.createElement('div');
-        lbl.style.cssText = 'font-family:"Courier New",monospace;font-size:9px;color:rgba(255,255,255,0.3);text-align:center;margin-top:4px;';
-        lbl.textContent = 'EMPTY SLOT';
+        lbl.className = 'chestEmptyLabel'; lbl.textContent = 'EMPTY SLOT';
         slot.appendChild(lbl);
       } else {
         const cfg = CHEST_TYPES[chest.type];
-
         if (chest.openingStarted) {
           const elapsed = (Date.now() - chest.openingStarted) / 1000;
           const remaining = Math.max(0, cfg.openTime - elapsed);
           const pct = 1 - remaining / cfg.openTime;
-          drawChestArt(artCanvas, chest.type, pct);
+          drawChestArt(artCanvas, chest.type, pct >= 1 ? 1 : pct);
 
           const nameEl = document.createElement('div');
-          nameEl.style.cssText = 'font-family:"Courier New",monospace;font-size:10px;font-weight:bold;color:' + cfg.color + ';text-align:center;margin-top:4px;';
-          nameEl.textContent = cfg.name;
-          slot.appendChild(nameEl);
+          nameEl.className = 'chestSlotName'; nameEl.style.color = cfg.color;
+          nameEl.textContent = cfg.name; slot.appendChild(nameEl);
 
           const timerEl = document.createElement('div');
-          timerEl.className = 'chestTimer';
-          timerEl.textContent = formatTimer(remaining);
-          slot.appendChild(timerEl);
+          timerEl.className = 'chestSlotTimer';
+          timerEl.textContent = formatTimer(remaining); slot.appendChild(timerEl);
 
           const openBtn = document.createElement('button');
-          openBtn.className = 'chestOpenBtn';
           if (remaining <= 0) {
-            openBtn.textContent = '✦ OPEN!';
-            openBtn.style.cssText += 'background:#39ff6a;border-color:#1a8c3e;color:#1a1a1a;';
+            openBtn.className = 'chestSlotBtn open'; openBtn.textContent = '✦ OPEN!';
           } else {
-            const gemCost = Math.ceil(remaining / 600);
-            openBtn.textContent = '💎 ' + gemCost;
-            openBtn.style.cssText += 'background:#a855f7;border-color:#7c3aed;color:#fff;';
+            openBtn.className = 'chestSlotBtn gems';
+            openBtn.textContent = '💎 ' + Math.ceil(remaining / 600);
           }
           openBtn.addEventListener('click', () => {
             const result = openChest(idx);
             if (result && result.error === 'needGems') {
               showChestReward(container, 'Need ' + result.gemCost + ' gems to skip!', null);
             } else if (result && result.rewards) {
-              updateEquipTopBar();
-              showChestReward(container, null, result.rewards);
-              renderSlots();
+              updateEquipTopBar(); showChestReward(container, null, result.rewards); renderSlots();
             }
           });
           slot.appendChild(openBtn);
         } else {
           drawChestArt(artCanvas, chest.type, 0);
           const nameEl = document.createElement('div');
-          nameEl.style.cssText = 'font-family:"Courier New",monospace;font-size:10px;font-weight:bold;color:' + cfg.color + ';text-align:center;margin-top:4px;';
-          nameEl.textContent = cfg.name;
-          slot.appendChild(nameEl);
+          nameEl.className = 'chestSlotName'; nameEl.style.color = cfg.color;
+          nameEl.textContent = cfg.name; slot.appendChild(nameEl);
 
           const startBtn2 = document.createElement('button');
-          startBtn2.className = 'chestOpenBtn';
-          startBtn2.textContent = '▶ START';
-          startBtn2.style.cssText += 'background:#f4d03f;border-color:#b8860b;color:#333;';
-          startBtn2.addEventListener('click', () => {
-            openChest(idx);
-            renderSlots();
-          });
+          startBtn2.className = 'chestSlotBtn start'; startBtn2.textContent = '▶ START';
+          startBtn2.addEventListener('click', () => { openChest(idx); renderSlots(); });
           slot.appendChild(startBtn2);
         }
       }
