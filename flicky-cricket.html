@@ -1354,10 +1354,14 @@ function updateFielders() {
 
 // ---------- INPUT ----------
 let currentTouchPos = null;
+let touchRipple = null; // {x, y, life, maxLife}
+
 canvas.addEventListener('pointerdown', e => {
   if (state !== 'ready' && state !== 'ballcoming') return;
   touchStart = { x: e.clientX, y: e.clientY, t: performance.now() };
   currentTouchPos = { x: e.clientX, y: e.clientY };
+  touchRipple = { x: e.clientX, y: e.clientY, life: 18, maxLife: 18 };
+  haptic(8); // tiny confirm buzz on touch-down
 });
 canvas.addEventListener('pointermove', e => {
   if (!touchStart) return;
@@ -9246,38 +9250,59 @@ function drawBall() {
 }
 
 function drawSwipeTrail() {
+  // ripple on touch-down
+  if (touchRipple && touchRipple.life > 0) {
+    const t = 1 - touchRipple.life / touchRipple.maxLife;
+    const r = 12 + t * 28;
+    const alpha = (1 - t) * 0.6;
+    ctx.strokeStyle = `rgba(255,255,255,${alpha.toFixed(2)})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(touchRipple.x, touchRipple.y, r, 0, Math.PI*2);
+    ctx.stroke();
+    touchRipple.life--;
+  }
+
   if (!touchStart || !currentTouchPos) return;
   const sx = touchStart.x, sy = touchStart.y;
   const cx = currentTouchPos.x, cy = currentTouchPos.y;
   const dx = cx - sx, dy = cy - sy;
   const dist = Math.hypot(dx, dy);
 
-  // touch origin dot
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  // power level 0-1 based on swipe distance (full power at ~140px)
+  const powerT = Math.min(dist / 140, 1);
+  // colour ramp: white → yellow → orange
+  const r = Math.round(255);
+  const g = Math.round(255 - powerT * 165);
+  const b = Math.round(255 - powerT * 255);
+  const arrowColor = `rgba(${r},${g},${b},`;
+
+  // touch origin dot — pulses with power
+  const originR = 10 + powerT * 5;
+  ctx.fillStyle = arrowColor + '0.45)';
   ctx.beginPath();
-  ctx.arc(sx, sy, 12, 0, Math.PI*2);
+  ctx.arc(sx, sy, originR, 0, Math.PI*2);
   ctx.fill();
 
-  if (dist < 8) return; // no direction yet
+  if (dist < 8) return;
 
-  // arrow shaft
   const angle = Math.atan2(dy, dx);
-  const arrowLen = Math.min(dist, 90);
+  const arrowLen = Math.min(dist, 110);
   const ex = sx + Math.cos(angle) * arrowLen;
   const ey = sy + Math.sin(angle) * arrowLen;
 
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = arrowColor + '0.85)';
+  ctx.lineWidth = 3 + powerT * 2;
   ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(sx, sy);
   ctx.lineTo(ex, ey);
   ctx.stroke();
 
-  // arrowhead
-  const headLen = 14;
-  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  // arrowhead scales with power
+  const headLen = 13 + powerT * 6;
+  ctx.fillStyle = arrowColor + '0.95)';
   ctx.beginPath();
   ctx.moveTo(ex, ey);
   ctx.lineTo(ex - Math.cos(angle - 0.4)*headLen, ey - Math.sin(angle - 0.4)*headLen);
@@ -9285,7 +9310,7 @@ function drawSwipeTrail() {
   ctx.closePath();
   ctx.fill();
 
-  // shot name label near arrow tip
+  // shot name label
   const shotAngleDeg = Math.atan2(dx, -dy) * 180 / Math.PI;
   let shotLabel;
   if (shotAngleDeg > 120 || shotAngleDeg < -120) shotLabel = 'BEHIND';
@@ -9297,28 +9322,27 @@ function drawSwipeTrail() {
 
   const labelX = sx + Math.cos(angle) * (arrowLen + 22);
   const labelY = sy + Math.sin(angle) * (arrowLen + 22);
-  ctx.font = 'bold 11px Courier New';
+  ctx.font = `bold ${10 + Math.round(powerT*3)}px Courier New`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillText(shotLabel, labelX+1, labelY+1);
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillStyle = arrowColor + '1)';
   ctx.fillText(shotLabel, labelX, labelY);
 
-  // shot sector overlay on the field: project swipe angle onto field
-  const shotAngle = shotAngleDeg * Math.PI / 180; // radians, 0=straight, +ve=off, -ve=leg
+  // shot sector overlay on the field
+  const shotAngle = shotAngleDeg * Math.PI / 180;
   const fieldCx = W/2, fieldCy = H * 0.56;
   const rx = W * 0.46, ry = H * 0.40;
-  const sectorHalf = Math.PI / 6; // 30 degrees each side
+  const sectorHalf = Math.PI / 6;
   const sectorStart = shotAngle - sectorHalf - Math.PI/2;
   const sectorEnd   = shotAngle + sectorHalf - Math.PI/2;
 
   ctx.save();
-  ctx.globalAlpha = 0.18;
-  ctx.fillStyle = '#39ff6a';
+  ctx.globalAlpha = 0.12 + powerT * 0.12;
+  ctx.fillStyle = `rgb(${r},${g},${b})`;
   ctx.beginPath();
   ctx.moveTo(fieldCx, fieldCy);
-  // approximate ellipse sector with line segments
   const steps = 20;
   for (let i = 0; i <= steps; i++) {
     const a = sectorStart + (sectorEnd - sectorStart) * (i / steps);
