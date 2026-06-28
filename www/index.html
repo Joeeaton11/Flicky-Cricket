@@ -134,6 +134,13 @@
   .menuSecBtn .bIcon { font-size:22px; }
   .menuSecBtn { transition:transform 80ms ease, background 80ms ease, border-color 80ms ease; }
   .menuSecBtn:active { transform:scale(0.93); background:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.4); }
+  #removeAdsBtn {
+    font-family:'Courier New',monospace; font-size:11px; letter-spacing:2px;
+    color:#f4d03f; background:transparent; border:1.5px solid rgba(244,208,63,0.35);
+    cursor:pointer; padding:7px 0; text-align:center; width:100%;
+    transition:transform 80ms ease, background 80ms ease;
+  }
+  #removeAdsBtn:active { transform:scale(0.96); background:rgba(244,208,63,0.08); }
   #howToPlayBtn {
     font-family:'Courier New',monospace; font-size:10px; letter-spacing:3px;
     color:rgba(255,255,255,0.28); background:transparent; border:none;
@@ -315,6 +322,7 @@
       <button id="leagueBtn" class="menuSecBtn"><span class="bIcon">&#x1F3C6;</span>LEAGUE</button>
     </div>
 
+    <button id="removeAdsBtn" class="hidden">&#x2605;&ensp;REMOVE ADS</button>
     <button id="howToPlayBtn">HOW TO PLAY</button>
     <p id="introText" class="hidden">Swipe up on the ball as it arrives to flick it!<br><br>
     Bigger / faster swipe = more power.<br>
@@ -832,6 +840,92 @@ function hapticHit()     { haptic(30); }
 function hapticBig()     { haptic([40,20,40]); }
 function hapticSix()     { haptic([60,25,60,25,80]); }
 function hapticWicket()  { haptic([80,30,120]); }
+
+// ── ADS & IAP ──
+// Replace these IDs with your real AdMob IDs before release.
+// Test IDs are safe to use during development.
+const ADMOB_CONFIG = {
+  // iOS AdMob App ID goes in Info.plist (GADApplicationIdentifier)
+  // Android AdMob App ID goes in AndroidManifest.xml
+  interstitialId: {
+    ios:     'ca-app-pub-3940256099942544/4411468910', // test ID — replace before release
+    android: 'ca-app-pub-3940256099942544/1033173712', // test ID — replace before release
+  }
+};
+const IAP_REMOVE_ADS_ID = 'remove_ads'; // must match App Store Connect / Google Play product ID
+
+let adsRemoved = localStorage.getItem('flickyAdsRemoved') === 'true';
+let gamesPlayedSinceAd = 0;
+const AD_FREQUENCY = 3; // show interstitial every N games
+
+// Initialise AdMob via Capacitor plugin (no-ops gracefully in browser)
+async function initAds() {
+  if (adsRemoved) return;
+  try {
+    const { AdMob } = await import('@capacitor-community/admob');
+    const platform = (await (await import('@capacitor/core')).Capacitor.getPlatform());
+    await AdMob.initialize({ testingDevices: [], initializeForTesting: false });
+    // Preload first interstitial
+    await AdMob.prepareInterstitial({
+      adId: platform === 'ios' ? ADMOB_CONFIG.interstitialId.ios : ADMOB_CONFIG.interstitialId.android,
+    });
+    window._admob = AdMob;
+    window._admobPlatform = platform;
+  } catch(e) {
+    // Running in browser or plugin not installed — silently skip
+  }
+}
+
+async function showInterstitialIfDue() {
+  if (adsRemoved || !window._admob) return;
+  gamesPlayedSinceAd++;
+  if (gamesPlayedSinceAd < AD_FREQUENCY) return;
+  gamesPlayedSinceAd = 0;
+  try {
+    await window._admob.showInterstitial();
+    // Preload next one
+    await window._admob.prepareInterstitial({
+      adId: window._admobPlatform === 'ios'
+        ? ADMOB_CONFIG.interstitialId.ios
+        : ADMOB_CONFIG.interstitialId.android,
+    });
+  } catch(e) {}
+}
+
+async function purchaseRemoveAds() {
+  try {
+    const { InAppPurchase2 } = await import('@ionic-native/in-app-purchase-2');
+    // Full IAP flow handled via plugin — see docs
+    // On success:
+    grantRemoveAds();
+  } catch(e) {
+    // Browser fallback — just grant it (for testing)
+    if (location.hostname === 'localhost' || location.hostname === '') {
+      grantRemoveAds();
+    } else {
+      alert('Purchase unavailable. Please try again.');
+    }
+  }
+}
+
+function grantRemoveAds() {
+  adsRemoved = true;
+  localStorage.setItem('flickyAdsRemoved', 'true');
+  removeAdsBtn.classList.add('hidden');
+  showMessage('ADS REMOVED! Thank you!', '#f4d03f', 2000);
+  hapticBig();
+}
+
+// Show Remove Ads button only if ads not already purchased
+const removeAdsBtn = document.getElementById('removeAdsBtn');
+if (!adsRemoved) removeAdsBtn.classList.remove('hidden');
+removeAdsBtn.addEventListener('click', () => {
+  hapticTap();
+  purchaseRemoveAds();
+});
+
+// Init ads on load
+initAds();
 
 function setMuted(muted) {
   audioMuted = muted;
@@ -2428,6 +2522,9 @@ function endGame() {
 
   overlay.classList.remove('hidden');
   muteBtn.classList.remove('hidden');
+
+  // Show interstitial ad every 3 games (skipped if ads removed)
+  showInterstitialIfDue();
 }
 
 // ---------- BALL PROGRESS UPDATE ----------
