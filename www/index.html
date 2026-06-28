@@ -335,6 +335,52 @@
   .equipBtn.equipped { background:#dcfce7; color:#166534; cursor:default; }
   .equipBtn.upgrade  { background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; }
 
+  /* ── Item detail panel (below card grid) ── */
+  .equipDetailPanel {
+    margin:8px; border-radius:12px; overflow:hidden;
+    background:rgba(255,255,255,0.10); border:2px solid rgba(255,255,255,0.18);
+    box-shadow:0 4px 16px rgba(0,0,0,0.3);
+  }
+  .equipDetailInner {
+    display:flex; gap:12px; align-items:center; padding:12px 14px;
+  }
+  .equipDetailArt {
+    width:72px; height:72px; flex-shrink:0; border-radius:8px;
+    background:linear-gradient(135deg,#f0f4ff,#e2eaf8); overflow:hidden; position:relative;
+    border:2px solid rgba(255,255,255,0.3);
+  }
+  .equipDetailArt canvas { width:100%; height:100%; display:block; }
+  .equipDetailInfo { flex:1; text-align:left; }
+  .equipDetailName {
+    font-family:'Arial Black',Arial,sans-serif; font-size:14px; font-weight:900;
+    color:#fff; text-shadow:0 1px 4px rgba(0,0,0,0.5); line-height:1.1;
+  }
+  .equipDetailRarity {
+    font-family:'Arial Black',Arial,sans-serif; font-size:10px; font-weight:700;
+    letter-spacing:1px; margin:2px 0 6px;
+  }
+  .equipDetailStatRow { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+  .equipDetailStatLabel { font-family:'Courier New',monospace; font-size:9px; color:rgba(255,255,255,0.65); width:32px; flex-shrink:0; }
+  .equipDetailStatTrack { flex:1; height:8px; background:rgba(255,255,255,0.15); border-radius:4px; overflow:hidden; }
+  .equipDetailStatFill { height:100%; border-radius:4px; }
+  .equipDetailFooter {
+    display:flex; gap:8px; padding:0 14px 12px; align-items:center;
+  }
+  .equipDetailProg { flex:1; }
+  .equipDetailProgBar { height:8px; background:rgba(255,255,255,0.15); border-radius:4px; overflow:hidden; margin-bottom:3px; }
+  .equipDetailProgFill { height:100%; border-radius:4px; background:linear-gradient(90deg,#22c55e,#16a34a); }
+  .equipDetailProgLabel { font-family:'Courier New',monospace; font-size:9px; color:rgba(255,255,255,0.6); }
+  .equipDetailActionBtn {
+    font-family:'Arial Black',Arial,sans-serif; font-size:11px; font-weight:900;
+    padding:9px 16px; border:none; border-radius:20px; cursor:pointer; letter-spacing:0.5px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.3); transition:transform 80ms; flex-shrink:0;
+  }
+  .equipDetailActionBtn:active { transform:scale(0.95); }
+  .equipDetailActionBtn.equip   { background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; }
+  .equipDetailActionBtn.inuse   { background:rgba(22,163,74,0.25); color:#4ade80; cursor:default; }
+  .equipDetailActionBtn.upgrade { background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; }
+  .equipDetailActionBtn.locked  { background:rgba(255,255,255,0.12); color:rgba(255,255,255,0.4); cursor:default; }
+
   /* ── Chests tab ── */
   #chestSlotsGrid {
     display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:10px;
@@ -2255,41 +2301,76 @@ function drawEquipArt(canvas, slot, item, owned) {
   ctx2.lineCap = 'round'; ctx2.lineJoin = 'round';
 
   if (slot === 'bat') {
-    // rotate slightly for dynamism
-    ctx2.translate(cx, cy); ctx2.rotate(-0.18); ctx2.translate(-cx, -cy);
-    // handle – dark grip
-    const hx = cx + sz*0.10, hy = cy + sz*0.04;
-    const hg = ctx2.createLinearGradient(hx-sz*0.06,0,hx+sz*0.06,0);
-    hg.addColorStop(0,'#5a3a1a'); hg.addColorStop(0.5,'#8b5e3c'); hg.addColorStop(1,'#3a2010');
-    ctx2.fillStyle = hg;
-    ctx2.beginPath(); ctx2.roundRect(hx-sz*0.055, hy+sz*0.02, sz*0.11, sz*0.40, sz*0.025); ctx2.fill();
-    // grip wrapping
-    ctx2.strokeStyle = 'rgba(0,0,0,0.4)'; ctx2.lineWidth = sz*0.013;
-    for (let i=0;i<5;i++) { const yy=hy+sz*0.05+i*sz*0.072; ctx2.beginPath(); ctx2.moveTo(hx-sz*0.055,yy); ctx2.lineTo(hx+sz*0.055,yy); ctx2.stroke(); }
-    // blade
-    const bx = cx - sz*0.04;
-    const grad = ctx2.createLinearGradient(bx-sz*0.20,0,bx+sz*0.20,0);
-    grad.addColorStop(0,shadeColor(col,-35)); grad.addColorStop(0.25,lightenColor(col,35));
-    grad.addColorStop(0.6,col); grad.addColorStop(1,shadeColor(col,-25));
+    // Cricket bat diagonal — handle top-left, blade toe bottom-right
+    // Rotate 40° so blade is clearly wide and handle is narrow
+    ctx2.translate(cx, cy); ctx2.rotate(0.70); ctx2.translate(-cx, -cy);
+
+    // Bat drawn vertically along centre: handle at top, blade at bottom
+    const hw  = sz * 0.048;  // handle half-width
+    const bw  = sz * 0.155;  // blade half-width
+    const htop = cy - sz*0.44; // top of handle (knob end)
+    const hbot = cy - sz*0.10; // bottom of handle / top of shoulder
+    const btop = cy - sz*0.05; // start of blade body
+    const bbot = cy + sz*0.44; // toe of blade
+
+    // Drop shadow
+    ctx2.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx2.beginPath(); ctx2.ellipse(cx+sz*0.03, bbot+sz*0.025, bw*0.7, sz*0.025, 0, 0, Math.PI*2); ctx2.fill();
+
+    // Blade face
+    const grad = ctx2.createLinearGradient(cx-bw, 0, cx+bw, 0);
+    grad.addColorStop(0,    shadeColor(col,-45));
+    grad.addColorStop(0.10, shadeColor(col,-15));
+    grad.addColorStop(0.30, lightenColor(col,40));
+    grad.addColorStop(0.55, lightenColor(col,18));
+    grad.addColorStop(0.82, col);
+    grad.addColorStop(1,    shadeColor(col,-35));
     ctx2.fillStyle = grad;
     ctx2.beginPath();
-    ctx2.moveTo(bx-sz*0.20, hy+sz*0.06);
-    ctx2.lineTo(bx+sz*0.20, hy+sz*0.06);
-    ctx2.quadraticCurveTo(bx+sz*0.22, hy, bx+sz*0.18, cy-sz*0.40);
-    ctx2.quadraticCurveTo(bx, cy-sz*0.48, bx-sz*0.18, cy-sz*0.40);
-    ctx2.quadraticCurveTo(bx-sz*0.22, hy, bx-sz*0.20, hy+sz*0.06);
+    // Shoulder taper: handle width → blade width
+    ctx2.moveTo(cx - hw, hbot);
+    ctx2.bezierCurveTo(cx-hw, hbot+sz*0.06, cx-bw, btop-sz*0.02, cx-bw, btop);
+    // Left side down to toe
+    ctx2.lineTo(cx - bw*0.85, bbot);
+    // Rounded toe
+    ctx2.quadraticCurveTo(cx, bbot + sz*0.04, cx + bw*0.85, bbot);
+    // Right side up to shoulder
+    ctx2.lineTo(cx + bw, btop);
+    ctx2.bezierCurveTo(cx+bw, btop-sz*0.02, cx+hw, hbot+sz*0.06, cx+hw, hbot);
     ctx2.closePath(); ctx2.fill();
-    // centre ridge
-    ctx2.strokeStyle = shadeColor(col,-45); ctx2.lineWidth = sz*0.025;
-    ctx2.beginPath(); ctx2.moveTo(bx, hy+sz*0.06); ctx2.lineTo(bx, cy-sz*0.44); ctx2.stroke();
-    // edge bevel
-    ctx2.strokeStyle = lightenColor(col,40); ctx2.lineWidth = sz*0.012;
-    ctx2.beginPath(); ctx2.moveTo(bx-sz*0.195,hy+sz*0.05); ctx2.lineTo(bx-sz*0.17,cy-sz*0.39); ctx2.stroke();
-    ctx2.beginPath(); ctx2.moveTo(bx+sz*0.195,hy+sz*0.05); ctx2.lineTo(bx+sz*0.17,cy-sz*0.39); ctx2.stroke();
-    // shine
-    const sh = ctx2.createRadialGradient(bx-sz*0.08,cy-sz*0.15,0,bx-sz*0.05,cy-sz*0.10,sz*0.20);
+
+    // Spine ridge
+    ctx2.strokeStyle = shadeColor(col,-55); ctx2.lineWidth = sz*0.028; ctx2.lineCap='round';
+    ctx2.beginPath(); ctx2.moveTo(cx, btop+sz*0.02); ctx2.lineTo(cx, bbot-sz*0.04); ctx2.stroke();
+
+    // Edge bevels
+    ctx2.lineWidth = sz*0.008; ctx2.strokeStyle = lightenColor(col,55);
+    ctx2.beginPath(); ctx2.moveTo(cx-bw+sz*0.01, btop+sz*0.02); ctx2.lineTo(cx-bw*0.87+sz*0.01, bbot-sz*0.02); ctx2.stroke();
+    ctx2.beginPath(); ctx2.moveTo(cx+bw-sz*0.01, btop+sz*0.02); ctx2.lineTo(cx+bw*0.87-sz*0.01, bbot-sz*0.02); ctx2.stroke();
+
+    // Face shine
+    const sh = ctx2.createLinearGradient(cx-bw*0.75, btop, cx-bw*0.05, bbot);
     sh.addColorStop(0,'rgba(255,255,255,0.30)'); sh.addColorStop(1,'rgba(255,255,255,0)');
-    ctx2.fillStyle=sh; ctx2.beginPath(); ctx2.arc(bx,cy,sz*0.50,0,Math.PI*2); ctx2.fill();
+    ctx2.fillStyle = sh;
+    ctx2.beginPath();
+    ctx2.moveTo(cx-bw+sz*0.01, btop+sz*0.02); ctx2.lineTo(cx-sz*0.02, btop+sz*0.02);
+    ctx2.lineTo(cx-sz*0.02, bbot-sz*0.06); ctx2.lineTo(cx-bw*0.87+sz*0.01, bbot-sz*0.04);
+    ctx2.closePath(); ctx2.fill();
+
+    // Handle — dark wood
+    const hg = ctx2.createLinearGradient(cx-hw,0,cx+hw,0);
+    hg.addColorStop(0,'#1a0c04'); hg.addColorStop(0.3,'#8b5e3c'); hg.addColorStop(0.7,'#7a4f30'); hg.addColorStop(1,'#1a0c04');
+    ctx2.fillStyle = hg;
+    ctx2.beginPath(); ctx2.roundRect(cx-hw, htop+sz*0.03, hw*2, hbot-htop-sz*0.03, hw); ctx2.fill();
+    // Grip bands
+    ctx2.strokeStyle = 'rgba(40,20,0,0.50)'; ctx2.lineWidth = sz*0.016;
+    for(let i=0;i<5;i++){
+      const yy = htop + sz*0.06 + i*(hbot-htop-sz*0.06)*0.22;
+      ctx2.beginPath(); ctx2.moveTo(cx-hw+1,yy); ctx2.lineTo(cx+hw-1,yy); ctx2.stroke();
+    }
+    // Knob
+    ctx2.fillStyle = shadeColor(col,-55);
+    ctx2.beginPath(); ctx2.ellipse(cx, htop+sz*0.025, hw*1.7, sz*0.026, 0, 0, Math.PI*2); ctx2.fill();
 
   } else if (slot === 'gloves') {
     // single glove, centred, larger
@@ -2559,7 +2640,117 @@ function renderEquipSlotTab(slot, container) {
 
     grid.appendChild(card);
     drawEquipArt(artCanvas, slot, item, owned);
+
+    // tap card to update detail panel
+    card.addEventListener('click', () => renderEquipDetail(slot, item, container));
   });
+
+  // show detail panel for equipped item by default
+  const equippedItem = EQUIPMENT[slot].find(i => i.id === equippedItems[slot]) || EQUIPMENT[slot][0];
+  renderEquipDetail(slot, equippedItem, container);
+}
+
+function renderEquipDetail(slot, item, container) {
+  const existing = container.querySelector('.equipDetailPanel');
+  if (existing) existing.remove();
+
+  const level = itemLevels[item.id] || 0;
+  const owned = level >= 1;
+  const cards = itemCards[item.id] || 0;
+  const isEquipped = equippedItems[slot] === item.id;
+  const rc = rarityColor(item.rarity);
+
+  const panel = document.createElement('div');
+  panel.className = 'equipDetailPanel';
+
+  // top row: art + info
+  const inner = document.createElement('div');
+  inner.className = 'equipDetailInner';
+
+  const artDiv = document.createElement('div');
+  artDiv.className = 'equipDetailArt';
+  const ac = document.createElement('canvas');
+  ac.width = 160; ac.height = 160;
+  artDiv.appendChild(ac);
+  inner.appendChild(artDiv);
+
+  const info = document.createElement('div');
+  info.className = 'equipDetailInfo';
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'equipDetailName'; nameEl.textContent = item.name;
+  info.appendChild(nameEl);
+
+  const rarityEl = document.createElement('div');
+  rarityEl.className = 'equipDetailRarity'; rarityEl.textContent = item.rarity.toUpperCase();
+  rarityEl.style.color = rc; info.appendChild(rarityEl);
+
+  // stat bars — all stats for this item
+  Object.entries(item.stats).forEach(([key, val]) => {
+    const maxes = { power:0.30, timing:0.07, grip:0.35, footwork:0.06, composure:0.35, agility:10 };
+    const pct = Math.min(1, val / (maxes[key] || 1));
+    const row = document.createElement('div'); row.className = 'equipDetailStatRow';
+    const lbl = document.createElement('div'); lbl.className = 'equipDetailStatLabel'; lbl.textContent = key.slice(0,4).toUpperCase();
+    const track = document.createElement('div'); track.className = 'equipDetailStatTrack';
+    const fill = document.createElement('div'); fill.className = 'equipDetailStatFill';
+    fill.style.cssText = 'width:' + (pct*100) + '%;background:' + rc + ';';
+    track.appendChild(fill); row.appendChild(lbl); row.appendChild(track);
+    info.appendChild(row);
+  });
+
+  if (owned && level > 0) {
+    const lvlEl = document.createElement('div');
+    lvlEl.style.cssText = 'font-family:"Courier New",monospace;font-size:9px;color:rgba(255,255,255,0.6);margin-top:4px;';
+    const pips = '●'.repeat(level) + '○'.repeat(5-level);
+    lvlEl.textContent = 'LVL ' + level + '  ' + pips;
+    info.appendChild(lvlEl);
+  }
+
+  inner.appendChild(info);
+  panel.appendChild(inner);
+
+  // footer: progress + action button
+  const footer = document.createElement('div');
+  footer.className = 'equipDetailFooter';
+
+  const progDiv = document.createElement('div'); progDiv.className = 'equipDetailProg';
+  const progBar = document.createElement('div'); progBar.className = 'equipDetailProgBar';
+  const progFill = document.createElement('div'); progFill.className = 'equipDetailProgFill';
+  const progLbl = document.createElement('div'); progLbl.className = 'equipDetailProgLabel';
+
+  if (!owned) {
+    const needed = item.cardsToLevel[0];
+    progFill.style.width = Math.min(1, cards/needed)*100 + '%';
+    progLbl.textContent = cards + ' / ' + needed + ' cards to unlock';
+  } else if (level < 5) {
+    const needed = item.cardsToLevel[level-1];
+    progFill.style.width = Math.min(1, cards/needed)*100 + '%';
+    progLbl.textContent = cards + ' / ' + needed + ' cards to level up';
+  } else {
+    progFill.style.width = '100%'; progFill.style.background = '#f59e0b';
+    progLbl.textContent = 'MAX LEVEL REACHED';
+  }
+  progBar.appendChild(progFill); progDiv.appendChild(progBar); progDiv.appendChild(progLbl);
+  footer.appendChild(progDiv);
+
+  const btn = document.createElement('button');
+  btn.className = 'equipDetailActionBtn';
+  if (!owned) {
+    btn.className += ' locked'; btn.textContent = '🔒 LOCKED'; btn.disabled = true;
+  } else if (isEquipped) {
+    btn.className += ' inuse'; btn.textContent = '✓ IN USE'; btn.disabled = true;
+  } else if (level < 5 && cards >= item.cardsToLevel[level-1]) {
+    btn.className += ' upgrade'; btn.textContent = '▲ UPGRADE';
+    btn.addEventListener('click', () => { upgradeItem(item.id); renderEquipSlotTab(slot, container); });
+  } else {
+    btn.className += ' equip'; btn.textContent = 'EQUIP';
+    btn.addEventListener('click', () => { equippedItems[slot]=item.id; saveEquipmentState(); renderEquipSlotTab(slot, container); });
+  }
+  footer.appendChild(btn);
+  panel.appendChild(footer);
+  container.appendChild(panel);
+
+  drawEquipArt(ac, slot, item, owned);
 }
 
 function formatTimer(seconds) {
