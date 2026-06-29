@@ -11291,44 +11291,32 @@ function _spawnCoinParticle(color) {
   setTimeout(() => el.remove(), 800);
 }
 
+let _revealItems = [];
+let _revealIndex = 0;
+
 function _doRevealSequence() {
-  // Switch layout: hide canvas, show rewards
   chestOpenCanvas.style.display = 'none';
   chestOpenTitle.style.opacity  = '1';
   chestRewardsList.style.display = 'flex';
 
   const rewards = _chestOpenRewards;
-  const cfg = CHEST_TYPES[_chestOpenType];
-  const allItems = [];
+  _revealItems = [];
+  _revealIndex = 0;
 
-  // Coins row first
-  if (rewards.coins) {
-    allItems.push({ type:'coins', amount: rewards.coins });
-  }
-  // Gems row
-  if (rewards.gems && rewards.gems > 0) {
-    allItems.push({ type:'gems', amount: rewards.gems });
-  }
-  // Equipment cards
-  if (rewards.cards) {
-    rewards.cards.forEach(c => allItems.push({ type:'card', card: c }));
-  }
+  if (rewards.coins) _revealItems.push({ type:'coins', amount: rewards.coins });
+  if (rewards.gems && rewards.gems > 0) _revealItems.push({ type:'gems', amount: rewards.gems });
+  if (rewards.cards) rewards.cards.forEach(c => _revealItems.push({ type:'card', card: c }));
 
-  // Build DOM elements (hidden) then stagger reveal
-  allItems.forEach((item, i) => {
+  // Pre-build all reward elements, hidden
+  _revealItems.forEach(item => {
     let el;
     if (item.type === 'coins') {
       el = document.createElement('div');
       el.className = 'chestCoinRow';
       el.innerHTML =
         '<div style="font-size:24px;line-height:1">🪙</div>' +
-        '<div><div class="chestCoinAmount" id="chestCoinDisplay">0</div>' +
+        '<div><div class="chestCoinAmount chestCoinDisplay">0</div>' +
         '<div class="chestCoinLabel">COINS EARNED</div></div>';
-      chestRewardsList.appendChild(el);
-      setTimeout(() => {
-        el.classList.add('visible');
-        _countUp(el.querySelector('#chestCoinDisplay'), 0, item.amount, 800);
-      }, i * 180 + 100);
     } else if (item.type === 'gems') {
       el = document.createElement('div');
       el.className = 'chestCoinRow';
@@ -11338,8 +11326,6 @@ function _doRevealSequence() {
         '<div style="font-size:24px;line-height:1">💎</div>' +
         '<div><div class="chestCoinAmount" style="color:#a855f7;text-shadow:0 0 12px rgba(168,85,247,0.5)">' + item.amount + '</div>' +
         '<div class="chestCoinLabel">GEMS</div></div>';
-      chestRewardsList.appendChild(el);
-      setTimeout(() => el.classList.add('visible'), i * 180 + 100);
     } else {
       const c = item.card;
       const rc = rarityColor(c.rarity);
@@ -11349,14 +11335,9 @@ function _doRevealSequence() {
       const needed  = itemRef && curLvl > 0 && curLvl < maxLvl ? itemRef.cardsToLevel[curLvl - 1] : null;
       const haveCards = itemCards[c.id] || 0;
       let badgeText = '', badgeClass = 'chestRewardCardBadge';
-      if (curLvl === 0) {
-        badgeText = 'NEW!'; badgeClass += ' maxed'; // gold badge for new unlock
-      } else if (curLvl >= maxLvl) {
-        badgeText = 'MAX LVL'; badgeClass += ' maxed';
-      } else if (needed !== null) {
-        badgeText = haveCards + '/' + needed + ' CARDS';
-      }
-      const rarityLabel = c.rarity.toUpperCase();
+      if (curLvl === 0) { badgeText = 'NEW!'; badgeClass += ' maxed'; }
+      else if (curLvl >= maxLvl) { badgeText = 'MAX LVL'; badgeClass += ' maxed'; }
+      else if (needed !== null) { badgeText = haveCards + '/' + needed + ' CARDS'; }
       el = document.createElement('div');
       el.className = 'chestRewardCard';
       el.style.borderLeftColor = rc;
@@ -11366,18 +11347,49 @@ function _doRevealSequence() {
         '</div>' +
         '<div class="chestRewardCardInfo">' +
           '<div class="chestRewardCardName">' + c.name + '</div>' +
-          '<div class="chestRewardCardSub">' + rarityLabel + ' · LVL ' + Math.max(1, curLvl) + '</div>' +
+          '<div class="chestRewardCardSub">' + c.rarity.toUpperCase() + ' · LVL ' + Math.max(1, curLvl) + '</div>' +
         '</div>' +
         (badgeText ? '<div class="' + badgeClass + '">' + badgeText + '</div>' : '');
-      chestRewardsList.appendChild(el);
-      setTimeout(() => el.classList.add('visible'), i * 180 + 100);
     }
+    item._el = el;
+    chestRewardsList.appendChild(el);
   });
 
-  // Show done button after all cards revealed
+  // Show tap hint and wire up reveal-on-tap after brief delay
+  // (prevents the burst-tap from immediately revealing the first item)
+  chestTapHint.style.display = 'block';
+  chestTapHint.textContent = 'TAP TO REVEAL (' + _revealItems.length + ' remaining)';
   setTimeout(() => {
-    chestOpenDoneBtn.classList.add('visible');
-  }, allItems.length * 180 + 400);
+    chestOpenOverlay.addEventListener('click', _onRevealTap);
+    chestOpenOverlay.addEventListener('touchend', _onRevealTapTouch, { passive: false });
+  }, 400);
+}
+
+function _onRevealTapTouch(e) { e.preventDefault(); _onRevealTap(); }
+
+function _onRevealTap() {
+  if (_revealIndex >= _revealItems.length) return;
+
+  const item = _revealItems[_revealIndex];
+  item._el.classList.add('visible');
+
+  if (item.type === 'coins') {
+    const disp = item._el.querySelector('.chestCoinDisplay');
+    if (disp) _countUp(disp, 0, item.amount, 700);
+  }
+
+  _revealIndex++;
+  const remaining = _revealItems.length - _revealIndex;
+
+  if (remaining > 0) {
+    chestTapHint.textContent = 'TAP TO REVEAL (' + remaining + ' remaining)';
+  } else {
+    // All revealed — show done button
+    chestTapHint.style.display = 'none';
+    chestOpenOverlay.removeEventListener('click', _onRevealTap);
+    chestOpenOverlay.removeEventListener('touchend', _onRevealTapTouch);
+    setTimeout(() => chestOpenDoneBtn.classList.add('visible'), 300);
+  }
 }
 
 function _countUp(el, from, to, duration) {
@@ -11414,6 +11426,8 @@ chestOpenDoneBtn.addEventListener('click', _closeChestAnim);
 chestOpenDoneBtn.addEventListener('touchend', (e) => { e.preventDefault(); _closeChestAnim(); }, {passive:false});
 
 function _closeChestAnim() {
+  chestOpenOverlay.removeEventListener('click', _onRevealTap);
+  chestOpenOverlay.removeEventListener('touchend', _onRevealTapTouch);
   chestOpenOverlay.classList.add('hidden');
   chestOpenCanvas.style.display = 'block';
   if (_chestAnimFrame) { cancelAnimationFrame(_chestAnimFrame); _chestAnimFrame = null; }
