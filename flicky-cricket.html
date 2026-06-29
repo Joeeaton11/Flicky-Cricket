@@ -339,8 +339,44 @@
     font-family:'Arial Black',Arial,sans-serif; font-size:7.5px; font-weight:700;
     letter-spacing:0.5px; margin-bottom:5px;
   }
-  .equipListStatRow { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
-  .equipListStatLabel { font-family:'Arial Black',Arial,sans-serif; font-size:6.5px; color:#6b7280; width:28px; flex-shrink:0; }
+  .equipListStatRow { display:flex; align-items:center; gap:4px; margin-bottom:3px; }
+  .equipListStatLabel { font-family:'Arial Black',Arial,sans-serif; font-size:6.5px; color:#6b7280; width:26px; flex-shrink:0; cursor:pointer; }
+  .equipListStatLabel:active { color:#3b82f6; }
+  .statInfoBtn {
+    font-size:7px; color:rgba(100,130,200,0.7); cursor:pointer; flex-shrink:0;
+    line-height:1; padding:0 1px; transition:color 100ms;
+  }
+  .statInfoBtn:active { color:#60a5fa; }
+
+  /* Stat info popup */
+  #statInfoPopup {
+    position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0); transition:background 200ms;
+    pointer-events:none;
+  }
+  #statInfoPopup.visible { background:rgba(0,0,0,0.72); pointer-events:all; }
+  #statInfoPopupInner {
+    background:linear-gradient(160deg,#1e2d45,#0d1828);
+    border:2px solid rgba(255,255,255,0.18); border-radius:20px;
+    padding:28px 28px 24px; max-width:280px; width:80%; text-align:center;
+    box-shadow:0 8px 40px rgba(0,0,0,0.8);
+    transform:scale(0.8); opacity:0; transition:transform 200ms cubic-bezier(0.34,1.4,0.64,1), opacity 200ms ease;
+    position:relative;
+  }
+  #statInfoPopup.visible #statInfoPopupInner { transform:scale(1); opacity:1; }
+  #statInfoClose {
+    position:absolute; top:10px; right:14px;
+    font-size:16px; color:rgba(255,255,255,0.4); cursor:pointer; padding:4px;
+  }
+  #statInfoIcon { font-size:44px; margin-bottom:8px; line-height:1; }
+  #statInfoLabel {
+    font-family:'Arial Black',Arial,sans-serif; font-size:16px; font-weight:900;
+    color:#fff; letter-spacing:2px; margin-bottom:10px;
+  }
+  #statInfoDesc {
+    font-family:'Arial',sans-serif; font-size:13px; color:rgba(255,255,255,0.75);
+    line-height:1.5;
+  }
   .equipListStatTrack { flex:1; height:5px; background:#e5e7eb; border-radius:3px; overflow:hidden; position:relative; }
   .equipListStatFill  { height:100%; border-radius:3px; }
   .equipListDesc { font-family:'Arial',sans-serif; font-size:7px; color:#9ca3af; margin-top:3px; line-height:1.3; font-style:italic; }
@@ -2824,6 +2860,41 @@ function openEquipTab(tab) {
   }
 }
 
+const STAT_INFO = {
+  power:      { short:'PWR',  label:'Power',      icon:'💥', desc:'How hard you hit the ball. High power sends the ball further for sixes and boundaries.' },
+  timing:     { short:'TIM',  label:'Timing',     icon:'⏱️', desc:'How forgiving the sweet spot is. Better timing means mis-hits still travel well.' },
+  control:    { short:'CTRL', label:'Control',    icon:'🎯', desc:'Accuracy of shot placement. High control lets you thread the gaps and pick your spots.' },
+  grip:       { short:'GRIP', label:'Grip',       icon:'🤜', desc:'How firmly you hold the bat. Better grip reduces dropped catches and improves bat swing.' },
+  cushion:    { short:'CUSH', label:'Cushion',    icon:'🛡️', desc:'Absorbs sting on fast deliveries. High cushion keeps your hands comfortable under pressure.' },
+  footwork:   { short:'FOOT', label:'Footwork',  icon:'👣', desc:'Speed of movement to the pitch. Good footwork lets you get to more balls and play strokes earlier.' },
+  protection: { short:'PROT', label:'Protection', icon:'🔰', desc:'Guards your legs on the crease. High protection reduces the chance of LBW dismissals.' },
+  composure:  { short:'COMP', label:'Composure',  icon:'🧠', desc:'Mental focus under pressure. High composure stops wickets on bouncers and short-pitched balls.' },
+  vision:     { short:'VIS',  label:'Vision',     icon:'👁️', desc:'How quickly you spot the ball. Better vision gives you extra reaction time to pick line & length.' },
+  agility:    { short:'AGIL', label:'Agility',    icon:'⚡', desc:'Running speed between the wickets. High agility converts more singles and avoids run-outs.' },
+  stability:  { short:'STAB', label:'Stability',  icon:'⚓', desc:'Balance at the crease. Good stability keeps your base solid when playing big shots.' },
+};
+
+function statShort(key) { return (STAT_INFO[key] || {}).short || key.slice(0,4).toUpperCase(); }
+
+function showStatInfoPopup(key) {
+  const info = STAT_INFO[key]; if (!info) return;
+  let existing = document.getElementById('statInfoPopup');
+  if (existing) existing.remove();
+  const pop = document.createElement('div');
+  pop.id = 'statInfoPopup';
+  pop.innerHTML = '<div id="statInfoPopupInner">' +
+    '<div id="statInfoClose">✕</div>' +
+    '<div id="statInfoIcon">' + info.icon + '</div>' +
+    '<div id="statInfoLabel">' + info.label.toUpperCase() + '</div>' +
+    '<div id="statInfoDesc">' + info.desc + '</div>' +
+    '</div>';
+  document.body.appendChild(pop);
+  requestAnimationFrame(() => pop.classList.add('visible'));
+  const close = () => { pop.classList.remove('visible'); setTimeout(() => pop.remove(), 200); };
+  pop.querySelector('#statInfoClose').addEventListener('click', close);
+  pop.addEventListener('click', e => { if (e.target === pop) close(); });
+}
+
 function rarityColor(rarity) {
   return { common:'#9ca3af', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b' }[rarity] || '#fff';
 }
@@ -3207,7 +3278,12 @@ function renderEquipSlotTab(slot, container) {
       const curPct  = Math.min(1, curVal  / 100);
       const nextPct = Math.min(1, nextVal / 100);
       const sr = document.createElement('div'); sr.className = 'equipListStatRow';
-      const lbl = document.createElement('div'); lbl.className = 'equipListStatLabel'; lbl.textContent = key.slice(0,4).toUpperCase();
+      const lbl = document.createElement('div'); lbl.className = 'equipListStatLabel';
+      lbl.textContent = statShort(key);
+      lbl.title = (STAT_INFO[key] || {}).label || key;
+      lbl.addEventListener('click', e => { e.stopPropagation(); showStatInfoPopup(key); });
+      const infoBtn = document.createElement('span'); infoBtn.className = 'statInfoBtn'; infoBtn.textContent = 'ℹ';
+      infoBtn.addEventListener('click', e => { e.stopPropagation(); showStatInfoPopup(key); });
       const track = document.createElement('div'); track.className = 'equipListStatTrack';
       const fill = document.createElement('div'); fill.className = 'equipListStatFill';
       fill.style.cssText = 'width:' + (curPct*100) + '%;background:' + rc;
@@ -3217,7 +3293,7 @@ function renderEquipSlotTab(slot, container) {
         gainFill.style.cssText = 'position:absolute;left:' + (curPct*100) + '%;width:' + ((nextPct-curPct)*100) + '%;background:#22c55e;top:0;height:100%;';
         track.appendChild(gainFill);
       }
-      sr.appendChild(lbl); sr.appendChild(track);
+      sr.appendChild(lbl); sr.appendChild(infoBtn); sr.appendChild(track);
       mid.appendChild(sr);
     });
 
@@ -3342,7 +3418,8 @@ function renderEquipDetail(slot, item, container) {
     const maxes = { power:100, timing:100, control:100, grip:100, cushion:100, footwork:100, protection:100, composure:100, vision:100, agility:100, stability:100 };
     const pct = Math.min(1, val / (maxes[key] || 1));
     const row = document.createElement('div'); row.className = 'equipDetailStatRow';
-    const lbl = document.createElement('div'); lbl.className = 'equipDetailStatLabel'; lbl.textContent = key.slice(0,4).toUpperCase();
+    const lbl = document.createElement('div'); lbl.className = 'equipDetailStatLabel'; lbl.textContent = statShort(key);
+    lbl.addEventListener('click', e => { e.stopPropagation(); showStatInfoPopup(key); });
     const track = document.createElement('div'); track.className = 'equipDetailStatTrack';
     const fill = document.createElement('div'); fill.className = 'equipDetailStatFill';
     fill.style.cssText = 'width:' + (pct*100) + '%;background:' + rc + ';';
