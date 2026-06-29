@@ -3110,62 +3110,76 @@ function doFlick(swipe) {
 
   state = 'hit';
   // compute timing accuracy: how close ball.z was to this ball's "sweet spot"
-  // (zoneCenter varies per ball - a fuller or shorter length shifts the
-  // ideal timing point, so the window isn't always in the same place)
   const z = ball.z;
   const zc = ball.zoneCenter;
   let timingQuality;
-  const timingBonus = getEquipStat('bat','timing') + getEquipStat('pads','footwork');
-  if (z < zc - 0.22 - timingBonus) timingQuality = 0.3; // too early
-  else if (z > zc + 0.13) { bowled(); return; } // too late, already passed
+  // bat timing widens the early-hit window (0.22 base → up to 0.36 at stat 96)
+  const timingWindow = 0.22 + (getEquipStat('bat','timing') / 100) * 0.14;
+  if (z < zc - timingWindow) timingQuality = 0.3; // too early
+  else if (z > zc + 0.13) { bowled(); return; }   // too late
   else timingQuality = 1 - Math.abs(z - zc) / 0.3;
   timingQuality = Math.max(0.15, Math.min(1, timingQuality));
 
-  // shot direction: full 360 degrees based on swipe direction.
-  // angle convention matches fielder layout: 0 = straight back down the ground
-  // (toward bowler), increasing clockwise through off side (positive) to
-  // behind the wicket (180) and around through leg side (negative) back to 0.
-  // swipe.dx = horizontal component, swipe.dy = vertical (negative = up/forward)
   const shotAngle = Math.atan2(swipe.dx, -swipe.dy) * 180/Math.PI;
 
   // ---- energy effects ----
-  // big swings cost energy proportional to raw power. If energy is low when
-  // attempting a big swing, the effective power is reduced (the shot feels
-  // "tired") AND timing quality is penalised (more likely to mistime/edge).
   let effectivePower = power;
   let fatigued = false;
   if (energy < ENERGY_LOW_THRESHOLD && power > 1) {
     fatigued = true;
-    const fatigue = 1 - (energy / ENERGY_LOW_THRESHOLD); // 0 (full energy) -> 1 (empty)
-    effectivePower = power * (1 - fatigue * 0.5); // up to 50% power reduction
-    timingQuality = timingQuality * (1 - fatigue * 0.4); // up to 40% timing penalty
+    const fatigue = 1 - (energy / ENERGY_LOW_THRESHOLD);
+    effectivePower = power * (1 - fatigue * 0.5);
+    timingQuality = timingQuality * (1 - fatigue * 0.4);
     timingQuality = Math.max(0.1, timingQuality);
+  }
+
+  // ---- shot spray on full-power swings (reduced by shoes stability) ----
+  // max-effort swing with poor shoe grip causes angle to drift off intended line
+  if (power > 1.8) {
+    const stab = getEquipStat('shoes','stability') / 100;
+    const maxSpray = 12 * (1 - stab * 0.85); // 10.2° at stat 14 → 1.8° at stat 99
+    const spray = (Math.random() * 2 - 1) * maxSpray;
+    // shotAngle is const so we apply spray via a local variable passed forward
+    ball._sprayAngle = spray; // picked up in resolveShot
+  } else {
+    ball._sprayAngle = 0;
   }
 
   // ---- cross-bat mismatch penalty ----
-  // hitting hard against the line (e.g. ball bowled on the off side, but
-  // swung hard to the leg side) is a mistimed cross-bat shot in real
-  // cricket - penalise power and timing for big "wrong side" swings.
-  // Shots played straight (shotAngle near 0/180, i.e. with the line) are
-  // never penalised regardless of the delivery's line.
+  // vision stat controls how early you pick up the line — high vision means
+  // you read it before committing, low vision means you get caught playing
+  // across the wrong line even after the ball has travelled a long way.
   let mismatched = false;
   const shotSide = shotAngle > 5 ? 1 : (shotAngle < -5 ? -1 : 0);
-  if (ball.lineSide !== 0 && shotSide !== 0 && shotSide !== ball.lineSide && power > 0.8) {
+  // vision: 0.14 (stat 14) → ball must be 86% of the way before you read it
+  //         0.96 (stat 96) → you read it from 4% of travel onward (very early)
+  const visionReadThreshold = 1 - (getEquipStat('helmet','vision') / 100);
+  const lineVisible = ball.z >= visionReadThreshold;
+  if (lineVisible && ball.lineSide !== 0 && shotSide !== 0 && shotSide !== ball.lineSide && power > 0.8) {
     mismatched = true;
-    const gripBonus = getEquipStat('gloves','grip');
-    effectivePower *= (0.6 + gripBonus);       // significant power loss on a cross-bat swing
-    timingQuality *= (0.65 + gripBonus * 0.8); // much more likely to mistime/edge
+    const grip = getEquipStat('gloves','grip') / 100;
+    effectivePower *= (1 - 0.35 * (1 - grip)); // up to 35% power loss; grip mitigates it
+    timingQuality *= (1 - 0.40 * (1 - grip)); // up to 40% timing loss
     timingQuality = Math.max(0.1, timingQuality);
   }
 
-  // drain energy based on raw swipe power (any big swing costs energy,
-  // regardless of how the shot turns out)
-  const composure = getEquipStat('helmet','composure');
-  const energyCost = Math.max(0, power - 0.5) * ENERGY_DRAIN_RATE * (1 - composure);
+  // ---- energy drain ----
+  // cushion (gloves) cuts drain on big swings — absorbs the physical shock
+  // composure (helmet) cuts drain when already low on energy — mental focus
+  const cushion = getEquipStat('gloves','cushion') / 100;
+  const composure = getEquipStat('helmet','composure') / 100;
+  const bigSwing = power > 1.5;
+  let drainFactor = 1;
+  if (bigSwing) drainFactor *= (1 - cushion * 0.55);   // up to 55% less drain on big swings
+  if (fatigued) drainFactor *= (1 - composure * 0.60); // up to 60% less drain when tired
+  const energyCost = Math.max(0, power - 0.5) * ENERGY_DRAIN_RATE * drainFactor;
   energy = Math.max(0, energy - energyCost);
 
-  // power combined with timing determines distance
-  const distance = effectivePower * getEquipStat('bat','power') * timingQuality * 1.0; // 0..~3
+  // ---- shot distance ----
+  // bat power scales from 0.592 (stat 32) to 0.964 (stat 94); well-timed big
+  // swing with mid-range bat reaches boundary, maxed legendary can clear the rope
+  const batPower = 0.40 + (getEquipStat('bat','power') / 100) * 0.60;
+  const distance = effectivePower * batPower * timingQuality;
 
   resolveShot(distance, shotAngle, timingQuality, power, fatigued, mismatched);
 }
@@ -3173,45 +3187,55 @@ function doFlick(swipe) {
 function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mismatched) {
   completeTutorialIfActive();
 
-  // record this shot's direction for field adaptation (only meaningful hits,
-  // not tiny defensive dabs - those don't reveal a scoring "tendency")
-  shotHistory.push(shotAngle);
+  // apply shot spray from stability calculation in doFlick
+  const finalAngle = shotAngle + (ball._sprayAngle || 0);
+  ball._sprayAngle = 0;
+
+  shotHistory.push(finalAngle);
   if (shotHistory.length > SHOT_HISTORY_LEN) shotHistory.shift();
 
-  // categorize outcome
-  // distance roughly: <0.25 = dot/very weak, 0.25-0.6 = 1-2, 0.6-1.2 = boundary territory, >1.2 = six
   let runsScored = 0;
   let outcome = '';
   let outType = null;
   let fieldedSave = false;
 
-  // chance of edge/mistime if timing quality low
   const mistimed = timingQuality < 0.45;
+  const nearFielder = findNearestFielder(finalAngle);
 
-  // find the fielder nearest the shot's line - used for catches, boundary
-  // saves, and general fielding of every non-boundary shot
-  const nearFielder = findNearestFielder(shotAngle);
+  // bat control reduces catch chance on attacking mistimed shots (0.65 → 0.37)
+  const control = getEquipStat('bat','control') / 100;
+  const attackCatchChance = 0.65 * (1 - control * 0.43);
 
-  if (distance < 0.18) {
+  // pads protection reduces catch chance on defensive mistimed shots (0.65 → 0.36)
+  const protection = getEquipStat('pads','protection') / 100;
+  const defenceCatchChance = 0.65 * (1 - protection * 0.45);
+
+  // pads footwork increases chance of getting 2 runs vs 1 (0.50 → 0.74)
+  const footwork = getEquipStat('pads','footwork') / 100;
+  const twoRunChance = 0.50 + footwork * 0.24;
+
+  // shoes agility lowers the dot ball threshold — quicker between the wickets
+  // means shorter hits still convert to runs (threshold 0.18 → 0.13 at max)
+  const agility = getEquipStat('shoes','agility') / 100;
+  const dotThreshold = 0.18 - agility * 0.05;
+
+  if (distance < dotThreshold) {
     runsScored = 0;
     outcome = 'DOT BALL';
   } else if (distance < 0.45) {
-    // mistimed shot straight to a close fielder = caught
-    if (mistimed && nearFielder && nearFielder.diff < 30 && nearFielder.f.dist < 0.7 && Math.random() < 0.65) {
+    if (mistimed && nearFielder && nearFielder.diff < 30 && nearFielder.f.dist < 0.7 && Math.random() < defenceCatchChance) {
       outType = 'caught';
       outcome = 'CAUGHT!';
     } else {
-      runsScored = Math.random() < 0.5 ? 1 : 2;
+      runsScored = Math.random() < twoRunChance ? 2 : 1;
       outcome = runsScored + (runsScored===1?' RUN':' RUNS');
     }
   } else if (distance < 0.9) {
-    // mistimed shot hit straight to a fielder in the deep = caught
-    if (mistimed && nearFielder && nearFielder.diff < 30 && Math.random() < 0.65) {
+    if (mistimed && nearFielder && nearFielder.diff < 30 && Math.random() < attackCatchChance) {
       outType = 'caught';
       outcome = 'CAUGHT!';
     } else if (nearFielder && nearFielder.canSave) {
-      // a fielder can cut this off before it reaches the boundary
-      runsScored = Math.random() < 0.5 ? 1 : 2;
+      runsScored = Math.random() < twoRunChance ? 2 : 1;
       outcome = 'FIELDED - ' + runsScored + (runsScored===1?' RUN':' RUNS');
       fieldedSave = true;
     } else {
@@ -3219,9 +3243,7 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
       outcome = 'FOUR!';
     }
   } else {
-    // big shot - only caught if it's heading straight at a fielder
-    // (e.g. mistimed top edge that doesn't carry as far as it looks)
-    if (mistimed && nearFielder && nearFielder.diff < 22 && Math.random() < 0.45) {
+    if (mistimed && nearFielder && nearFielder.diff < 22 && Math.random() < attackCatchChance * 0.7) {
       outType = 'caught';
       outcome = 'CAUGHT!';
     } else {
@@ -3231,10 +3253,9 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
   }
 
   // ---- energy regen ----
-  // passive regen happens every ball; gentle shots (dot balls and 1-2 runs)
-  // get a bonus on top, rewarding placement over brute force
+  // agility already used above; gentle shots restore more energy naturally
   let regen = ENERGY_PASSIVE_REGEN;
-  if (distance < 0.45) regen += ENERGY_GENTLE_BONUS + getEquipStat('shoes','agility');
+  if (distance < 0.45) regen += ENERGY_GENTLE_BONUS;
   energy = Math.min(MAX_ENERGY, energy + regen);
 
   // determine how far the ball visually travels based on outcome:
@@ -3292,7 +3313,7 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
     nearFielder.f.chasing = true;
     nearFielder.f.target = nearFielder.f.interceptPoint;
   } else if (outcome !== 'FOUR!' && outcome !== 'SIX!') {
-    sendFielderToBall(shotAngle, targetDist, nearFielder);
+    sendFielderToBall(finalAngle, targetDist, nearFielder);
   }
 
   animateHit(hitAngle, distance, () => {
