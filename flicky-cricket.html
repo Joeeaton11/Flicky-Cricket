@@ -320,6 +320,7 @@
     box-shadow:0 2px 6px rgba(245,158,11,0.4); transition:transform 70ms;
   }
   .equipListUpgradeBtn:active { transform:scale(0.93); }
+  .equipListUpgradeBtn.cant-afford { background:linear-gradient(135deg,#9ca3af,#6b7280); box-shadow:none; opacity:0.7; cursor:not-allowed; }
 
   /* ── Chests tab ── */
   #chestSlotsGrid {
@@ -595,7 +596,7 @@ hudBest.textContent = 'BEST: ' + best; if(menuBestVal) menuBestVal.textContent =
 // Career stats track lifetime totals for achievements.
 function loadCareerStats() {
   const defaults = {
-    coins: 0,
+    coins: 500,
     careerRuns: 0,
     fours: 0,
     sixes: 0,
@@ -1245,6 +1246,65 @@ const EQUIP_SLOTS = ['bat','gloves','pads','helmet','shoes'];
 const RARITY_MAX_LEVEL    = { common:8, rare:6, epic:5, legendary:4 };
 const RARITY_UNLOCK_SEASON = { common:1, rare:2, epic:4, legendary:7 };
 
+// Coin cost to upgrade per rarity, indexed by current level (0 = L1→L2)
+const UPGRADE_COIN_COST = {
+  common:    [50,  100,  200,  350,  500,  750, 1000],
+  rare:      [150, 350,  700, 1200, 2000],
+  epic:      [400, 900, 1800, 3500],
+  legendary: [1000,2500,5000],
+};
+
+// Match entry fee and win prize by season
+const MATCH_ECONOMY = [
+  { entry:   50, prize:  130 }, // season 1
+  { entry:  150, prize:  380 }, // season 2
+  { entry:  350, prize:  880 }, // season 3
+  { entry:  700, prize: 1750 }, // season 4
+  { entry: 1500, prize: 3750 }, // season 5
+  { entry: 3000, prize: 7500 }, // season 6
+  { entry: 6000, prize:15000 }, // season 7+
+];
+
+function getMatchEconomy() {
+  const idx = Math.min((league.season - 1), MATCH_ECONOMY.length - 1);
+  return MATCH_ECONOMY[idx];
+}
+
+// Daily free chests — 2 per day, resets at midnight
+function loadDailyChests() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('flickyDailyChests') || '{}');
+    const today = new Date().toDateString();
+    if (saved.date !== today) return { date: today, claimed: 0 };
+    return saved;
+  } catch(e) { return { date: new Date().toDateString(), claimed: 0 }; }
+}
+function saveDailyChests(state) {
+  localStorage.setItem('flickyDailyChests', JSON.stringify(state));
+}
+function claimDailyChest() {
+  const state = loadDailyChests();
+  if (state.claimed >= 2) return false;
+  state.claimed++;
+  saveDailyChests(state);
+  // add a silver chest to an empty slot
+  const emptySlot = chestSlots.findIndex(s => s === null);
+  if (emptySlot !== -1) {
+    chestSlots[emptySlot] = { type: 'silver', earnedAt: Date.now(), openingStarted: null, daily: true };
+    saveChestSlots();
+  }
+  return true;
+}
+function dailyChestsRemaining() {
+  return Math.max(0, 2 - loadDailyChests().claimed);
+}
+
+function getUpgradeCoinCost(item, level) {
+  const costs = UPGRADE_COIN_COST[item.rarity];
+  if (!costs) return 0;
+  return costs[level - 1] || 0;
+}
+
 function loadEquipmentState() {
   const defaults = {
     equippedItems: { bat:'bat_classic', gloves:'gloves_classic', pads:'pads_standard', helmet:'helmet_basic', shoes:'shoes_trainer' },
@@ -1403,9 +1463,13 @@ function upgradeItem(itemId) {
   if (level === 0 || level >= maxLvl) return false;
   const needed = item.cardsToLevel[level - 1];
   if ((itemCards[itemId] || 0) < needed) return false;
+  const coinCost = getUpgradeCoinCost(item, level);
+  if (career.coins < coinCost) return false;
   itemCards[itemId] -= needed;
   itemLevels[itemId] = level + 1;
+  career.coins -= coinCost;
   saveEquipmentState();
+  saveCareerStats();
   return true;
 }
 
@@ -1962,9 +2026,17 @@ if (new URLSearchParams(location.search).get('scene')) {
 }
 
 startBtn.addEventListener('click', () => {
-  getAudioCtx(); // unlock audio on first user interaction
+  getAudioCtx();
   playUiTap(); hapticTap();
-  // reset result panel for next game
+  // deduct entry fee
+  const eco = getMatchEconomy();
+  if (career.coins < eco.entry) {
+    showMessage('NOT ENOUGH COINS!', '#f87171', 1200);
+    return;
+  }
+  career.coins -= eco.entry;
+  saveCareerStats();
+  updateHud();
   resultText.style.display = 'none';
   document.getElementById('statusBlock').style.display = 'none';
   shareBtn.classList.add('hidden');
@@ -2040,7 +2112,8 @@ function updateNextOpponentDisplay() {
     rival = table[playerPos - 1]; // chasing the team above
   }
   const matchNum = league.matchInSeason + 1;
-  nextOpponentDisplay.textContent = `NEXT: vs ${rival.name} \u2014 MATCH ${matchNum}/${SEASON_LENGTH}, SEASON ${league.season}`;
+  const eco3 = getMatchEconomy();
+  nextOpponentDisplay.textContent = `NEXT: vs ${rival.name} \u2014 MATCH ${matchNum}/${SEASON_LENGTH}, SEASON ${league.season} \u00b7 ENTRY ${eco3.entry.toLocaleString()}\ud83e\ude99 \u00b7 WIN ${eco3.prize.toLocaleString()}\ud83e\ude99`;
 }
 
 function renderLeagueScreen() {
@@ -2675,13 +2748,18 @@ function renderEquipSlotTab(slot, container) {
     }
     right.appendChild(btn);
 
-    // Upgrade badge if ready
+    // Upgrade badge if cards ready
     if (owned && level < (RARITY_MAX_LEVEL[item.rarity] || 5) && cards >= item.cardsToLevel[level-1]) {
+      const coinCost = getUpgradeCoinCost(item, level);
+      const canAfford = career.coins >= coinCost;
       const upBadge = document.createElement('button');
-      upBadge.className = 'equipListUpgradeBtn'; upBadge.textContent = '▲ UPGRADE';
+      upBadge.className = 'equipListUpgradeBtn' + (canAfford ? '' : ' cant-afford');
+      upBadge.textContent = '▲ ' + coinCost.toLocaleString() + '🪙';
+      upBadge.disabled = !canAfford;
+      upBadge.title = canAfford ? 'Upgrade' : 'Not enough coins';
       upBadge.addEventListener('click', e => {
         e.stopPropagation();
-        upgradeItem(item.id); renderEquipSlotTab(slot, container);
+        if (upgradeItem(item.id)) { updateEquipTopBar(); renderEquipSlotTab(slot, container); }
       });
       right.appendChild(upBadge);
     }
@@ -3702,8 +3780,18 @@ function endGame() {
   }
   localStorage.setItem('flickyTarget', String(target));
 
-  // award coins (1 per run) and update career stats
-  const coinsEarned = runs;
+  // award coins based on match result
+  const eco = getMatchEconomy();
+  let coinsEarned, coinLabel;
+  if (beatTarget) {
+    coinsEarned = eco.prize;
+    coinLabel = 'WIN PRIZE';
+  } else {
+    // score-based refund: up to 75% of entry fee based on runs vs target
+    const refundPct = Math.min(0.75, runs / (target * 1.2));
+    coinsEarned = Math.round(eco.entry * refundPct);
+    coinLabel = 'REFUND';
+  }
   career.coins += coinsEarned;
   career.careerRuns += runs;
   career.fours += thisRunFours;
@@ -3742,7 +3830,9 @@ function endGame() {
     // result handled by resultText
   }
   let html = resultLine + (runs > best ? '<br>NEW BEST SCORE!' : '');
-  html += `<br><br><span style="color:#fff;">+${coinsEarned} COINS</span> (total: ${career.coins})`;
+  const eco2 = getMatchEconomy();
+  html += `<br><br><span style="color:#f4d03f;">+${coinsEarned.toLocaleString()} 🪙 ${coinLabel}</span>`;
+  html += `<br><span style="color:#9ca3af;font-size:0.85em;">Entry was ${eco2.entry.toLocaleString()} · Balance: ${career.coins.toLocaleString()}</span>`;
   html += leagueHtml;
   if (newlyUnlocked.length) {
     html += '<br><br><span style="color:#39ff6a;">ACHIEVEMENT UNLOCKED!</span>';
@@ -10908,6 +10998,19 @@ function gameLoop() {
 targetDisplay.textContent = 'TARGET: ' + target + ' RUNS';
 updateNextOpponentDisplay();
 updateStreakDisplay();
+
+// grant free daily chests on load (up to 2 per day)
+(function grantDailyChests() {
+  const remaining = dailyChestsRemaining();
+  for (let i = 0; i < remaining; i++) claimDailyChest();
+  if (remaining > 0) {
+    setTimeout(() => showMessage(
+      remaining === 2 ? '🎁 2 FREE DAILY CHESTS ADDED!' : '🎁 FREE DAILY CHEST ADDED!',
+      '#22c55e', 2000
+    ), 1200);
+  }
+})();
+
 gameLoop();
 </script>
 </body>
