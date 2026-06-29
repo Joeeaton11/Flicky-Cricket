@@ -246,6 +246,57 @@
     background:#1a3d6a; box-sizing:border-box;
   }
 
+  /* ── Kit Bag Overview ── */
+  .kitBagWrap { display:flex; flex-direction:column; gap:10px; padding:12px 10px; }
+  .kitBagCard {
+    display:flex; align-items:center; gap:12px;
+    background:linear-gradient(135deg,#1e2d45,#0d1a2e);
+    border-radius:16px; padding:10px 12px;
+    border:2px solid var(--rc,#555);
+    box-shadow:0 0 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+    cursor:pointer; transition:transform 80ms, box-shadow 80ms;
+    position:relative; overflow:hidden;
+  }
+  .kitBagCard::before {
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(ellipse at 20% 50%, rgba(255,255,255,0.04), transparent 60%);
+    pointer-events:none;
+  }
+  .kitBagCard:active { transform:scale(0.97); }
+  .kitBagArtWrap {
+    width:80px; height:80px; flex-shrink:0; border-radius:12px; overflow:hidden;
+    border:2px solid rgba(255,255,255,0.12);
+    background:linear-gradient(135deg,#f0f4ff,#dde8f5);
+  }
+  .kitBagArtWrap canvas { width:80px; height:80px; }
+  .kitBagMid { flex:1; min-width:0; }
+  .kitBagSlotLabel {
+    font-family:'Arial Black',Arial,sans-serif; font-size:9px; font-weight:900;
+    color:rgba(255,255,255,0.45); letter-spacing:2px; text-transform:uppercase; margin-bottom:3px;
+  }
+  .kitBagItemName {
+    font-family:'Arial Black',Arial,sans-serif; font-size:15px; font-weight:900;
+    color:#fff; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    text-shadow:0 1px 4px rgba(0,0,0,0.6); margin-bottom:2px;
+  }
+  .kitBagRarity {
+    font-family:'Arial Black',Arial,sans-serif; font-size:9px; font-weight:900;
+    letter-spacing:1.5px; margin-bottom:6px;
+  }
+  .kitBagPips { display:flex; gap:3px; }
+  .kitBagPip {
+    width:10px; height:6px; border-radius:3px;
+    background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2);
+  }
+  .kitBagPip.filled { background:var(--rc,#f4d03f); border-color:var(--rc,#f4d03f); box-shadow:0 0 4px var(--rc,#f4d03f); }
+  .kitBagChangeBtn {
+    font-family:'Arial Black',Arial,sans-serif; font-size:9px; font-weight:900; letter-spacing:1px;
+    padding:7px 10px; border-radius:10px; border:none; cursor:pointer; flex-shrink:0;
+    background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff;
+    box-shadow:0 2px 8px rgba(59,130,246,0.4); transition:transform 70ms;
+  }
+  .kitBagChangeBtn:active { transform:scale(0.92); }
+
   /* ── Equipment List View ── */
   .equipList { display:flex; flex-direction:column; gap:6px; padding:8px; }
 
@@ -310,8 +361,8 @@
     box-shadow:0 2px 6px rgba(0,0,0,0.2);
   }
   .equipListBtn:active { transform:scale(0.93); }
-  .equipListBtn.equip  { background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; }
-  .equipListBtn.inuse  { background:#dcfce7; color:#166534; cursor:default; box-shadow:none; }
+  .equipListBtn.equip  { background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; font-size:10px; padding:8px 14px; box-shadow:0 4px 12px rgba(22,163,74,0.5); }
+  .equipListBtn.inuse  { background:linear-gradient(135deg,#166534,#14532d); color:#86efac; cursor:default; box-shadow:0 0 0 2px #16a34a; }
   .equipListBtn.locked { background:rgba(180,180,200,0.25); color:rgba(80,80,110,0.6); cursor:default; box-shadow:none; font-size:12px; padding:4px 8px; }
   .equipListUpgradeBtn {
     font-family:'Arial Black',Arial,sans-serif; font-size:7px; font-weight:900;
@@ -817,12 +868,13 @@
       <span id="equipGemBalance"></span>
     </div>
     <div id="equipTabs">
-      <button class="equipTab active" data-tab="bat">BAT</button>
+      <button class="equipTab active" data-tab="kit">KIT BAG</button>
+      <button class="equipTab" data-tab="bat">BAT</button>
       <button class="equipTab" data-tab="gloves">GLOVES</button>
       <button class="equipTab" data-tab="pads">PADS</button>
       <button class="equipTab" data-tab="helmet">HELMET</button>
       <button class="equipTab" data-tab="shoes">SHOES</button>
-      <button class="equipTab" data-tab="chests">CHESTS</button>
+      <button class="equipTab" data-tab="chests">📦</button>
     </div>
   </div>
   <div id="equipContent"></div>
@@ -2451,7 +2503,7 @@ startBtn.addEventListener('click', () => {
 customiseBtn.addEventListener('click', () => {
   overlay.classList.add('hidden');
   customiseScreen.classList.remove('hidden');
-  openEquipTab('bat');
+  openEquipTab('kit');
   updateEquipTopBar();
 });
 
@@ -2763,7 +2815,9 @@ function openEquipTab(tab) {
   if (chestTimerInterval) { clearInterval(chestTimerInterval); chestTimerInterval = null; }
   const content = document.getElementById('equipContent');
   content.innerHTML = '';
-  if (tab === 'chests') {
+  if (tab === 'kit') {
+    renderKitBagTab(content);
+  } else if (tab === 'chests') {
     renderChestTab(content);
   } else {
     renderEquipSlotTab(tab, content);
@@ -3018,6 +3072,88 @@ function shadeColor(hex, amt) {
 }
 function lightenColor(hex, amt) { return shadeColor(hex, amt); }
 
+function renderKitBagTab(container) {
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'kitBagWrap';
+
+  const SLOTS = [
+    { key:'bat',    label:'BAT',    emoji:'🏏' },
+    { key:'gloves', label:'GLOVES', emoji:'🥊' },
+    { key:'pads',   label:'PADS',   emoji:'🦵' },
+    { key:'helmet', label:'HELMET', emoji:'⛑️' },
+    { key:'shoes',  label:'SHOES',  emoji:'👟' },
+  ];
+
+  SLOTS.forEach(({ key, label, emoji }) => {
+    const itemId = equippedItems[key];
+    const item = EQUIPMENT[key].find(i => i.id === itemId) || EQUIPMENT[key][0];
+    const level = itemLevels[item.id] || 0;
+    const rc = rarityColor(item.rarity);
+    const maxLvl = RARITY_MAX_LEVEL[item.rarity] || 5;
+
+    const card = document.createElement('div');
+    card.className = 'kitBagCard rarity-' + item.rarity;
+    card.style.setProperty('--rc', rc);
+
+    // left: art canvas
+    const artWrap = document.createElement('div');
+    artWrap.className = 'kitBagArtWrap';
+    const ac = document.createElement('canvas');
+    ac.width = 100; ac.height = 100;
+    artWrap.appendChild(ac);
+    card.appendChild(artWrap);
+
+    // middle: info
+    const mid = document.createElement('div');
+    mid.className = 'kitBagMid';
+
+    const slotLbl = document.createElement('div');
+    slotLbl.className = 'kitBagSlotLabel';
+    slotLbl.textContent = emoji + '  ' + label;
+    mid.appendChild(slotLbl);
+
+    const itemName = document.createElement('div');
+    itemName.className = 'kitBagItemName';
+    itemName.textContent = item.name;
+    mid.appendChild(itemName);
+
+    const rarLbl = document.createElement('div');
+    rarLbl.className = 'kitBagRarity';
+    rarLbl.textContent = item.rarity.toUpperCase();
+    rarLbl.style.color = rc;
+    mid.appendChild(rarLbl);
+
+    // level pips
+    const pipsRow = document.createElement('div');
+    pipsRow.className = 'kitBagPips';
+    for (let p = 0; p < maxLvl; p++) {
+      const pip = document.createElement('div');
+      pip.className = 'kitBagPip' + (p < level ? ' filled' : '');
+      pip.style.setProperty('--rc', rc);
+      pipsRow.appendChild(pip);
+    }
+    mid.appendChild(pipsRow);
+
+    card.appendChild(mid);
+
+    // right: change button
+    const changeBtn = document.createElement('button');
+    changeBtn.className = 'kitBagChangeBtn';
+    changeBtn.textContent = 'CHANGE';
+    card.appendChild(changeBtn);
+
+    card.addEventListener('click', () => openEquipTab(key));
+    changeBtn.addEventListener('click', e => { e.stopPropagation(); openEquipTab(key); });
+
+    wrap.appendChild(card);
+
+    requestAnimationFrame(() => drawEquipArt(ac, key, item, level >= 1));
+  });
+
+  container.appendChild(wrap);
+}
+
 function renderEquipSlotTab(slot, container) {
   container.innerHTML = '';
   const list = document.createElement('div');
@@ -3133,7 +3269,7 @@ function renderEquipSlotTab(slot, container) {
     if (!owned) {
       btn.classList.add('locked'); btn.textContent = '🔒'; btn.disabled = true;
     } else if (isEquipped) {
-      btn.classList.add('inuse'); btn.textContent = '✓ IN USE'; btn.disabled = true;
+      btn.classList.add('inuse'); btn.textContent = '✓ EQUIPPED'; btn.disabled = true;
     } else {
       btn.classList.add('equip'); btn.textContent = 'EQUIP';
       btn.addEventListener('click', e => {
