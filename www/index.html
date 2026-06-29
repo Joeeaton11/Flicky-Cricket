@@ -1242,7 +1242,8 @@ const EQUIPMENT = {
 };
 
 const EQUIP_SLOTS = ['bat','gloves','pads','helmet','shoes'];
-const RARITY_MAX_LEVEL = { common:8, rare:6, epic:5, legendary:4 };
+const RARITY_MAX_LEVEL    = { common:8, rare:6, epic:5, legendary:4 };
+const RARITY_UNLOCK_SEASON = { common:1, rare:2, epic:4, legendary:7 };
 
 function loadEquipmentState() {
   const defaults = {
@@ -1334,18 +1335,24 @@ function openChestRewards(typeName) {
   const numCards = cfg.cards.min + Math.floor(Math.random() * (cfg.cards.max - cfg.cards.min + 1));
   const gemReward = cfg.gems.min + Math.floor(Math.random() * (cfg.gems.max - cfg.gems.min + 1));
   const rewards = { cards: [], gems: gemReward };
+  // only offer rarities the player has unlocked via season progression
+  const allRarities = ['common','rare','epic','legendary'];
+  const unlockedRarities = allRarities.filter(r => league.season >= RARITY_UNLOCK_SEASON[r]);
+
   for (let i = 0; i < numCards; i++) {
-    // pick rarity
-    const r = Math.random();
-    let rarityIdx = 0;
-    let cum = 0;
-    for (let ri = 0; ri < cfg.rarity.length; ri++) {
-      cum += cfg.rarity[ri];
+    // build a normalised probability table using only unlocked rarities
+    const weights = cfg.rarity.map((w, ri) =>
+      unlockedRarities.includes(allRarities[ri]) ? w : 0
+    );
+    const total = weights.reduce((a, b) => a + b, 0);
+    if (total === 0) continue;
+    const r = Math.random() * total;
+    let cum = 0, rarityIdx = 0;
+    for (let ri = 0; ri < weights.length; ri++) {
+      cum += weights[ri];
       if (r < cum) { rarityIdx = ri; break; }
     }
-    const rarities = ['common','rare','epic','legendary'];
-    const rarity = rarities[rarityIdx];
-    // pick a random item of that rarity across all slots
+    const rarity = allRarities[rarityIdx];
     const candidates = [];
     EQUIP_SLOTS.forEach(slot => {
       EQUIPMENT[slot].forEach(item => { if (item.rarity === rarity) candidates.push(item); });
