@@ -5209,30 +5209,47 @@ function startBallSequence() {
   state = 'ready';
   hideMessage();
   ball = { x:0.5, y:0, z:0, vx:0, vy:0, active:true, radius:8 };
-  // difficulty scaling: a steady ramp over the innings, plus per-ball random
-  // variance (pace changes) and a small extra ramp tied to league season so
-  // later seasons feel noticeably tougher
-  // league difficulty multiplier (1.0 = Jolly Roger, 1.9 = Sky Arena)
+
+  // ── Base ramp (innings progress + season) ──
+  const baseSpeed = 0.011 + Math.min(ballsBowled * 0.0006, 0.01);
+  const seasonRamp = Math.min((league.season - 1) * 0.0008, 0.006);
+
+  // ── League difficulty (shifts the pool weights, not a flat multiplier) ──
   const activeLgDiff = (window._activeLeagueIdx !== undefined && window._activeLeagueIdx !== null)
     ? (THEMED_LEAGUES[window._activeLeagueIdx].difficulty || 1.0)
     : 1.0;
+  // d ranges 0-1 across the 7 leagues; used to weight delivery type pool
+  const d = Math.min(1, (activeLgDiff - 1.0) / 0.90);
 
-  const baseSpeed = 0.011 + Math.min(ballsBowled * 0.0006, 0.01);
-  const seasonRamp = Math.min((league.season-1) * 0.0008, 0.006);
-  const paceVariance = (Math.random()-0.5) * 0.004 * activeLgDiff;
-  ballSpeed = (baseSpeed + seasonRamp + paceVariance) * activeLgDiff;
+  // ── Delivery type pool ──
+  // Each entry: [weight, speedMult, swingMult, zoneBias, label]
+  // speedMult: multiplier on base pace  swingMult: line width scale
+  // zoneBias: shift zoneCenter (-ve = shorter/back-of-a-length, +ve = fuller)
+  const DELIVERIES = [
+    // type          weight(easy→hard)    spd    swing  zone
+    { w: lerp(0.28, 0.08, d), spd:1.00, swg:0.9,  zb: 0.00 }, // stock ball
+    { w: lerp(0.28, 0.12, d), spd:0.55, swg:0.7,  zb:+0.04 }, // slow ball (fuller)
+    { w: lerp(0.20, 0.30, d), spd:1.30, swg:1.0,  zb:-0.02 }, // quickie
+    { w: lerp(0.12, 0.28, d), spd:1.10, swg:2.0,  zb: 0.00 }, // big swinger
+    { w: lerp(0.08, 0.14, d), spd:1.15, swg:1.4,  zb:-0.06 }, // back-of-a-length seamer
+    { w: lerp(0.04, 0.08, d), spd:1.20, swg:0.6,  zb:+0.08 }, // yorker-length (hard to reach)
+  ];
 
-  // line width: higher leagues bowl wider lines — more swing/seam movement
-  const swingWidth = 0.18 * activeLgDiff;
-  ball.targetX = 0.5 + (Math.random()-0.5) * Math.min(swingWidth, 0.36);
-  // side of the pitch this delivery is bowled on, used for the cross-bat
-  // mismatch penalty: positive targetX offset = off side, negative = leg side
+  // weighted random pick
+  const totalW = DELIVERIES.reduce((s, x) => s + x.w, 0);
+  let pick = Math.random() * totalW, delivery = DELIVERIES[0];
+  for (const dv of DELIVERIES) { pick -= dv.w; if (pick <= 0) { delivery = dv; break; } }
+
+  // ── Assemble this ball's characteristics ──
+  const paceVariance = (Math.random() - 0.5) * 0.003; // small per-ball noise always present
+  ballSpeed = (baseSpeed + seasonRamp + paceVariance) * delivery.spd;
+
+  const swingWidth = 0.18 * delivery.swg;
+  ball.targetX = 0.5 + (Math.random() - 0.5) * Math.min(swingWidth, 0.40);
   ball.lineSide = ball.targetX > 0.5 ? 1 : (ball.targetX < 0.5 ? -1 : 0);
 
-  // length variation: shift where the "sweet spot" timing zone falls this
-  // ball (a fuller or shorter delivery), so the zone isn't always the same
-  ball.zoneCenter = 0.92 + (Math.random()-0.5)*0.18; // was fixed at 0.92
-  ball.zoneCenter = Math.max(0.78, Math.min(1.0, ball.zoneCenter));
+  ball.zoneCenter = 0.92 + delivery.zb + (Math.random() - 0.5) * 0.10;
+  ball.zoneCenter = Math.max(0.76, Math.min(1.02, ball.zoneCenter));
 
   // tutorial: the very first ball this player ever faces is slowed down and
   // guided with on-screen prompts
