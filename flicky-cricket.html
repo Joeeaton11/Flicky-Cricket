@@ -1228,6 +1228,7 @@
   </div>
   <div id="equipContent"></div>
   <button id="customiseDoneBtn">DONE</button>
+  <div id="upgradeFlashOverlay" style="display:none;position:fixed;inset:0;z-index:9999;pointer-events:none;overflow:hidden;"></div>
   <!-- legacy elements kept for compatibility -->
   <canvas id="charCanvas" width="1" height="1" style="display:none"></canvas>
   <div id="customiseCoinBalance" style="display:none"></div>
@@ -3871,6 +3872,75 @@ function drawCharacterPreview() {
 let currentEquipTab = 'bat';
 let chestTimerInterval = null;
 
+function showUpgradeAnimation(rowEl, rarityCol, statDeltas) {
+  const overlay = document.getElementById('upgradeFlashOverlay');
+  overlay.innerHTML = '';
+  overlay.style.display = 'block';
+
+  // starburst SVG centred on the row
+  const rect = rowEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;';
+  svg.setAttribute('viewBox', '0 0 390 844');
+  const bx = cx / window.innerWidth * 390;
+  const by = cy / window.innerHeight * 844;
+  let d = 'M ' + bx + ' ' + by + ' ';
+  for (let i = 0; i < 20; i++) {
+    const a1 = (i / 20) * Math.PI * 2;
+    const a2 = ((i + 0.5) / 20) * Math.PI * 2;
+    d += 'L ' + (bx + Math.cos(a1)*500).toFixed(1) + ' ' + (by + Math.sin(a1)*500).toFixed(1) + ' ';
+    d += 'L ' + (bx + Math.cos(a2)*80).toFixed(1)  + ' ' + (by + Math.sin(a2)*80).toFixed(1)  + ' ';
+  }
+  d += 'Z';
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', d); path.setAttribute('fill', rarityCol); path.setAttribute('opacity', '0.55');
+  svg.appendChild(path);
+
+  // white flash
+  const flash = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  flash.setAttribute('cx', bx); flash.setAttribute('cy', by); flash.setAttribute('r', 60);
+  flash.setAttribute('fill', '#fff'); flash.setAttribute('opacity', '0.9');
+  svg.appendChild(flash);
+  overlay.appendChild(svg);
+
+  // particles
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    const angle = (i / 20) * Math.PI * 2;
+    const speed = 60 + i * 8;
+    const size = 6 + (i % 4) * 3;
+    p.style.cssText = 'position:fixed;border-radius:50%;pointer-events:none;' +
+      'width:' + size + 'px;height:' + size + 'px;' +
+      'background:' + rarityCol + ';box-shadow:0 0 8px ' + rarityCol + ';' +
+      'left:' + cx + 'px;top:' + cy + 'px;' +
+      'transition:transform 0.6s ease-out,opacity 0.6s ease-out;opacity:1;';
+    overlay.appendChild(p);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      p.style.transform = 'translate(' + (Math.cos(angle)*speed) + 'px,' + (Math.sin(angle)*speed) + 'px)';
+      p.style.opacity = '0';
+    }));
+  }
+
+  setTimeout(() => { overlay.style.display = 'none'; overlay.innerHTML = ''; }, 750);
+
+  // animate stat bar fills and show +delta labels
+  if (statDeltas && statDeltas.length) {
+    setTimeout(() => {
+      statDeltas.forEach(({ fillEl, newPct, deltaEl, delta, col }) => {
+        if (fillEl) { fillEl.style.transition = 'width 0.5s ease-out'; fillEl.style.width = (newPct * 100) + '%'; }
+        if (deltaEl && delta > 0) {
+          deltaEl.textContent = '+' + Math.round(delta);
+          deltaEl.style.cssText = 'color:#22c55e;font-weight:700;font-size:11px;margin-left:4px;transition:opacity 1s ease 0.5s;opacity:1;';
+          setTimeout(() => { deltaEl.style.opacity = '0'; }, 1200);
+        }
+      });
+    }, 200);
+  }
+}
+
 function updateEquipTopBar() {
   document.getElementById('equipCoinBalance').textContent = '🪙 ' + career.coins;
   document.getElementById('equipGemBalance').textContent = '💎 ' + gems;
@@ -4661,7 +4731,8 @@ function renderEquipSlotTab(slot, container) {
       mid.appendChild(maxedEl);
     }
 
-    // Stat bars (all stats)
+    // Stat bars (all stats) — collect refs for upgrade animation
+    const _statBarRefs = [];
     Object.entries(item.stats).forEach(([key]) => {
       const curVal  = statAtLevel(item, key, level);
       const maxLvl  = RARITY_MAX_LEVEL[item.rarity] || 5;
@@ -4670,9 +4741,13 @@ function renderEquipSlotTab(slot, container) {
       const nextPct = Math.min(1, nextVal / 100);
       const sr = document.createElement('div'); sr.className = 'equipListStatRow';
       const lblRow = document.createElement('div'); lblRow.className = 'equipListStatLabelRow';
+      lblRow.style.display = 'flex'; lblRow.style.alignItems = 'center';
       const lbl = document.createElement('div'); lbl.className = 'equipListStatLabel';
       lbl.textContent = (STAT_INFO[key] || {}).label || key;
       lblRow.appendChild(lbl);
+      const deltaEl = document.createElement('span');
+      deltaEl.style.cssText = 'color:#22c55e;font-weight:700;font-size:11px;margin-left:4px;opacity:0;';
+      lblRow.appendChild(deltaEl);
       const track = document.createElement('div'); track.className = 'equipListStatTrack';
       const fill = document.createElement('div'); fill.className = 'equipListStatFill';
       fill.style.cssText = 'width:' + (curPct*100) + '%;background:' + rc;
@@ -4682,10 +4757,9 @@ function renderEquipSlotTab(slot, container) {
         gainFill.style.cssText = 'position:absolute;left:' + (curPct*100) + '%;width:' + ((nextPct-curPct)*100) + '%;background:#22c55e;top:0;height:100%;';
         track.appendChild(gainFill);
       }
-      const valEl = document.createElement('div'); valEl.className = 'equipListStatValue';
-      valEl.textContent = Math.round(curVal);
       sr.appendChild(lblRow); sr.appendChild(track);
       mid.appendChild(sr);
+      _statBarRefs.push({ fillEl: fill, newPct: nextPct, deltaEl, delta: nextVal - curVal });
     });
 
     row.appendChild(mid);
@@ -4719,7 +4793,11 @@ function renderEquipSlotTab(slot, container) {
       upBadge.disabled = !canAfford;
       upBadge.addEventListener('click', e => {
         e.stopPropagation();
-        if (upgradeItem(item.id)) { updateEquipTopBar(); renderEquipSlotTab(slot, container); }
+        if (upgradeItem(item.id)) {
+          updateEquipTopBar();
+          showUpgradeAnimation(row, rc, _statBarRefs);
+          setTimeout(() => renderEquipSlotTab(slot, container), 800);
+        }
       });
       right.appendChild(upBadge);
     }
