@@ -6186,10 +6186,13 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
       checkMilestone(prevRuns, runs);
       updateHud();
       const color = runsScored >= 4 ? '#f4d03f' : (runsScored === 0 ? '#bbb' : '#fff');
-      let displayMsg = outcome;
-      if (mismatched && rawPower > 1.2) displayMsg = 'CROSS-BAT! ' + outcome;
-      else if (fatigued && rawPower > 1.5) displayMsg = 'TIRED... ' + outcome;
-      showMessage(displayMsg, color, 900);
+      // Don't show the small message bar for FOUR/SIX — the big canvas popText handles those
+      if (outcome !== 'FOUR!' && outcome !== 'SIX!') {
+        let displayMsg = outcome;
+        if (mismatched && rawPower > 1.2) displayMsg = 'CROSS-BAT! ' + outcome;
+        else if (fatigued && rawPower > 1.5) displayMsg = 'TIRED... ' + outcome;
+        showMessage(displayMsg, color, 900);
+      }
       if (outcome === 'FOUR!') { umpireSignal = 'four'; umpireSignalTimer = 60; }
       if (outcome === 'SIX!') { umpireSignal = 'six'; umpireSignalTimer = 60; }
       setTimeout(nextOrEnd, 1000);
@@ -6316,7 +6319,19 @@ function animateHit(angle, distance, callback, targetDist) {
 }
 
 function checkMilestone(prev, next) {
-  const milestones = [50, 100, 150, 200];
+  const effectiveTgt = window._leagueTargetFloor ? Math.max(target, window._leagueTargetFloor) : target;
+  const milestones = [50, 100, 150, 200, 250, 300];
+
+  // Approaching warnings — 5 runs away
+  const approachPoints = [...milestones, effectiveTgt];
+  for (const m of approachPoints) {
+    if (prev < m - 5 && next >= m - 5 && next < m) {
+      showMessage('⚡ ' + (m - next) + ' RUNS TO ' + m + '!', '#f4d03f', 1800);
+      break;
+    }
+  }
+
+  // Hit milestone
   for (const m of milestones) {
     if (prev < m && next >= m) {
       triggerMilestone(m);
@@ -7749,13 +7764,33 @@ function drawBeachScene() {
 
   // ── SCOREBOARD ───────────────────────────────────────────────────────────────
   {
-    const sbW=W*.18, sbH=H*.034, sbX=ocx-sbW/2, sbY=oTop+H*.003;
-    ctx.fillStyle='rgba(8,45,8,.9)'; ctx.fillRect(sbX-2,sbY-2,sbW+4,sbH+4);
-    ctx.fillStyle='#1C6020'; ctx.fillRect(sbX,sbY,sbW,sbH);
-    ctx.strokeStyle='#FFDD44'; ctx.lineWidth=1.5; ctx.strokeRect(sbX+2,sbY+2,sbW-4,sbH-4);
-    ctx.fillStyle='#FFFF88'; ctx.font=`bold ${H*.02}px monospace`; ctx.textAlign='center';
-    ctx.fillText((typeof runs!=='undefined'?runs:0)+' runs', ocx, sbY+sbH*.68);
-    ctx.textAlign='left';
+    const runsNow = (typeof runs !== 'undefined' ? runs : 0);
+    const effectiveTgt = window._leagueTargetFloor ? Math.max(target, window._leagueTargetFloor) : target;
+    const sbW = W * 0.46, sbH = H * 0.072, sbX = ocx - sbW / 2, sbY = oTop + H * 0.002;
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath(); ctx.roundRect(sbX+2, sbY+3, sbW, sbH, 8); ctx.fill();
+    // panel
+    const sbGrad = ctx.createLinearGradient(sbX, sbY, sbX, sbY+sbH);
+    sbGrad.addColorStop(0, 'rgba(5,25,5,0.96)');
+    sbGrad.addColorStop(1, 'rgba(10,40,10,0.96)');
+    ctx.fillStyle = sbGrad;
+    ctx.beginPath(); ctx.roundRect(sbX, sbY, sbW, sbH, 8); ctx.fill();
+    ctx.strokeStyle = '#FFDD44'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(sbX+1.5, sbY+1.5, sbW-3, sbH-3, 7); ctx.stroke();
+    // runs — large
+    ctx.fillStyle = '#FFFF99'; ctx.font = `bold ${H * 0.046}px monospace`; ctx.textAlign = 'center';
+    ctx.fillText(runsNow, ocx - sbW * 0.14, sbY + sbH * 0.72);
+    // separator
+    ctx.fillStyle = 'rgba(255,221,68,0.4)';
+    ctx.fillRect(ocx + sbW * 0.01, sbY + sbH * 0.15, 1.5, sbH * 0.7);
+    // target — right side
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = `bold ${H * 0.018}px monospace`;
+    ctx.fillText('TARGET', ocx + sbW * 0.16, sbY + sbH * 0.36);
+    ctx.fillStyle = runsNow >= effectiveTgt - 5 ? '#50dc78' : '#FFDD44';
+    ctx.font = `bold ${H * 0.034}px monospace`;
+    ctx.fillText(effectiveTgt, ocx + sbW * 0.16, sbY + sbH * 0.78);
+    ctx.textAlign = 'left';
   }
 
   // Energy bar
