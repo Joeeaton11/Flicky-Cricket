@@ -2432,7 +2432,14 @@ let currentGroundScheme = GROUND_SCHEMES[0];
 function rollStadiumConditions() {
   const forced = new URLSearchParams(location.search).get('scene');
   const match = forced && TIME_OF_DAY.find(t => t.key === forced);
-  currentTimeOfDay = match || TIME_OF_DAY[Math.floor(Math.random()*TIME_OF_DAY.length)];
+  if (match) { currentTimeOfDay = match; }
+  else if (window._activeLeagueIdx !== undefined && window._activeLeagueIdx !== null) {
+    const lg = THEMED_LEAGUES[window._activeLeagueIdx];
+    const sceneMatch = lg && TIME_OF_DAY.find(t => t.key === lg.sceneKey);
+    currentTimeOfDay = sceneMatch || TIME_OF_DAY[Math.floor(Math.random()*TIME_OF_DAY.length)];
+  } else {
+    currentTimeOfDay = TIME_OF_DAY[Math.floor(Math.random()*TIME_OF_DAY.length)];
+  }
   currentGroundScheme = GROUND_SCHEMES[Math.floor(Math.random()*GROUND_SCHEMES.length)];
 }
 
@@ -2954,695 +2961,542 @@ function _drawStumps(ctx, bx, gy, ht, sc, gc) {
   ctx.shadowBlur=0;
 }
 
+// ─── Shared scene-card renderer ───────────────────────────────────────────
+function _drawSceneCard(ctx, W, H, sceneKey, decorFn) {
+  const tod = typeof TIME_OF_DAY !== 'undefined'
+    ? (TIME_OF_DAY.find(t => t.key === sceneKey) || TIME_OF_DAY[0])
+    : { skyTop:'#9fd8f0', skyBottom:'#cdeefb', grass:'#2a8c3e', pitch:'#d9c08a' };
+  // Sky gradient (top 60%)
+  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.6);
+  sky.addColorStop(0, tod.skyTop);
+  sky.addColorStop(1, tod.skyBottom);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H * 0.6);
+  // Ground (bottom 40%)
+  ctx.fillStyle = tod.grass;
+  ctx.fillRect(0, H * 0.6, W, H * 0.4);
+  // Pitch strip (center 12% width, full height)
+  ctx.fillStyle = tod.pitch;
+  ctx.fillRect(W * 0.44, 0, W * 0.12, H);
+  // Stumps
+  if (typeof _drawStumps === 'function') {
+    _drawStumps(ctx, W * 0.5, H * 0.74, H * 0.14, '#e8d080', null);
+  }
+  // Scene decorations
+  if (typeof decorFn === 'function') decorFn(ctx, W, H);
+}
+
 const THEMED_LEAGUES = [
+  // 1 ── Village Green ─────────────────────────────────────────────────────
   {
-    id: 'jolly_roger',
-    name: "THE JOLLY ROGER",
-    subtitle: "Pirate Cricket · Skull Island",
-    unlock: 0,
-    targetFloor: 25,
-    difficulty: 1.00,
-    entry: 100,
-    winTrophy: 1, lossTrophy: 0,
-    winCoins: 150, lossCoins: 0,
-    winChest: 'bronze',
-    accentColor: '#c0392b',
-    accentColor2: '#8b0000',
-    textColor: '#ff9999',
+    sceneKey: 'day',
+    name: "THE VILLAGE GREEN",
+    subtitle: "Sunny Cricket · The Home Ground",
+    unlock: 0, targetFloor: 20, difficulty: 1.00, entry: 75,
+    winTrophy: 1, lossTrophy: 0, winCoins: 120, lossCoins: 0, winChest: 'bronze',
+    accentColor: '#4a9e4a', accentColor2: '#2a6a2a', textColor: '#aaffaa',
     drawArt(ctx, W, H) {
-      // Deep stormy night sky
-      const sky = ctx.createLinearGradient(0,0,0,H*0.58);
-      sky.addColorStop(0,'#060214'); sky.addColorStop(0.5,'#100828'); sky.addColorStop(1,'#1a0a30');
-      ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
-      // Stars
-      [[0.06,0.06,2],[0.18,0.04,1.5],[0.3,0.09,1],[0.44,0.03,2],[0.57,0.07,1.5],[0.70,0.05,1],[0.82,0.10,2],[0.91,0.04,1.5],[0.14,0.16,1],[0.36,0.14,1.5],[0.60,0.12,1],[0.77,0.18,2],[0.50,0.20,1],[0.88,0.15,1.5],[0.04,0.22,1]].forEach(([fx,fy,r]) => {
-        ctx.fillStyle=`rgba(255,255,255,${r>1.5?0.9:0.6})`; ctx.beginPath(); ctx.arc(fx*W,fy*H,r,0,Math.PI*2); ctx.fill();
+      _drawSceneCard(ctx, W, H, 'day', (ctx, W, H) => {
+        // Sun
+        ctx.fillStyle = '#ffe030';
+        ctx.beginPath(); ctx.arc(W*0.85, H*0.15, H*0.06, 0, Math.PI*2); ctx.fill();
+        // Clouds
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath(); ctx.ellipse(W*0.2, H*0.12, W*0.12, H*0.05, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(W*0.65, H*0.08, W*0.18, H*0.06, 0, 0, Math.PI*2); ctx.fill();
       });
-      // Storm clouds
-      ctx.fillStyle='rgba(20,10,40,0.7)';
-      [[0.1,0.22,H*0.08],[0.28,0.18,H*0.09],[0.5,0.15,H*0.10],[0.72,0.19,H*0.08],[0.88,0.23,H*0.07]].forEach(([fx,fy,r]) => {
-        ctx.beginPath(); ctx.arc(fx*W,fy*H,r,0,Math.PI*2); ctx.fill();
-      });
-      // Moon glow through clouds
-      const moonG = ctx.createRadialGradient(W*0.78,H*0.12,0,W*0.78,H*0.12,H*0.22);
-      moonG.addColorStop(0,'rgba(200,190,255,0.18)'); moonG.addColorStop(1,'transparent');
-      ctx.fillStyle=moonG; ctx.fillRect(0,0,W,H*0.4);
-      ctx.fillStyle='#e8e0ff'; ctx.beginPath(); ctx.arc(W*0.78,H*0.10,H*0.055,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(20,10,40,0.55)'; ctx.beginPath(); ctx.arc(W*0.78,H*0.10,H*0.055,0,Math.PI*2); ctx.fill();
-      // Moon (crescent through cloud)
-      ctx.fillStyle='#e8e0ff'; ctx.beginPath(); ctx.arc(W*0.78,H*0.095,H*0.048,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(16,8,40,0.85)'; ctx.beginPath(); ctx.arc(W*0.812,H*0.088,H*0.040,0,Math.PI*2); ctx.fill();
-      // Moonpath on water (shimmer column)
-      const mpath = ctx.createLinearGradient(W*0.45,H*0.58,W*0.55,H);
-      mpath.addColorStop(0,'rgba(200,190,255,0.22)'); mpath.addColorStop(1,'transparent');
-      ctx.fillStyle=mpath;
-      ctx.beginPath(); ctx.moveTo(W*0.45,H*0.58); ctx.lineTo(W*0.55,H*0.58); ctx.lineTo(W*0.7,H); ctx.lineTo(W*0.3,H); ctx.closePath(); ctx.fill();
-      // Ocean
-      const sea = ctx.createLinearGradient(0,H*0.55,0,H);
-      sea.addColorStop(0,'#0c1e38'); sea.addColorStop(0.4,'#081428'); sea.addColorStop(1,'#040c1a');
-      ctx.fillStyle=sea; ctx.fillRect(0,H*0.55,W,H*0.45);
-      // Wave layers
-      [['rgba(60,100,180,0.22)',0.58],['rgba(40,80,160,0.16)',0.63],['rgba(30,60,140,0.12)',0.68],['rgba(20,50,120,0.10)',0.73]].forEach(([c,fy],wi) => {
-        ctx.fillStyle=c; ctx.beginPath(); ctx.moveTo(0,fy*H);
-        for(let x=0;x<=W;x+=8){ ctx.lineTo(x,(fy+Math.sin((x/W)*Math.PI*5+wi*0.8)*0.018)*H); }
-        ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
-      });
-      // Island silhouette far back
-      ctx.fillStyle='#0a0418';
-      ctx.beginPath(); ctx.moveTo(0,H*0.56); ctx.lineTo(W*0.08,H*0.38); ctx.lineTo(W*0.18,H*0.44); ctx.lineTo(W*0.28,H*0.36); ctx.lineTo(W*0.38,H*0.56); ctx.closePath(); ctx.fill();
-      // Palm on island
-      ctx.strokeStyle='#0d0620'; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.moveTo(W*0.18,H*0.44); ctx.lineTo(W*0.16,H*0.30); ctx.stroke();
-      ctx.fillStyle='#0d0620';
-      [[-0.05,-0.04],[0.03,-0.06],[0.05,-0.02],[-0.02,-0.07]].forEach(([dx,dy]) => {
-        ctx.beginPath(); ctx.ellipse(W*0.16+dx*W,(H*0.30+dy*H),W*0.04,H*0.012,dx>0?0.5:-0.5,0,Math.PI*2); ctx.fill();
-      });
-      // Main ship hull (detailed)
-      ctx.fillStyle='#2a1008';
-      ctx.beginPath(); ctx.moveTo(W*0.10,H*0.70); ctx.lineTo(W*0.90,H*0.70); ctx.lineTo(W*0.84,H*0.83); ctx.quadraticCurveTo(W*0.5,H*0.88,W*0.16,H*0.83); ctx.closePath(); ctx.fill();
-      // Hull planks
-      ctx.strokeStyle='rgba(80,40,10,0.7)'; ctx.lineWidth=1;
-      for(let i=1;i<=4;i++){ ctx.beginPath(); ctx.moveTo(W*0.10,H*(0.70+i*0.03)); ctx.lineTo(W*0.90,H*(0.70+i*0.03)); ctx.stroke(); }
-      // Deck
-      ctx.fillStyle='#5c2e10';
-      ctx.fillRect(W*0.12,H*0.62,W*0.76,H*0.09);
-      ctx.strokeStyle='#7a3e18'; ctx.lineWidth=1;
-      for(let i=0;i<6;i++){ ctx.beginPath(); ctx.moveTo(W*(0.12+i*0.13),H*0.62); ctx.lineTo(W*(0.12+i*0.13),H*0.71); ctx.stroke(); }
-      // Cannon ports
-      ctx.fillStyle='#1a0808';
-      [[0.22,0.67],[0.36,0.67],[0.64,0.67],[0.78,0.67]].forEach(([fx,fy]) => {
-        ctx.beginPath(); ctx.arc(fx*W,fy*H,H*0.012,0,Math.PI*2); ctx.fill();
-      });
-      // Main mast (thick)
-      ctx.strokeStyle='#4a2808'; ctx.lineWidth=7;
-      ctx.beginPath(); ctx.moveTo(W*0.5,H*0.62); ctx.lineTo(W*0.5,H*0.08); ctx.stroke();
-      // Yard arm
-      ctx.lineWidth=4;
-      ctx.beginPath(); ctx.moveTo(W*0.28,H*0.24); ctx.lineTo(W*0.72,H*0.24); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W*0.35,H*0.42); ctx.lineTo(W*0.65,H*0.42); ctx.stroke();
-      // Rigging lines
-      ctx.strokeStyle='rgba(100,70,30,0.6)'; ctx.lineWidth=1.5;
-      [[W*0.28,H*0.24,W*0.12,H*0.64],[W*0.72,H*0.24,W*0.88,H*0.64],[W*0.28,H*0.24,W*0.5,H*0.62],[W*0.72,H*0.24,W*0.5,H*0.62]].forEach(([x1,y1,x2,y2]) => {
-        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-      });
-      // Main sail (dark, weather-beaten, skull painted)
-      ctx.fillStyle='rgba(50,35,18,0.95)';
-      ctx.beginPath(); ctx.moveTo(W*0.28,H*0.24); ctx.quadraticCurveTo(W*0.18,H*0.38,W*0.28,H*0.62);
-      ctx.lineTo(W*0.5,H*0.62); ctx.lineTo(W*0.5,H*0.24); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='rgba(60,42,22,0.95)';
-      ctx.beginPath(); ctx.moveTo(W*0.5,H*0.24); ctx.lineTo(W*0.5,H*0.62); ctx.lineTo(W*0.72,H*0.62);
-      ctx.quadraticCurveTo(W*0.82,H*0.38,W*0.72,H*0.24); ctx.closePath(); ctx.fill();
-      // Skull on sail
-      ctx.fillStyle='rgba(255,255,255,0.85)';
-      ctx.beginPath(); ctx.arc(W*0.5,H*0.40,H*0.048,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(55,38,20,1)';
-      ctx.beginPath(); ctx.arc(W*0.485,H*0.387,H*0.014,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(W*0.515,H*0.387,H*0.014,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='rgba(55,38,20,1)'; ctx.lineWidth=2.5;
-      ctx.beginPath(); ctx.moveTo(W*0.478,H*0.428); ctx.lineTo(W*0.522,H*0.428); ctx.stroke();
-      // Cross bones
-      ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(W*0.476,H*0.442); ctx.lineTo(W*0.524,H*0.462); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W*0.524,H*0.442); ctx.lineTo(W*0.476,H*0.462); ctx.stroke();
-      // Black Jolly Roger flag
-      ctx.fillStyle='#0a0a0a';
-      ctx.fillRect(W*0.50,H*0.08,W*0.20,H*0.10);
-      // tiny flag skull
-      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(W*0.61,H*0.114,H*0.018,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#0a0a0a'; ctx.beginPath(); ctx.arc(W*0.606,H*0.112,H*0.006,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(W*0.616,H*0.112,H*0.006,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.moveTo(W*0.604,H*0.128); ctx.lineTo(W*0.619,H*0.136); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W*0.619,H*0.128); ctx.lineTo(W*0.604,H*0.136); ctx.stroke();
-      // Cricket ball (cannon ball)
-      _drawBall(ctx, W*0.80, H*0.58, H*0.046, '#c0392b');
-      // Treasure chest on deck
-      ctx.fillStyle='#6b3a10'; ctx.fillRect(W*0.20,H*0.60,W*0.07,H*0.025);
-      ctx.fillStyle='#8b5a18'; ctx.fillRect(W*0.20,H*0.595,W*0.07,H*0.015);
-      ctx.strokeStyle='#f4d03f'; ctx.lineWidth=1;
-      ctx.strokeRect(W*0.20,H*0.595,W*0.07,H*0.03);
     }
   },
+  // 2 ── Dusk Oval ──────────────────────────────────────────────────────────
   {
-    id: 'iron_works',
-    name: "THE IRON WORKS",
-    subtitle: "Steampunk Cricket · The Foundry",
-    unlock: 20,
-    targetFloor: 40,
-    difficulty: 1.10,
-    entry: 300,
-    winTrophy: 1, lossTrophy: 0,
-    winCoins: 400, lossCoins: 50,
-    winChest: 'silver',
-    accentColor: '#b87333',
-    accentColor2: '#8b5a00',
-    textColor: '#ffcc88',
+    sceneKey: 'evening',
+    name: "THE DUSK OVAL",
+    subtitle: "Golden Hour Cricket · Sunset Ground",
+    unlock: 8, targetFloor: 27, difficulty: 1.07, entry: 150,
+    winTrophy: 1, lossTrophy: 0, winCoins: 230, lossCoins: 0, winChest: 'bronze',
+    accentColor: '#e8914a', accentColor2: '#a05a10', textColor: '#ffd088',
     drawArt(ctx, W, H) {
-      // Soot-black sky lit from below
-      const sky = ctx.createLinearGradient(0,0,0,H);
-      sky.addColorStop(0,'#080400'); sky.addColorStop(0.5,'#180a00'); sky.addColorStop(1,'#2a1000');
-      ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
-      // Brick wall — wide arched building facade
-      ctx.fillStyle='#1e0e04';
-      ctx.fillRect(0,H*0.22,W,H*0.78);
-      // Brick rows
-      ctx.strokeStyle='#2c1608'; ctx.lineWidth=1;
-      for(let row=0;row<18;row++){
-        const y=(H*0.22)+(row*H*0.044);
-        const offset=(row%2)*W*0.06;
-        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
-        for(let col=0;col<8;col++){ const x=offset+col*W*0.13; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y+H*0.044); ctx.stroke(); }
-      }
-      // Giant furnace glow (central arch)
-      const furnaceG = ctx.createRadialGradient(W*0.5,H*0.76,0,W*0.5,H*0.76,W*0.55);
-      furnaceG.addColorStop(0,'rgba(255,160,20,0.95)'); furnaceG.addColorStop(0.2,'rgba(255,80,0,0.7)'); furnaceG.addColorStop(0.5,'rgba(180,40,0,0.3)'); furnaceG.addColorStop(1,'transparent');
-      ctx.fillStyle=furnaceG; ctx.fillRect(0,H*0.3,W,H*0.7);
-      // Furnace arch opening
-      ctx.fillStyle='#ff8c00';
-      ctx.beginPath(); ctx.ellipse(W*0.5,H*0.72,W*0.18,H*0.09,0,Math.PI,0); ctx.fill();
-      ctx.fillStyle='#ffcc40';
-      ctx.beginPath(); ctx.ellipse(W*0.5,H*0.72,W*0.13,H*0.065,0,Math.PI,0); ctx.fill();
-      ctx.fillStyle='#fff8c0';
-      ctx.beginPath(); ctx.ellipse(W*0.5,H*0.72,W*0.07,H*0.035,0,Math.PI,0); ctx.fill();
-      // Arch border
-      ctx.strokeStyle='#5a3010'; ctx.lineWidth=5;
-      ctx.beginPath(); ctx.ellipse(W*0.5,H*0.72,W*0.18,H*0.09,0,Math.PI,0); ctx.stroke();
-      // Large gear left
-      const drawGear2 = (cx,cy,r,teeth,c1,c2) => {
-        const ta=Math.PI*2/teeth;
-        ctx.fillStyle=c1;
-        ctx.beginPath(); ctx.arc(cx,cy,r*0.72,0,Math.PI*2); ctx.fill();
-        for(let i=0;i<teeth;i++){
-          ctx.save(); ctx.translate(cx,cy); ctx.rotate(ta*i);
-          ctx.fillRect(-r*0.10,-r,r*0.20,r*0.30);
-          ctx.restore();
-        }
-        // Spokes
-        ctx.strokeStyle=c2; ctx.lineWidth=r*0.12;
-        for(let i=0;i<6;i++){
-          const a=i*Math.PI/3;
-          ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r*0.15,cy+Math.sin(a)*r*0.15); ctx.lineTo(cx+Math.cos(a)*r*0.60,cy+Math.sin(a)*r*0.60); ctx.stroke();
-        }
-        ctx.fillStyle=c2; ctx.beginPath(); ctx.arc(cx,cy,r*0.18,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='#100500'; ctx.beginPath(); ctx.arc(cx,cy,r*0.09,0,Math.PI*2); ctx.fill();
-      };
-      drawGear2(W*0.10,H*0.44,H*0.19,12,'#6b3c12','#8b5020');
-      drawGear2(W*0.90,H*0.50,H*0.15,10,'#5a3010','#7a4218');
-      drawGear2(W*0.72,H*0.33,H*0.10,8,'#7a4218','#9a5a20');
-      // Pipe system
-      ctx.strokeStyle='#4a2808'; ctx.lineWidth=8;
-      ctx.beginPath(); ctx.moveTo(W*0.22,H*0.55); ctx.lineTo(W*0.22,H*0.30); ctx.lineTo(W*0.45,H*0.30); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W*0.78,H*0.58); ctx.lineTo(W*0.78,H*0.35); ctx.lineTo(W*0.60,H*0.35); ctx.stroke();
-      ctx.strokeStyle='#6b3a10'; ctx.lineWidth=4;
-      ctx.beginPath(); ctx.moveTo(W*0.22,H*0.30); ctx.lineTo(W*0.22,H*0.24); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W*0.34,H*0.30); ctx.lineTo(W*0.34,H*0.22); ctx.stroke();
-      // Steam puffs from pipes
-      [[W*0.22,H*0.22],[W*0.34,H*0.20]].forEach(([px,py]) => {
-        [0,H*0.04,H*0.08].forEach(dy => {
-          const a=0.15-dy/H*0.3;
-          ctx.fillStyle=`rgba(200,180,150,${a})`;
-          ctx.beginPath(); ctx.arc(px,py-dy,H*0.04+dy*0.1,0,Math.PI*2); ctx.fill();
+      _drawSceneCard(ctx, W, H, 'evening', (ctx, W, H) => {
+        // Horizontal glow bands
+        ctx.fillStyle = 'rgba(255,140,50,0.18)';
+        ctx.fillRect(0, H*0.25, W, H*0.08);
+        ctx.fillStyle = 'rgba(255,200,80,0.14)';
+        ctx.fillRect(0, H*0.35, W, H*0.06);
+        // Sun at horizon
+        const sg = ctx.createRadialGradient(W*0.5, H*0.52, 0, W*0.5, H*0.52, H*0.12);
+        sg.addColorStop(0, 'rgba(255,220,60,0.9)');
+        sg.addColorStop(0.5, 'rgba(255,140,30,0.5)');
+        sg.addColorStop(1, 'transparent');
+        ctx.fillStyle = sg;
+        ctx.beginPath(); ctx.arc(W*0.5, H*0.52, H*0.12, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ff9020';
+        ctx.beginPath(); ctx.arc(W*0.5, H*0.52, H*0.09, 0, Math.PI*2); ctx.fill();
+      });
+    }
+  },
+  // 3 ── Shore Cup ──────────────────────────────────────────────────────────
+  {
+    sceneKey: 'beach',
+    name: "THE SHORE CUP",
+    subtitle: "Beach Cricket · The Sandy Oval",
+    unlock: 20, targetFloor: 35, difficulty: 1.14, entry: 250,
+    winTrophy: 1, lossTrophy: 0, winCoins: 390, lossCoins: 25, winChest: 'bronze',
+    accentColor: '#1a8adc', accentColor2: '#0a4a90', textColor: '#88ddff',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'beach', (ctx, W, H) => {
+        // Wave arc
+        ctx.strokeStyle = 'rgba(20,140,200,0.7)'; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, H*0.62);
+        ctx.quadraticCurveTo(W*0.25, H*0.58, W*0.5, H*0.62);
+        ctx.quadraticCurveTo(W*0.75, H*0.66, W, H*0.62);
+        ctx.stroke();
+        // Palm trunk
+        ctx.strokeStyle = '#6a3a10'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(W*0.12, H*0.8); ctx.lineTo(W*0.18, H*0.45); ctx.stroke();
+        // Palm leaves
+        ctx.strokeStyle = '#1a7a20'; ctx.lineWidth = 2;
+        const lx = W*0.18, ly = H*0.45;
+        [[-0.12,-0.10],[-0.06,-0.16],[0.02,-0.18],[0.10,-0.12],[0.14,-0.04]].forEach(([dx,dy]) => {
+          ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx+W*dx, ly+H*dy); ctx.stroke();
         });
       });
-      // Cricket pitch (forge floor, glowing cobbles)
-      ctx.fillStyle='#1a0a00'; ctx.fillRect(W*0.28,H*0.74,W*0.44,H*0.04);
-      ctx.strokeStyle='rgba(255,140,20,0.3)'; ctx.lineWidth=1; ctx.strokeRect(W*0.28,H*0.74,W*0.44,H*0.04);
-      _drawStumps(ctx, W*0.5, H*0.74, H*0.14, '#d4a030', '#ff8c00');
-      _drawBall(ctx, W*0.76, H*0.68, H*0.042, '#c05020');
-      // Top atmosphere — smoky haze
-      const haze = ctx.createLinearGradient(0,0,0,H*0.22);
-      haze.addColorStop(0,'rgba(0,0,0,0.6)'); haze.addColorStop(1,'transparent');
-      ctx.fillStyle=haze; ctx.fillRect(0,0,W,H*0.22);
     }
   },
+  // 4 ── Floodlit ───────────────────────────────────────────────────────────
   {
-    id: 'lost_temple',
-    name: "THE LOST TEMPLE",
-    subtitle: "Jungle Cricket · Ancient Ruins",
-    unlock: 50,
-    targetFloor: 60,
-    difficulty: 1.22,
-    entry: 600,
-    winTrophy: 2, lossTrophy: 0,
-    winCoins: 800, lossCoins: 80,
-    winChest: 'silver',
-    accentColor: '#2d7a2d',
-    accentColor2: '#1a5a1a',
-    textColor: '#88ff88',
+    sceneKey: 'night',
+    name: "THE FLOODLIT",
+    subtitle: "Night Cricket · Under The Lights",
+    unlock: 36, targetFloor: 44, difficulty: 1.22, entry: 400,
+    winTrophy: 1, lossTrophy: 0, winCoins: 630, lossCoins: 40, winChest: 'bronze',
+    accentColor: '#3a5a9a', accentColor2: '#1a2a6a', textColor: '#aabbff',
     drawArt(ctx, W, H) {
-      // Rich jungle sky — deep canopy light from above
-      const sky = ctx.createLinearGradient(0,0,0,H);
-      sky.addColorStop(0,'#061008'); sky.addColorStop(0.3,'#0e2010'); sky.addColorStop(0.6,'#153018'); sky.addColorStop(1,'#1a3a1a');
-      ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
-      // Golden god-rays through canopy
-      ctx.save();
-      [[-0.12,0.35],[0,0.5],[0.10,0.38],[-0.08,0.55]].forEach(([dx,op]) => {
-        const rg = ctx.createLinearGradient(W*(0.5+dx),0,W*(0.5+dx*3),H*0.55);
-        rg.addColorStop(0,`rgba(200,180,40,${op*0.18})`); rg.addColorStop(1,'transparent');
-        ctx.fillStyle=rg;
-        ctx.beginPath(); ctx.moveTo(W*0.5,0); ctx.lineTo(W*(0.5+dx-0.04),H*0.55); ctx.lineTo(W*(0.5+dx+0.04),H*0.55); ctx.closePath(); ctx.fill();
-      });
-      ctx.restore();
-      // Background jungle foliage (darkest, far)
-      ctx.fillStyle='#082008';
-      [[0.02,0.42,H*0.16],[0.14,0.36,H*0.14],[0.86,0.38,H*0.15],[0.96,0.44,H*0.13],[0.08,0.50,H*0.10],[0.90,0.52,H*0.11]].forEach(([fx,fy,r]) => {
-        ctx.beginPath(); ctx.arc(fx*W,fy*H,r,0,Math.PI*2); ctx.fill();
-      });
-      // Mid foliage
-      ctx.fillStyle='#0e3a0e';
-      [[0.05,0.48,H*0.13],[0.18,0.42,H*0.12],[0.75,0.44,H*0.13],[0.88,0.40,H*0.11],[0.92,0.50,H*0.10]].forEach(([fx,fy,r]) => {
-        ctx.beginPath(); ctx.arc(fx*W,fy*H,r,0,Math.PI*2); ctx.fill();
-      });
-      // Temple — far back, in golden mist
-      const templeFog = ctx.createRadialGradient(W*0.5,H*0.38,0,W*0.5,H*0.38,W*0.42);
-      templeFog.addColorStop(0,'rgba(160,140,60,0.20)'); templeFog.addColorStop(1,'transparent');
-      ctx.fillStyle=templeFog; ctx.fillRect(0,0,W,H*0.7);
-      // Temple base tiers (3 stepped platforms)
-      [
-        [0.14,0.68,0.72,0.08,'#4a3c1c'],
-        [0.20,0.61,0.60,0.08,'#5a4a22'],
-        [0.26,0.54,0.48,0.08,'#6b5a2a'],
-        [0.32,0.48,0.36,0.07,'#7a6830'],
-      ].forEach(([fx,fy,fw,fh,c]) => {
-        ctx.fillStyle=c; ctx.fillRect(fx*W,fy*H,fw*W,fh*H);
-        ctx.strokeStyle='rgba(160,140,60,0.35)'; ctx.lineWidth=1; ctx.strokeRect(fx*W,fy*H,fw*W,fh*H);
-        // stone line details
-        ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=1;
-        for(let i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(fx*W+fw*W*i/4,fy*H); ctx.lineTo(fx*W+fw*W*i/4,(fy+fh)*H); ctx.stroke(); }
-      });
-      // Temple spire
-      ctx.fillStyle='#8a7838';
-      ctx.beginPath(); ctx.moveTo(W*0.50,H*0.10); ctx.lineTo(W*0.34,H*0.48); ctx.lineTo(W*0.66,H*0.48); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle='rgba(200,180,80,0.5)'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.moveTo(W*0.50,H*0.10); ctx.lineTo(W*0.34,H*0.48); ctx.lineTo(W*0.66,H*0.48); ctx.closePath(); ctx.stroke();
-      // Glyph marks on spire
-      ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=1;
-      [[0.50,0.22,0.04],[0.50,0.30,0.03],[0.50,0.38,0.025]].forEach(([fx,fy,r]) => {
-        ctx.beginPath(); ctx.rect(fx*W-r*W,fy*H-r*H,2*r*W,2*r*H); ctx.stroke();
-      });
-      // Vines on temple
-      ctx.strokeStyle='rgba(40,140,20,0.7)'; ctx.lineWidth=2;
-      [[0.34,0.48,0.22,0.72],[0.66,0.48,0.76,0.70],[0.28,0.55,0.20,0.74],[0.60,0.55,0.72,0.68]].forEach(([x1,y1,x2,y2]) => {
-        ctx.beginPath(); ctx.moveTo(x1*W,y1*H); ctx.bezierCurveTo(x1*W,y1*H+H*0.08,x2*W,y2*H-H*0.08,x2*W,y2*H); ctx.stroke();
-      });
-      // Ground — mossy stone
-      const ground = ctx.createLinearGradient(0,H*0.75,0,H);
-      ground.addColorStop(0,'#1a2e10'); ground.addColorStop(1,'#0e1e08');
-      ctx.fillStyle=ground; ctx.fillRect(0,H*0.75,W,H*0.25);
-      // Stone flags on ground
-      ctx.strokeStyle='rgba(60,80,40,0.5)'; ctx.lineWidth=1;
-      for(let r=0;r<4;r++) for(let c=0;c<5;c++){ ctx.strokeRect(c*W*0.22,H*0.75+r*H*0.065,W*0.22,H*0.065); }
-      // Pitch
-      ctx.fillStyle='rgba(200,180,80,0.18)'; ctx.fillRect(W*0.3,H*0.75,W*0.4,H*0.04);
-      ctx.strokeStyle='rgba(200,180,80,0.4)'; ctx.lineWidth=1; ctx.strokeRect(W*0.3,H*0.75,W*0.4,H*0.04);
-      _drawStumps(ctx, W*0.5, H*0.76, H*0.14, '#c8b860', null);
-      // Gold artifact cricket ball
-      _drawBall(ctx, W*0.74, H*0.70, H*0.042, '#d4a030');
-      // Fireflies
-      ctx.fillStyle='rgba(200,255,100,0.6)';
-      [[0.10,0.60],[0.82,0.58],[0.22,0.70],[0.68,0.65],[0.35,0.62]].forEach(([fx,fy]) => {
-        ctx.beginPath(); ctx.arc(fx*W,fy*H,2,0,Math.PI*2); ctx.fill();
-      });
-      // Near foliage (darkest, closest)
-      ctx.fillStyle='#061806';
-      [[0,0.62,H*0.15],[0.10,0.58,H*0.12],[0.90,0.60,H*0.14],[1.0,0.64,H*0.15]].forEach(([fx,fy,r]) => {
-        ctx.beginPath(); ctx.arc(fx*W,fy*H,r,0,Math.PI*2); ctx.fill();
+      _drawSceneCard(ctx, W, H, 'night', (ctx, W, H) => {
+        // Stars (12 deterministic positions)
+        ctx.fillStyle = '#ffffff';
+        [[0.08,0.05],[0.15,0.14],[0.25,0.06],[0.35,0.18],[0.45,0.08],
+         [0.55,0.15],[0.62,0.04],[0.72,0.12],[0.80,0.07],[0.88,0.18],
+         [0.92,0.04],[0.30,0.28]].forEach(([px,py]) => {
+          ctx.beginPath(); ctx.arc(W*px, H*py, 1.5, 0, Math.PI*2); ctx.fill();
+        });
+        // Floodlight towers
+        [[W*0.18, H*0.3],[W*0.82, H*0.3]].forEach(([lx,ly]) => {
+          ctx.fillStyle = '#c0c8e0'; ctx.fillRect(lx-W*0.008, ly, W*0.016, H*0.4);
+          ctx.fillStyle = 'rgba(255,255,180,0.5)'; ctx.fillRect(lx-W*0.03, ly-H*0.01, W*0.06, H*0.015);
+          // Light beam
+          const bg = ctx.createLinearGradient(lx, ly, lx, H*0.72);
+          bg.addColorStop(0,'rgba(255,255,200,0.18)'); bg.addColorStop(1,'transparent');
+          ctx.fillStyle = bg;
+          ctx.beginPath(); ctx.moveTo(lx-W*0.018, ly); ctx.lineTo(lx-W*0.1, H*0.72); ctx.lineTo(lx+W*0.1, H*0.72); ctx.lineTo(lx+W*0.018, ly); ctx.closePath(); ctx.fill();
+        });
       });
     }
   },
+  // 5 ── Rainforest ─────────────────────────────────────────────────────────
   {
-    id: 'frozen_north',
+    sceneKey: 'jungle',
+    name: "THE RAINFOREST",
+    subtitle: "Jungle Cricket · Ancient Ruins",
+    unlock: 55, targetFloor: 54, difficulty: 1.30, entry: 600,
+    winTrophy: 2, lossTrophy: 0, winCoins: 950, lossCoins: 60, winChest: 'silver',
+    accentColor: '#2d8a2d', accentColor2: '#1a5a1a', textColor: '#88ff88',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'jungle', (ctx, W, H) => {
+        // Tree triangles along horizon
+        ctx.fillStyle = '#1a4010';
+        [[0.05,0.62,0.12],[0.22,0.60,0.10],[0.70,0.61,0.11],[0.88,0.63,0.09]].forEach(([cx,by,hw]) => {
+          ctx.beginPath(); ctx.moveTo(W*cx, H*by); ctx.lineTo(W*(cx-hw), H*(by+0.15)); ctx.lineTo(W*(cx+hw), H*(by+0.15)); ctx.closePath(); ctx.fill();
+        });
+        // Hanging vines
+        ctx.strokeStyle = '#2a6020'; ctx.lineWidth = 2;
+        [0.08,0.20,0.80,0.93].forEach(px => {
+          ctx.beginPath(); ctx.moveTo(W*px, 0); ctx.lineTo(W*px, H*0.45); ctx.stroke();
+        });
+      });
+    }
+  },
+  // 6 ── Frozen North ───────────────────────────────────────────────────────
+  {
+    sceneKey: 'arctic',
     name: "THE FROZEN NORTH",
     subtitle: "Arctic Cricket · The Ice Ground",
-    unlock: 100,
-    targetFloor: 80,
-    difficulty: 1.36,
-    entry: 1000,
-    winTrophy: 2, lossTrophy: 1,
-    winCoins: 1300, lossCoins: 100,
-    winChest: 'gold',
-    accentColor: '#4ac0e0',
-    accentColor2: '#0a80b0',
-    textColor: '#aaeeff',
+    unlock: 78, targetFloor: 65, difficulty: 1.39, entry: 900,
+    winTrophy: 2, lossTrophy: 0, winCoins: 1400, lossCoins: 90, winChest: 'silver',
+    accentColor: '#4ac0e0', accentColor2: '#0a80b0', textColor: '#aaeeff',
     drawArt(ctx, W, H) {
-      // Deep arctic night
-      const sky = ctx.createLinearGradient(0,0,0,H*0.62);
-      sky.addColorStop(0,'#010610'); sky.addColorStop(0.4,'#020d1e'); sky.addColorStop(1,'#041528');
-      ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
-      // Stars (bright arctic sky)
-      [[0.04,0.04,2],[0.12,0.02,1.5],[0.21,0.08,1],[0.32,0.03,2],[0.43,0.06,1.5],[0.56,0.02,2],[0.64,0.09,1],[0.76,0.05,1.5],[0.85,0.08,2],[0.93,0.03,1],[0.08,0.14,1.5],[0.28,0.16,1],[0.48,0.12,1.5],[0.68,0.15,2],[0.88,0.13,1],[0.17,0.22,1],[0.58,0.20,1.5],[0.78,0.19,1]].forEach(([fx,fy,r]) => {
-        ctx.fillStyle=r>1.5?'#cceeff':'rgba(180,220,255,0.8)'; ctx.beginPath(); ctx.arc(fx*W,fy*H,r,0,Math.PI*2); ctx.fill();
+      _drawSceneCard(ctx, W, H, 'arctic', (ctx, W, H) => {
+        // Aurora bands
+        ['rgba(60,220,160,0.20)','rgba(40,200,220,0.15)','rgba(80,180,140,0.12)'].forEach((c,i) => {
+          ctx.fillStyle = c;
+          ctx.fillRect(0, H*(0.08+i*0.07), W, H*0.04);
+        });
+        // Snow peaks at horizon
+        ctx.fillStyle = '#e8f4f8';
+        [[0.1,0.62],[0.3,0.58],[0.7,0.59],[0.9,0.63]].forEach(([px,py]) => {
+          ctx.beginPath(); ctx.moveTo(W*px, H*py); ctx.lineTo(W*(px-0.08), H*0.72); ctx.lineTo(W*(px+0.08), H*0.72); ctx.closePath(); ctx.fill();
+        });
       });
-      // Aurora borealis — vivid layered curtains
-      const drawAurora = (fy, amp, c1, c2) => {
-        const ag = ctx.createLinearGradient(0,fy*H-amp*H,0,fy*H+amp*H);
-        ag.addColorStop(0,'transparent'); ag.addColorStop(0.3,c1); ag.addColorStop(0.5,c2); ag.addColorStop(0.7,c1); ag.addColorStop(1,'transparent');
-        ctx.fillStyle=ag;
-        ctx.beginPath(); ctx.moveTo(0,H);
-        for(let x=W;x>=0;x-=6) ctx.lineTo(x,(fy+Math.sin(x/W*Math.PI*4+1.2)*amp)*H);
-        for(let x=0;x<=W;x+=6) ctx.lineTo(x,(fy+Math.sin(x/W*Math.PI*4)*amp*0.6)*H);
-        ctx.closePath(); ctx.fill();
-      };
-      drawAurora(0.26,0.14,'rgba(0,220,100,0.35)','rgba(0,255,120,0.18)');
-      drawAurora(0.18,0.10,'rgba(0,160,255,0.28)','rgba(40,200,255,0.14)');
-      drawAurora(0.32,0.08,'rgba(160,0,255,0.20)','rgba(180,40,255,0.10)');
-      drawAurora(0.12,0.07,'rgba(0,240,160,0.22)','rgba(0,255,200,0.10)');
-      // Moon — full, ice-blue tinted
-      const moonG = ctx.createRadialGradient(W*0.18,H*0.12,0,W*0.18,H*0.12,H*0.14);
-      moonG.addColorStop(0,'rgba(180,230,255,0.25)'); moonG.addColorStop(1,'transparent');
-      ctx.fillStyle=moonG; ctx.fillRect(0,0,W*0.4,H*0.3);
-      ctx.fillStyle='#ddf0ff'; ctx.beginPath(); ctx.arc(W*0.18,H*0.12,H*0.065,0,Math.PI*2); ctx.fill();
-      // Slight mare on moon
-      ctx.fillStyle='rgba(140,200,240,0.35)'; ctx.beginPath(); ctx.arc(W*0.19,H*0.10,H*0.025,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(140,200,240,0.25)'; ctx.beginPath(); ctx.arc(W*0.16,H*0.14,H*0.018,0,Math.PI*2); ctx.fill();
-      // Ice cliffs/glaciers flanking
-      ctx.fillStyle='#8abcd0';
-      ctx.beginPath(); ctx.moveTo(0,H*0.68); ctx.lineTo(W*0.04,H*0.45); ctx.lineTo(W*0.10,H*0.50); ctx.lineTo(W*0.14,H*0.38); ctx.lineTo(W*0.20,H*0.52); ctx.lineTo(W*0.22,H*0.68); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#6aa0bc';
-      ctx.beginPath(); ctx.moveTo(W*0.78,H*0.68); ctx.lineTo(W*0.80,H*0.46); ctx.lineTo(W*0.86,H*0.52); ctx.lineTo(W*0.90,H*0.40); ctx.lineTo(W*0.96,H*0.48); ctx.lineTo(W,H*0.68); ctx.closePath(); ctx.fill();
-      // Glacier shading
-      ctx.strokeStyle='rgba(200,240,255,0.4)'; ctx.lineWidth=1;
-      [[0.06,0.45,0.08,0.68],[0.16,0.38,0.14,0.60]].forEach(([x1,y1,x2,y2]) => {
-        ctx.beginPath(); ctx.moveTo(x1*W,y1*H); ctx.lineTo(x2*W,y2*H); ctx.stroke();
-      });
-      // Snow ground — gradient
-      const snow = ctx.createLinearGradient(0,H*0.62,0,H);
-      snow.addColorStop(0,'#c8e4f4'); snow.addColorStop(0.4,'#b0cce0'); snow.addColorStop(1,'#90b0cc');
-      ctx.fillStyle=snow; ctx.fillRect(0,H*0.62,W,H*0.38);
-      // Snow contours / drifts
-      ctx.fillStyle='rgba(255,255,255,0.30)';
-      [[0.08,0.64,W*0.18,H*0.022],[0.35,0.63,W*0.20,H*0.018],[0.68,0.64,W*0.16,H*0.020],[0.92,0.63,W*0.14,H*0.022]].forEach(([fx,fy,rx,ry]) => {
-        ctx.beginPath(); ctx.ellipse(fx*W,fy*H,rx,ry,0,0,Math.PI*2); ctx.fill();
-      });
-      // Frozen lake / pitch area
-      const lakeG = ctx.createRadialGradient(W*0.5,H*0.72,0,W*0.5,H*0.72,W*0.3);
-      lakeG.addColorStop(0,'rgba(160,220,255,0.55)'); lakeG.addColorStop(1,'transparent');
-      ctx.fillStyle=lakeG; ctx.fillRect(W*0.2,H*0.64,W*0.6,H*0.15);
-      // Ice cracks on lake
-      ctx.strokeStyle='rgba(100,180,230,0.35)'; ctx.lineWidth=1;
-      [[0.38,0.68,0.45,0.72],[0.52,0.70,0.60,0.66],[0.44,0.74,0.50,0.70]].forEach(([x1,y1,x2,y2]) => {
-        ctx.beginPath(); ctx.moveTo(x1*W,y1*H); ctx.lineTo(x2*W,y2*H); ctx.stroke();
-      });
-      // Pitch strip
-      ctx.fillStyle='rgba(200,240,255,0.45)'; ctx.fillRect(W*0.28,H*0.69,W*0.44,H*0.035);
-      ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=1; ctx.strokeRect(W*0.28,H*0.69,W*0.44,H*0.035);
-      // Icicle stumps
-      _drawStumps(ctx, W*0.5, H*0.69, H*0.14, '#c0e8f8', '#60c0f0');
-      // Polar bear silhouette far right
-      ctx.fillStyle='rgba(200,230,245,0.5)';
-      ctx.beginPath(); ctx.ellipse(W*0.88,H*0.67,W*0.06,H*0.03,0,0,Math.PI*2); ctx.fill(); // body
-      ctx.beginPath(); ctx.ellipse(W*0.93,H*0.645,W*0.028,H*0.022,0.4,0,Math.PI*2); ctx.fill(); // head
-      // Cricket ball — ice blue
-      _drawBall(ctx, W*0.24, H*0.66, H*0.042, '#1870b0');
-      // Moon reflection on snow
-      const mrefl = ctx.createRadialGradient(W*0.5,H*0.65,0,W*0.5,H*0.65,W*0.25);
-      mrefl.addColorStop(0,'rgba(200,230,255,0.12)'); mrefl.addColorStop(1,'transparent');
-      ctx.fillStyle=mrefl; ctx.fillRect(0,H*0.62,W,H*0.38);
     }
   },
+  // 7 ── Sand Dunes ─────────────────────────────────────────────────────────
   {
-    id: 'desert_cup',
-    name: "THE DESERT CUP",
-    subtitle: "Arabian Cricket · Sand & Stars",
-    unlock: 180,
-    targetFloor: 105,
-    difficulty: 1.52,
-    entry: 1800,
-    winTrophy: 2, lossTrophy: 1,
-    winCoins: 2200, lossCoins: 150,
-    winChest: 'gold',
-    accentColor: '#d4a030',
-    accentColor2: '#a07010',
-    textColor: '#ffdd88',
+    sceneKey: 'desert',
+    name: "THE SAND DUNES",
+    subtitle: "Desert Cricket · Sand & Stars",
+    unlock: 105, targetFloor: 77, difficulty: 1.48, entry: 1300,
+    winTrophy: 2, lossTrophy: 1, winCoins: 2050, lossCoins: 130, winChest: 'silver',
+    accentColor: '#d4a030', accentColor2: '#a07010', textColor: '#ffdd88',
     drawArt(ctx, W, H) {
-      // Blazing sunset sky
-      const sky = ctx.createLinearGradient(0,0,0,H*0.58);
-      sky.addColorStop(0,'#0c0418'); sky.addColorStop(0.3,'#3a0a00'); sky.addColorStop(0.6,'#8a2a00'); sky.addColorStop(1,'#c86000');
-      ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
-      // Stars (barely visible in dusky sky)
-      [[0.06,0.05,1],[0.20,0.03,1.5],[0.35,0.07,1],[0.50,0.04,1.5],[0.68,0.06,1],[0.80,0.04,1.5],[0.92,0.08,1],[0.14,0.13,1],[0.44,0.10,1],[0.72,0.12,1.5],[0.58,0.15,1]].forEach(([fx,fy,r]) => {
-        ctx.fillStyle='rgba(255,230,160,0.7)'; ctx.beginPath(); ctx.arc(fx*W,fy*H,r,0,Math.PI*2); ctx.fill();
+      _drawSceneCard(ctx, W, H, 'desert', (ctx, W, H) => {
+        // Dune curves
+        ctx.fillStyle = '#c89840';
+        ctx.beginPath(); ctx.moveTo(0,H*0.72); ctx.quadraticCurveTo(W*0.25,H*0.58,W*0.5,H*0.66); ctx.quadraticCurveTo(W*0.75,H*0.74,W,H*0.65); ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
+        // Pyramid silhouette
+        ctx.fillStyle = '#a07830';
+        ctx.beginPath(); ctx.moveTo(W*0.78, H*0.65); ctx.lineTo(W*0.88, H*0.65); ctx.lineTo(W*0.83, H*0.50); ctx.closePath(); ctx.fill();
       });
-      // Sun just below horizon — glow
-      const sunG = ctx.createRadialGradient(W*0.5,H*0.58,0,W*0.5,H*0.58,W*0.55);
-      sunG.addColorStop(0,'rgba(255,200,60,0.60)'); sunG.addColorStop(0.15,'rgba(255,120,0,0.40)'); sunG.addColorStop(0.35,'rgba(200,50,0,0.20)'); sunG.addColorStop(1,'transparent');
-      ctx.fillStyle=sunG; ctx.fillRect(0,H*0.2,W,H*0.5);
-      // Crescent moon high left
-      ctx.fillStyle='#ffdd80'; ctx.beginPath(); ctx.arc(W*0.12,H*0.10,H*0.058,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#0c0418'; ctx.beginPath(); ctx.arc(W*0.148,H*0.09,H*0.048,0,Math.PI*2); ctx.fill();
-      // Distant dune range (far, dark)
-      ctx.fillStyle='#6a3808';
-      ctx.beginPath(); ctx.moveTo(0,H*0.62);
-      ctx.quadraticCurveTo(W*0.12,H*0.44,W*0.25,H*0.55);
-      ctx.quadraticCurveTo(W*0.38,H*0.36,W*0.52,H*0.50);
-      ctx.quadraticCurveTo(W*0.66,H*0.40,W*0.80,H*0.54);
-      ctx.quadraticCurveTo(W*0.90,H*0.46,W,H*0.56);
-      ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
-      // Mid dune (warmer)
-      ctx.fillStyle='#c07010';
-      ctx.beginPath(); ctx.moveTo(0,H*0.70);
-      ctx.quadraticCurveTo(W*0.20,H*0.54,W*0.38,H*0.65);
-      ctx.quadraticCurveTo(W*0.56,H*0.46,W*0.72,H*0.62);
-      ctx.quadraticCurveTo(W*0.86,H*0.52,W,H*0.64);
-      ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
-      // Dune crest highlights
-      ctx.strokeStyle='rgba(255,200,80,0.35)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(0,H*0.70); ctx.quadraticCurveTo(W*0.20,H*0.54,W*0.38,H*0.65); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W*0.38,H*0.65); ctx.quadraticCurveTo(W*0.56,H*0.46,W*0.72,H*0.62); ctx.stroke();
-      // Foreground sand
-      const sand = ctx.createLinearGradient(0,H*0.76,0,H);
-      sand.addColorStop(0,'#e09820'); sand.addColorStop(1,'#c07808');
-      ctx.fillStyle=sand; ctx.fillRect(0,H*0.76,W,H*0.24);
-      // Sand ripples
-      ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=1;
-      for(let i=0;i<5;i++){ ctx.beginPath(); ctx.moveTo(0,H*(0.79+i*0.04)); for(let x=0;x<W;x+=12){ ctx.lineTo(x,H*(0.79+i*0.04+Math.sin(x/W*Math.PI*6)*0.008)); } ctx.stroke(); }
-      // Ornate pavilion tent (right side)
-      ctx.fillStyle='#8b0000';
-      ctx.beginPath(); ctx.moveTo(W*0.70,H*0.62); ctx.lineTo(W*0.76,H*0.42); ctx.lineTo(W*0.95,H*0.56); ctx.lineTo(W*0.95,H*0.76); ctx.lineTo(W*0.70,H*0.76); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#c00000';
-      ctx.beginPath(); ctx.moveTo(W*0.70,H*0.56); ctx.lineTo(W*0.76,H*0.42); ctx.lineTo(W*0.82,H*0.54); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle='#f4d03f'; ctx.lineWidth=1.5;
-      ctx.strokeRect(W*0.70,H*0.62,W*0.25,H*0.14);
-      ctx.beginPath(); ctx.moveTo(W*0.76,H*0.42); ctx.lineTo(W*0.76,H*0.62); ctx.stroke();
-      // Tent lanterns
-      [[W*0.715,H*0.61],[W*0.94,H*0.60]].forEach(([lx,ly]) => {
-        ctx.fillStyle='#f4d03f'; ctx.beginPath(); ctx.arc(lx,ly,H*0.014,0,Math.PI*2); ctx.fill();
-        const lG = ctx.createRadialGradient(lx,ly,0,lx,ly,H*0.05);
-        lG.addColorStop(0,'rgba(255,200,50,0.4)'); lG.addColorStop(1,'transparent');
-        ctx.fillStyle=lG; ctx.beginPath(); ctx.arc(lx,ly,H*0.05,0,Math.PI*2); ctx.fill();
-      });
-      // Palm tree cluster (left)
-      ctx.strokeStyle='#3a2010'; ctx.lineWidth=4;
-      ctx.beginPath(); ctx.moveTo(W*0.14,H*0.76); ctx.bezierCurveTo(W*0.12,H*0.62,W*0.18,H*0.50,W*0.15,H*0.38); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W*0.22,H*0.76); ctx.bezierCurveTo(W*0.24,H*0.62,W*0.20,H*0.50,W*0.24,H*0.36); ctx.stroke();
-      // Palm fronds
-      ctx.fillStyle='#3a6010';
-      [[-0.06,-0.06],[0.04,-0.08],[0.06,-0.04],[-0.02,-0.10],[-0.07,-0.03]].forEach(([dx,dy]) => {
-        ctx.beginPath(); ctx.ellipse(W*0.15+dx*W,H*0.38+dy*H,W*0.05,H*0.016,dx>0?0.5:-0.5,0,Math.PI*2); ctx.fill();
-      });
-      [[-0.05,-0.06],[0.05,-0.07],[0.07,-0.03],[0.01,-0.10],[-0.06,-0.03]].forEach(([dx,dy]) => {
-        ctx.beginPath(); ctx.ellipse(W*0.24+dx*W,H*0.36+dy*H,W*0.05,H*0.016,dx>0?0.5:-0.5,0,Math.PI*2); ctx.fill();
-      });
-      // Pitch
-      ctx.fillStyle='rgba(255,220,100,0.3)'; ctx.fillRect(W*0.28,H*0.76,W*0.40,H*0.035);
-      ctx.strokeStyle='rgba(255,230,120,0.5)'; ctx.lineWidth=1; ctx.strokeRect(W*0.28,H*0.76,W*0.40,H*0.035);
-      _drawStumps(ctx, W*0.50, H*0.76, H*0.14, '#ffd060', null);
-      _drawBall(ctx, W*0.26, H*0.72, H*0.040, '#c04010');
-      // Camel silhouette (distance)
-      ctx.fillStyle='rgba(80,40,0,0.7)';
-      ctx.beginPath(); ctx.ellipse(W*0.60,H*0.60,W*0.055,H*0.030,0,0,Math.PI*2); ctx.fill(); // body
-      ctx.beginPath(); ctx.arc(W*0.648,H*0.578,H*0.020,0,Math.PI*2); ctx.fill(); // head
-      ctx.beginPath(); ctx.arc(W*0.61,H*0.565,H*0.022,0,Math.PI*2); ctx.fill(); // hump
-      ctx.fillRect(W*0.576,H*0.620,W*0.012,H*0.040); // leg
-      ctx.fillRect(W*0.600,H*0.622,W*0.012,H*0.038);
-      ctx.fillRect(W*0.626,H*0.620,W*0.012,H*0.040);
     }
   },
+  // 8 ── Frontier ───────────────────────────────────────────────────────────
   {
-    id: 'midnight_league',
-    name: "THE MIDNIGHT LEAGUE",
-    subtitle: "Gothic Cricket · The Dark Oval",
-    unlock: 280,
-    targetFloor: 135,
-    difficulty: 1.70,
-    entry: 3000,
-    winTrophy: 2, lossTrophy: 1,
-    winCoins: 3800, lossCoins: 200,
-    winChest: 'gold',
-    accentColor: '#8822c0',
-    accentColor2: '#4a0a80',
-    textColor: '#cc88ff',
+    sceneKey: 'westwild',
+    name: "THE FRONTIER",
+    subtitle: "Wild West Cricket · Dust & Tumbleweeds",
+    unlock: 135, targetFloor: 90, difficulty: 1.58, entry: 1800,
+    winTrophy: 2, lossTrophy: 1, winCoins: 2850, lossCoins: 180, winChest: 'silver',
+    accentColor: '#c08040', accentColor2: '#8a5010', textColor: '#ffcc88',
     drawArt(ctx, W, H) {
-      // Inky gothic sky
-      const sky = ctx.createLinearGradient(0,0,0,H);
-      sky.addColorStop(0,'#020004'); sky.addColorStop(0.5,'#0a0016'); sky.addColorStop(1,'#14002a');
-      ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
-      // Stars (faint)
-      [[0.08,0.04,1],[0.22,0.02,1.5],[0.40,0.06,1],[0.55,0.03,1.5],[0.70,0.05,1],[0.84,0.03,2],[0.94,0.07,1],[0.15,0.11,1],[0.45,0.09,1.5],[0.62,0.08,1],[0.80,0.10,1]].forEach(([fx,fy,r]) => {
-        ctx.fillStyle='rgba(200,160,255,0.7)'; ctx.beginPath(); ctx.arc(fx*W,fy*H,r,0,Math.PI*2); ctx.fill();
+      _drawSceneCard(ctx, W, H, 'westwild', (ctx, W, H) => {
+        // Mesa cliffs
+        ctx.fillStyle = '#8a4820';
+        ctx.fillRect(0, H*0.48, W*0.18, H*0.14);
+        ctx.fillRect(W*0.82, H*0.50, W*0.18, H*0.12);
+        // Cactus
+        ctx.fillStyle = '#386830';
+        ctx.fillRect(W*0.75, H*0.50, W*0.025, H*0.18); // trunk
+        ctx.fillRect(W*0.72, H*0.55, W*0.025, H*0.06); // left arm
+        ctx.fillRect(W*0.775, H*0.56, W*0.025, H*0.06); // right arm
       });
-      // Full moon — huge, ominous
-      const moonH = ctx.createRadialGradient(W*0.20,H*0.18,0,W*0.20,H*0.18,H*0.22);
-      moonH.addColorStop(0,'rgba(220,180,255,0.30)'); moonH.addColorStop(0.4,'rgba(140,80,220,0.15)'); moonH.addColorStop(1,'transparent');
-      ctx.fillStyle=moonH; ctx.fillRect(0,0,W*0.5,H*0.45);
-      ctx.fillStyle='#ece0ff'; ctx.beginPath(); ctx.arc(W*0.20,H*0.18,H*0.088,0,Math.PI*2); ctx.fill();
-      // Moon surface craters
-      ctx.fillStyle='rgba(160,120,220,0.30)';
-      [[W*0.185,H*0.155,H*0.028],[W*0.225,H*0.205,H*0.018],[W*0.175,H*0.210,H*0.014]].forEach(([cx,cy,r]) => {
-        ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
-      });
-      // Gothic cathedral spires (silhouette)
-      ctx.fillStyle='#0a0012';
-      // Left spire cluster
-      const drawSpire = (bx, by, bw, bh) => {
-        ctx.fillRect(bx-bw/2, by, bw, bh); // shaft
-        ctx.beginPath(); ctx.moveTo(bx,by-bh*0.35); ctx.lineTo(bx-bw*0.7,by); ctx.lineTo(bx+bw*0.7,by); ctx.closePath(); ctx.fill(); // point
-        // pointed arch window
-        ctx.strokeStyle='rgba(80,0,120,0.4)'; ctx.lineWidth=1;
-        ctx.beginPath(); ctx.moveTo(bx-bw*0.2,by+bh*0.3); ctx.lineTo(bx-bw*0.2,by+bh*0.6); ctx.bezierCurveTo(bx-bw*0.2,by+bh*0.2,bx+bw*0.2,by+bh*0.2,bx+bw*0.2,by+bh*0.6); ctx.lineTo(bx+bw*0.2,by+bh*0.3); ctx.stroke();
-      };
-      drawSpire(W*0.08,H*0.22,W*0.04,H*0.52);
-      drawSpire(W*0.16,H*0.30,W*0.05,H*0.44);
-      drawSpire(W*0.25,H*0.35,W*0.06,H*0.39);
-      drawSpire(W*0.92,H*0.24,W*0.04,H*0.50);
-      drawSpire(W*0.84,H*0.32,W*0.05,H*0.42);
-      drawSpire(W*0.75,H*0.38,W*0.06,H*0.36);
-      // Connecting battlements
-      ctx.fillStyle='#0a0012';
-      ctx.fillRect(W*0.08,H*0.74,W*0.20,H*0.04);
-      ctx.fillRect(W*0.72,H*0.74,W*0.20,H*0.04);
-      // Battlement merlons
-      [[W*0.08,H*0.70,W*0.03,H*0.04],[W*0.13,H*0.70,W*0.03,H*0.04],[W*0.18,H*0.70,W*0.03,H*0.04],[W*0.23,H*0.70,W*0.03,H*0.04],[W*0.74,H*0.70,W*0.03,H*0.04],[W*0.80,H*0.70,W*0.03,H*0.04],[W*0.86,H*0.70,W*0.03,H*0.04],[W*0.91,H*0.70,W*0.03,H*0.04]].forEach(([x,y,w,h]) => {
-        ctx.fillRect(x,y,w,h);
-      });
-      // Lightning bolt
-      ctx.strokeStyle='rgba(200,100,255,0.9)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(W*0.62,H*0.02); ctx.lineTo(W*0.58,H*0.18); ctx.lineTo(W*0.64,H*0.24); ctx.lineTo(W*0.56,H*0.44); ctx.stroke();
-      ctx.strokeStyle='rgba(200,100,255,0.25)'; ctx.lineWidth=8;
-      ctx.beginPath(); ctx.moveTo(W*0.62,H*0.02); ctx.lineTo(W*0.58,H*0.18); ctx.lineTo(W*0.64,H*0.24); ctx.lineTo(W*0.56,H*0.44); ctx.stroke();
-      // Lightning glow
-      const lglow = ctx.createRadialGradient(W*0.60,H*0.20,0,W*0.60,H*0.20,W*0.20);
-      lglow.addColorStop(0,'rgba(180,80,255,0.20)'); lglow.addColorStop(1,'transparent');
-      ctx.fillStyle=lglow; ctx.fillRect(W*0.3,0,W*0.4,H*0.5);
-      // Bats (4 small, scattered)
-      const drawBat = (bx, by, s) => {
-        ctx.fillStyle='rgba(10,0,20,0.9)';
-        ctx.beginPath(); ctx.ellipse(bx,by,s*0.6,s*0.3,0,0,Math.PI*2); ctx.fill(); // body
-        ctx.beginPath(); ctx.moveTo(bx-s*0.6,by); ctx.quadraticCurveTo(bx-s*1.4,by-s*0.8,bx-s*2,by+s*0.2); ctx.quadraticCurveTo(bx-s*1.2,by+s*0.6,bx,by+s*0.1); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(bx+s*0.6,by); ctx.quadraticCurveTo(bx+s*1.4,by-s*0.8,bx+s*2,by+s*0.2); ctx.quadraticCurveTo(bx+s*1.2,by+s*0.6,bx,by+s*0.1); ctx.closePath(); ctx.fill();
-      };
-      drawBat(W*0.38,H*0.28,H*0.022);
-      drawBat(W*0.48,H*0.22,H*0.016);
-      drawBat(W*0.55,H*0.32,H*0.018);
-      drawBat(W*0.42,H*0.38,H*0.012);
-      // Dark ground
-      ctx.fillStyle='#080010'; ctx.fillRect(0,H*0.74,W,H*0.26);
-      // Purple ground glow
-      const gground = ctx.createRadialGradient(W*0.5,H*0.74,0,W*0.5,H*0.74,W*0.5);
-      gground.addColorStop(0,'rgba(140,0,220,0.35)'); gground.addColorStop(0.4,'rgba(80,0,140,0.20)'); gground.addColorStop(1,'transparent');
-      ctx.fillStyle=gground; ctx.fillRect(0,H*0.5,W,H*0.5);
-      // Pitch
-      ctx.fillStyle='rgba(60,0,100,0.6)'; ctx.fillRect(W*0.28,H*0.74,W*0.44,H*0.038);
-      ctx.strokeStyle='rgba(160,60,255,0.5)'; ctx.lineWidth=1; ctx.strokeRect(W*0.28,H*0.74,W*0.44,H*0.038);
-      _drawStumps(ctx, W*0.5, H*0.74, H*0.16, '#c060ff', '#8800ff');
-      _drawBall(ctx, W*0.74, H*0.70, H*0.040, '#8822c0');
     }
   },
+  // 9 ── Coral Coast ────────────────────────────────────────────────────────
   {
-    id: 'sky_arena',
-    name: "THE SKY ARENA",
-    subtitle: "Galactic Cricket · Above The Clouds",
-    unlock: 400,
-    targetFloor: 170,
-    difficulty: 1.90,
-    entry: 5000,
-    winTrophy: 3, lossTrophy: 2,
-    winCoins: 6000, lossCoins: 300,
-    winChest: 'legendary',
-    accentColor: '#00ccff',
-    accentColor2: '#0066aa',
-    textColor: '#88ddff',
+    sceneKey: 'reef',
+    name: "THE CORAL COAST",
+    subtitle: "Reef Cricket · The Sandy Shore",
+    unlock: 170, targetFloor: 104, difficulty: 1.68, entry: 2500,
+    winTrophy: 2, lossTrophy: 1, winCoins: 4000, lossCoins: 250, winChest: 'gold',
+    accentColor: '#20a8c0', accentColor2: '#0a6880', textColor: '#88eeff',
     drawArt(ctx, W, H) {
-      // Deep space — rich star field
-      const sky = ctx.createLinearGradient(0,0,0,H);
-      sky.addColorStop(0,'#000308'); sky.addColorStop(0.4,'#020610'); sky.addColorStop(1,'#040e28');
-      ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
-      // Stars — many, varied brightness and color
-      [[0.04,0.03,2,'#fff'],[0.11,0.02,1,'#adf'],[0.19,0.07,1.5,'#ffc'],[0.28,0.04,2,'#fff'],[0.36,0.02,1,'#adf'],[0.44,0.08,1.5,'#fff'],[0.52,0.03,2,'#ffc'],[0.60,0.06,1,'#fff'],[0.68,0.04,1.5,'#adf'],[0.76,0.07,2,'#fff'],[0.84,0.03,1,'#ffc'],[0.91,0.06,1.5,'#fff'],[0.96,0.02,1,'#adf'],[0.08,0.14,1.5,'#fff'],[0.22,0.12,2,'#ffc'],[0.38,0.17,1,'#adf'],[0.50,0.11,1.5,'#fff'],[0.64,0.15,2,'#fff'],[0.78,0.13,1,'#ffc'],[0.92,0.16,1.5,'#adf'],[0.15,0.22,1,'#fff'],[0.34,0.20,1.5,'#adf'],[0.55,0.19,1,'#ffc'],[0.72,0.21,2,'#fff'],[0.88,0.20,1,'#fff']].forEach(([fx,fy,r,c]) => {
-        ctx.fillStyle=c; ctx.beginPath(); ctx.arc(fx*W,fy*H,r,0,Math.PI*2); ctx.fill();
-        if(r>1.5){ ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.arc(fx*W,fy*H,r*2.5,0,Math.PI*2); ctx.fill(); }
+      _drawSceneCard(ctx, W, H, 'reef', (ctx, W, H) => {
+        // Wavy water line
+        ctx.strokeStyle = 'rgba(30,160,210,0.7)'; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0,H*0.64);
+        for (let i=0; i<=8; i++) ctx.lineTo(W*i/8, H*(0.64 + (i%2===0?0.02:-0.02)));
+        ctx.stroke();
+        // Fish (ellipse + triangle)
+        ctx.fillStyle = '#f07030';
+        ctx.beginPath(); ctx.ellipse(W*0.72, H*0.50, W*0.04, H*0.025, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(W*0.76, H*0.50); ctx.lineTo(W*0.80, H*0.46); ctx.lineTo(W*0.80, H*0.54); ctx.closePath(); ctx.fill();
+        // Coral blob
+        ctx.fillStyle = '#e04080';
+        ctx.beginPath(); ctx.ellipse(W*0.20, H*0.70, W*0.04, H*0.05, 0, 0, Math.PI*2); ctx.fill();
       });
-      // Nebula cloud — soft purple/blue wash
-      const neb = ctx.createRadialGradient(W*0.25,H*0.20,0,W*0.25,H*0.20,W*0.45);
-      neb.addColorStop(0,'rgba(80,40,160,0.20)'); neb.addColorStop(0.4,'rgba(40,80,200,0.10)'); neb.addColorStop(1,'transparent');
-      ctx.fillStyle=neb; ctx.fillRect(0,0,W*0.6,H*0.45);
-      // Saturn-like planet (large, dramatic)
-      const pG = ctx.createRadialGradient(W*0.78,H*0.22,0,W*0.78,H*0.22,H*0.14);
-      pG.addColorStop(0,'#60a0e0'); pG.addColorStop(0.3,'#3070c0'); pG.addColorStop(0.7,'#1848a0'); pG.addColorStop(1,'#0c2860');
-      ctx.fillStyle=pG; ctx.beginPath(); ctx.arc(W*0.78,H*0.22,H*0.13,0,Math.PI*2); ctx.fill();
-      // Planet band stripes
-      ctx.fillStyle='rgba(80,120,200,0.3)';
-      ctx.save(); ctx.beginPath(); ctx.arc(W*0.78,H*0.22,H*0.13,0,Math.PI*2); ctx.clip();
-      [[H*0.155,H*0.025],[H*0.195,H*0.018],[H*0.235,H*0.022]].forEach(([py,pw]) => {
-        ctx.fillRect(0,py,W,pw);
+    }
+  },
+  // 10 ── Big Top ────────────────────────────────────────────────────────────
+  {
+    sceneKey: 'carnival',
+    name: "THE BIG TOP",
+    subtitle: "Carnival Cricket · Lights & Laughter",
+    unlock: 208, targetFloor: 119, difficulty: 1.79, entry: 3500,
+    winTrophy: 3, lossTrophy: 1, winCoins: 5600, lossCoins: 350, winChest: 'gold',
+    accentColor: '#d040a0', accentColor2: '#901060', textColor: '#ff88dd',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'carnival', (ctx, W, H) => {
+        // Ferris wheel
+        const fwx = W*0.78, fwy = H*0.28, fwr = H*0.18;
+        ctx.strokeStyle = '#f0d030'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(fwx, fwy, fwr, 0, Math.PI*2); ctx.stroke();
+        for (let i=0; i<6; i++) {
+          const a = i*Math.PI/3;
+          ctx.beginPath(); ctx.moveTo(fwx, fwy); ctx.lineTo(fwx+Math.cos(a)*fwr, fwy+Math.sin(a)*fwr); ctx.stroke();
+        }
+        // String lights across top
+        const colors = ['#ff4040','#40ff40','#4040ff','#ffff40','#ff40ff','#40ffff','#ff8040','#40ff80'];
+        for (let i=0; i<8; i++) {
+          ctx.fillStyle = colors[i];
+          ctx.beginPath(); ctx.arc(W*(0.05+i*0.12), H*0.06, W*0.014, 0, Math.PI*2); ctx.fill();
+        }
       });
-      ctx.restore();
-      // Planet rings (tilted ellipse)
-      ctx.strokeStyle='rgba(140,180,255,0.55)'; ctx.lineWidth=4;
-      ctx.beginPath(); ctx.ellipse(W*0.78,H*0.22,H*0.22,H*0.055,0.25,0,Math.PI*2); ctx.stroke();
-      ctx.strokeStyle='rgba(100,150,255,0.30)'; ctx.lineWidth=8;
-      ctx.beginPath(); ctx.ellipse(W*0.78,H*0.22,H*0.26,H*0.065,0.25,0,Math.PI*2); ctx.stroke();
-      // Ring occluding lower planet
-      ctx.fillStyle='rgba(4,14,40,0.9)';
-      ctx.save(); ctx.beginPath(); ctx.ellipse(W*0.78,H*0.22+H*0.04,H*0.22,H*0.055*0.5,0.25,0,Math.PI); ctx.fill(); ctx.restore();
-      // Earth visible below — curved horizon
-      const earthG = ctx.createRadialGradient(W*0.5,H*1.2,0,W*0.5,H*1.2,H*0.8);
-      earthG.addColorStop(0,'#1060c0'); earthG.addColorStop(0.3,'#2080e0'); earthG.addColorStop(0.5,'#4090d0'); earthG.addColorStop(0.7,'rgba(40,100,180,0.4)'); earthG.addColorStop(1,'transparent');
-      ctx.fillStyle=earthG; ctx.fillRect(0,H*0.55,W,H*0.45);
-      // Cloud layer horizon
-      ctx.fillStyle='rgba(200,220,240,0.20)';
-      ctx.beginPath(); ctx.ellipse(W*0.5,H*0.62,W*0.65,H*0.05,0,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.15)';
-      ctx.beginPath(); ctx.ellipse(W*0.5,H*0.60,W*0.5,H*0.025,0,0,Math.PI*2); ctx.fill();
-      // Floating stadium platform
-      const platG = ctx.createRadialGradient(W*0.5,H*0.68,0,W*0.5,H*0.68,W*0.42);
-      platG.addColorStop(0,'rgba(0,180,255,0.22)'); platG.addColorStop(0.5,'rgba(0,100,200,0.12)'); platG.addColorStop(1,'transparent');
-      ctx.fillStyle=platG; ctx.fillRect(0,H*0.58,W,H*0.35);
-      // Stadium rim — outer arc glowing
-      ctx.strokeStyle='rgba(0,200,255,0.6)'; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.ellipse(W*0.5,H*0.65,W*0.40,H*0.075,0,Math.PI,Math.PI*2); ctx.stroke();
-      ctx.strokeStyle='rgba(0,200,255,0.3)'; ctx.lineWidth=7;
-      ctx.beginPath(); ctx.ellipse(W*0.5,H*0.65,W*0.40,H*0.075,0,Math.PI,Math.PI*2); ctx.stroke();
-      // Inner stands
-      ctx.strokeStyle='rgba(0,160,220,0.4)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.ellipse(W*0.5,H*0.65,W*0.30,H*0.055,0,Math.PI,Math.PI*2); ctx.stroke();
-      // Floodlight towers
-      [[W*0.18,H*0.58],[W*0.82,H*0.58]].forEach(([lx,ly]) => {
-        ctx.strokeStyle='#4080c0'; ctx.lineWidth=3;
-        ctx.beginPath(); ctx.moveTo(lx,H*0.72); ctx.lineTo(lx,ly); ctx.stroke();
-        // Light head
-        ctx.fillStyle='#80c0ff'; ctx.fillRect(lx-W*0.025,ly-H*0.012,W*0.05,H*0.012);
-        // Beam
-        const beamG = ctx.createRadialGradient(lx,ly,0,lx,H*0.72,H*0.18);
-        beamG.addColorStop(0,'rgba(100,200,255,0.25)'); beamG.addColorStop(1,'transparent');
-        ctx.fillStyle=beamG; ctx.beginPath(); ctx.moveTo(lx-W*0.02,ly); ctx.lineTo(lx-W*0.12,H*0.72); ctx.lineTo(lx+W*0.12,H*0.72); ctx.lineTo(lx+W*0.02,ly); ctx.closePath(); ctx.fill();
+    }
+  },
+  // 11 ── Ironworks ─────────────────────────────────────────────────────────
+  {
+    sceneKey: 'steampunk',
+    name: "THE IRONWORKS",
+    subtitle: "Steampunk Cricket · The Foundry",
+    unlock: 250, targetFloor: 135, difficulty: 1.90, entry: 4800,
+    winTrophy: 3, lossTrophy: 1, winCoins: 7700, lossCoins: 480, winChest: 'gold',
+    accentColor: '#b87333', accentColor2: '#8b5a00', textColor: '#ffcc88',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'steampunk', (ctx, W, H) => {
+        // Two gear outlines
+        [[W*0.22,H*0.30,H*0.16],[W*0.38,H*0.38,H*0.12]].forEach(([cx,cy,r]) => {
+          ctx.strokeStyle = '#c09050'; ctx.lineWidth = 4;
+          ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+          ctx.lineWidth = 2;
+          for (let i=0; i<8; i++) {
+            const a = i*Math.PI/4;
+            ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*(r-4), cy+Math.sin(a)*(r-4)); ctx.lineTo(cx+Math.cos(a)*(r+6), cy+Math.sin(a)*(r+6)); ctx.stroke();
+          }
+        });
+        // Smoke puffs
+        ctx.fillStyle = 'rgba(180,160,120,0.4)';
+        [[W*0.65,H*0.12],[W*0.70,H*0.08],[W*0.76,H*0.14]].forEach(([sx,sy]) => {
+          ctx.beginPath(); ctx.arc(sx, sy, H*0.04, 0, Math.PI*2); ctx.fill();
+        });
       });
-      // Pitch strip
-      ctx.fillStyle='rgba(0,180,255,0.20)'; ctx.fillRect(W*0.30,H*0.67,W*0.40,H*0.038);
-      ctx.strokeStyle='rgba(0,220,255,0.5)'; ctx.lineWidth=1; ctx.strokeRect(W*0.30,H*0.67,W*0.40,H*0.038);
-      _drawStumps(ctx, W*0.50, H*0.67, H*0.15, '#00ccff', '#00aaff');
-      // Energy ball
-      const ballG2 = ctx.createRadialGradient(W*0.24,H*0.62,0,W*0.24,H*0.62,H*0.048);
-      ballG2.addColorStop(0,'#ffffff'); ballG2.addColorStop(0.25,'#80eeff'); ballG2.addColorStop(0.7,'#0080cc'); ballG2.addColorStop(1,'#002060');
-      ctx.fillStyle=ballG2; ctx.beginPath(); ctx.arc(W*0.24,H*0.62,H*0.048,0,Math.PI*2); ctx.fill();
-      // Ball orbit ring
-      ctx.strokeStyle='rgba(0,220,255,0.45)'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.ellipse(W*0.24,H*0.62,H*0.09,H*0.024,0.4,0,Math.PI*2); ctx.stroke();
-      // Shooting meteor
-      ctx.strokeStyle='rgba(255,220,100,0.6)'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.moveTo(W*0.46,H*0.05); ctx.lineTo(W*0.52,H*0.14); ctx.stroke();
-      ctx.strokeStyle='rgba(255,220,100,0.2)'; ctx.lineWidth=4;
-      ctx.beginPath(); ctx.moveTo(W*0.46,H*0.05); ctx.lineTo(W*0.52,H*0.14); ctx.stroke();
+    }
+  },
+  // 12 ── Crane Yard ─────────────────────────────────────────────────────────
+  {
+    sceneKey: 'construction',
+    name: "THE CRANE YARD",
+    subtitle: "Urban Cricket · Steel & Concrete",
+    unlock: 296, targetFloor: 152, difficulty: 2.02, entry: 6500,
+    winTrophy: 3, lossTrophy: 2, winCoins: 10500, lossCoins: 650, winChest: 'gold',
+    accentColor: '#8a7a5a', accentColor2: '#5a4a2a', textColor: '#ddccaa',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'construction', (ctx, W, H) => {
+        // Crane mast
+        ctx.fillStyle = '#f0a020';
+        ctx.fillRect(W*0.72, H*0.08, W*0.02, H*0.55);
+        // Jib arm
+        ctx.fillRect(W*0.40, H*0.08, W*0.34, W*0.02);
+        // Hanging cable
+        ctx.strokeStyle = '#a08040'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(W*0.55, H*0.10); ctx.lineTo(W*0.55, H*0.40); ctx.stroke();
+        // Hazard stripes bottom
+        const sw = W*0.08;
+        for (let i=0; i<12; i++) {
+          ctx.fillStyle = i%2===0 ? '#f0c020' : '#202020';
+          ctx.fillRect(i*sw, H*0.93, sw, H*0.07);
+        }
+      });
+    }
+  },
+  // 13 ── Castle Keep ────────────────────────────────────────────────────────
+  {
+    sceneKey: 'medieval',
+    name: "THE CASTLE KEEP",
+    subtitle: "Medieval Cricket · The Tournament",
+    unlock: 346, targetFloor: 170, difficulty: 2.14, entry: 8500,
+    winTrophy: 3, lossTrophy: 2, winCoins: 13750, lossCoins: 850, winChest: 'gold',
+    accentColor: '#6a8a3a', accentColor2: '#3a5a1a', textColor: '#bbdd88',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'medieval', (ctx, W, H) => {
+        // Castle wall with battlements
+        ctx.fillStyle = '#607060';
+        ctx.fillRect(W*0.25, H*0.50, W*0.50, H*0.16);
+        // Merlons (notched top)
+        for (let i=0; i<5; i++) {
+          ctx.fillRect(W*(0.27+i*0.09), H*0.43, W*0.05, H*0.08);
+        }
+        // Two round towers
+        ctx.beginPath(); ctx.arc(W*0.24, H*0.54, W*0.06, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(W*0.76, H*0.54, W*0.06, 0, Math.PI*2); ctx.fill();
+      });
+    }
+  },
+  // 14 ── Jolly Roger ────────────────────────────────────────────────────────
+  {
+    sceneKey: 'pirate',
+    name: "THE JOLLY ROGER",
+    subtitle: "Pirate Cricket · Skull Island",
+    unlock: 400, targetFloor: 189, difficulty: 2.27, entry: 11000,
+    winTrophy: 4, lossTrophy: 2, winCoins: 17800, lossCoins: 1100, winChest: 'legendary',
+    accentColor: '#c0392b', accentColor2: '#8b0000', textColor: '#ff9999',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'pirate', (ctx, W, H) => {
+        // Ship mast
+        ctx.strokeStyle = '#604020'; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(W*0.75, H*0.70); ctx.lineTo(W*0.75, H*0.18); ctx.stroke();
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(W*0.58, H*0.30); ctx.lineTo(W*0.92, H*0.30); ctx.stroke();
+        // Skull
+        ctx.fillStyle = '#e8e0d0';
+        ctx.beginPath(); ctx.arc(W*0.28, H*0.20, H*0.08, 0, Math.PI*2); ctx.fill();
+        // Eyes
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(W*0.245, H*0.18, H*0.018, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(W*0.315, H*0.18, H*0.018, 0, Math.PI*2); ctx.fill();
+        // Teeth
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(W*0.20, H*0.27); ctx.lineTo(W*0.36, H*0.27); ctx.stroke();
+        for (let i=0; i<4; i++) { ctx.beginPath(); ctx.moveTo(W*(0.22+i*0.04), H*0.27); ctx.lineTo(W*(0.22+i*0.04), H*0.30); ctx.stroke(); }
+      });
+    }
+  },
+  // 15 ── Haunted Oval ───────────────────────────────────────────────────────
+  {
+    sceneKey: 'halloween',
+    name: "THE HAUNTED OVAL",
+    subtitle: "Halloween Cricket · The Dark Ground",
+    unlock: 458, targetFloor: 209, difficulty: 2.40, entry: 14000,
+    winTrophy: 4, lossTrophy: 2, winCoins: 22750, lossCoins: 1400, winChest: 'legendary',
+    accentColor: '#7a22aa', accentColor2: '#4a0a70', textColor: '#dd88ff',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'halloween', (ctx, W, H) => {
+        // Full moon
+        ctx.fillStyle = '#f0e850';
+        ctx.beginPath(); ctx.arc(W*0.5, H*0.15, H*0.09, 0, Math.PI*2); ctx.fill();
+        // Bats (V-shapes)
+        ctx.fillStyle = '#1a0a20';
+        [[W*0.22,H*0.25],[W*0.68,H*0.20],[W*0.40,H*0.35]].forEach(([bx,by]) => {
+          ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx-W*0.05,by-H*0.03); ctx.lineTo(bx-W*0.02,by+H*0.01); ctx.lineTo(bx,by); ctx.lineTo(bx+W*0.02,by+H*0.01); ctx.lineTo(bx+W*0.05,by-H*0.03); ctx.closePath(); ctx.fill();
+        });
+        // Pumpkin
+        ctx.fillStyle = '#e06020';
+        ctx.beginPath(); ctx.arc(W*0.82, H*0.62, H*0.06, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#1a0a00';
+        ctx.beginPath(); ctx.moveTo(W*0.806,H*0.60); ctx.lineTo(W*0.814,H*0.64); ctx.lineTo(W*0.822,H*0.60); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(W*0.830,H*0.60); ctx.lineTo(W*0.838,H*0.64); ctx.lineTo(W*0.846,H*0.60); ctx.fill();
+      });
+    }
+  },
+  // 16 ── Winter Cup ─────────────────────────────────────────────────────────
+  {
+    sceneKey: 'christmas',
+    name: "THE WINTER CUP",
+    subtitle: "Christmas Cricket · Snow & Spirit",
+    unlock: 520, targetFloor: 230, difficulty: 2.54, entry: 18000,
+    winTrophy: 4, lossTrophy: 2, winCoins: 29250, lossCoins: 1800, winChest: 'legendary',
+    accentColor: '#2a6aaa', accentColor2: '#0a3a7a', textColor: '#88bbff',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'christmas', (ctx, W, H) => {
+        // Christmas tree
+        ctx.fillStyle = '#1a5a20';
+        ctx.beginPath(); ctx.moveTo(W*0.20,H*0.65); ctx.lineTo(W*0.10,H*0.85); ctx.lineTo(W*0.30,H*0.85); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(W*0.20,H*0.52); ctx.lineTo(W*0.12,H*0.67); ctx.lineTo(W*0.28,H*0.67); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(W*0.20,H*0.40); ctx.lineTo(W*0.13,H*0.54); ctx.lineTo(W*0.27,H*0.54); ctx.closePath(); ctx.fill();
+        // Star at top
+        ctx.fillStyle = '#ffee40';
+        ctx.beginPath(); ctx.arc(W*0.20, H*0.38, H*0.022, 0, Math.PI*2); ctx.fill();
+        // Snowflakes
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        [[0.40,0.08],[0.55,0.15],[0.65,0.06],[0.75,0.20],[0.85,0.10],[0.50,0.30],[0.70,0.35],[0.90,0.25]].forEach(([px,py]) => {
+          ctx.beginPath(); ctx.arc(W*px, H*py, 2.5, 0, Math.PI*2); ctx.fill();
+        });
+      });
+    }
+  },
+  // 17 ── Inferno ────────────────────────────────────────────────────────────
+  {
+    sceneKey: 'volcano',
+    name: "THE INFERNO",
+    subtitle: "Volcanic Cricket · The Lava Ground",
+    unlock: 586, targetFloor: 252, difficulty: 2.69, entry: 22000,
+    winTrophy: 4, lossTrophy: 3, winCoins: 35800, lossCoins: 2200, winChest: 'legendary',
+    accentColor: '#cc4010', accentColor2: '#8a1a00', textColor: '#ff9966',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'volcano', (ctx, W, H) => {
+        // Volcano mountain
+        ctx.fillStyle = '#3a1808';
+        ctx.beginPath(); ctx.moveTo(W*0.5,H*0.30); ctx.lineTo(W*0.25,H*0.65); ctx.lineTo(W*0.75,H*0.65); ctx.closePath(); ctx.fill();
+        // Lava glow at peak
+        const lg2 = ctx.createRadialGradient(W*0.5, H*0.30, 0, W*0.5, H*0.30, H*0.15);
+        lg2.addColorStop(0,'rgba(255,160,20,0.7)'); lg2.addColorStop(0.5,'rgba(200,60,10,0.4)'); lg2.addColorStop(1,'transparent');
+        ctx.fillStyle = lg2;
+        ctx.beginPath(); ctx.arc(W*0.5, H*0.30, H*0.15, 0, Math.PI*2); ctx.fill();
+        // Lava drip zigzag
+        ctx.strokeStyle = '#ff6010'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(W*0.48, H*0.32); ctx.lineTo(W*0.46, H*0.38); ctx.lineTo(W*0.50, H*0.44); ctx.lineTo(W*0.48, H*0.50); ctx.stroke();
+      });
+    }
+  },
+  // 18 ── Neon Grid ──────────────────────────────────────────────────────────
+  {
+    sceneKey: 'cyberpunk',
+    name: "THE NEON GRID",
+    subtitle: "Cyberpunk Cricket · The Digital Arena",
+    unlock: 656, targetFloor: 275, difficulty: 2.85, entry: 27000,
+    winTrophy: 5, lossTrophy: 3, winCoins: 44000, lossCoins: 2700, winChest: 'legendary',
+    accentColor: '#8822c0', accentColor2: '#4a0a80', textColor: '#cc88ff',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'cyberpunk', (ctx, W, H) => {
+        // Magenta horizon glow
+        const hg = ctx.createLinearGradient(0, H*0.55, 0, H*0.65);
+        hg.addColorStop(0,'rgba(255,32,192,0.5)'); hg.addColorStop(1,'transparent');
+        ctx.fillStyle = hg; ctx.fillRect(0, H*0.55, W, H*0.10);
+        // Neon grid lines on ground
+        ctx.strokeStyle = 'rgba(0,229,255,0.5)'; ctx.lineWidth = 1;
+        for (let i=1; i<6; i++) { ctx.beginPath(); ctx.moveTo(0,H*(0.6+i*0.07)); ctx.lineTo(W,H*(0.6+i*0.07)); ctx.stroke(); }
+        // Building outlines
+        ctx.strokeStyle = 'rgba(255,32,192,0.6)'; ctx.lineWidth = 1.5;
+        [[0.05,0.20,0.10,0.42],[0.82,0.28,0.10,0.34],[0.00,0.35,0.08,0.27]].forEach(([x,y,w,h]) => {
+          ctx.strokeRect(W*x, H*y, W*w, H*h);
+        });
+      });
+    }
+  },
+  // 19 ── Lunar Oval ─────────────────────────────────────────────────────────
+  {
+    sceneKey: 'moon',
+    name: "THE LUNAR OVAL",
+    subtitle: "Moon Cricket · Zero Gravity",
+    unlock: 730, targetFloor: 299, difficulty: 3.01, entry: 34000,
+    winTrophy: 5, lossTrophy: 3, winCoins: 55000, lossCoins: 3400, winChest: 'legendary',
+    accentColor: '#aaaacc', accentColor2: '#6a6a9a', textColor: '#dddeff',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'moon', (ctx, W, H) => {
+        // Earth in top-right
+        const eg = ctx.createRadialGradient(W*0.82, H*0.14, 0, W*0.82, H*0.14, H*0.12);
+        eg.addColorStop(0,'#4090c0'); eg.addColorStop(0.4,'#2060a0'); eg.addColorStop(0.7,'#184880'); eg.addColorStop(1,'rgba(10,20,60,0)');
+        ctx.fillStyle = eg;
+        ctx.beginPath(); ctx.arc(W*0.82, H*0.14, H*0.12, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(60,180,80,0.4)';
+        ctx.beginPath(); ctx.ellipse(W*0.80, H*0.10, H*0.06, H*0.04, -0.3, 0, Math.PI*2); ctx.fill();
+        // Stars
+        ctx.fillStyle = '#ffffff';
+        [[0.08,0.05],[0.18,0.14],[0.30,0.06],[0.42,0.18],[0.52,0.08],[0.60,0.20],[0.12,0.28],[0.35,0.32],[0.65,0.10],[0.25,0.22]].forEach(([px,py]) => {
+          ctx.beginPath(); ctx.arc(W*px, H*py, 1.5, 0, Math.PI*2); ctx.fill();
+        });
+        // Craters
+        ctx.strokeStyle = 'rgba(180,170,150,0.5)'; ctx.lineWidth = 2;
+        [[0.20,0.78,H*0.04],[0.55,0.82,H*0.03],[0.75,0.75,H*0.05]].forEach(([cx,cy,r]) => {
+          ctx.beginPath(); ctx.arc(W*cx, H*cy, r, 0, Math.PI*2); ctx.stroke();
+        });
+      });
+    }
+  },
+  // 20 ── Red Planet ─────────────────────────────────────────────────────────
+  {
+    sceneKey: 'mars',
+    name: "THE RED PLANET",
+    subtitle: "Mars Cricket · The Final Frontier",
+    unlock: 808, targetFloor: 325, difficulty: 3.18, entry: 42000,
+    winTrophy: 5, lossTrophy: 3, winCoins: 68000, lossCoins: 4200, winChest: 'legendary',
+    accentColor: '#c04428', accentColor2: '#7a1a08', textColor: '#ffaa88',
+    drawArt(ctx, W, H) {
+      _drawSceneCard(ctx, W, H, 'mars', (ctx, W, H) => {
+        // Rust sky haze
+        const mh = ctx.createLinearGradient(0, 0, 0, H*0.6);
+        mh.addColorStop(0,'rgba(120,40,20,0.3)'); mh.addColorStop(1,'rgba(200,100,40,0.15)');
+        ctx.fillStyle = mh; ctx.fillRect(0, 0, W, H*0.6);
+        // Two moons
+        ctx.fillStyle = '#c8a888';
+        ctx.beginPath(); ctx.arc(W*0.18, H*0.10, H*0.04, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#b09070';
+        ctx.beginPath(); ctx.arc(W*0.30, H*0.06, H*0.025, 0, Math.PI*2); ctx.fill();
+        // Dust swirl arcs on ground
+        ctx.strokeStyle = 'rgba(180,100,50,0.4)'; ctx.lineWidth = 2;
+        [[W*0.25,H*0.78,W*0.15,H*0.04],[W*0.70,H*0.82,W*0.12,H*0.03]].forEach(([cx,cy,rx,ry]) => {
+          ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI); ctx.stroke();
+        });
+      });
     }
   }
 ];
