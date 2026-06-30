@@ -2961,6 +2961,7 @@ const THEMED_LEAGUES = [
     subtitle: "Pirate Cricket · Skull Island",
     unlock: 0,
     targetFloor: 25,
+    difficulty: 1.00,
     entry: 100,
     winTrophy: 1, lossTrophy: 0,
     winCoins: 150, lossCoins: 0,
@@ -3088,6 +3089,7 @@ const THEMED_LEAGUES = [
     subtitle: "Steampunk Cricket · The Foundry",
     unlock: 20,
     targetFloor: 40,
+    difficulty: 1.10,
     entry: 300,
     winTrophy: 1, lossTrophy: 0,
     winCoins: 400, lossCoins: 50,
@@ -3179,6 +3181,7 @@ const THEMED_LEAGUES = [
     subtitle: "Jungle Cricket · Ancient Ruins",
     unlock: 50,
     targetFloor: 60,
+    difficulty: 1.22,
     entry: 600,
     winTrophy: 2, lossTrophy: 0,
     winCoins: 800, lossCoins: 80,
@@ -3273,6 +3276,7 @@ const THEMED_LEAGUES = [
     subtitle: "Arctic Cricket · The Ice Ground",
     unlock: 100,
     targetFloor: 80,
+    difficulty: 1.36,
     entry: 1000,
     winTrophy: 2, lossTrophy: 1,
     winCoins: 1300, lossCoins: 100,
@@ -3362,6 +3366,7 @@ const THEMED_LEAGUES = [
     subtitle: "Arabian Cricket · Sand & Stars",
     unlock: 180,
     targetFloor: 105,
+    difficulty: 1.52,
     entry: 1800,
     winTrophy: 2, lossTrophy: 1,
     winCoins: 2200, lossCoins: 150,
@@ -3459,6 +3464,7 @@ const THEMED_LEAGUES = [
     subtitle: "Gothic Cricket · The Dark Oval",
     unlock: 280,
     targetFloor: 135,
+    difficulty: 1.70,
     entry: 3000,
     winTrophy: 2, lossTrophy: 1,
     winCoins: 3800, lossCoins: 200,
@@ -3548,6 +3554,7 @@ const THEMED_LEAGUES = [
     subtitle: "Galactic Cricket · Above The Clouds",
     unlock: 400,
     targetFloor: 170,
+    difficulty: 1.90,
     entry: 5000,
     winTrophy: 3, lossTrophy: 2,
     winCoins: 6000, lossCoins: 300,
@@ -3702,6 +3709,10 @@ function renderLeagueScreen() {
         <div class="leagueStatPill">
           <div class="spLabel">MIN TARGET</div>
           <div class="spVal" style="color:#aaa">${lg.targetFloor} RUNS</div>
+        </div>
+        <div class="leagueStatPill">
+          <div class="spLabel">PACE</div>
+          <div class="spVal" style="color:${idx >= 4 ? '#ff6b6b' : idx >= 2 ? '#f4d03f' : '#39ff6a'}">${'★'.repeat(idx+1)}</div>
         </div>
         <div class="leagueStatPill">
           <div class="spLabel">REWARD</div>
@@ -5201,13 +5212,19 @@ function startBallSequence() {
   // difficulty scaling: a steady ramp over the innings, plus per-ball random
   // variance (pace changes) and a small extra ramp tied to league season so
   // later seasons feel noticeably tougher
+  // league difficulty multiplier (1.0 = Jolly Roger, 1.9 = Sky Arena)
+  const activeLgDiff = (window._activeLeagueIdx !== undefined && window._activeLeagueIdx !== null)
+    ? (THEMED_LEAGUES[window._activeLeagueIdx].difficulty || 1.0)
+    : 1.0;
+
   const baseSpeed = 0.011 + Math.min(ballsBowled * 0.0006, 0.01);
   const seasonRamp = Math.min((league.season-1) * 0.0008, 0.006);
-  const paceVariance = (Math.random()-0.5) * 0.004; // some balls quicker/slower
-  ballSpeed = baseSpeed + seasonRamp + paceVariance;
+  const paceVariance = (Math.random()-0.5) * 0.004 * activeLgDiff;
+  ballSpeed = (baseSpeed + seasonRamp + paceVariance) * activeLgDiff;
 
-  // line (off-side vs leg-side bias) - keep existing range
-  ball.targetX = 0.5 + (Math.random()-0.5)*0.18;
+  // line width: higher leagues bowl wider lines — more swing/seam movement
+  const swingWidth = 0.18 * activeLgDiff;
+  ball.targetX = 0.5 + (Math.random()-0.5) * Math.min(swingWidth, 0.36);
   // side of the pitch this delivery is bowled on, used for the cross-bat
   // mismatch penalty: positive targetX offset = off side, negative = leg side
   ball.lineSide = ball.targetX > 0.5 ? 1 : (ball.targetX < 0.5 ? -1 : 0);
