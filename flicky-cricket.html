@@ -1000,7 +1000,10 @@
   <!-- Mid: pitch shows through, match info sits at bottom of zone -->
   <div id="menuMid">
     <div id="menuMatchCard">
-      <div id="menuBestBadge">&#x2605; BEST &nbsp;<span id="menuBestVal">0</span> RUNS</div>
+      <div id="menuBestBadge" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>&#x2605; BEST &nbsp;<span id="menuBestVal">0</span> RUNS</span>
+        <span id="menuTrophyBadge" style="color:#f4d03f;font-size:12px;">🏆 <span id="menuTrophyVal">0</span></span>
+      </div>
       <div id="nextOpponentDisplay" style="color:rgba(255,255,255,0.7); font-family:'Courier New',monospace; font-size:11px; text-align:center;"></div>
       <div id="menuChestAlert" class="hidden">📦&nbsp; CHEST READY TO OPEN</div>
     </div>
@@ -2665,22 +2668,14 @@ if (new URLSearchParams(location.search).get('scene')) {
   }, 500);
 }
 
-startBtn.addEventListener('click', () => {
+// Central game-start — called after entry fee already deducted and _activeLeagueIdx set
+function startGame() {
   getAudioCtx();
-  playUiTap(); hapticTap();
-  // deduct entry fee
-  const eco = getMatchEconomy();
-  if (career.coins < eco.entry) {
-    showMessage('NOT ENOUGH COINS!', '#f87171', 1200);
-    return;
-  }
-  career.coins -= eco.entry;
-  saveCareerStats();
-  updateHud();
   resultText.style.display = 'none';
   document.getElementById('statusBlock').style.display = 'none';
   shareBtn.classList.add('hidden');
   overlay.classList.add('hidden');
+  leagueScreen.classList.add('hidden');
   muteBtn.classList.add('hidden');
   runs = 0;
   ballsBowled = 0;
@@ -2691,6 +2686,15 @@ startBtn.addEventListener('click', () => {
   rollStadiumConditions();
   updateHud();
   startBallSequence();
+}
+
+// PLAY button → open league screen so every match goes through a league
+startBtn.addEventListener('click', () => {
+  getAudioCtx();
+  playUiTap(); hapticTap();
+  overlay.classList.add('hidden');
+  leagueScreen.classList.remove('hidden');
+  renderLeagueScreen();
 });
 
 customiseBtn.addEventListener('click', () => {
@@ -2744,21 +2748,20 @@ function updateStreakDisplay() {
 
 // the player (the one to chase), or just below if the player is 1st
 function updateNextOpponentDisplay() {
-  if (league.matchInSeason >= SEASON_LENGTH) {
-    nextOpponentDisplay.textContent = 'SEASON ' + league.season + ' COMPLETE - NEW SEASON STARTING';
-    return;
+  const trophies = trophyState ? trophyState.count : 0;
+  // Find highest unlocked league
+  let currentLg = THEMED_LEAGUES[0];
+  for (let i = THEMED_LEAGUES.length - 1; i >= 0; i--) {
+    if (trophies >= THEMED_LEAGUES[i].unlock) { currentLg = THEMED_LEAGUES[i]; break; }
   }
-  const table = sortedLeagueTable();
-  const playerPos = table.findIndex(t=>t.isPlayer);
-  let rival;
-  if (playerPos === 0) {
-    rival = table[1]; // defending top spot against 2nd place
-  } else {
-    rival = table[playerPos - 1]; // chasing the team above
+  // Next league to unlock
+  const nextLg = THEMED_LEAGUES.find(lg => lg.unlock > trophies);
+  let line = `${currentLg.name}  \u00b7  ${currentLg.entry.toLocaleString()}\ud83e\ude99 ENTRY`;
+  if (nextLg) {
+    const needed = nextLg.unlock - trophies;
+    line += `  \u00b7  ${needed}\ud83c\udfc6 to ${nextLg.name.split(' ').pop()}`;
   }
-  const matchNum = league.matchInSeason + 1;
-  const eco3 = getMatchEconomy();
-  nextOpponentDisplay.textContent = `NEXT: vs ${rival.name} \u2014 MATCH ${matchNum}/${SEASON_LENGTH}, SEASON ${league.season} \u00b7 ENTRY ${eco3.entry.toLocaleString()}\ud83e\ude99 \u00b7 WIN ${eco3.prize.toLocaleString()}\ud83e\ude99`;
+  nextOpponentDisplay.textContent = line;
 }
 
 // ===== THEMED LEAGUES =====
@@ -3829,14 +3832,20 @@ function updateEquipTopBar() {
 function updateMenuHUD() {
   const gc = document.getElementById('menuGemCount');
   const cc = document.getElementById('menuCoinCount');
+  const tc = document.getElementById('menuTrophyVal');
   if (gc) gc.textContent = gems;
-  if (cc) cc.textContent = career.coins;
+  if (cc) cc.textContent = career.coins.toLocaleString();
+  if (tc) tc.textContent = trophyState ? trophyState.count : 0;
   // chest badge: count slots that are ready to open
   const readyCount = chestSlots.filter(s => s && s.openingStarted !== null && (Date.now() - s.openingStarted) >= CHEST_TYPES[s.type].openTime * 1000).length;
   const badge = document.getElementById('menuChestBadge');
   const alert = document.getElementById('menuChestAlert');
   if (badge) { badge.textContent = readyCount; badge.classList.toggle('show', readyCount > 0); }
   if (alert) { alert.classList.toggle('hidden', readyCount === 0); }
+  // best score
+  const bestEl = document.getElementById('menuBestVal');
+  if (bestEl) bestEl.textContent = career.bestScore || 0;
+  updateNextOpponentDisplay();
 }
 
 function drawMenuLogo() {
@@ -5724,9 +5733,9 @@ function endGame() {
     // result handled by resultText
   }
   let html = resultLine + (runs > best ? '<br>NEW BEST SCORE!' : '');
-  const eco2 = getMatchEconomy();
+  const _lgName = (activeLgIdx !== undefined && activeLgIdx !== null && THEMED_LEAGUES[activeLgIdx]) ? THEMED_LEAGUES[activeLgIdx].name : null;
   html += `<br><br><span style="color:#f4d03f;">+${coinsEarned.toLocaleString()} 🪙 ${coinLabel}</span>`;
-  html += `<br><span style="color:#9ca3af;font-size:0.85em;">Entry was ${eco2.entry.toLocaleString()} · Balance: ${career.coins.toLocaleString()}</span>`;
+  html += `<br><span style="color:#9ca3af;font-size:0.85em;">${_lgName ? _lgName + ' · ' : ''}Balance: ${career.coins.toLocaleString()}🪙</span>`;
   html += leagueHtml;
   if (newlyUnlocked.length) {
     html += '<br><br><span style="color:#39ff6a;">ACHIEVEMENT UNLOCKED!</span>';
