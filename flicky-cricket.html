@@ -2960,6 +2960,7 @@ const THEMED_LEAGUES = [
     name: "THE JOLLY ROGER",
     subtitle: "Pirate Cricket · Skull Island",
     unlock: 0,
+    targetFloor: 25,
     entry: 100,
     winTrophy: 1, lossTrophy: 0,
     winCoins: 150, lossCoins: 0,
@@ -3086,6 +3087,7 @@ const THEMED_LEAGUES = [
     name: "THE IRON WORKS",
     subtitle: "Steampunk Cricket · The Foundry",
     unlock: 20,
+    targetFloor: 40,
     entry: 300,
     winTrophy: 1, lossTrophy: 0,
     winCoins: 400, lossCoins: 50,
@@ -3176,6 +3178,7 @@ const THEMED_LEAGUES = [
     name: "THE LOST TEMPLE",
     subtitle: "Jungle Cricket · Ancient Ruins",
     unlock: 50,
+    targetFloor: 60,
     entry: 600,
     winTrophy: 2, lossTrophy: 0,
     winCoins: 800, lossCoins: 80,
@@ -3269,6 +3272,7 @@ const THEMED_LEAGUES = [
     name: "THE FROZEN NORTH",
     subtitle: "Arctic Cricket · The Ice Ground",
     unlock: 100,
+    targetFloor: 80,
     entry: 1000,
     winTrophy: 2, lossTrophy: 1,
     winCoins: 1300, lossCoins: 100,
@@ -3357,6 +3361,7 @@ const THEMED_LEAGUES = [
     name: "THE DESERT CUP",
     subtitle: "Arabian Cricket · Sand & Stars",
     unlock: 180,
+    targetFloor: 105,
     entry: 1800,
     winTrophy: 2, lossTrophy: 1,
     winCoins: 2200, lossCoins: 150,
@@ -3453,6 +3458,7 @@ const THEMED_LEAGUES = [
     name: "THE MIDNIGHT LEAGUE",
     subtitle: "Gothic Cricket · The Dark Oval",
     unlock: 280,
+    targetFloor: 135,
     entry: 3000,
     winTrophy: 2, lossTrophy: 1,
     winCoins: 3800, lossCoins: 200,
@@ -3541,6 +3547,7 @@ const THEMED_LEAGUES = [
     name: "THE SKY ARENA",
     subtitle: "Galactic Cricket · Above The Clouds",
     unlock: 400,
+    targetFloor: 170,
     entry: 5000,
     winTrophy: 3, lossTrophy: 2,
     winCoins: 6000, lossCoins: 300,
@@ -3693,6 +3700,10 @@ function renderLeagueScreen() {
           <div class="spVal" style="color:#ff6666">${lg.lossTrophy > 0 ? '-'+lg.lossTrophy+'🏆' : '0🏆'} +${lg.lossCoins}🪙</div>
         </div>
         <div class="leagueStatPill">
+          <div class="spLabel">MIN TARGET</div>
+          <div class="spVal" style="color:#aaa">${lg.targetFloor} RUNS</div>
+        </div>
+        <div class="leagueStatPill">
           <div class="spLabel">REWARD</div>
           <div class="spVal" style="color:#f4d03f">${lg.winChest.toUpperCase()}</div>
         </div>
@@ -3736,6 +3747,8 @@ function renderLeagueScreen() {
       saveCareerStats();
       // Store active league for result handling
       window._activeLeagueIdx = parseInt(btn.dataset.idx);
+      // Apply target floor: if league minimum is higher than current target, use the floor
+      window._leagueTargetFloor = lg.targetFloor || 0;
       leagueScreen.classList.add('hidden');
       // Start game
       startGame();
@@ -5812,14 +5825,20 @@ function endGame() {
   }
   hudBest.textContent = 'BEST: ' + best; if(menuBestVal) menuBestVal.textContent = best;
 
-  const beatTarget = runs >= target;
-  const beatBy = runs - target;
+  // Apply league target floor: the effective target is max(personal target, league floor)
+  const leagueFloor = window._leagueTargetFloor || 0;
+  window._leagueTargetFloor = 0;
+  const effectiveTarget = Math.max(target, leagueFloor);
+
+  const beatTarget = runs >= effectiveTarget;
+  const beatBy = runs - effectiveTarget;
   const NEAR_MISS_MARGIN = 10;
   const nearMiss = !beatTarget && beatBy >= -NEAR_MISS_MARGIN;
   const isNewBest = runs > career.bestScore;
 
   if (beatTarget) {
-    target += TARGET_STEP;
+    // Only advance the personal target if the player beat it (not just the floor)
+    if (runs >= target) target += TARGET_STEP;
   } else if (nearMiss) {
     setTimeout(playNearMissSound, 400);
   }
@@ -5888,7 +5907,7 @@ function endGame() {
   }
 
   lastResult = {
-    runs, target, beatTarget, nearMiss,
+    runs, target: effectiveTarget, beatTarget, nearMiss,
     fours: thisRunFours, sixes: thisRunSixes,
     leaguePos: sortedLeagueTable().findIndex(t=>t.isPlayer) + 1,
     season: league.season,
@@ -5907,7 +5926,7 @@ function endGame() {
   showInterstitialIfDue();
 
   showResultScreen({
-    runs, target, beatTarget, nearMiss, isNewBest,
+    runs, target: effectiveTarget, beatTarget, nearMiss, isNewBest,
     fours: thisRunFours, sixes: thisRunSixes, balls: ballsBowled,
     coinsEarned, trophyDelta, trophyTotal: trophyState.count,
     earnedChestType, activeLg, newlyUnlocked,
@@ -7281,9 +7300,10 @@ function drawSceneScoreboard() {
 
   drawChip(lx, 'RUNS', String(runs), '#ffffff');
 
-  const runsLeft = Math.max(0, target - runs);
+  const displayTarget = Math.max(target, window._leagueTargetFloor || 0);
+  const runsLeft = Math.max(0, displayTarget - runs);
   const targetColor = runsLeft <= 10 ? '#e74c3c' : runsLeft <= 30 ? '#f4d03f' : '#39ff6a';
-  drawChip(rx, 'TARGET', String(target), targetColor);
+  drawChip(rx, 'TARGET', String(displayTarget), targetColor);
 
   // Slim energy bar spanning the full width of both chips, below them
   const ebY  = chipY + chipH + H * 0.006;
