@@ -5828,12 +5828,6 @@ function endGame() {
   // award coins
   const eco = getMatchEconomy();
   let coinsEarned;
-  if (beatTarget) {
-    coinsEarned = eco.prize;
-  } else {
-    const refundPct = Math.min(0.75, runs / (target * 1.2));
-    coinsEarned = Math.round(eco.entry * refundPct);
-  }
 
   // themed league rewards
   let trophyDelta = 0;
@@ -5844,9 +5838,15 @@ function endGame() {
     activeLg = THEMED_LEAGUES[activeLgIdx];
     trophyDelta = beatTarget ? activeLg.winTrophy : -activeLg.lossTrophy;
     const lgCoins = beatTarget ? activeLg.winCoins : activeLg.lossCoins;
+    // use the actual league entry fee for loss refund calculation
+    if (beatTarget) {
+      coinsEarned = lgCoins;
+    } else {
+      const refundPct = Math.min(0.75, runs / (target * 1.2));
+      coinsEarned = Math.round(activeLg.entry * refundPct) + activeLg.lossCoins;
+    }
     trophyState.count = Math.max(0, trophyState.count + trophyDelta);
     saveTrophies();
-    coinsEarned += lgCoins;
     if (beatTarget && activeLg.winChest) {
       const ci = chestSlots.indexOf(null);
       if (ci !== -1) {
@@ -5856,6 +5856,14 @@ function endGame() {
       }
     }
     window._activeLeagueIdx = null;
+  } else {
+    // no active league — fall back to old economy-based coins
+    if (beatTarget) {
+      coinsEarned = eco.prize;
+    } else {
+      const refundPct = Math.min(0.75, runs / (target * 1.2));
+      coinsEarned = Math.round(eco.entry * refundPct);
+    }
   }
 
   career.coins += coinsEarned;
