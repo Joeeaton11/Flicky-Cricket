@@ -8027,63 +8027,74 @@ function sceneLabelColor() {
 }
 
 function drawSceneScoreboard() {
-  // Two pill chips: RUNS (left) and TARGET (right), separated by a divider
-  const chipH = H * 0.048;
-  const chipW = W * 0.38;
-  const gap   = W * 0.03;
-  const totalW = chipW * 2 + gap;
-  const chipY  = H * 0.014;
-  const lx = W / 2 - totalW / 2;
-  const rx = lx + chipW + gap;
-  const r  = chipH / 2; // corner radius
-
-  function drawChip(x, label, value, valColor) {
-    // shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath(); ctx.roundRect(x+2, chipY+2, chipW, chipH, r); ctx.fill();
-    // background
-    ctx.fillStyle = 'rgba(10,10,18,0.82)';
-    ctx.beginPath(); ctx.roundRect(x, chipY, chipW, chipH, r); ctx.fill();
-    // border
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.roundRect(x, chipY, chipW, chipH, r); ctx.stroke();
-    // label
-    const labelSize = Math.max(8, chipH * 0.28);
-    ctx.fillStyle = sceneLabelColor();
-    ctx.font = sceneFont(labelSize, false);
-    ctx.textAlign = 'center';
-    ctx.fillText(label, x + chipW / 2, chipY + chipH * 0.38);
-    // value
-    const valSize = Math.max(12, chipH * 0.46);
-    ctx.fillStyle = valColor;
-    ctx.font = sceneFont(valSize, true);
-    ctx.fillText(value, x + chipW / 2, chipY + chipH * 0.82);
-    ctx.textAlign = 'left';
-  }
-
-  drawChip(lx, 'RUNS', String(runs), '#ffffff');
+  // Rounded scoreboard panel — dark green shell with gold border, two equal halves
+  const bW  = W * 0.82;
+  const bH  = H * 0.072;
+  const bX  = (W - bW) / 2;
+  const bY  = H * 0.010;
+  const br  = bH * 0.28; // corner radius
 
   const displayTarget = Math.max(target, window._leagueTargetFloor || 0);
   const runsLeft = Math.max(0, displayTarget - runs);
-  const targetColor = runsLeft <= 10 ? '#e74c3c' : runsLeft <= 30 ? '#f4d03f' : '#39ff6a';
-  drawChip(rx, 'TARGET', String(displayTarget), targetColor);
 
-  // Slim energy bar spanning the full width of both chips, below them
-  const ebY  = chipY + chipH + H * 0.006;
-  const ebH  = Math.max(4, H * 0.007);
-  const ebW  = totalW;
-  const ebX  = lx;
-  const pct  = Math.max(0, Math.min(1, energy / MAX_ENERGY));
+  // drop shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.beginPath(); ctx.roundRect(bX+3, bY+4, bW, bH, br); ctx.fill();
+
+  // board body
+  const bg = ctx.createLinearGradient(bX, bY, bX, bY+bH);
+  bg.addColorStop(0, '#0a2010'); bg.addColorStop(1, '#051208');
+  ctx.fillStyle = bg;
+  ctx.beginPath(); ctx.roundRect(bX, bY, bW, bH, br); ctx.fill();
+
+  // left half tint
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(bX, bY, bW/2, bH, [br, 0, 0, br]); ctx.clip();
+  ctx.fillStyle = 'rgba(0,255,100,0.04)'; ctx.fillRect(bX, bY, bW/2, bH);
+  ctx.restore();
+
+  // right half tint
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(bX+bW/2, bY, bW/2, bH, [0, br, br, 0]); ctx.clip();
+  ctx.fillStyle = 'rgba(255,180,0,0.04)'; ctx.fillRect(bX+bW/2, bY, bW/2, bH);
+  ctx.restore();
+
+  // gold border
+  ctx.strokeStyle = '#DDAA00'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(bX+0.75, bY+0.75, bW-1.5, bH-1.5, br); ctx.stroke();
+
+  // centre divider
+  ctx.fillStyle = 'rgba(200,150,0,0.3)'; ctx.fillRect(bX+bW/2-0.5, bY+bH*0.12, 1, bH*0.76);
+
+  ctx.textAlign = 'center';
+
+  // RUNS — large white number
+  const labelSz = Math.max(8, bH * 0.22);
+  const runsSz  = Math.max(18, bH * 0.54);
+  ctx.fillStyle = 'rgba(0,255,100,0.55)'; ctx.font = `bold ${labelSz}px monospace`;
+  ctx.fillText('RUNS', bX + bW*0.25, bY + bH*0.30);
+  ctx.fillStyle = '#ffffff'; ctx.font = `900 ${runsSz}px sans-serif`;
+  ctx.fillText(String(runs), bX + bW*0.25, bY + bH*0.88);
+
+  // TARGET — amber, slightly smaller
+  const tgtSz = Math.max(14, bH * 0.44);
+  const tgtColor = runsLeft <= 10 ? '#ff4444' : runsLeft <= 30 ? '#f4d03f' : '#FFD700';
+  ctx.fillStyle = 'rgba(255,200,0,0.55)'; ctx.font = `bold ${labelSz}px monospace`;
+  ctx.fillText('TARGET', bX + bW*0.75, bY + bH*0.30);
+  ctx.fillStyle = tgtColor; ctx.font = `900 ${tgtSz}px sans-serif`;
+  ctx.fillText(String(displayTarget), bX + bW*0.75, bY + bH*0.88);
+
+  ctx.textAlign = 'left';
+
+  // Energy bar — slim strip below the board
+  const ebY = bY + bH + H * 0.005;
+  const ebH = Math.max(3, H * 0.006);
+  const pct = Math.max(0, Math.min(1, energy / MAX_ENERGY));
   const barColor = pct > 0.6 ? '#39ff6a' : pct > ENERGY_LOW_THRESHOLD / MAX_ENERGY ? '#f4d03f' : '#e74c3c';
-
-  // track
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.beginPath(); ctx.roundRect(ebX, ebY, ebW, ebH, ebH/2); ctx.fill();
-  // fill
-  if (pct > 0.01) {
-    ctx.fillStyle = barColor;
-    ctx.beginPath(); ctx.roundRect(ebX, ebY, ebW * pct, ebH, ebH/2); ctx.fill();
-  }
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(bX, ebY, bW, ebH);
+  if (pct > 0.01) { ctx.fillStyle = barColor; ctx.fillRect(bX, ebY, bW*pct, ebH); }
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 0.5;
+  ctx.strokeRect(bX, ebY, bW, ebH);
 }
 
 function drawGroundRings(colorA, colorB, horizonBlend) {
