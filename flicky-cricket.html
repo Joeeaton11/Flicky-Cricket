@@ -8027,7 +8027,34 @@ function sceneLabelColor() {
 }
 
 function drawSceneScoreboard() {
-  // Rounded scoreboard panel — dark green shell with gold border, two equal halves
+  // Per-scene scoreboard themes: [boardBg0, boardBg1, border, runsLabel, runsVal, targetLabel, targetVal, leftTint, rightTint]
+  const BOARD_THEMES = {
+    day:          ['#0a2010','#051208','#DDAA00','rgba(0,255,100,0.55)','#ffffff','rgba(255,200,0,0.55)','#FFD700','rgba(0,255,100,0.04)','rgba(255,180,0,0.04)'],
+    evening:      ['#1a0e06','#0d0703','#c87828','rgba(255,180,80,0.55)','#ffffff','rgba(255,140,0,0.55)','#ffaa44','rgba(255,140,60,0.06)','rgba(255,100,0,0.06)'],
+    night:        ['#06091a','#030510','#4466cc','rgba(140,180,255,0.55)','#ddeeff','rgba(80,160,255,0.55)','#88bbff','rgba(60,100,255,0.05)','rgba(40,80,220,0.05)'],
+    beach:        ['#04181c','#020e12','#00b8d4','rgba(0,220,200,0.55)','#ffffff','rgba(255,210,0,0.55)','#ffe066','rgba(0,200,180,0.05)','rgba(255,200,0,0.05)'],
+    moon:         ['#04060f','#020308','#7799cc','rgba(160,200,255,0.5)','#e8f0ff','rgba(100,180,255,0.5)','#aaccff','rgba(80,120,200,0.05)','rgba(60,100,180,0.05)'],
+    pirate:       ['#1a0e04','#0e0802','#b8860b','rgba(220,170,60,0.55)','#ffe8a0','rgba(200,140,40,0.55)','#ffcc44','rgba(180,120,20,0.06)','rgba(140,90,10,0.06)'],
+    arctic:       ['#04101a','#020810','#88ccee','rgba(160,220,255,0.55)','#ffffff','rgba(120,200,255,0.55)','#aaddff','rgba(80,180,255,0.05)','rgba(60,160,240,0.05)'],
+    jungle:       ['#041408','#020a04','#44cc44','rgba(80,220,80,0.55)','#aaffaa','rgba(180,255,60,0.55)','#ccff44','rgba(40,200,40,0.05)','rgba(160,255,0,0.05)'],
+    westwild:     ['#1a0e04','#0e0802','#cc6622','rgba(255,160,80,0.55)','#ffe8cc','rgba(255,120,40,0.55)','#ff9944','rgba(200,100,40,0.06)','rgba(160,70,20,0.06)'],
+    volcano:      ['#120404','#080202','#ff4400','rgba(255,100,40,0.6)','#ffaa88','rgba(255,60,0,0.6)','#ff6622','rgba(255,80,20,0.06)','rgba(200,40,0,0.06)'],
+    cyberpunk:    ['#060412','#030208','#00ffe0','rgba(0,255,224,0.6)','#00ffe0','rgba(255,0,200,0.6)','#ff44cc','rgba(0,255,200,0.06)','rgba(200,0,180,0.06)'],
+    carnival:     ['#140820','#0a0414','#ff44cc','rgba(255,100,200,0.6)','#ffaaee','rgba(255,220,0,0.6)','#ffee44','rgba(255,60,180,0.06)','rgba(255,200,0,0.06)'],
+    halloween:    ['#0a0408','#050204','#ff6600','rgba(255,120,0,0.6)','#ffaa44','rgba(180,0,255,0.55)','#cc66ff','rgba(255,80,0,0.06)','rgba(140,0,200,0.06)'],
+    reef:         ['#030c18','#010810','#ff6644','rgba(255,140,100,0.55)','#ffffff','rgba(255,100,60,0.55)','#ff8866','rgba(255,120,80,0.05)','rgba(200,80,40,0.05)'],
+    desert:       ['#1a0e04','#0e0802','#cc7733','rgba(255,180,80,0.55)','#fff0cc','rgba(220,120,40,0.55)','#ffaa55','rgba(200,140,40,0.06)','rgba(160,80,20,0.06)'],
+    christmas:    ['#04081a','#020510','#cc2222','rgba(255,80,80,0.6)','#ffffff','rgba(255,60,60,0.6)','#ff4444','rgba(200,20,20,0.06)','rgba(255,180,0,0.05)'],
+    steampunk:    ['#140e04','#0a0802','#b87a30','rgba(220,160,80,0.55)','#f0d090','rgba(180,120,50,0.55)','#d4a060','rgba(180,120,40,0.06)','rgba(140,90,20,0.06)'],
+    construction: ['#0c0c04','#080804','#f0a020','rgba(255,200,40,0.6)','#ffee88','rgba(255,140,0,0.6)','#ff9900','rgba(220,160,0,0.06)','rgba(200,100,0,0.06)'],
+    medieval:     ['#080c08','#040804','#cc9900','rgba(220,180,60,0.55)','#fff0cc','rgba(200,40,40,0.55)','#ff6666','rgba(180,140,20,0.06)','rgba(180,20,20,0.06)'],
+    mars:         ['#180604','#0c0402','#cc2200','rgba(255,100,60,0.6)','#ffaa88','rgba(200,60,20,0.6)','#ff6644','rgba(200,60,20,0.06)','rgba(160,40,10,0.06)'],
+  };
+  const key = (currentTimeOfDay && currentTimeOfDay.key) || 'day';
+  const th = BOARD_THEMES[key] || BOARD_THEMES.day;
+  const [bg0,bg1,border,runsLabelCol,runsValCol,tgtLabelCol,tgtValCol,leftTint,rightTint] = th;
+
+  // Rounded scoreboard panel
   const bW  = W * 0.82;
   const bH  = H * 0.072;
   const bX  = (W - bW) / 2;
@@ -8042,44 +8069,45 @@ function drawSceneScoreboard() {
   ctx.beginPath(); ctx.roundRect(bX+3, bY+4, bW, bH, br); ctx.fill();
 
   // board body
-  const bg = ctx.createLinearGradient(bX, bY, bX, bY+bH);
-  bg.addColorStop(0, '#0a2010'); bg.addColorStop(1, '#051208');
-  ctx.fillStyle = bg;
+  const boardGrad = ctx.createLinearGradient(bX, bY, bX, bY+bH);
+  boardGrad.addColorStop(0, bg0); boardGrad.addColorStop(1, bg1);
+  ctx.fillStyle = boardGrad;
   ctx.beginPath(); ctx.roundRect(bX, bY, bW, bH, br); ctx.fill();
 
   // left half tint
   ctx.save();
   ctx.beginPath(); ctx.roundRect(bX, bY, bW/2, bH, [br, 0, 0, br]); ctx.clip();
-  ctx.fillStyle = 'rgba(0,255,100,0.04)'; ctx.fillRect(bX, bY, bW/2, bH);
+  ctx.fillStyle = leftTint; ctx.fillRect(bX, bY, bW/2, bH);
   ctx.restore();
 
   // right half tint
   ctx.save();
   ctx.beginPath(); ctx.roundRect(bX+bW/2, bY, bW/2, bH, [0, br, br, 0]); ctx.clip();
-  ctx.fillStyle = 'rgba(255,180,0,0.04)'; ctx.fillRect(bX+bW/2, bY, bW/2, bH);
+  ctx.fillStyle = rightTint; ctx.fillRect(bX+bW/2, bY, bW/2, bH);
   ctx.restore();
 
-  // gold border
-  ctx.strokeStyle = '#DDAA00'; ctx.lineWidth = 1.5;
+  // themed border
+  ctx.strokeStyle = border; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.roundRect(bX+0.75, bY+0.75, bW-1.5, bH-1.5, br); ctx.stroke();
 
-  // centre divider
-  ctx.fillStyle = 'rgba(200,150,0,0.3)'; ctx.fillRect(bX+bW/2-0.5, bY+bH*0.12, 1, bH*0.76);
+  // centre divider (same hue as border, dimmed)
+  ctx.fillStyle = border.replace(')',',0.3)').replace('#','rgba(0,0,0,0.3)');
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(bX+bW/2-0.5, bY+bH*0.12, 1, bH*0.76);
 
   ctx.textAlign = 'center';
 
-  // RUNS — large white number
+  // RUNS
   const labelSz = Math.max(8, bH * 0.22);
   const runsSz  = Math.max(18, bH * 0.54);
-  ctx.fillStyle = 'rgba(0,255,100,0.55)'; ctx.font = `bold ${labelSz}px monospace`;
+  ctx.fillStyle = runsLabelCol; ctx.font = `bold ${labelSz}px monospace`;
   ctx.fillText('RUNS', bX + bW*0.25, bY + bH*0.30);
-  ctx.fillStyle = '#ffffff'; ctx.font = `900 ${runsSz}px sans-serif`;
+  ctx.fillStyle = runsValCol; ctx.font = `900 ${runsSz}px sans-serif`;
   ctx.fillText(String(runs), bX + bW*0.25, bY + bH*0.88);
 
-  // TARGET — amber, slightly smaller
+  // TARGET — urgent colour override when close
   const tgtSz = Math.max(14, bH * 0.44);
-  const tgtColor = runsLeft <= 10 ? '#ff4444' : runsLeft <= 30 ? '#f4d03f' : '#FFD700';
-  ctx.fillStyle = 'rgba(255,200,0,0.55)'; ctx.font = `bold ${labelSz}px monospace`;
+  const tgtColor = runsLeft <= 10 ? '#ff4444' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
+  ctx.fillStyle = tgtLabelCol; ctx.font = `bold ${labelSz}px monospace`;
   ctx.fillText('TARGET', bX + bW*0.75, bY + bH*0.30);
   ctx.fillStyle = tgtColor; ctx.font = `900 ${tgtSz}px sans-serif`;
   ctx.fillText(String(displayTarget), bX + bW*0.75, bY + bH*0.88);
