@@ -13411,45 +13411,81 @@ function _refreshBatsmanSprite() {
   if (_batsmanSpriteKey === key) return;
   _batsmanSpriteKey = key;
 
-  const padColor = '#f5f0e6';
-  // Darken a hex color by `n` per channel for the helmet peak
+  const padColor = '#f0ece0';
   const dk = (hex,n) => '#'+[1,3,5].map(i=>Math.max(0,parseInt(hex.slice(i,i+2),16)-n).toString(16).padStart(2,'0')).join('');
-  const hatDark = dk(hat, 45);
+  const hatDark = dk(hat, 50);
 
-  // SVG viewBox 0 0 80 130 — 3/4 behind view, LH batter
-  // Back leg (right/leg-side) lower-right; front leg (left/off-side) upper-left.
-  const svg = `<svg viewBox="0 0 80 130" xmlns="http://www.w3.org/2000/svg">
-  <ellipse cx="42" cy="127" rx="30" ry="5.5" fill="rgba(0,0,0,0.28)"/>
-  <ellipse cx="53" cy="123" rx="13" ry="4.5" fill="${boots}" transform="rotate(9,53,123)"/>
-  <rect x="46" y="91" width="15" height="33" rx="6" fill="${padColor}" transform="rotate(9,53,107)"/>
-  <line x1="46" y1="98" x2="61" y2="96" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(9,53,107)"/>
-  <line x1="46" y1="106" x2="61" y2="104" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(9,53,107)"/>
-  <line x1="46" y1="114" x2="61" y2="112" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(9,53,107)"/>
-  <rect x="46" y="78" width="15" height="15" rx="3" fill="${trousers}" transform="rotate(9,53,85)"/>
-  <rect x="25" y="51" width="10" height="26" rx="4" fill="${body}" transform="rotate(-12,30,64)"/>
-  <ellipse cx="25" cy="79" rx="8" ry="5.5" fill="${gloveColor}" transform="rotate(-12,25,79)"/>
-  <path d="M34,41 L60,41 L63,83 L32,83 Z" fill="${body}"/>
-  <rect x="57" y="41" width="5" height="42" rx="1" fill="rgba(255,255,255,0.11)"/>
-  <rect x="34" y="41" width="4" height="42" rx="1" fill="rgba(0,0,0,0.10)"/>
-  <rect x="34" y="50" width="29" height="6" rx="2" fill="rgba(255,255,255,0.16)"/>
-  <rect x="59" y="54" width="10" height="22" rx="4" fill="${body}"/>
-  <ellipse cx="30" cy="113" rx="11" ry="4" fill="${boots}" transform="rotate(-9,30,113)"/>
-  <rect x="23" y="78" width="14" height="36" rx="6" fill="${padColor}" transform="rotate(-9,30,96)"/>
-  <line x1="23" y1="85" x2="37" y2="83" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(-9,30,96)"/>
-  <line x1="23" y1="93" x2="37" y2="91" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(-9,30,96)"/>
-  <line x1="23" y1="101" x2="37" y2="99" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(-9,30,96)"/>
-  <line x1="23" y1="109" x2="37" y2="107" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(-9,30,96)"/>
-  <rect x="23" y="66" width="14" height="14" rx="3" fill="${trousers}" transform="rotate(-9,30,73)"/>
-  <ellipse cx="48" cy="38" rx="5.5" ry="7" fill="${face}"/>
-  <ellipse cx="49" cy="27" rx="11" ry="12" fill="${face}"/>
-  <path d="M38,27 Q39,8 49,6 Q60,8 61,27 Q56,22 49,21 Q42,22 38,27Z" fill="${hat}"/>
-  <rect x="38" y="24" width="23" height="10" rx="3" fill="${hat}"/>
-  <path d="M38,26 L17,33 L38,39Z" fill="${hatDark}"/>
-  <ellipse cx="61" cy="30" rx="5.5" ry="9" fill="${hat}"/>
-  <path d="M38,27 Q39,8 49,6 Q60,8 61,27" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
-  <line x1="27" y1="33" x2="24" y2="42" stroke="rgba(15,15,15,0.65)" stroke-width="1.6" stroke-linecap="round"/>
-  <line x1="31" y1="32" x2="28" y2="41" stroke="rgba(15,15,15,0.65)" stroke-width="1.6" stroke-linecap="round"/>
-  <line x1="35" y1="32" x2="32" y2="41" stroke="rgba(15,15,15,0.65)" stroke-width="1.6" stroke-linecap="round"/>
+  // viewBox 0 0 72 132
+  // 3/4 rear view — we see the BACK of the player.
+  // BACK leg (right/leg-side): x≈50, boot y≈124  — nearer camera, lower on screen
+  // FRONT leg (left/off-side): x≈20, boot y≈106  — further from camera, higher on screen
+  // Body: narrow side-on silhouette, centred ~x=38
+  // Front arm extends RIGHT toward bat (bat drawn on canvas)
+  // Back arm hangs LEFT (leg side)
+  // Helmet: dome viewed from behind, peak juts LEFT, ear guard RIGHT
+  const svg = `<svg viewBox="0 0 72 132" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- shadow -->
+  <ellipse cx="36" cy="129" rx="28" ry="5.5" fill="rgba(0,0,0,0.32)"/>
+
+  <!-- ── BACK LEG  (right side, y-base≈124, nearer camera) ── -->
+  <ellipse cx="50" cy="124" rx="13" ry="4.5" fill="${boots}" transform="rotate(10 50 124)"/>
+  <rect x="43" y="91" width="15" height="34" rx="6" fill="${padColor}" transform="rotate(8 50 108)"/>
+  <line x1="43" y1="99"  x2="58" y2="97"  stroke="rgba(0,0,0,0.17)" stroke-width="1" transform="rotate(8 50 108)"/>
+  <line x1="43" y1="107" x2="58" y2="105" stroke="rgba(0,0,0,0.17)" stroke-width="1" transform="rotate(8 50 108)"/>
+  <line x1="43" y1="115" x2="58" y2="113" stroke="rgba(0,0,0,0.17)" stroke-width="1" transform="rotate(8 50 108)"/>
+  <rect x="43" y="79"  width="15" height="14" rx="3" fill="${trousers}" transform="rotate(8 50 86)"/>
+
+  <!-- ── TORSO ── -->
+  <!-- back arm (left arm, leg-side) — left of view -->
+  <rect x="14" y="48" width="10" height="22" rx="4" fill="${body}" transform="rotate(-14 19 59)"/>
+  <ellipse cx="13" cy="72" rx="9" ry="5.5" fill="${gloveColor}" transform="rotate(-14 13 72)"/>
+
+  <!-- jersey — narrow side-on silhouette, we see the BACK -->
+  <path d="M28,40 L54,40 L57,80 L25,80 Z" fill="${body}"/>
+  <!-- spine seam (shows it is the back of the jersey) -->
+  <rect x="39" y="40" width="2.5" height="40" fill="rgba(255,255,255,0.09)"/>
+  <!-- camera-side edge highlight -->
+  <rect x="52" y="40" width="4"   height="40" rx="1" fill="rgba(255,255,255,0.14)"/>
+  <!-- far-side shadow -->
+  <rect x="28" y="40" width="4"   height="40" rx="1" fill="rgba(0,0,0,0.13)"/>
+  <!-- shoulder collar band -->
+  <rect x="28" y="40" width="29"  height="6"  rx="2" fill="rgba(255,255,255,0.17)"/>
+
+  <!-- front arm (right arm, off-side) — right of view, reaches bat -->
+  <rect x="55" y="52" width="10" height="22" rx="4" fill="${body}" transform="rotate(12 60 63)"/>
+
+  <!-- ── FRONT LEG  (left side, y-base≈106, further from camera) ── -->
+  <ellipse cx="20" cy="106" rx="11" ry="3.8" fill="${boots}" transform="rotate(-9 20 106)"/>
+  <rect x="14" y="73" width="13" height="34" rx="6" fill="${padColor}" transform="rotate(-7 20 90)"/>
+  <line x1="14" y1="81"  x2="27" y2="79"  stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(-7 20 90)"/>
+  <line x1="14" y1="89"  x2="27" y2="87"  stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(-7 20 90)"/>
+  <line x1="14" y1="97"  x2="27" y2="95"  stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(-7 20 90)"/>
+  <line x1="14" y1="105" x2="27" y2="103" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(-7 20 90)"/>
+  <rect x="14" y="61"  width="13" height="14" rx="3" fill="${trousers}" transform="rotate(-7 20 68)"/>
+
+  <!-- ── NECK + HEAD ── -->
+  <!-- neck — only back portion visible -->
+  <ellipse cx="41" cy="37" rx="5" ry="6.5" fill="${face}"/>
+  <!-- back of skull -->
+  <ellipse cx="41" cy="24" rx="11" ry="12.5" fill="${face}"/>
+
+  <!-- ── HELMET (viewed from behind — dome, peak LEFT, ear guard RIGHT) ── -->
+  <!-- dome covers skull top -->
+  <path d="M30,24 Q30,5 41,3 Q52,5 53,24 Q49,18 41,17 Q33,18 30,24Z" fill="${hat}"/>
+  <!-- rim band across forehead -->
+  <rect x="30" y="21" width="23" height="10" rx="3" fill="${hat}"/>
+  <!-- peak — juts hard LEFT (off-side, toward bowler) -->
+  <path d="M30,22 L8,30 L30,36Z" fill="${hatDark}"/>
+  <!-- ear guard — right side, large and prominent from 3/4 behind -->
+  <ellipse cx="53" cy="26" rx="6" ry="9.5" fill="${hat}"/>
+  <!-- helmet shine arc -->
+  <path d="M30,24 Q30,5 41,3 Q52,5 53,24" fill="none" stroke="rgba(255,255,255,0.24)" stroke-width="1.5"/>
+  <!-- face-guard grille bars (hang from peak, faintly visible from behind) -->
+  <line x1="17" y1="29" x2="14" y2="40" stroke="rgba(5,5,5,0.65)" stroke-width="1.7" stroke-linecap="round"/>
+  <line x1="21" y1="28" x2="18" y2="39" stroke="rgba(5,5,5,0.65)" stroke-width="1.7" stroke-linecap="round"/>
+  <line x1="25" y1="27" x2="22" y2="38" stroke="rgba(5,5,5,0.65)" stroke-width="1.7" stroke-linecap="round"/>
+
 </svg>`;
 
   const img = new Image();
@@ -13469,19 +13505,19 @@ function drawBatsman() {
 
   // ── BODY: SVG sprite ──
   _refreshBatsmanSprite();
-  // SVG viewBox 80×130, drawn at 1.35× → 108×175.5px
-  // Sprite foot level is at SVG y≈126; map that to canvas `by`
-  const spW = 108, spH = 175;
-  const spX = bx - 51; // slight right-offset so bat side is visible
-  const spY = by - 170;
+  // SVG viewBox 0 0 72 132, drawn at ~1.25× → 90×165px
+  // Back boot is at SVG y=124 → canvas offset 155px from sprite top → spY = by-155
+  const spW = 90, spH = 165;
+  const spX = bx - 46;
+  const spY = by - 155;
   if (_batsmanSprite && _batsmanSprite.complete && _batsmanSprite.naturalWidth > 0) {
     ctx.drawImage(_batsmanSprite, spX, spY, spW, spH);
   }
 
   // ── BAT + FRONT GLOVES (animated on canvas over the sprite) ──
-  // Bat pivot maps to SVG front-arm hand position (SVG ~x=67,y=73) scaled to canvas
-  const batPX = spX + (67 / 80) * spW;
-  const batPY = spY + (73 / 130) * spH;
+  // Bat pivot: SVG front-arm end ≈ x=65,y=74 → scaled to canvas
+  const batPX = spX + (65 / 72) * spW;
+  const batPY = spY + (74 / 132) * spH;
   ctx.save();
   ctx.translate(batPX, batPY);
   ctx.rotate(batAngle);
