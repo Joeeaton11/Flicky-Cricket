@@ -13397,124 +13397,194 @@ function drawFielder(x,y,chasing,diving) {
 }
 
 function drawBatsman() {
+  // 3/4 view from behind: back leg (right/leg-side) is nearer camera = lower Y.
+  // Front leg (left/off-side) steps toward bowler = higher up screen = smaller Y.
   const bx = W/2;
   const by = PITCH_BOTTOM() - 4;
-  const s = 0.78; // scale factor for zoomed-out field view
+  const s = 1.05;
 
-  const hat = CUSTOM_CATEGORIES[0].colors[playerCustom.hat];
-  const face = CUSTOM_CATEGORIES[1].colors[playerCustom.face];
-  const body = CUSTOM_CATEGORIES[2].colors[playerCustom.body];
+  const hat        = CUSTOM_CATEGORIES[0].colors[playerCustom.hat];
+  const face       = CUSTOM_CATEGORIES[1].colors[playerCustom.face];
+  const body       = CUSTOM_CATEGORIES[2].colors[playerCustom.body];
   const gloveColor = CUSTOM_CATEGORIES[3].colors[playerCustom.hands];
-  const trousers = CUSTOM_CATEGORIES[4].colors[playerCustom.trousers];
-  const boots = CUSTOM_CATEGORIES[5].colors[playerCustom.boots];
-  const padColor = '#f5f0e6'; // cricket pads are traditionally white/cream
+  const trousers   = CUSTOM_CATEGORIES[4].colors[playerCustom.trousers];
+  const boots      = CUSTOM_CATEGORIES[5].colors[playerCustom.boots];
+  const padColor   = '#f5f0e6';
 
-  // shadow under the batsman
-  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  let batAngle = 0.32;
+  if (touchStart) batAngle = 0.88;
+  if (state === 'hit') batAngle = -1.35;
+
+  // Key positions
+  const backX = bx + 9*s,  backY = by;          // back foot: nearer, lower
+  const frontX = bx - 7*s, frontY = by - 13*s;  // front foot: further, higher
+
+  // ── SHADOW ──
+  ctx.fillStyle = 'rgba(0,0,0,0.20)';
   ctx.beginPath();
-  ctx.ellipse(bx, by+2, 16*s, 4, 0, 0, Math.PI*2);
+  ctx.ellipse(bx + 2*s, by + 2, 22*s, 5*s, 0.12, 0, Math.PI*2);
   ctx.fill();
 
-  // boots (peeking out from under pads)
-  ctx.fillStyle = boots;
-  ctx.fillRect(bx-11*s, by-2, 9*s, 4);
-  ctx.fillRect(bx+2*s, by-2, 9*s, 4);
-
-  // pads (leg guards) - the classic cricket silhouette element
-  ctx.fillStyle = padColor;
-  ctx.fillRect(bx-12*s, by-20*s, 10*s, 19*s);
-  ctx.fillRect(bx+2*s, by-20*s, 10*s, 19*s);
-  // pad straps
-  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-  ctx.lineWidth = 1;
-  for (let i=0;i<3;i++) {
-    const py2 = by-17*s + i*5*s;
-    ctx.beginPath(); ctx.moveTo(bx-12*s, py2); ctx.lineTo(bx-2*s, py2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(bx+2*s, py2); ctx.lineTo(bx+12*s, py2); ctx.stroke();
-  }
-
-  // shorts/trousers hem above pads
-  ctx.fillStyle = trousers;
-  ctx.fillRect(bx-12*s, by-23*s, 10*s, 4*s);
-  ctx.fillRect(bx+2*s, by-23*s, 10*s, 4*s);
-
-  // body / jersey (slightly tapered torso)
-  ctx.fillStyle = body;
-  ctx.fillRect(bx-11*s, by-52*s, 22*s, 30*s);
-  // collar/placket trim
-  ctx.fillStyle = 'rgba(0,0,0,0.15)';
-  ctx.fillRect(bx-2*s, by-52*s, 4*s, 10*s);
-
-  // back arm (non-bat side), drawn behind torso
-  ctx.fillStyle = body;
-  ctx.fillRect(bx-15*s, by-50*s, 5*s, 16*s);
-  ctx.fillStyle = gloveColor;
-  ctx.fillRect(bx-16*s, by-36*s, 7*s, 6*s);
-
-  // neck + head
-  ctx.fillStyle = face;
-  ctx.fillRect(bx-3*s, by-58*s, 6*s, 6*s); // neck
-  ctx.beginPath();
-  ctx.arc(bx, by-64*s, 9*s, 0, Math.PI*2);
-  ctx.fill();
-
-  // helmet (shell + peak + grille hint)
-  ctx.fillStyle = hat;
-  ctx.beginPath();
-  ctx.arc(bx, by-66*s, 10.5*s, Math.PI, Math.PI*2);
-  ctx.fill();
-  ctx.fillRect(bx-10.5*s, by-66*s, 21*s, 5*s);
-  // peak
-  ctx.fillRect(bx-10.5*s, by-62*s, 9*s, 2.5*s);
-  // grille (a few vertical bars over the face)
-  ctx.strokeStyle = 'rgba(40,40,40,0.5)';
-  ctx.lineWidth = 1;
-  for (let i=-2;i<=2;i++) {
-    ctx.beginPath();
-    ctx.moveTo(bx + i*2.2*s, by-63*s);
-    ctx.lineTo(bx + i*2.2*s, by-56*s);
-    ctx.stroke();
-  }
-
-  // bat + front arm/glove (drawn last, in front of body)
+  // ── BACK BOOT ──
   ctx.save();
-  ctx.translate(bx+12*s, by-32*s);
-  let batAngle = 0.35;
-  if (state === 'hit') batAngle = -1.3;
-  if (touchStart) batAngle = 0.85;
-  ctx.rotate(batAngle);
+  ctx.translate(backX, backY);
+  ctx.rotate(0.18);
+  ctx.fillStyle = boots;
+  ctx.beginPath(); ctx.ellipse(0, 0, 10*s, 3.8*s, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
 
-  // bat handle + grip
-  ctx.fillStyle = '#3a2a1a';
-  ctx.fillRect(-2.5*s, -10*s, 5*s, 12*s);
-  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-  ctx.lineWidth = 1;
-  for (let i=0;i<4;i++) {
-    ctx.beginPath();
-    ctx.moveTo(-2.5*s, -9*s + i*2.5*s);
-    ctx.lineTo(2.5*s, -9*s + i*2.5*s);
-    ctx.stroke();
+  // ── BACK PAD + TROUSERS ──
+  ctx.save();
+  ctx.translate(backX - 1*s, backY - 13*s);
+  ctx.rotate(0.18);
+  ctx.fillStyle = padColor;
+  ctx.fillRect(-5.5*s, -16*s, 12*s, 18*s);
+  ctx.strokeStyle = 'rgba(0,0,0,0.14)'; ctx.lineWidth = 0.9;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath(); ctx.moveTo(-5.5*s, -12*s + i*5*s); ctx.lineTo(6.5*s, -12*s + i*5*s); ctx.stroke();
   }
-  // bat blade - tapered toward the toe, with a spine highlight
-  ctx.fillStyle = '#d9b178';
+  ctx.fillStyle = trousers;
+  ctx.fillRect(-5.5*s, -28*s, 12*s, 13*s);
+  ctx.restore();
+
+  // ── TORSO (side-on, we see the back) ──
+  ctx.save();
+  ctx.translate(bx + 1*s, by - 48*s);
+  ctx.rotate(-0.20);
+
+  // Back arm (left arm — right of our view, leg side)
+  ctx.fillStyle = body;
+  ctx.fillRect(-17*s, -4*s, 8*s, 22*s);
+  // Back glove
+  ctx.fillStyle = gloveColor;
+  ctx.beginPath(); ctx.ellipse(-14*s, 19*s, 7*s, 5*s, 0.22, 0, Math.PI*2); ctx.fill();
+
+  // Torso — trapezoidal, wider at top (shoulders), we see the back
+  ctx.fillStyle = body;
   ctx.beginPath();
-  ctx.moveTo(-5*s, 0);
-  ctx.lineTo(5*s, 0);
-  ctx.lineTo(4*s, 38*s);
-  ctx.lineTo(-4*s, 38*s);
+  ctx.moveTo(-13*s, -8*s);
+  ctx.lineTo(13*s,  -8*s);
+  ctx.lineTo(11*s,  26*s);
+  ctx.lineTo(-11*s, 26*s);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.fillRect(-1*s, 2*s, 2*s, 34*s); // spine highlight
+  // Kit highlight (camera-side edge)
+  ctx.fillStyle = 'rgba(255,255,255,0.13)';
+  ctx.fillRect(9*s, -8*s, 4*s, 34*s);
+  // Kit shadow (far side edge)
+  ctx.fillStyle = 'rgba(0,0,0,0.12)';
+  ctx.fillRect(-13*s, -8*s, 4*s, 34*s);
+  // Shoulder / collar line
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
+  ctx.fillRect(-13*s, -8*s, 26*s, 4*s);
 
-  // front glove gripping the handle
+  // Front arm (right arm — off-side, extends toward bat handle)
+  ctx.fillStyle = body;
+  ctx.fillRect(9*s, 2*s, 8*s, 20*s);
+
+  ctx.restore();
+
+  // ── FRONT BOOT ──
+  ctx.save();
+  ctx.translate(frontX, frontY);
+  ctx.rotate(-0.14);
+  ctx.fillStyle = boots;
+  ctx.beginPath(); ctx.ellipse(0, 0, 9*s, 3.4*s, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // ── FRONT PAD + TROUSERS ──
+  ctx.save();
+  ctx.translate(frontX, frontY - 12*s);
+  ctx.rotate(-0.12);
+  ctx.fillStyle = padColor;
+  ctx.fillRect(-5*s, -18*s, 11*s, 20*s);
+  ctx.strokeStyle = 'rgba(0,0,0,0.14)'; ctx.lineWidth = 0.9;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath(); ctx.moveTo(-5*s, -14*s + i*5*s); ctx.lineTo(6*s, -14*s + i*5*s); ctx.stroke();
+  }
+  ctx.fillStyle = trousers;
+  ctx.fillRect(-5*s, -30*s, 11*s, 13*s);
+  ctx.restore();
+
+  // ── NECK + HEAD ──
+  const hx = bx + 3*s, hy = by - 78*s;
+  ctx.fillStyle = face;
+  ctx.beginPath(); ctx.ellipse(hx, hy + 8*s, 5*s, 7*s, -0.12, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = face;
+  ctx.beginPath(); ctx.ellipse(hx, hy - 1*s, 10*s, 11*s, -0.12, 0, Math.PI*2); ctx.fill();
+
+  // ── HELMET ──
+  ctx.fillStyle = hat;
+  ctx.beginPath(); ctx.ellipse(hx, hy - 1*s, 12*s, 13*s, -0.12, Math.PI, Math.PI*2); ctx.fill();
+  ctx.fillRect(hx - 12*s, hy - 3*s, 24*s, 9*s);
+  // Peak (juts LEFT — off-side, toward bowler)
+  ctx.beginPath();
+  ctx.moveTo(hx - 12*s, hy - 1*s);
+  ctx.lineTo(hx - 24*s, hy + 5*s);
+  ctx.lineTo(hx - 12*s, hy + 7*s);
+  ctx.closePath();
+  ctx.fill();
+  // Ear guard (right side, prominent from 3/4 behind view)
+  ctx.beginPath(); ctx.ellipse(hx + 11*s, hy + 2*s, 5*s, 8*s, 0.28, 0, Math.PI*2); ctx.fill();
+  // Rim highlight
+  ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1.3;
+  ctx.beginPath(); ctx.ellipse(hx, hy - 1*s, 12*s, 13*s, -0.12, Math.PI, Math.PI*2); ctx.stroke();
+  // Grille bars (barely visible at front edge)
+  ctx.strokeStyle = 'rgba(20,20,20,0.55)'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(hx - 11*s + i*2.8*s, hy + 3*s);
+    ctx.lineTo(hx - 14*s + i*2.8*s, hy + 10*s);
+    ctx.stroke();
+  }
+  ctx.lineCap = 'butt';
+
+  // ── BAT + FRONT GLOVES ──
+  ctx.save();
+  ctx.translate(bx + 15*s, by - 34*s);
+  ctx.rotate(batAngle);
+
+  // Grip
+  ctx.fillStyle = '#251508';
+  ctx.fillRect(-3.5*s, -18*s, 7*s, 20*s);
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath(); ctx.moveTo(-3.5*s, -16*s + i*3.5*s); ctx.lineTo(3.5*s, -16*s + i*3.5*s); ctx.stroke();
+  }
+
+  // Blade back (willow edges)
+  ctx.fillStyle = '#b08030';
+  ctx.beginPath();
+  ctx.moveTo(-8*s, 0); ctx.lineTo(8*s, 0);
+  ctx.lineTo(7*s, 46*s); ctx.lineTo(-7*s, 46*s);
+  ctx.closePath(); ctx.fill();
+
+  // Blade face (lighter willow)
+  ctx.fillStyle = '#e8cc78';
+  ctx.beginPath();
+  ctx.moveTo(-6.5*s, 1*s); ctx.lineTo(6.5*s, 1*s);
+  ctx.lineTo(5.5*s, 45*s); ctx.lineTo(-5.5*s, 45*s);
+  ctx.closePath(); ctx.fill();
+
+  // Spine
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  ctx.fillRect(-2*s, 4*s, 4*s, 39*s);
+
+  // Toe
+  ctx.fillStyle = '#a07030';
+  ctx.fillRect(-7*s, 44*s, 14*s, 4*s);
+
+  // Sticker band
+  ctx.fillStyle = 'rgba(180,20,20,0.45)';
+  ctx.fillRect(-5.5*s, 18*s, 11*s, 4.5*s);
+
+  // Gloves
   ctx.fillStyle = gloveColor;
-  ctx.beginPath();
-  ctx.arc(0, -8*s, 5*s, 0, Math.PI*2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(1*s, -2*s, 4.5*s, 0, Math.PI*2);
-  ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, -12*s, 8*s, 6*s, 0.1, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, -4.5*s, 7*s, 5.5*s, 0.1, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.17)';
+  ctx.beginPath(); ctx.ellipse(-2.5*s, -13.5*s, 2.8*s, 2*s, -0.3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(2.5*s, -13.5*s, 2.8*s, 2*s, 0.3, 0, Math.PI*2); ctx.fill();
 
   ctx.restore();
 }
