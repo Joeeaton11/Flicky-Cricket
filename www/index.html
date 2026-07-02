@@ -13396,195 +13396,137 @@ function drawFielder(x,y,chasing,diving) {
   }
 }
 
-function drawBatsman() {
-  // 3/4 view from behind: back leg (right/leg-side) is nearer camera = lower Y.
-  // Front leg (left/off-side) steps toward bowler = higher up screen = smaller Y.
-  const bx = W/2;
-  const by = PITCH_BOTTOM() - 4;
-  const s = 1.05;
+// ── Batsman SVG sprite cache ─────────────────────────────────
+let _batsmanSprite = null;
+let _batsmanSpriteKey = null;
 
+function _refreshBatsmanSprite() {
   const hat        = CUSTOM_CATEGORIES[0].colors[playerCustom.hat];
   const face       = CUSTOM_CATEGORIES[1].colors[playerCustom.face];
   const body       = CUSTOM_CATEGORIES[2].colors[playerCustom.body];
   const gloveColor = CUSTOM_CATEGORIES[3].colors[playerCustom.hands];
   const trousers   = CUSTOM_CATEGORIES[4].colors[playerCustom.trousers];
   const boots      = CUSTOM_CATEGORIES[5].colors[playerCustom.boots];
-  const padColor   = '#f5f0e6';
+  const key = [hat,face,body,gloveColor,trousers,boots].join(',');
+  if (_batsmanSpriteKey === key) return;
+  _batsmanSpriteKey = key;
+
+  const padColor = '#f5f0e6';
+  // Darken a hex color by `n` per channel for the helmet peak
+  const dk = (hex,n) => '#'+[1,3,5].map(i=>Math.max(0,parseInt(hex.slice(i,i+2),16)-n).toString(16).padStart(2,'0')).join('');
+  const hatDark = dk(hat, 45);
+
+  // SVG viewBox 0 0 80 130 — 3/4 behind view, LH batter
+  // Back leg (right/leg-side) lower-right; front leg (left/off-side) upper-left.
+  const svg = `<svg viewBox="0 0 80 130" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="42" cy="127" rx="30" ry="5.5" fill="rgba(0,0,0,0.28)"/>
+  <ellipse cx="53" cy="123" rx="13" ry="4.5" fill="${boots}" transform="rotate(9,53,123)"/>
+  <rect x="46" y="91" width="15" height="33" rx="6" fill="${padColor}" transform="rotate(9,53,107)"/>
+  <line x1="46" y1="98" x2="61" y2="96" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(9,53,107)"/>
+  <line x1="46" y1="106" x2="61" y2="104" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(9,53,107)"/>
+  <line x1="46" y1="114" x2="61" y2="112" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(9,53,107)"/>
+  <rect x="46" y="78" width="15" height="15" rx="3" fill="${trousers}" transform="rotate(9,53,85)"/>
+  <rect x="25" y="51" width="10" height="26" rx="4" fill="${body}" transform="rotate(-12,30,64)"/>
+  <ellipse cx="25" cy="79" rx="8" ry="5.5" fill="${gloveColor}" transform="rotate(-12,25,79)"/>
+  <path d="M34,41 L60,41 L63,83 L32,83 Z" fill="${body}"/>
+  <rect x="57" y="41" width="5" height="42" rx="1" fill="rgba(255,255,255,0.11)"/>
+  <rect x="34" y="41" width="4" height="42" rx="1" fill="rgba(0,0,0,0.10)"/>
+  <rect x="34" y="50" width="29" height="6" rx="2" fill="rgba(255,255,255,0.16)"/>
+  <rect x="59" y="54" width="10" height="22" rx="4" fill="${body}"/>
+  <ellipse cx="30" cy="113" rx="11" ry="4" fill="${boots}" transform="rotate(-9,30,113)"/>
+  <rect x="23" y="78" width="14" height="36" rx="6" fill="${padColor}" transform="rotate(-9,30,96)"/>
+  <line x1="23" y1="85" x2="37" y2="83" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(-9,30,96)"/>
+  <line x1="23" y1="93" x2="37" y2="91" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(-9,30,96)"/>
+  <line x1="23" y1="101" x2="37" y2="99" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(-9,30,96)"/>
+  <line x1="23" y1="109" x2="37" y2="107" stroke="rgba(0,0,0,0.15)" stroke-width="0.9" transform="rotate(-9,30,96)"/>
+  <rect x="23" y="66" width="14" height="14" rx="3" fill="${trousers}" transform="rotate(-9,30,73)"/>
+  <ellipse cx="48" cy="38" rx="5.5" ry="7" fill="${face}"/>
+  <ellipse cx="49" cy="27" rx="11" ry="12" fill="${face}"/>
+  <path d="M38,27 Q39,8 49,6 Q60,8 61,27 Q56,22 49,21 Q42,22 38,27Z" fill="${hat}"/>
+  <rect x="38" y="24" width="23" height="10" rx="3" fill="${hat}"/>
+  <path d="M38,26 L17,33 L38,39Z" fill="${hatDark}"/>
+  <ellipse cx="61" cy="30" rx="5.5" ry="9" fill="${hat}"/>
+  <path d="M38,27 Q39,8 49,6 Q60,8 61,27" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
+  <line x1="27" y1="33" x2="24" y2="42" stroke="rgba(15,15,15,0.65)" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="31" y1="32" x2="28" y2="41" stroke="rgba(15,15,15,0.65)" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="35" y1="32" x2="32" y2="41" stroke="rgba(15,15,15,0.65)" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+
+  const img = new Image();
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  _batsmanSprite = img;
+}
+
+function drawBatsman() {
+  const bx = W/2;
+  const by = PITCH_BOTTOM() - 4;
+
+  const gloveColor = CUSTOM_CATEGORIES[3].colors[playerCustom.hands];
 
   let batAngle = 0.32;
   if (touchStart) batAngle = 0.88;
   if (state === 'hit') batAngle = -1.35;
 
-  // Key positions
-  const backX = bx + 9*s,  backY = by;          // back foot: nearer, lower
-  const frontX = bx - 7*s, frontY = by - 13*s;  // front foot: further, higher
-
-  // ── SHADOW ──
-  ctx.fillStyle = 'rgba(0,0,0,0.20)';
-  ctx.beginPath();
-  ctx.ellipse(bx + 2*s, by + 2, 22*s, 5*s, 0.12, 0, Math.PI*2);
-  ctx.fill();
-
-  // ── BACK BOOT ──
-  ctx.save();
-  ctx.translate(backX, backY);
-  ctx.rotate(0.18);
-  ctx.fillStyle = boots;
-  ctx.beginPath(); ctx.ellipse(0, 0, 10*s, 3.8*s, 0, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
-
-  // ── BACK PAD + TROUSERS ──
-  ctx.save();
-  ctx.translate(backX - 1*s, backY - 13*s);
-  ctx.rotate(0.18);
-  ctx.fillStyle = padColor;
-  ctx.fillRect(-5.5*s, -16*s, 12*s, 18*s);
-  ctx.strokeStyle = 'rgba(0,0,0,0.14)'; ctx.lineWidth = 0.9;
-  for (let i = 0; i < 3; i++) {
-    ctx.beginPath(); ctx.moveTo(-5.5*s, -12*s + i*5*s); ctx.lineTo(6.5*s, -12*s + i*5*s); ctx.stroke();
+  // ── BODY: SVG sprite ──
+  _refreshBatsmanSprite();
+  // SVG viewBox 80×130, drawn at 1.35× → 108×175.5px
+  // Sprite foot level is at SVG y≈126; map that to canvas `by`
+  const spW = 108, spH = 175;
+  const spX = bx - 51; // slight right-offset so bat side is visible
+  const spY = by - 170;
+  if (_batsmanSprite && _batsmanSprite.complete && _batsmanSprite.naturalWidth > 0) {
+    ctx.drawImage(_batsmanSprite, spX, spY, spW, spH);
   }
-  ctx.fillStyle = trousers;
-  ctx.fillRect(-5.5*s, -28*s, 12*s, 13*s);
-  ctx.restore();
 
-  // ── TORSO (side-on, we see the back) ──
+  // ── BAT + FRONT GLOVES (animated on canvas over the sprite) ──
+  // Bat pivot maps to SVG front-arm hand position (SVG ~x=67,y=73) scaled to canvas
+  const batPX = spX + (67 / 80) * spW;
+  const batPY = spY + (73 / 130) * spH;
   ctx.save();
-  ctx.translate(bx + 1*s, by - 48*s);
-  ctx.rotate(-0.20);
-
-  // Back arm (left arm — right of our view, leg side)
-  ctx.fillStyle = body;
-  ctx.fillRect(-17*s, -4*s, 8*s, 22*s);
-  // Back glove
-  ctx.fillStyle = gloveColor;
-  ctx.beginPath(); ctx.ellipse(-14*s, 19*s, 7*s, 5*s, 0.22, 0, Math.PI*2); ctx.fill();
-
-  // Torso — trapezoidal, wider at top (shoulders), we see the back
-  ctx.fillStyle = body;
-  ctx.beginPath();
-  ctx.moveTo(-13*s, -8*s);
-  ctx.lineTo(13*s,  -8*s);
-  ctx.lineTo(11*s,  26*s);
-  ctx.lineTo(-11*s, 26*s);
-  ctx.closePath();
-  ctx.fill();
-  // Kit highlight (camera-side edge)
-  ctx.fillStyle = 'rgba(255,255,255,0.13)';
-  ctx.fillRect(9*s, -8*s, 4*s, 34*s);
-  // Kit shadow (far side edge)
-  ctx.fillStyle = 'rgba(0,0,0,0.12)';
-  ctx.fillRect(-13*s, -8*s, 4*s, 34*s);
-  // Shoulder / collar line
-  ctx.fillStyle = 'rgba(255,255,255,0.10)';
-  ctx.fillRect(-13*s, -8*s, 26*s, 4*s);
-
-  // Front arm (right arm — off-side, extends toward bat handle)
-  ctx.fillStyle = body;
-  ctx.fillRect(9*s, 2*s, 8*s, 20*s);
-
-  ctx.restore();
-
-  // ── FRONT BOOT ──
-  ctx.save();
-  ctx.translate(frontX, frontY);
-  ctx.rotate(-0.14);
-  ctx.fillStyle = boots;
-  ctx.beginPath(); ctx.ellipse(0, 0, 9*s, 3.4*s, 0, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
-
-  // ── FRONT PAD + TROUSERS ──
-  ctx.save();
-  ctx.translate(frontX, frontY - 12*s);
-  ctx.rotate(-0.12);
-  ctx.fillStyle = padColor;
-  ctx.fillRect(-5*s, -18*s, 11*s, 20*s);
-  ctx.strokeStyle = 'rgba(0,0,0,0.14)'; ctx.lineWidth = 0.9;
-  for (let i = 0; i < 4; i++) {
-    ctx.beginPath(); ctx.moveTo(-5*s, -14*s + i*5*s); ctx.lineTo(6*s, -14*s + i*5*s); ctx.stroke();
-  }
-  ctx.fillStyle = trousers;
-  ctx.fillRect(-5*s, -30*s, 11*s, 13*s);
-  ctx.restore();
-
-  // ── NECK + HEAD ──
-  const hx = bx + 3*s, hy = by - 78*s;
-  ctx.fillStyle = face;
-  ctx.beginPath(); ctx.ellipse(hx, hy + 8*s, 5*s, 7*s, -0.12, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = face;
-  ctx.beginPath(); ctx.ellipse(hx, hy - 1*s, 10*s, 11*s, -0.12, 0, Math.PI*2); ctx.fill();
-
-  // ── HELMET ──
-  ctx.fillStyle = hat;
-  ctx.beginPath(); ctx.ellipse(hx, hy - 1*s, 12*s, 13*s, -0.12, Math.PI, Math.PI*2); ctx.fill();
-  ctx.fillRect(hx - 12*s, hy - 3*s, 24*s, 9*s);
-  // Peak (juts LEFT — off-side, toward bowler)
-  ctx.beginPath();
-  ctx.moveTo(hx - 12*s, hy - 1*s);
-  ctx.lineTo(hx - 24*s, hy + 5*s);
-  ctx.lineTo(hx - 12*s, hy + 7*s);
-  ctx.closePath();
-  ctx.fill();
-  // Ear guard (right side, prominent from 3/4 behind view)
-  ctx.beginPath(); ctx.ellipse(hx + 11*s, hy + 2*s, 5*s, 8*s, 0.28, 0, Math.PI*2); ctx.fill();
-  // Rim highlight
-  ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1.3;
-  ctx.beginPath(); ctx.ellipse(hx, hy - 1*s, 12*s, 13*s, -0.12, Math.PI, Math.PI*2); ctx.stroke();
-  // Grille bars (barely visible at front edge)
-  ctx.strokeStyle = 'rgba(20,20,20,0.55)'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
-  for (let i = 0; i < 3; i++) {
-    ctx.beginPath();
-    ctx.moveTo(hx - 11*s + i*2.8*s, hy + 3*s);
-    ctx.lineTo(hx - 14*s + i*2.8*s, hy + 10*s);
-    ctx.stroke();
-  }
-  ctx.lineCap = 'butt';
-
-  // ── BAT + FRONT GLOVES ──
-  ctx.save();
-  ctx.translate(bx + 15*s, by - 34*s);
+  ctx.translate(batPX, batPY);
   ctx.rotate(batAngle);
 
   // Grip
   ctx.fillStyle = '#251508';
-  ctx.fillRect(-3.5*s, -18*s, 7*s, 20*s);
+  ctx.fillRect(-3.5, -18, 7, 20);
   ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
   for (let i = 0; i < 5; i++) {
-    ctx.beginPath(); ctx.moveTo(-3.5*s, -16*s + i*3.5*s); ctx.lineTo(3.5*s, -16*s + i*3.5*s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-3.5, -16 + i*3.5); ctx.lineTo(3.5, -16 + i*3.5); ctx.stroke();
   }
 
   // Blade back (willow edges)
   ctx.fillStyle = '#b08030';
   ctx.beginPath();
-  ctx.moveTo(-8*s, 0); ctx.lineTo(8*s, 0);
-  ctx.lineTo(7*s, 46*s); ctx.lineTo(-7*s, 46*s);
+  ctx.moveTo(-8, 0); ctx.lineTo(8, 0);
+  ctx.lineTo(7, 46); ctx.lineTo(-7, 46);
   ctx.closePath(); ctx.fill();
 
   // Blade face (lighter willow)
   ctx.fillStyle = '#e8cc78';
   ctx.beginPath();
-  ctx.moveTo(-6.5*s, 1*s); ctx.lineTo(6.5*s, 1*s);
-  ctx.lineTo(5.5*s, 45*s); ctx.lineTo(-5.5*s, 45*s);
+  ctx.moveTo(-6.5, 1); ctx.lineTo(6.5, 1);
+  ctx.lineTo(5.5, 45); ctx.lineTo(-5.5, 45);
   ctx.closePath(); ctx.fill();
 
   // Spine
   ctx.fillStyle = 'rgba(255,255,255,0.22)';
-  ctx.fillRect(-2*s, 4*s, 4*s, 39*s);
+  ctx.fillRect(-2, 4, 4, 39);
 
   // Toe
   ctx.fillStyle = '#a07030';
-  ctx.fillRect(-7*s, 44*s, 14*s, 4*s);
+  ctx.fillRect(-7, 44, 14, 4);
 
   // Sticker band
   ctx.fillStyle = 'rgba(180,20,20,0.45)';
-  ctx.fillRect(-5.5*s, 18*s, 11*s, 4.5*s);
+  ctx.fillRect(-5.5, 18, 11, 4.5);
 
   // Gloves
   ctx.fillStyle = gloveColor;
-  ctx.beginPath(); ctx.ellipse(0, -12*s, 8*s, 6*s, 0.1, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(0, -4.5*s, 7*s, 5.5*s, 0.1, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, -12, 8, 6, 0.1, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, -4.5, 7, 5.5, 0.1, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.17)';
-  ctx.beginPath(); ctx.ellipse(-2.5*s, -13.5*s, 2.8*s, 2*s, -0.3, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(2.5*s, -13.5*s, 2.8*s, 2*s, 0.3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-2.5, -13.5, 2.8, 2, -0.3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(2.5, -13.5, 2.8, 2, 0.3, 0, Math.PI*2); ctx.fill();
 
   ctx.restore();
 }
