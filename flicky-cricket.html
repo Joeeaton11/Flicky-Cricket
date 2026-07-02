@@ -1353,6 +1353,7 @@
       <div class="rs-rewardIco">🪙</div>
       <div id="rs-coinsRow" class="rs-rewardVal">+0</div>
       <div class="rs-rewardLbl">COINS EARNED</div>
+      <div id="rs-entryPaid" style="font-size:10px;color:rgba(255,255,255,0.38);margin-top:2px;"></div>
     </div>
     <div id="rs-chestRow" class="rs-rewardCard rrc-chest hidden">
       <div class="rs-rewardIco" id="rs-chestIco">📦</div>
@@ -1599,6 +1600,7 @@ function loadCareerStats() {
     matchesPlayed: 0,
     matchesWon: 0,
     bestScore: 0,
+    totalCoinsEarned: 0,
   };
   try {
     const saved = JSON.parse(localStorage.getItem('flickyCareer') || '{}');
@@ -1677,7 +1679,7 @@ const ACHIEVEMENTS = [
   { key:'target_smasher',name:'TARGET SMASHER',desc:'Beat a target by 20+ runs',    check: (c,r) => r.beatBy >= 20 },
   { key:'first_win',   name:'FIRST WIN',      desc:'Beat the target for the first time', check: c => c.matchesWon >= 1 },
   { key:'ten_wins',    name:'SEASONED PRO',   desc:'Win 10 matches',                check: c => c.matchesWon >= 10 },
-  { key:'coin_collector',name:'COIN COLLECTOR',desc:'Earn 250 coins total',         check: c => c.coins >= 250 },
+  { key:'coin_collector',name:'COIN COLLECTOR',desc:'Earn 250 coins total',         check: c => (c.totalCoinsEarned||0) >= 250 },
 ];
 
 function loadUnlockedAchievements() {
@@ -3028,10 +3030,36 @@ canvas.addEventListener('pointerup', e => {
 
 function attemptFlick() {
   if (state !== 'ballcoming') {
-    // swiped too early or too late - check if ball already passed
+    if (state === 'ready') {
+      // show "too early" flash on canvas
+      _showTimingFlash('TOO EARLY!', '#f4a020');
+    }
     return;
   }
   doFlick(swipeVec);
+}
+
+function _showTimingFlash(msg, color) {
+  // draw a brief centered message on the game canvas that fades out
+  let alpha = 1.0;
+  const flash = () => {
+    if (alpha <= 0) return;
+    const cw = canvas.width, ch = canvas.height;
+    const fontSize = Math.round(cw * 0.075);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = `bold ${fontSize}px "Arial Black", Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = color;
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.lineWidth = fontSize * 0.08;
+    ctx.strokeText(msg, cw * 0.5, ch * 0.42);
+    ctx.fillText(msg, cw * 0.5, ch * 0.42);
+    ctx.restore();
+    alpha -= 0.06;
+    requestAnimationFrame(flash);
+  };
+  flash();
 }
 
 // ---------- GAME FLOW ----------
@@ -4277,7 +4305,7 @@ function renderLeagueScreen() {
       </div>
       <div class="lcTargetRow">
         <span class="trLabel">🎯 TARGET</span>
-        <span class="trVal" style="color:rgba(255,255,255,0.85)">${lg.targetFloor} RUNS</span>
+        <span class="trVal" style="color:rgba(255,255,255,0.85)">${Math.max(lg.targetFloor, target)} RUNS</span>
         <span style="width:1px;background:rgba(255,255,255,0.1);height:20px;margin:0 4px;display:inline-block;"></span>
         <span class="trLabel">DIFFICULTY</span>
         <span class="trVal" style="color:${diffCol};font-size:10px;letter-spacing:0px">${diffStars}</span>
@@ -6017,8 +6045,9 @@ function doFlick(swipe) {
   const swipeDist = Math.hypot(swipe.dx, swipe.dy);
   const power = Math.min(swipeDist / swipe.dt, 3);
   if (swipeDist < 20) {
-    // too small to register as a flick - treat as miss
-    bowled();
+    // too small to register as a flick - show feedback then bowl out
+    _showTimingFlash('MISSED!', '#ff6b6b');
+    setTimeout(() => bowled(), 350);
     return;
   }
 
@@ -6671,6 +6700,8 @@ function endGame() {
         earnedChestType = activeLg.winChest;
       }
     }
+    window._lastLeagueIdx = activeLgIdx;
+    window._lastBeatTarget = beatTarget;
     window._activeLeagueIdx = null;
   } else {
     // no active league — fall back to old economy-based coins
@@ -6683,6 +6714,7 @@ function endGame() {
   }
 
   career.coins += coinsEarned;
+  career.totalCoinsEarned = (career.totalCoinsEarned || 0) + coinsEarned;
   career.careerRuns += runs;
   career.fours += thisRunFours;
   career.sixes += thisRunSixes;
@@ -6728,6 +6760,8 @@ function endGame() {
     coinsEarned, trophyDelta, trophyTotal: trophyState.count,
     earnedChestType, activeLg, newlyUnlocked,
     seasonSummary, seasonBonus,
+    matchInSeason: league.matchInSeason, seasonLength: SEASON_LENGTH,
+    entryPaid: activeLg ? activeLg.entry : 0,
   });
 }
 
@@ -6829,8 +6863,8 @@ function showResultScreen(d) {
     lgNameEl.textContent = lg.name;
     lgSubEl.textContent  = lg.subtitle || 'Match complete';
     lgNameEl.style.color = lg.textColor || '#fff';
-    if (d.activeLg.currentRound !== undefined) {
-      roundChip.textContent = `RD ${d.activeLg.currentRound}/${d.activeLg.totalRounds || 5}`;
+    if (d.matchInSeason) {
+      roundChip.textContent = `RD ${d.matchInSeason}/${d.seasonLength || 14}`;
       roundChip.style.display = '';
     } else {
       roundChip.style.display = 'none';
@@ -6934,6 +6968,10 @@ function showResultScreen(d) {
   // ── coins count-up ──
   const coinsEl = document.getElementById('rs-coinsRow');
   coinsEl.textContent = '+0';
+  const entryPaidEl = document.getElementById('rs-entryPaid');
+  if (entryPaidEl) {
+    entryPaidEl.textContent = d.entryPaid > 0 ? `${d.entryPaid.toLocaleString()} 🪙 entry paid` : '';
+  }
   const coinTarget = d.coinsEarned;
   const coinDuration = Math.min(900, 300 + coinTarget * 0.4);
   const coinStart = performance.now() + 600;
@@ -6964,8 +7002,8 @@ function showResultScreen(d) {
   // ── league progress ──
   const progBar = document.getElementById('rs-progressBar');
   if (d.activeLg) {
-    const roundNum   = d.activeLg.currentRound  || 1;
-    const totalRounds = d.activeLg.totalRounds  || 5;
+    const roundNum    = d.matchInSeason  || 1;
+    const totalRounds = d.seasonLength   || 14;
     const pct = Math.round((roundNum / totalRounds) * 100);
     document.getElementById('rs-progRound').textContent = `RD ${roundNum} / ${totalRounds}`;
     const fill = document.getElementById('rs-progressFill');
@@ -7021,8 +7059,22 @@ function hideResultScreen() {
     playBtn.addEventListener('click', () => {
       playUiTap(); hapticTap();
       hideResultScreen();
-      // small delay so the slide-out starts before game begins
       setTimeout(() => {
+        // If there's a last-played league, replay it directly without going
+        // through the carousel — unless the player beat the target (then they
+        // may want to pick a different / newly unlocked league).
+        const lastIdx = window._lastLeagueIdx;
+        if (lastIdx !== undefined && lastIdx !== null && !window._lastBeatTarget) {
+          const lg = THEMED_LEAGUES[lastIdx];
+          if (lg && career.coins >= lg.entry) {
+            career.coins -= lg.entry;
+            saveCareerStats();
+            window._activeLeagueIdx = lastIdx;
+            window._leagueTargetFloor = lg.targetFloor || 0;
+            startGame();
+            return;
+          }
+        }
         overlay.classList.add('hidden');
         leagueScreen.classList.remove('hidden');
         renderLeagueScreen();
