@@ -1424,7 +1424,6 @@ window.addEventListener('resize', resize);
 let state = 'menu'; // menu, ready, ballcoming, hit, result
 let runs = 0;
 let ballsBowled = 0;
-const BALLS_PER_MATCH = 20; // 20-ball innings (T20 style)
 let best = parseInt(localStorage.getItem('flickyBest') || '0');
 hudBest.textContent = 'BEST: ' + best; if(menuBestVal) menuBestVal.textContent = best;
 requestAnimationFrame(() => { drawMenuLogo(); updateMenuHUD(); });
@@ -6457,20 +6456,7 @@ function caughtOut() {
 
 function nextOrEnd() {
   hideMessage();
-  if (ballsBowled >= BALLS_PER_MATCH) {
-    // All balls bowled — innings complete regardless of wicket
-    showMessage('INNINGS OVER!', '#f4d03f');
-    flash = 0.4; flashColor = '100,200,100';
-    triggerShake(8, 8);
-    setTimeout(() => endGame(), 1800);
-  } else if (ballsBowled > 0 && ballsBowled % 6 === 0) {
-    // End of an over
-    const overNum = ballsBowled / 6;
-    showMessage('END OF OVER ' + overNum, '#f4d03f', 1200);
-    setTimeout(() => startBallSequence(), 1300);
-  } else {
-    startBallSequence();
-  }
+  startBallSequence();
 }
 
 // stores the data needed to render a shareable result card after each match
@@ -8106,43 +8092,26 @@ function drawSceneScoreboard() {
   ctx.strokeStyle = border; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.roundRect(bX+0.75, bY+0.75, bW-1.5, bH-1.5, br); ctx.stroke();
 
-  // dividers drawn inside the text section below
+  // centre divider
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(bX+bW/2-0.5, bY+bH*0.12, 1, bH*0.76);
 
   ctx.textAlign = 'center';
 
+  // RUNS
   const labelSz = Math.max(8, bH * 0.22);
   const runsSz  = Math.max(18, bH * 0.54);
-
-  // Dividers at 33% and 66%
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
-  ctx.fillRect(bX + bW*0.333 - 0.5, bY + bH*0.12, 1, bH*0.76);
-  ctx.fillRect(bX + bW*0.666 - 0.5, bY + bH*0.12, 1, bH*0.76);
-
-  // RUNS (left third)
   ctx.fillStyle = runsLabelCol; ctx.font = `bold ${labelSz}px monospace`;
-  ctx.fillText('RUNS', bX + bW*0.167, bY + bH*0.30);
+  ctx.fillText('RUNS', bX + bW*0.25, bY + bH*0.30);
   ctx.fillStyle = runsValCol; ctx.font = `900 ${runsSz}px sans-serif`;
-  ctx.fillText(String(runs), bX + bW*0.167, bY + bH*0.88);
+  ctx.fillText(String(runs), bX + bW*0.25, bY + bH*0.88);
 
-  // BALLS (centre third) — over.ball format, colour urgent when low
-  const ballsLeft = Math.max(0, BALLS_PER_MATCH - ballsBowled);
-  const oversDone = Math.floor(ballsBowled / 6);
-  const ballInOver = ballsBowled % 6;
-  const overStr = oversDone + '.' + ballInOver;
-  const ballsColor = ballsLeft <= 6 ? '#ff4444' : ballsLeft <= 12 ? '#f4d03f' : runsValCol;
-  ctx.fillStyle = runsLabelCol; ctx.font = `bold ${labelSz}px monospace`;
-  ctx.fillText('OVER', bX + bW*0.500, bY + bH*0.30);
-  ctx.fillStyle = ballsColor; ctx.font = `900 ${Math.max(14, bH*0.46)}px sans-serif`;
-  ctx.fillText(overStr, bX + bW*0.500, bY + bH*0.88);
-
-  // TARGET (right third) — show NEED when run rate matters
+  // TARGET — urgent colour override when close
   const tgtSz = Math.max(14, bH * 0.44);
   const tgtColor = runsLeft <= 10 ? '#ff4444' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
-  const rrRequired = ballsLeft > 0 ? (runsLeft / ballsLeft).toFixed(1) : '—';
   ctx.fillStyle = tgtLabelCol; ctx.font = `bold ${labelSz}px monospace`;
-  ctx.fillText('NEED', bX + bW*0.833, bY + bH*0.30);
+  ctx.fillText('TARGET', bX + bW*0.75, bY + bH*0.30);
   ctx.fillStyle = tgtColor; ctx.font = `900 ${tgtSz}px sans-serif`;
-  ctx.fillText(String(runsLeft > 0 ? runsLeft : '✓'), bX + bW*0.833, bY + bH*0.88);
+  ctx.fillText(String(displayTarget), bX + bW*0.75, bY + bH*0.88);
 
   ctx.textAlign = 'left';
 
@@ -8155,20 +8124,6 @@ function drawSceneScoreboard() {
   if (pct > 0.01) { ctx.fillStyle = barColor; ctx.fillRect(bX, ebY, bW*pct, ebH); }
   ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 0.5;
   ctx.strokeRect(bX, ebY, bW, ebH);
-
-  // Over dots: 6 dots below energy bar, filled = bowled this over
-  const dotY  = ebY + ebH + H * 0.007;
-  const dotR  = Math.max(2.5, H * 0.004);
-  const dotGap = dotR * 3.2;
-  const totalDotW = 5 * dotGap;
-  const dotStartX = bX + bW/2 - totalDotW/2;
-  for (let i = 0; i < 6; i++) {
-    const cx2 = dotStartX + i * dotGap;
-    const filled = i < ballInOver;
-    ctx.beginPath(); ctx.arc(cx2, dotY + dotR, dotR, 0, Math.PI*2);
-    ctx.fillStyle = filled ? border : 'rgba(255,255,255,0.2)';
-    ctx.fill();
-  }
 }
 
 function drawGroundRings(colorA, colorB, horizonBlend) {
