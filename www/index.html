@@ -684,9 +684,15 @@
   .chestSlot {
     border-radius:16px; border:2px solid rgba(255,255,255,0.12);
     display:flex; flex-direction:column; align-items:center;
-    padding:12px 8px 12px; gap:6px; text-align:center;
+    justify-content:space-between;
+    padding:12px 8px 12px; gap:0; text-align:center;
     background:rgba(255,255,255,0.05); transition:transform 80ms, box-shadow 80ms;
     position:relative;
+  }
+  .chestSlotTop { display:flex; flex-direction:column; align-items:center; gap:5px; width:100%; }
+  .chestSlotMiddle {
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    width:100%; min-height:44px; justify-content:center;
   }
   .chestSlot:active { transform:scale(0.97); }
   .chestSlot.empty { border-style:dashed; border-color:rgba(255,255,255,0.10); background:rgba(255,255,255,0.02); }
@@ -5936,14 +5942,26 @@ function renderChestTab(container) {
     chestSlots.forEach((chest, idx) => {
       const slot = document.createElement('div');
 
+      // ── TOP zone: art + name ──
+      const top = document.createElement('div');
+      top.className = 'chestSlotTop';
+
       const artCanvas = document.createElement('canvas');
-      artCanvas.width = 200; artCanvas.height = 200;
+      artCanvas.width = 200; artCanvas.height = 160;
       artCanvas.className = 'chestSlotCanvas';
-      slot.appendChild(artCanvas);
+      top.appendChild(artCanvas);
+
+      // ── MIDDLE zone: timer + bar (fixed height, always present) ──
+      const mid = document.createElement('div');
+      mid.className = 'chestSlotMiddle';
+
+      // ── ACTION button (always at bottom) ──
+      const btn = document.createElement('button');
+      btn.className = 'chestSlotBtn';
+      btn.style.width = '100%';
 
       if (!chest) {
         slot.className = 'chestSlot empty';
-        artCanvas.width = 200; artCanvas.height = 160;
         const ec = artCanvas.getContext('2d');
         ec.strokeStyle = 'rgba(255,255,255,0.10)';
         ec.lineWidth = 2; ec.setLineDash([6,5]);
@@ -5953,10 +5971,19 @@ function renderChestTab(container) {
         ec.font = 'bold 32px Arial'; ec.textAlign = 'center'; ec.textBaseline = 'middle';
         ec.fillText('+', 100, 80);
         const lbl = document.createElement('div');
-        lbl.className = 'chestEmptyLabel'; lbl.textContent = 'WIN TO EARN';
-        slot.appendChild(lbl);
+        lbl.className = 'chestSlotName'; lbl.style.color = 'rgba(255,255,255,0.25)';
+        lbl.textContent = 'EMPTY';
+        top.appendChild(lbl);
+        // mid stays empty for alignment
+        btn.style.visibility = 'hidden'; // keeps spacing, invisible
+        btn.textContent = 'EMPTY';
       } else {
         const cfg = CHEST_TYPES[chest.type];
+        const nameEl = document.createElement('div');
+        nameEl.className = 'chestSlotName'; nameEl.style.color = cfg.color;
+        nameEl.textContent = cfg.name;
+        top.appendChild(nameEl);
+
         if (chest.openingStarted) {
           const elapsed   = (Date.now() - chest.openingStarted) / 1000;
           const remaining = Math.max(0, cfg.openTime - elapsed);
@@ -5965,19 +5992,12 @@ function renderChestTab(container) {
 
           slot.className = 'chestSlot ' + (ready ? 'cs-ready' : 'cs-unlocking');
           if (!ready) slot.style.borderColor = cfg.color + '55';
-
-          // chest art (original size)
-          artCanvas.width = 200; artCanvas.height = 160;
           drawChestArt(artCanvas, chest.type, ready ? 1 : pct);
 
-          const nameEl = document.createElement('div');
-          nameEl.className = 'chestSlotName'; nameEl.style.color = cfg.color;
-          nameEl.textContent = cfg.name; slot.appendChild(nameEl);
-
           if (ready) {
-            const openBtn = document.createElement('button');
-            openBtn.className = 'chestSlotBtn open'; openBtn.textContent = '✦ OPEN!';
-            openBtn.addEventListener('click', () => {
+            // mid stays empty
+            btn.className = 'chestSlotBtn open'; btn.textContent = '✦ OPEN!';
+            btn.addEventListener('click', () => {
               const chestType = chest.type;
               const result = openChest(idx);
               if (result && result.rewards) {
@@ -5985,26 +6005,23 @@ function renderChestTab(container) {
                 showChestOpenAnimation(chestType, result.rewards, () => { updateEquipTopBar(); renderSlots(); });
               }
             });
-            slot.appendChild(openBtn);
           } else {
-            // timer
+            // timer + bar in mid zone
             const timerEl = document.createElement('div');
             timerEl.className = 'chestSlotTimer';
             timerEl.textContent = formatTimer(remaining);
-            slot.appendChild(timerEl);
-            // progress bar
             const track = document.createElement('div');
             track.style.cssText = 'width:100%;height:4px;background:rgba(255,255,255,0.10);border-radius:2px;overflow:hidden;';
             const fill = document.createElement('div');
             fill.style.cssText = `height:100%;border-radius:2px;width:${Math.round(pct*100)}%;background:${cfg.color};box-shadow:0 0 6px ${cfg.color}88;`;
             track.appendChild(fill);
-            slot.appendChild(track);
+            mid.appendChild(timerEl);
+            mid.appendChild(track);
 
             const gemCost = Math.ceil(remaining / 600);
-            const gemBtn = document.createElement('button');
-            gemBtn.className = 'chestSlotBtn gems';
-            gemBtn.textContent = '💎 ' + gemCost + ' — SKIP';
-            gemBtn.addEventListener('click', () => {
+            btn.className = 'chestSlotBtn gems';
+            btn.textContent = '💎 ' + gemCost + ' — SKIP';
+            btn.addEventListener('click', () => {
               const chestType = chest.type;
               const result = openChest(idx);
               if (result && result.error === 'needGems') {
@@ -6014,22 +6031,19 @@ function renderChestTab(container) {
                 showChestOpenAnimation(chestType, result.rewards, () => { updateEquipTopBar(); renderSlots(); });
               }
             });
-            slot.appendChild(gemBtn);
           }
         } else {
           slot.className = 'chestSlot';
-          artCanvas.width = 200; artCanvas.height = 160;
           drawChestArt(artCanvas, chest.type, 0);
-          const nameEl = document.createElement('div');
-          nameEl.className = 'chestSlotName'; nameEl.style.color = cfg.color;
-          nameEl.textContent = cfg.name; slot.appendChild(nameEl);
-
-          const startBtn2 = document.createElement('button');
-          startBtn2.className = 'chestSlotBtn start'; startBtn2.textContent = '▶ START';
-          startBtn2.addEventListener('click', () => { openChest(idx); renderSlots(); });
-          slot.appendChild(startBtn2);
+          // mid stays empty
+          btn.className = 'chestSlotBtn start'; btn.textContent = '▶ START';
+          btn.addEventListener('click', () => { openChest(idx); renderSlots(); });
         }
       }
+
+      slot.appendChild(top);
+      slot.appendChild(mid);
+      slot.appendChild(btn);
       slotsDiv.appendChild(slot);
     });
   }
