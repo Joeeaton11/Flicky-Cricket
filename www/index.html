@@ -682,32 +682,52 @@
     display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:10px;
   }
   .chestSlot {
-    border-radius:12px; border:3px solid rgba(255,255,255,0.2);
+    border-radius:16px; border:2px solid rgba(255,255,255,0.12);
     display:flex; flex-direction:column; align-items:center;
-    padding:10px 8px 10px; gap:6px; text-align:center;
-    background:rgba(255,255,255,0.08); transition:transform 80ms;
-    position:relative; box-shadow:0 2px 10px rgba(0,0,0,0.3);
+    padding:12px 8px 12px; gap:6px; text-align:center;
+    background:rgba(255,255,255,0.05); transition:transform 80ms, box-shadow 80ms;
+    position:relative;
   }
   .chestSlot:active { transform:scale(0.97); }
-  .chestSlot.empty { border-style:dashed; border-color:rgba(255,255,255,0.15); }
+  .chestSlot.empty { border-style:dashed; border-color:rgba(255,255,255,0.10); background:rgba(255,255,255,0.02); }
+  .chestSlot.cs-unlocking { border-color:rgba(255,255,255,0.22); }
+  .chestSlot.cs-ready {
+    animation:chestReadyPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes chestReadyPulse {
+    0%,100% { box-shadow:0 0 0 0 rgba(244,208,63,0); }
+    50%      { box-shadow:0 0 18px 4px rgba(244,208,63,0.35); }
+  }
   .chestSlotCanvas { width:100%; display:block; }
   .chestSlotName {
     font-family:'Arial Black',Arial,sans-serif; font-size:10px; font-weight:900;
     letter-spacing:1px; text-shadow:0 1px 4px rgba(0,0,0,0.5);
   }
-  .chestSlotTimer { font-family:'Courier New',monospace; font-size:12px; color:#f4d03f; font-weight:bold; }
+  .chestSlotTimer {
+    font-family:'Arial Black',Arial,sans-serif; font-size:16px; font-weight:900;
+    color:#fff; letter-spacing:1px; line-height:1;
+  }
+  .chestSlotTimerSub {
+    font-family:'Courier New',monospace; font-size:8px; color:rgba(255,255,255,0.4);
+    letter-spacing:2px; margin-top:1px;
+  }
   .chestSlotBtn {
     font-family:'Arial Black',Arial,sans-serif; font-size:9px; font-weight:900;
-    padding:7px 0; border:none; border-radius:20px; cursor:pointer; width:100%;
+    padding:8px 0; border:none; border-radius:20px; cursor:pointer; width:100%;
     letter-spacing:0.5px; transition:transform 80ms; box-shadow:0 2px 6px rgba(0,0,0,0.3);
   }
   .chestSlotBtn:active { transform:scale(0.96); }
   .chestSlotBtn.start { background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; }
-  .chestSlotBtn.open  { background:linear-gradient(135deg,#f4d03f,#e8a020); color:#1a1000; }
+  .chestSlotBtn.open  {
+    background:linear-gradient(135deg,#f4d03f,#e8a020); color:#1a1000;
+    font-size:12px; padding:10px 0;
+    box-shadow:0 0 14px rgba(244,208,63,0.5), 0 2px 0 #8a5a00;
+  }
   .chestSlotBtn.gems  { background:linear-gradient(135deg,#a855f7,#7c3aed); color:#fff; }
   .chestSlotBtn.watch-ad { background:linear-gradient(135deg,#0f766e,#0d9488); color:#fff; font-size:12px; }
   .chestEmptyLabel {
-    font-family:'Courier New',monospace; font-size:10px; color:rgba(255,255,255,0.3);
+    font-family:'Courier New',monospace; font-size:9px; color:rgba(255,255,255,0.25);
+    letter-spacing:1px;
   }
   .chestRewardPopup {
     background:rgba(0,0,0,0.92); border:2px solid #f4d03f; padding:14px;
@@ -5883,6 +5903,29 @@ function drawChestArt(canvas, type, pct) {
   }
 }
 
+function drawProgressArc(ctx, cx, cy, radius, pct, color, ready) {
+  const startAngle = -Math.PI / 2;
+  const fullAngle  = startAngle + Math.PI * 2 * pct;
+  // track
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.stroke();
+  // fill
+  if (pct > 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, startAngle, fullAngle);
+    ctx.strokeStyle = ready ? '#f4d03f' : color;
+    ctx.lineWidth = 7; ctx.lineCap = 'round';
+    ctx.shadowColor = ready ? '#f4d03f' : color;
+    ctx.shadowBlur  = ready ? 14 : 8;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function renderChestTab(container) {
   const slotsDiv = document.createElement('div');
   slotsDiv.id = 'chestSlotsGrid';
@@ -5891,44 +5934,52 @@ function renderChestTab(container) {
     slotsDiv.innerHTML = '';
     chestSlots.forEach((chest, idx) => {
       const slot = document.createElement('div');
-      slot.className = 'chestSlot' + (!chest ? ' empty' : '');
 
       const artCanvas = document.createElement('canvas');
-      artCanvas.width = 200; artCanvas.height = 160;
+      artCanvas.width = 200; artCanvas.height = 200;
       artCanvas.className = 'chestSlotCanvas';
-      artCanvas.style.cssText = 'width:100%;display:block;';
       slot.appendChild(artCanvas);
 
       if (!chest) {
-        // draw dotted empty outline inside canvas
+        slot.className = 'chestSlot empty';
         const ec = artCanvas.getContext('2d');
-        ec.strokeStyle = 'rgba(255,255,255,0.15)';
-        ec.lineWidth = 3; ec.setLineDash([8,6]);
-        ec.beginPath(); ec.roundRect(10,10,180,140,12); ec.stroke();
+        ec.strokeStyle = 'rgba(255,255,255,0.10)';
+        ec.lineWidth = 2; ec.setLineDash([6,5]);
+        ec.beginPath(); ec.roundRect(14,14,172,172,16); ec.stroke();
         ec.setLineDash([]);
-        ec.fillStyle='rgba(255,255,255,0.12)';
-        ec.font='bold 36px Arial'; ec.textAlign='center'; ec.textBaseline='middle';
-        ec.fillText('+', 100, 80);
+        ec.fillStyle = 'rgba(255,255,255,0.08)';
+        ec.font = 'bold 32px Arial'; ec.textAlign = 'center'; ec.textBaseline = 'middle';
+        ec.fillText('+', 100, 100);
         const lbl = document.createElement('div');
-        lbl.className = 'chestEmptyLabel'; lbl.textContent = 'EMPTY SLOT';
+        lbl.className = 'chestEmptyLabel'; lbl.textContent = 'WIN TO EARN';
         slot.appendChild(lbl);
       } else {
         const cfg = CHEST_TYPES[chest.type];
         if (chest.openingStarted) {
-          const elapsed = (Date.now() - chest.openingStarted) / 1000;
+          const elapsed   = (Date.now() - chest.openingStarted) / 1000;
           const remaining = Math.max(0, cfg.openTime - elapsed);
-          const pct = 1 - remaining / cfg.openTime;
-          drawChestArt(artCanvas, chest.type, pct >= 1 ? 1 : pct);
+          const pct = cfg.openTime > 0 ? Math.min(1, 1 - remaining / cfg.openTime) : 1;
+          const ready = remaining <= 0;
+
+          slot.className = 'chestSlot ' + (ready ? 'cs-ready' : 'cs-unlocking');
+          if (!ready) slot.style.borderColor = cfg.color + '55';
+
+          // draw chest art centred with arc around it
+          const ctx = artCanvas.getContext('2d');
+          ctx.clearRect(0, 0, 200, 200);
+          // chest art in a smaller inner region
+          const offCanvas = document.createElement('canvas');
+          offCanvas.width = 200; offCanvas.height = 200;
+          drawChestArt(offCanvas, chest.type, ready ? 1 : pct);
+          ctx.drawImage(offCanvas, 0, 0);
+          // arc overlay
+          drawProgressArc(ctx, 100, 100, 88, pct, cfg.color, ready);
 
           const nameEl = document.createElement('div');
           nameEl.className = 'chestSlotName'; nameEl.style.color = cfg.color;
           nameEl.textContent = cfg.name; slot.appendChild(nameEl);
 
-          const timerEl = document.createElement('div');
-          timerEl.className = 'chestSlotTimer';
-          timerEl.textContent = formatTimer(remaining); slot.appendChild(timerEl);
-
-          if (remaining <= 0) {
+          if (ready) {
             const openBtn = document.createElement('button');
             openBtn.className = 'chestSlotBtn open'; openBtn.textContent = '✦ OPEN!';
             openBtn.addEventListener('click', () => {
@@ -5941,10 +5992,18 @@ function renderChestTab(container) {
             });
             slot.appendChild(openBtn);
           } else {
+            const timerEl = document.createElement('div');
+            timerEl.className = 'chestSlotTimer';
+            timerEl.textContent = formatTimer(remaining);
+            slot.appendChild(timerEl);
+            const timerSub = document.createElement('div');
+            timerSub.className = 'chestSlotTimerSub'; timerSub.textContent = 'REMAINING';
+            slot.appendChild(timerSub);
+
             const gemCost = Math.ceil(remaining / 600);
             const gemBtn = document.createElement('button');
             gemBtn.className = 'chestSlotBtn gems';
-            gemBtn.textContent = '💎 ' + gemCost + ' — OPEN NOW';
+            gemBtn.textContent = '💎 ' + gemCost + ' — SKIP';
             gemBtn.addEventListener('click', () => {
               const chestType = chest.type;
               const result = openChest(idx);
@@ -5956,9 +6015,9 @@ function renderChestTab(container) {
               }
             });
             slot.appendChild(gemBtn);
-
           }
         } else {
+          slot.className = 'chestSlot';
           drawChestArt(artCanvas, chest.type, 0);
           const nameEl = document.createElement('div');
           nameEl.className = 'chestSlotName'; nameEl.style.color = cfg.color;
@@ -5977,7 +6036,6 @@ function renderChestTab(container) {
   renderSlots();
   container.appendChild(slotsDiv);
 
-  // update timers every second
   chestTimerInterval = setInterval(() => {
     if (currentEquipTab !== 'chests') { clearInterval(chestTimerInterval); return; }
     renderSlots();
