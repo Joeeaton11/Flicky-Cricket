@@ -5903,27 +5903,28 @@ function drawChestArt(canvas, type, pct) {
   }
 }
 
-function drawProgressArc(ctx, cx, cy, radius, pct, color, ready) {
+function drawProgressArcCanvas(canvas, pct, color, ready) {
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  const cx = W / 2, cy = H / 2, r = W / 2 - 5;
   const startAngle = -Math.PI / 2;
-  const fullAngle  = startAngle + Math.PI * 2 * pct;
   // track
-  ctx.save();
   ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
-  ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 6; ctx.lineCap = 'round';
   ctx.stroke();
   // fill
   if (pct > 0) {
     ctx.beginPath();
-    ctx.arc(cx, cy, radius, startAngle, fullAngle);
+    ctx.arc(cx, cy, r, startAngle, startAngle + Math.PI * 2 * pct);
     ctx.strokeStyle = ready ? '#f4d03f' : color;
-    ctx.lineWidth = 7; ctx.lineCap = 'round';
+    ctx.lineWidth = 6; ctx.lineCap = 'round';
     ctx.shadowColor = ready ? '#f4d03f' : color;
-    ctx.shadowBlur  = ready ? 14 : 8;
+    ctx.shadowBlur  = ready ? 16 : 8;
     ctx.stroke();
   }
-  ctx.restore();
 }
 
 function renderChestTab(container) {
@@ -5942,14 +5943,15 @@ function renderChestTab(container) {
 
       if (!chest) {
         slot.className = 'chestSlot empty';
+        artCanvas.width = 200; artCanvas.height = 160;
         const ec = artCanvas.getContext('2d');
         ec.strokeStyle = 'rgba(255,255,255,0.10)';
         ec.lineWidth = 2; ec.setLineDash([6,5]);
-        ec.beginPath(); ec.roundRect(14,14,172,172,16); ec.stroke();
+        ec.beginPath(); ec.roundRect(14,14,172,132,16); ec.stroke();
         ec.setLineDash([]);
         ec.fillStyle = 'rgba(255,255,255,0.08)';
         ec.font = 'bold 32px Arial'; ec.textAlign = 'center'; ec.textBaseline = 'middle';
-        ec.fillText('+', 100, 100);
+        ec.fillText('+', 100, 80);
         const lbl = document.createElement('div');
         lbl.className = 'chestEmptyLabel'; lbl.textContent = 'WIN TO EARN';
         slot.appendChild(lbl);
@@ -5964,16 +5966,9 @@ function renderChestTab(container) {
           slot.className = 'chestSlot ' + (ready ? 'cs-ready' : 'cs-unlocking');
           if (!ready) slot.style.borderColor = cfg.color + '55';
 
-          // draw chest art centred with arc around it
-          const ctx = artCanvas.getContext('2d');
-          ctx.clearRect(0, 0, 200, 200);
-          // chest art in a smaller inner region
-          const offCanvas = document.createElement('canvas');
-          offCanvas.width = 200; offCanvas.height = 200;
-          drawChestArt(offCanvas, chest.type, ready ? 1 : pct);
-          ctx.drawImage(offCanvas, 0, 0);
-          // arc overlay
-          drawProgressArc(ctx, 100, 100, 88, pct, cfg.color, ready);
+          // chest art (original size)
+          artCanvas.width = 200; artCanvas.height = 160;
+          drawChestArt(artCanvas, chest.type, ready ? 1 : pct);
 
           const nameEl = document.createElement('div');
           nameEl.className = 'chestSlotName'; nameEl.style.color = cfg.color;
@@ -5992,13 +5987,21 @@ function renderChestTab(container) {
             });
             slot.appendChild(openBtn);
           } else {
-            const timerEl = document.createElement('div');
-            timerEl.className = 'chestSlotTimer';
-            timerEl.textContent = formatTimer(remaining);
-            slot.appendChild(timerEl);
-            const timerSub = document.createElement('div');
-            timerSub.className = 'chestSlotTimerSub'; timerSub.textContent = 'REMAINING';
-            slot.appendChild(timerSub);
+            // arc ring below chest name
+            const arcWrap = document.createElement('div');
+            arcWrap.style.cssText = 'position:relative;width:56px;height:56px;flex-shrink:0;';
+            const arcCanvas = document.createElement('canvas');
+            arcCanvas.width = 56; arcCanvas.height = 56;
+            arcCanvas.style.cssText = 'position:absolute;top:0;left:0;width:56px;height:56px;';
+            drawProgressArcCanvas(arcCanvas, pct, cfg.color, false);
+            // timer text centred inside arc
+            const arcLabel = document.createElement('div');
+            arcLabel.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+              font-family:'Arial Black',Arial,sans-serif;font-size:9px;font-weight:900;
+              color:#fff;letter-spacing:0;text-align:center;line-height:1.2;white-space:nowrap;`;
+            arcLabel.textContent = formatTimer(remaining);
+            arcWrap.appendChild(arcCanvas); arcWrap.appendChild(arcLabel);
+            slot.appendChild(arcWrap);
 
             const gemCost = Math.ceil(remaining / 600);
             const gemBtn = document.createElement('button');
@@ -6018,6 +6021,7 @@ function renderChestTab(container) {
           }
         } else {
           slot.className = 'chestSlot';
+          artCanvas.width = 200; artCanvas.height = 160;
           drawChestArt(artCanvas, chest.type, 0);
           const nameEl = document.createElement('div');
           nameEl.className = 'chestSlotName'; nameEl.style.color = cfg.color;
