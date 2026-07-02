@@ -3175,24 +3175,71 @@ function _drawSceneCard(ctx, W, H, sceneKey, decorFn) {
   const tod = typeof TIME_OF_DAY !== 'undefined'
     ? (TIME_OF_DAY.find(t => t.key === sceneKey) || TIME_OF_DAY[0])
     : { skyTop:'#9fd8f0', skyBottom:'#cdeefb', grass:'#2a8c3e', pitch:'#d9c08a' };
-  // Sky gradient (top 60%)
-  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.6);
+  const HZ = H * 0.52; // horizon y
+
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, HZ);
   sky.addColorStop(0, tod.skyTop);
   sky.addColorStop(1, tod.skyBottom);
   ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, W, H * 0.6);
-  // Ground (bottom 40%)
-  ctx.fillStyle = tod.grass;
-  ctx.fillRect(0, H * 0.6, W, H * 0.4);
-  // Pitch strip (center 12% width, full height)
-  ctx.fillStyle = tod.pitch;
-  ctx.fillRect(W * 0.44, 0, W * 0.12, H);
-  // Stumps
-  if (typeof _drawStumps === 'function') {
-    _drawStumps(ctx, W * 0.5, H * 0.74, H * 0.14, '#e8d080', null);
+  ctx.fillRect(0, 0, W, HZ);
+
+  // Ground — two-tone mowing stripes
+  const stripeCount = 8;
+  for (let i = 0; i < stripeCount; i++) {
+    const t = i / stripeCount;
+    // lighter stripe alternates
+    const base = tod.grass;
+    ctx.fillStyle = i % 2 === 0 ? base : _blendColor(base, '#000000', 0.12);
+    const x0 = W * t, x1 = W * (t + 1/stripeCount);
+    ctx.beginPath();
+    ctx.moveTo(x0, HZ); ctx.lineTo(x1, HZ); ctx.lineTo(x1, H); ctx.lineTo(x0, H);
+    ctx.closePath(); ctx.fill();
   }
+
+  // Outfield boundary ellipse
+  ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.ellipse(W*0.5, HZ + (H-HZ)*0.1, W*0.46, (H-HZ)*0.85, 0, Math.PI, 0);
+  ctx.stroke();
+
+  // Perspective pitch (trapezoid — narrow at horizon, wide at bottom)
+  const pitchTopW = W * 0.07, pitchBotW = W * 0.22;
+  const pitchTop = HZ + (H-HZ)*0.02, pitchBot = H;
+  ctx.fillStyle = tod.pitch;
+  ctx.beginPath();
+  ctx.moveTo(W*0.5 - pitchTopW/2, pitchTop);
+  ctx.lineTo(W*0.5 + pitchTopW/2, pitchTop);
+  ctx.lineTo(W*0.5 + pitchBotW/2, pitchBot);
+  ctx.lineTo(W*0.5 - pitchBotW/2, pitchBot);
+  ctx.closePath(); ctx.fill();
+
+  // Crease lines on pitch
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.5;
+  // Bowling crease (near horizon)
+  const bc = pitchTop + (pitchBot-pitchTop)*0.18;
+  const bcW = pitchTopW + (pitchBotW-pitchTopW)*0.18;
+  ctx.beginPath(); ctx.moveTo(W*0.5-bcW/2-4, bc); ctx.lineTo(W*0.5+bcW/2+4, bc); ctx.stroke();
+  // Batting crease (near bottom)
+  const bcc = pitchTop + (pitchBot-pitchTop)*0.78;
+  const bccW = pitchTopW + (pitchBotW-pitchTopW)*0.78;
+  ctx.beginPath(); ctx.moveTo(W*0.5-bccW/2-4, bcc); ctx.lineTo(W*0.5+bccW/2+4, bcc); ctx.stroke();
+
+  // Stumps at batting crease
+  if (typeof _drawStumps === 'function') {
+    _drawStumps(ctx, W*0.5, bcc - H*0.01, H*0.10, '#e8d080', null);
+  }
+
   // Scene decorations
-  if (typeof decorFn === 'function') decorFn(ctx, W, H);
+  if (typeof decorFn === 'function') decorFn(ctx, W, H, HZ);
+}
+
+// Blend two hex colors by factor t (0=base, 1=target)
+function _blendColor(hex1, hex2, t) {
+  const p = c => [parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)];
+  const [r1,g1,b1] = p(hex1), [r2,g2,b2] = p(hex2);
+  const r = Math.round(r1+(r2-r1)*t), g = Math.round(g1+(g2-g1)*t), b = Math.round(b1+(b2-b1)*t);
+  return `rgb(${r},${g},${b})`;
 }
 
 const THEMED_LEAGUES = [
@@ -3205,41 +3252,46 @@ const THEMED_LEAGUES = [
     winTrophy: 1, lossTrophy: 0, winCoins: 120, lossCoins: 0, winChest: 'bronze',
     accentColor: '#4a9e4a', accentColor2: '#2a6a2a', textColor: '#aaffaa',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'day', (ctx, W, H) => {
-        // Bright sun with radial glow
-        const sg = ctx.createRadialGradient(W*0.84,H*0.13,0,W*0.84,H*0.13,H*0.18);
-        sg.addColorStop(0,'rgba(255,240,80,0.7)'); sg.addColorStop(0.4,'rgba(255,220,40,0.25)'); sg.addColorStop(1,'transparent');
-        ctx.fillStyle=sg; ctx.fillRect(0,0,W,H*0.5);
+      _drawSceneCard(ctx, W, H, 'day', (ctx, W, H, HZ) => {
+        // Bright sun top-right with glow
+        const sg = ctx.createRadialGradient(W*0.82,H*0.12,0,W*0.82,H*0.12,H*0.20);
+        sg.addColorStop(0,'rgba(255,240,80,0.75)'); sg.addColorStop(0.45,'rgba(255,220,40,0.22)'); sg.addColorStop(1,'transparent');
+        ctx.fillStyle=sg; ctx.fillRect(0,0,W,HZ);
         ctx.fillStyle='#ffe030';
-        ctx.beginPath(); ctx.arc(W*0.84,H*0.13,H*0.07,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='rgba(255,255,150,0.6)';
-        ctx.beginPath(); ctx.arc(W*0.84,H*0.13,H*0.095,0,Math.PI*2); ctx.fill();
-        // Fluffy cloud left
+        ctx.beginPath(); ctx.arc(W*0.82,H*0.12,H*0.072,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='rgba(255,255,150,0.55)';
+        ctx.beginPath(); ctx.arc(W*0.82,H*0.12,H*0.10,0,Math.PI*2); ctx.fill();
+        // Fluffy clouds
         ctx.fillStyle='rgba(255,255,255,0.95)';
-        [[W*0.14,H*0.11,W*0.07,H*0.045],[W*0.22,H*0.09,W*0.10,H*0.055],[W*0.30,H*0.11,W*0.07,H*0.042]].forEach(([cx,cy,rx,ry])=>{ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fill();});
-        // Cloud right
-        [[W*0.58,H*0.08,W*0.06,H*0.038],[W*0.65,H*0.065,W*0.09,H*0.052],[W*0.73,H*0.075,W*0.07,H*0.040]].forEach(([cx,cy,rx,ry])=>{ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fill();});
-        // Ground mowing stripes (subtle)
-        for(let i=0;i<6;i++){
-          ctx.fillStyle=i%2===0?'rgba(0,0,0,0.05)':'rgba(255,255,255,0.05)';
-          ctx.fillRect(i*W/6, H*0.6, W/6, H*0.4);
-        }
-        // Pavilion silhouette far left
-        ctx.fillStyle='rgba(255,255,255,0.25)';
-        ctx.fillRect(W*0.02,H*0.48,W*0.12,H*0.14);
-        ctx.fillStyle='rgba(255,255,255,0.15)';
-        ctx.beginPath(); ctx.moveTo(W*0.01,H*0.48); ctx.lineTo(W*0.08,H*0.40); ctx.lineTo(W*0.15,H*0.48); ctx.closePath(); ctx.fill();
-        // Boundary rope arc (top of outfield)
-        ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.ellipse(W*0.5,H*0.78,W*0.42,H*0.22,0,Math.PI,0); ctx.stroke();
-        // Trees right side
-        const treePos=[[W*0.87,H*0.50],[W*0.92,H*0.46],[W*0.96,H*0.52]];
-        treePos.forEach(([tx,ty])=>{
-          ctx.fillStyle='#3a8030';
-          ctx.beginPath(); ctx.arc(tx,ty,W*0.04,0,Math.PI*2); ctx.fill();
-          ctx.fillStyle='#2d6025';
-          ctx.beginPath(); ctx.arc(tx-W*0.01,ty+H*0.02,W*0.03,0,Math.PI*2); ctx.fill();
+        [[W*0.10,H*0.12,W*0.08,H*0.045],[W*0.20,H*0.09,W*0.11,H*0.058],[W*0.31,H*0.12,W*0.07,H*0.042]].forEach(([cx,cy,rx,ry])=>{ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fill();});
+        [[W*0.54,H*0.08,W*0.07,H*0.038],[W*0.62,H*0.065,W*0.10,H*0.052],[W*0.71,H*0.08,W*0.07,H*0.040]].forEach(([cx,cy,rx,ry])=>{ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fill();});
+        // Pavilion on horizon left — white building with pitched roof
+        const px=W*0.05, py=HZ-H*0.13, pw=W*0.14, ph=H*0.13;
+        ctx.fillStyle='rgba(240,240,220,0.85)';
+        ctx.fillRect(px, py, pw, ph);
+        // Roof
+        ctx.fillStyle='rgba(180,60,40,0.75)';
+        ctx.beginPath(); ctx.moveTo(px-4,py); ctx.lineTo(px+pw/2,py-H*0.06); ctx.lineTo(px+pw+4,py); ctx.closePath(); ctx.fill();
+        // Windows
+        ctx.fillStyle='rgba(80,120,200,0.55)';
+        [[px+pw*0.18,py+ph*0.25,pw*0.15,ph*0.3],[px+pw*0.55,py+ph*0.25,pw*0.15,ph*0.3]].forEach(([wx,wy,ww,wh])=>{ctx.fillRect(wx,wy,ww,wh);});
+        // Trees left of pavilion
+        [[W*0.01,HZ-H*0.18],[W*0.03,HZ-H*0.22]].forEach(([tx,ty])=>{
+          ctx.fillStyle='#2d6025'; ctx.fillRect(tx+W*0.012,ty+H*0.08,W*0.006,H*0.1);
+          ctx.fillStyle='#3a8030'; ctx.beginPath(); ctx.arc(tx+W*0.015,ty,W*0.025,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#2d6025'; ctx.beginPath(); ctx.arc(tx+W*0.010,ty+H*0.025,W*0.018,0,Math.PI*2); ctx.fill();
         });
+        // Tree row right side on horizon
+        [[W*0.76,HZ-H*0.19],[W*0.82,HZ-H*0.24],[W*0.88,HZ-H*0.20],[W*0.93,HZ-H*0.17]].forEach(([tx,ty])=>{
+          ctx.fillStyle='#1e5018'; ctx.fillRect(tx+W*0.012,ty+H*0.09,W*0.006,H*0.1);
+          ctx.fillStyle='#2e7022'; ctx.beginPath(); ctx.arc(tx+W*0.015,ty,W*0.028,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#1e5018'; ctx.beginPath(); ctx.arc(tx+W*0.008,ty+H*0.028,W*0.020,0,Math.PI*2); ctx.fill();
+        });
+        // Sight screen far end (white rectangle on horizon)
+        ctx.fillStyle='rgba(255,255,255,0.82)';
+        ctx.fillRect(W*0.44, HZ-H*0.095, W*0.12, H*0.075);
+        ctx.strokeStyle='rgba(200,200,200,0.4)'; ctx.lineWidth=1;
+        ctx.strokeRect(W*0.44, HZ-H*0.095, W*0.12, H*0.075);
       });
     }
   },
@@ -3252,7 +3304,7 @@ const THEMED_LEAGUES = [
     winTrophy: 1, lossTrophy: 0, winCoins: 230, lossCoins: 0, winChest: 'bronze',
     accentColor: '#e8914a', accentColor2: '#a05a10', textColor: '#ffd088',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'evening', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'evening', (ctx, W, H, HZ) => {
         // Dramatic sunset sun just at horizon
         const sunG = ctx.createRadialGradient(W*0.5,H*0.60,0,W*0.5,H*0.60,H*0.30);
         sunG.addColorStop(0,'rgba(255,230,60,0.85)'); sunG.addColorStop(0.3,'rgba(255,140,20,0.55)'); sunG.addColorStop(0.7,'rgba(200,60,10,0.25)'); sunG.addColorStop(1,'transparent');
@@ -3292,7 +3344,7 @@ const THEMED_LEAGUES = [
     winTrophy: 1, lossTrophy: 0, winCoins: 390, lossCoins: 25, winChest: 'bronze',
     accentColor: '#1a8adc', accentColor2: '#0a4a90', textColor: '#88ddff',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'beach', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'beach', (ctx, W, H, HZ) => {
         // Sparkling sea overlay on bottom half
         const seaG = ctx.createLinearGradient(0,H*0.60,0,H);
         seaG.addColorStop(0,'rgba(20,140,200,0.55)'); seaG.addColorStop(1,'rgba(10,60,120,0.45)');
@@ -3343,7 +3395,7 @@ const THEMED_LEAGUES = [
     winTrophy: 1, lossTrophy: 0, winCoins: 630, lossCoins: 40, winChest: 'bronze',
     accentColor: '#3a5a9a', accentColor2: '#1a2a6a', textColor: '#aabbff',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'night', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'night', (ctx, W, H, HZ) => {
         // Stars — varying sizes, deterministic
         const stars=[[0.06,0.04,2],[0.13,0.13,1.5],[0.22,0.05,2.5],[0.32,0.17,1.5],[0.44,0.07,2],[0.53,0.14,1.5],[0.61,0.03,2],[0.70,0.11,2.5],[0.79,0.06,1.5],[0.87,0.17,2],[0.93,0.03,1.5],[0.28,0.27,1],[0.49,0.22,1],[0.74,0.25,1.5],[0.16,0.22,1],[0.40,0.29,1]];
         stars.forEach(([px,py,r])=>{ctx.fillStyle=`rgba(255,255,255,${0.5+r*0.2})`;ctx.beginPath();ctx.arc(W*px,H*py,r,0,Math.PI*2);ctx.fill();});
@@ -3385,7 +3437,7 @@ const THEMED_LEAGUES = [
     winTrophy: 2, lossTrophy: 0, winCoins: 950, lossCoins: 60, winChest: 'silver',
     accentColor: '#2d8a2d', accentColor2: '#1a5a1a', textColor: '#88ff88',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'jungle', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'jungle', (ctx, W, H, HZ) => {
         // Mist / atmospheric fog layer
         const mistG=ctx.createLinearGradient(0,H*0.40,0,H*0.70);
         mistG.addColorStop(0,'rgba(150,255,160,0.12)'); mistG.addColorStop(1,'transparent');
@@ -3437,7 +3489,7 @@ const THEMED_LEAGUES = [
     winTrophy: 2, lossTrophy: 0, winCoins: 1400, lossCoins: 90, winChest: 'silver',
     accentColor: '#4ac0e0', accentColor2: '#0a80b0', textColor: '#aaeeff',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'arctic', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'arctic', (ctx, W, H, HZ) => {
         // Aurora curtains — sinuous gradient bands
         const auroraColors=[['rgba(0,255,140,0.22)','rgba(0,200,255,0.18)'],['rgba(80,100,255,0.18)','rgba(0,230,160,0.14)'],['rgba(0,200,255,0.15)','rgba(100,50,255,0.12)']];
         auroraColors.forEach(([c1,c2],i)=>{
@@ -3485,7 +3537,7 @@ const THEMED_LEAGUES = [
     winTrophy: 2, lossTrophy: 1, winCoins: 2050, lossCoins: 130, winChest: 'silver',
     accentColor: '#d4a030', accentColor2: '#a07010', textColor: '#ffdd88',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'desert', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'desert', (ctx, W, H, HZ) => {
         // Heat haze / shimmer at horizon
         const hazeG=ctx.createLinearGradient(0,H*0.50,0,H*0.65);
         hazeG.addColorStop(0,'rgba(255,200,80,0.25)'); hazeG.addColorStop(1,'transparent');
@@ -3537,7 +3589,7 @@ const THEMED_LEAGUES = [
     winTrophy: 2, lossTrophy: 1, winCoins: 2850, lossCoins: 180, winChest: 'silver',
     accentColor: '#c08040', accentColor2: '#8a5010', textColor: '#ffcc88',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'westwild', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'westwild', (ctx, W, H, HZ) => {
         // Dusty haze / sunset tinge
         const dustG=ctx.createLinearGradient(0,H*0.40,0,H*0.65);
         dustG.addColorStop(0,'rgba(200,130,50,0.20)'); dustG.addColorStop(1,'transparent');
@@ -3589,7 +3641,7 @@ const THEMED_LEAGUES = [
     winTrophy: 2, lossTrophy: 1, winCoins: 4000, lossCoins: 250, winChest: 'gold',
     accentColor: '#20a8c0', accentColor2: '#0a6880', textColor: '#88eeff',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'reef', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'reef', (ctx, W, H, HZ) => {
         // Underwater caustic light on ground
         const causticG=ctx.createRadialGradient(W*0.5,H*0.5,0,W*0.5,H*0.5,W*0.55);
         causticG.addColorStop(0,'rgba(80,220,220,0.18)'); causticG.addColorStop(1,'transparent');
@@ -3643,7 +3695,7 @@ const THEMED_LEAGUES = [
     winTrophy: 3, lossTrophy: 1, winCoins: 5600, lossCoins: 350, winChest: 'gold',
     accentColor: '#d040a0', accentColor2: '#901060', textColor: '#ff88dd',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'carnival', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'carnival', (ctx, W, H, HZ) => {
         // Night sky tinge with warm carnival glow from below
         const glowG=ctx.createRadialGradient(W*0.5,H*0.65,0,W*0.5,H*0.65,W*0.65);
         glowG.addColorStop(0,'rgba(255,180,50,0.25)'); glowG.addColorStop(1,'transparent');
@@ -3705,7 +3757,7 @@ const THEMED_LEAGUES = [
     winTrophy: 3, lossTrophy: 1, winCoins: 7700, lossCoins: 480, winChest: 'gold',
     accentColor: '#b87333', accentColor2: '#8b5a00', textColor: '#ffcc88',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'steampunk', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'steampunk', (ctx, W, H, HZ) => {
         // Amber/smog tinted sky overlay
         const smogG=ctx.createLinearGradient(0,0,0,H*0.60);
         smogG.addColorStop(0,'rgba(80,50,20,0.30)'); smogG.addColorStop(1,'rgba(180,120,40,0.12)');
@@ -3779,7 +3831,7 @@ const THEMED_LEAGUES = [
     winTrophy: 3, lossTrophy: 2, winCoins: 10500, lossCoins: 650, winChest: 'gold',
     accentColor: '#8a7a5a', accentColor2: '#5a4a2a', textColor: '#ddccaa',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'construction', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'construction', (ctx, W, H, HZ) => {
         // Dusty overcast haze
         const dustG=ctx.createLinearGradient(0,0,0,H*0.60);
         dustG.addColorStop(0,'rgba(100,80,40,0.20)'); dustG.addColorStop(1,'rgba(180,150,80,0.10)');
@@ -3851,7 +3903,7 @@ const THEMED_LEAGUES = [
     winTrophy: 3, lossTrophy: 2, winCoins: 13750, lossCoins: 850, winChest: 'gold',
     accentColor: '#6a8a3a', accentColor2: '#3a5a1a', textColor: '#bbdd88',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'medieval', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'medieval', (ctx, W, H, HZ) => {
         // Mist rolling over ground
         const mistG=ctx.createLinearGradient(0,H*0.55,0,H*0.72);
         mistG.addColorStop(0,'rgba(200,220,200,0.30)'); mistG.addColorStop(1,'transparent');
@@ -3915,7 +3967,7 @@ const THEMED_LEAGUES = [
     winTrophy: 4, lossTrophy: 2, winCoins: 17800, lossCoins: 1100, winChest: 'legendary',
     accentColor: '#c0392b', accentColor2: '#8b0000', textColor: '#ff9999',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'pirate', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'pirate', (ctx, W, H, HZ) => {
         // Moody ocean — stormy
         const waveG=ctx.createLinearGradient(0,H*0.55,0,H);
         waveG.addColorStop(0,'rgba(20,60,100,0.75)'); waveG.addColorStop(1,'rgba(10,30,60,0.65)');
@@ -3988,7 +4040,7 @@ const THEMED_LEAGUES = [
     winTrophy: 4, lossTrophy: 2, winCoins: 22750, lossCoins: 1400, winChest: 'legendary',
     accentColor: '#7a22aa', accentColor2: '#4a0a70', textColor: '#dd88ff',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'halloween', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'halloween', (ctx, W, H, HZ) => {
         // Eerie moon glow
         const moonGlow=ctx.createRadialGradient(W*0.50,H*0.13,0,W*0.50,H*0.13,H*0.30);
         moonGlow.addColorStop(0,'rgba(220,240,80,0.25)'); moonGlow.addColorStop(0.5,'rgba(80,120,20,0.10)'); moonGlow.addColorStop(1,'transparent');
@@ -4062,7 +4114,7 @@ const THEMED_LEAGUES = [
     winTrophy: 4, lossTrophy: 2, winCoins: 29250, lossCoins: 1800, winChest: 'legendary',
     accentColor: '#2a6aaa', accentColor2: '#0a3a7a', textColor: '#88bbff',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'christmas', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'christmas', (ctx, W, H, HZ) => {
         // Snow falling — deterministic flake positions, varying sizes
         const flakes=[[0.08,0.05,3],[0.14,0.18,2],[0.22,0.09,2.5],[0.30,0.25,2],[0.38,0.12,3],[0.45,0.30,2],[0.52,0.07,2.5],[0.59,0.22,2],[0.66,0.14,3],[0.73,0.28,2],[0.80,0.08,2.5],[0.88,0.19,2],[0.94,0.32,3],[0.50,0.42,2],[0.62,0.36,2.5],[0.35,0.40,2],[0.17,0.36,2.5],[0.75,0.40,2]];
         flakes.forEach(([px,py,r])=>{ctx.fillStyle=`rgba(255,255,255,${0.6+r*0.1})`;ctx.beginPath();ctx.arc(W*px,H*py,r,0,Math.PI*2);ctx.fill();});
@@ -4125,7 +4177,7 @@ const THEMED_LEAGUES = [
     winTrophy: 4, lossTrophy: 3, winCoins: 35800, lossCoins: 2200, winChest: 'legendary',
     accentColor: '#cc4010', accentColor2: '#8a1a00', textColor: '#ff9966',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'volcano', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'volcano', (ctx, W, H, HZ) => {
         // Hellish sky glow from below
         const skyGlow=ctx.createLinearGradient(0,H*0.30,0,H*0.62);
         skyGlow.addColorStop(0,'rgba(180,40,0,0.25)'); skyGlow.addColorStop(1,'rgba(255,120,10,0.15)');
@@ -4191,7 +4243,7 @@ const THEMED_LEAGUES = [
     winTrophy: 5, lossTrophy: 3, winCoins: 44000, lossCoins: 2700, winChest: 'legendary',
     accentColor: '#8822c0', accentColor2: '#4a0a80', textColor: '#cc88ff',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'cyberpunk', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'cyberpunk', (ctx, W, H, HZ) => {
         // Neon horizon glow — magenta/cyan split
         const horizonG=ctx.createLinearGradient(0,H*0.50,0,H*0.68);
         horizonG.addColorStop(0,'rgba(255,0,200,0.45)'); horizonG.addColorStop(0.5,'rgba(0,220,255,0.25)'); horizonG.addColorStop(1,'transparent');
@@ -4249,7 +4301,7 @@ const THEMED_LEAGUES = [
     winTrophy: 5, lossTrophy: 3, winCoins: 55000, lossCoins: 3400, winChest: 'legendary',
     accentColor: '#aaaacc', accentColor2: '#6a6a9a', textColor: '#dddeff',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'moon', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'moon', (ctx, W, H, HZ) => {
         // Stars — many, varying brightness
         [[0.04,0.04,2],[0.11,0.12,1.5],[0.20,0.05,2.5],[0.28,0.19,1.5],[0.38,0.08,2],[0.46,0.25,1.5],[0.54,0.04,2.5],[0.60,0.16,1.5],[0.68,0.28,2],[0.72,0.07,1.5],[0.80,0.21,2],[0.88,0.10,2.5],[0.95,0.18,1.5],[0.14,0.30,1],[0.34,0.30,1.5],[0.52,0.33,1],[0.76,0.32,1.5],[0.22,0.23,1]].forEach(([px,py,r])=>{
           ctx.fillStyle=`rgba(255,255,255,${0.4+r*0.2})`;
@@ -4317,7 +4369,7 @@ const THEMED_LEAGUES = [
     winTrophy: 5, lossTrophy: 3, winCoins: 68000, lossCoins: 4200, winChest: 'legendary',
     accentColor: '#c04428', accentColor2: '#7a1a08', textColor: '#ffaa88',
     drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'mars', (ctx, W, H) => {
+      _drawSceneCard(ctx, W, H, 'mars', (ctx, W, H, HZ) => {
         // Dust storm haze across sky
         const dustG=ctx.createLinearGradient(0,0,0,H*0.62);
         dustG.addColorStop(0,'rgba(160,60,20,0.38)'); dustG.addColorStop(0.6,'rgba(200,110,40,0.20)'); dustG.addColorStop(1,'rgba(220,140,60,0.08)');
