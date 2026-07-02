@@ -3197,12 +3197,6 @@ function _drawSceneCard(ctx, W, H, sceneKey, decorFn) {
     ctx.closePath(); ctx.fill();
   }
 
-  // Outfield boundary ellipse
-  ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.ellipse(W*0.5, HZ + (H-HZ)*0.1, W*0.46, (H-HZ)*0.85, 0, Math.PI, 0);
-  ctx.stroke();
-
   // Perspective pitch (trapezoid — narrow at horizon, wide at bottom)
   const pitchTopW = W * 0.07, pitchBotW = W * 0.22;
   const pitchTop = HZ + (H-HZ)*0.02, pitchBot = H;
@@ -3338,12 +3332,21 @@ const THEMED_LEAGUES = [
     accentColor: '#1a8adc', accentColor2: '#0a4a90', textColor: '#88ddff',
     drawArt(ctx, W, H) {
       _drawSceneCard(ctx, W, H, 'beach', (ctx, W, H, HZ) => {
-        // BRIGHT TURQUOISE SEA — covers entire ground
-        const seaG=ctx.createLinearGradient(0,HZ,0,H); seaG.addColorStop(0,'#18d8e8'); seaG.addColorStop(0.3,'#0ea0c8'); seaG.addColorStop(1,'#0860a0'); ctx.fillStyle=seaG; ctx.fillRect(0,HZ,W,H-HZ);
-        // Sun glint path on water
-        const glint=ctx.createLinearGradient(W*0.30,HZ,W*0.70,H); glint.addColorStop(0,'rgba(255,255,200,0.55)'); glint.addColorStop(1,'rgba(255,255,200,0.05)'); ctx.fillStyle=glint; ctx.fillRect(W*0.25,HZ,W*0.50,H-HZ);
-        // Wave crests
-        ctx.strokeStyle='rgba(255,255,255,0.65)'; ctx.lineWidth=2.5; [[HZ+H*0.05,0.022],[HZ+H*0.11,0.018],[HZ+H*0.18,0.020],[HZ+H*0.26,0.016]].forEach(([by,amp])=>{ctx.beginPath();ctx.moveTo(0,by);for(let i=0;i<=12;i++)ctx.lineTo(W*i/12,by+H*amp*(i%2===0?1:-1));ctx.stroke();});
+        // SEA — from horizon down to beach line
+        const beachY = HZ + (H-HZ)*0.52; // beach starts ~halfway down ground
+        const seaG=ctx.createLinearGradient(0,HZ,0,beachY); seaG.addColorStop(0,'#18d8e8'); seaG.addColorStop(0.5,'#0ea0c8'); seaG.addColorStop(1,'#0870b8'); ctx.fillStyle=seaG; ctx.fillRect(0,HZ,W,beachY-HZ);
+        // Sun glint on water
+        const glint=ctx.createLinearGradient(W*0.30,HZ,W*0.70,beachY); glint.addColorStop(0,'rgba(255,255,200,0.55)'); glint.addColorStop(1,'rgba(255,255,200,0.05)'); ctx.fillStyle=glint; ctx.fillRect(W*0.25,HZ,W*0.50,beachY-HZ);
+        // Wave crests in sea
+        ctx.strokeStyle='rgba(255,255,255,0.65)'; ctx.lineWidth=2.5; [[HZ+H*0.05,0.018],[HZ+H*0.11,0.015],[HZ+H*0.18,0.016],[HZ+H*0.25,0.013]].forEach(([by,amp])=>{if(by<beachY){ctx.beginPath();ctx.moveTo(0,by);for(let i=0;i<=12;i++)ctx.lineTo(W*i/12,by+H*amp*(i%2===0?1:-1));ctx.stroke();}});
+        // Wet sand strip (transition, slightly darker)
+        const wetG=ctx.createLinearGradient(0,beachY-H*0.02,0,beachY+H*0.04); wetG.addColorStop(0,'#9ecfc8'); wetG.addColorStop(1,'#c8b87a'); ctx.fillStyle=wetG; ctx.fillRect(0,beachY-H*0.02,W,H*0.06);
+        // SANDY BEACH — foreground
+        const sandG=ctx.createLinearGradient(0,beachY+H*0.04,0,H); sandG.addColorStop(0,'#e0c878'); sandG.addColorStop(1,'#c8a848'); ctx.fillStyle=sandG; ctx.fillRect(0,beachY+H*0.04,W,H-(beachY+H*0.04));
+        // Sand ripple lines
+        ctx.strokeStyle='rgba(160,120,40,0.35)'; ctx.lineWidth=1.5; [0.62,0.72,0.82,0.91].forEach(yf=>{ctx.beginPath();ctx.moveTo(W*0.08,H*yf);ctx.quadraticCurveTo(W*0.50,H*(yf-0.012),W*0.92,H*yf);ctx.stroke();});
+        // Foamy wave edge on beach
+        ctx.strokeStyle='rgba(255,255,255,0.70)'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(0,beachY+H*0.02); for(let i=0;i<=20;i++) ctx.lineTo(W*i/20,beachY+H*0.02+H*0.012*(i%2===0?1:-1)); ctx.stroke();
         // Blazing sun top centre-right
         const sg=ctx.createRadialGradient(W*0.78,H*0.09,0,W*0.78,H*0.09,H*0.22); sg.addColorStop(0,'rgba(255,240,80,0.85)'); sg.addColorStop(0.4,'rgba(255,200,30,0.35)'); sg.addColorStop(1,'transparent'); ctx.fillStyle=sg; ctx.fillRect(0,0,W,HZ);
         ctx.fillStyle='#ffe030'; ctx.beginPath(); ctx.arc(W*0.78,H*0.09,H*0.080,0,Math.PI*2); ctx.fill();
@@ -3600,47 +3603,46 @@ const THEMED_LEAGUES = [
     accentColor: '#20a8c0', accentColor2: '#0a6880', textColor: '#88eeff',
     drawArt(ctx, W, H) {
       _drawSceneCard(ctx, W, H, 'reef', (ctx, W, H, HZ) => {
-        // Underwater caustic light on ground
-        const causticG=ctx.createRadialGradient(W*0.5,H*0.5,0,W*0.5,H*0.5,W*0.55);
-        causticG.addColorStop(0,'rgba(80,220,220,0.18)'); causticG.addColorStop(1,'transparent');
-        ctx.fillStyle=causticG; ctx.fillRect(0,0,W,H);
-        // Wavy light bands on ground (caustics)
-        ctx.strokeStyle='rgba(100,240,240,0.15)'; ctx.lineWidth=8;
-        [[H*0.68,0.02],[H*0.75,0.025],[H*0.82,0.018]].forEach(([baseY,amp])=>{
-          ctx.beginPath(); ctx.moveTo(0,baseY);
-          for(let i=1;i<=16;i++) ctx.lineTo(W*i/16,baseY+H*amp*(i%2===0?1:-1));
-          ctx.stroke();
-        });
-        // Coral formations
-        [[W*0.10,H*0.76,'#e02870'],[W*0.18,H*0.72,'#ff4488'],[W*0.78,H*0.74,'#20b8c0'],[W*0.86,H*0.70,'#e04490']].forEach(([cx,cy,col])=>{
-          ctx.fillStyle=col;
-          for(let b=0;b<5;b++){
-            const bx=cx+W*(b-2)*0.012;
-            ctx.beginPath(); ctx.moveTo(bx,cy); ctx.lineTo(bx-W*0.008,cy-H*(0.06+b%2*0.04)); ctx.lineTo(bx+W*0.008,cy-H*(0.06+b%2*0.04)); ctx.closePath(); ctx.fill();
-          }
-          ctx.beginPath(); ctx.ellipse(cx,cy,W*0.05,H*0.015,0,0,Math.PI*2); ctx.fill();
-        });
-        // Seaweed strands
-        ctx.strokeStyle='#20a030'; ctx.lineWidth=3;
-        [W*0.30,W*0.36,W*0.64,W*0.70].forEach((sx,i)=>{
-          ctx.beginPath(); ctx.moveTo(sx,H*0.85);
-          ctx.quadraticCurveTo(sx+W*(i%2===0?0.03:-0.03),H*0.75,sx,H*0.65);
-          ctx.quadraticCurveTo(sx+W*(i%2===0?-0.025:0.025),H*0.56,sx,H*0.50); ctx.stroke();
-        });
-        // Fish — orange clownfish
-        ctx.fillStyle='#ff6010';
-        ctx.beginPath(); ctx.ellipse(W*0.68,H*0.38,W*0.045,H*0.028,0,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(W*0.725,H*0.38); ctx.lineTo(W*0.758,H*0.352); ctx.lineTo(W*0.758,H*0.408); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle='#fff'; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.moveTo(W*0.698,H*0.356); ctx.lineTo(W*0.698,H*0.404); ctx.stroke();
-        ctx.fillStyle='#1a1a1a'; ctx.beginPath(); ctx.arc(W*0.658,H*0.374,W*0.006,0,Math.PI*2); ctx.fill();
-        // Blue fish
-        ctx.fillStyle='#2060e0';
-        ctx.beginPath(); ctx.ellipse(W*0.78,H*0.28,W*0.032,H*0.020,0.2,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(W*0.812,H*0.28); ctx.lineTo(W*0.838,H*0.262); ctx.lineTo(W*0.838,H*0.298); ctx.closePath(); ctx.fill();
-        // Bubbles
-        ctx.strokeStyle='rgba(200,240,255,0.6)'; ctx.lineWidth=1.5;
-        [[W*0.68,H*0.30,H*0.018],[W*0.71,H*0.22,H*0.012],[W*0.74,H*0.15,H*0.009]].forEach(([bx,by,br])=>{ctx.beginPath();ctx.arc(bx,by,br,0,Math.PI*2);ctx.stroke();});
+        // Deep ocean overlay (entire card is underwater)
+        const deepG=ctx.createLinearGradient(0,0,0,H); deepG.addColorStop(0,'rgba(0,60,100,0.72)'); deepG.addColorStop(1,'rgba(0,30,60,0.55)'); ctx.fillStyle=deepG; ctx.fillRect(0,0,W,H);
+        // Underwater caustic light ripples
+        ctx.strokeStyle='rgba(100,240,255,0.14)'; ctx.lineWidth=10;
+        [[H*0.10,0.025],[H*0.22,0.020],[H*0.35,0.022],[H*0.55,0.018],[H*0.70,0.020],[H*0.84,0.015]].forEach(([baseY,amp])=>{ctx.beginPath();ctx.moveTo(0,baseY);for(let i=1;i<=18;i++)ctx.lineTo(W*i/18,baseY+H*amp*(i%2===0?1:-1));ctx.stroke();});
+        // Sandy sea floor
+        const floorG=ctx.createLinearGradient(0,H*0.78,0,H); floorG.addColorStop(0,'#b8a060'); floorG.addColorStop(1,'#d0b870'); ctx.fillStyle=floorG; ctx.fillRect(0,H*0.78,W,H*0.22);
+        // Tall kelp forest — left
+        ctx.strokeStyle='#1a8a28'; ctx.lineWidth=5; [W*0.04,W*0.09,W*0.14,W*0.20,W*0.25].forEach((sx,i)=>{ctx.beginPath();ctx.moveTo(sx,H*0.86);ctx.bezierCurveTo(sx+W*(i%2===0?0.04:-0.04),H*0.65,sx+W*(i%2===0?-0.03:0.03),H*0.45,sx+W*(i%3===0?0.06:-0.02),H*0.20);ctx.stroke();});
+        // Tall kelp — right
+        [W*0.76,W*0.81,W*0.86,W*0.91,W*0.96].forEach((sx,i)=>{ctx.beginPath();ctx.moveTo(sx,H*0.84);ctx.bezierCurveTo(sx+W*(i%2===0?-0.04:0.04),H*0.63,sx+W*(i%2===0?0.03:-0.03),H*0.42,sx+W*(i%3===0?-0.05:0.02),H*0.18);ctx.stroke();});
+        // Big coral formations
+        [[W*0.10,H*0.80,'#e02870'],[W*0.19,H*0.76,'#ff4488'],[W*0.30,H*0.82,'#ff6620'],[W*0.70,H*0.80,'#20b8c0'],[W*0.81,H*0.76,'#e04490'],[W*0.90,H*0.78,'#ff2244']].forEach(([cx,cy,col])=>{ctx.fillStyle=col;for(let b=0;b<7;b++){const bx=cx+W*(b-3)*0.010;ctx.beginPath();ctx.moveTo(bx,cy);ctx.lineTo(bx-W*0.007,cy-H*(0.055+b%2*0.04));ctx.lineTo(bx+W*0.007,cy-H*(0.055+b%2*0.04));ctx.closePath();ctx.fill();}ctx.beginPath();ctx.ellipse(cx,cy,W*0.055,H*0.016,0,0,Math.PI*2);ctx.fill();});
+        // Brain coral blobs
+        ctx.fillStyle='#c89040'; [W*0.44,W*0.55].forEach(cx=>{ctx.beginPath();ctx.ellipse(cx,H*0.84,W*0.040,H*0.034,0,0,Math.PI*2);ctx.fill();});
+        ctx.strokeStyle='rgba(180,120,30,0.55)'; ctx.lineWidth=1.5; [W*0.44,W*0.55].forEach(cx=>{for(let r=0;r<4;r++){ctx.beginPath();ctx.ellipse(cx,H*0.84,W*(0.012+r*0.008),H*(0.010+r*0.007),r*0.5,0,Math.PI*2);ctx.stroke();}});
+        // SHARK silhouette cruising upper area
+        ctx.fillStyle='rgba(50,80,110,0.82)';
+        ctx.beginPath(); ctx.moveTo(W*0.18,H*0.22); ctx.lineTo(W*0.38,H*0.19); ctx.lineTo(W*0.44,H*0.22); ctx.lineTo(W*0.38,H*0.255); ctx.closePath(); ctx.fill(); // body
+        ctx.beginPath(); ctx.moveTo(W*0.18,H*0.22); ctx.lineTo(W*0.10,H*0.192); ctx.lineTo(W*0.16,H*0.228); ctx.closePath(); ctx.fill(); // tail
+        ctx.beginPath(); ctx.moveTo(W*0.30,H*0.19); ctx.lineTo(W*0.315,H*0.138); ctx.lineTo(W*0.33,H*0.19); ctx.closePath(); ctx.fill(); // dorsal fin
+        ctx.fillStyle='rgba(220,240,255,0.5)'; ctx.beginPath(); ctx.arc(W*0.415,H*0.212,W*0.007,0,Math.PI*2); ctx.fill(); // eye
+        // SHOAL of small tropical fish (yellow/blue stripes)
+        [[0.50,0.32],[0.54,0.28],[0.57,0.33],[0.61,0.26],[0.64,0.30],[0.58,0.37],[0.52,0.40],[0.66,0.36]].forEach(([fx,fy])=>{ctx.fillStyle='#f8c820';ctx.beginPath();ctx.ellipse(W*fx,H*fy,W*0.018,H*0.011,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#1a60d0';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(W*fx,H*(fy-0.008));ctx.lineTo(W*fx,H*(fy+0.008));ctx.stroke();ctx.fillStyle='rgba(30,30,30,0.7)';ctx.beginPath();ctx.arc(W*(fx-0.011),H*fy,W*0.003,0,Math.PI*2);ctx.fill();});
+        // TREASURE CHEST on sea floor
+        const tcx=W*0.42,tcy=H*0.84; ctx.fillStyle='#8b5a20'; ctx.fillRect(tcx-W*0.050,tcy-H*0.050,W*0.100,H*0.050); ctx.fillStyle='#a06a28'; ctx.fillRect(tcx-W*0.050,tcy-H*0.060,W*0.100,H*0.020); ctx.strokeStyle='#d0a040'; ctx.lineWidth=2; ctx.strokeRect(tcx-W*0.050,tcy-H*0.060,W*0.100,H*0.070); ctx.fillStyle='#f8d020'; ctx.fillRect(tcx-W*0.010,tcy-H*0.045,W*0.020,H*0.016); ctx.beginPath(); ctx.arc(tcx,tcy-H*0.037,W*0.008,0,Math.PI*2); ctx.fill(); // lock
+        // Gold coins spilling from chest
+        ctx.fillStyle='rgba(255,200,20,0.88)'; [[tcx+W*0.05,tcy-H*0.01],[tcx+W*0.07,tcy+H*0.01],[tcx+W*0.09,tcy-H*0.005],[tcx-W*0.06,tcy+H*0.008],[tcx-W*0.08,tcy-H*0.003]].forEach(([gx,gy])=>{ctx.beginPath();ctx.ellipse(gx,gy,W*0.012,H*0.008,0,0,Math.PI*2);ctx.fill();});
+        // OCTOPUS peering from bottom-right coral
+        ctx.fillStyle='#c04880'; ctx.beginPath(); ctx.ellipse(W*0.88,H*0.76,W*0.038,H*0.030,0,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#c04880'; ctx.lineWidth=3; [[0.86,0.80,0.84,0.87],[0.88,0.82,0.87,0.90],[0.90,0.81,0.91,0.88],[0.92,0.79,0.94,0.86]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(W*x1,H*y1);ctx.quadraticCurveTo(W*((x1+x2)/2-0.01),H*((y1+y2)/2),W*x2,H*y2);ctx.stroke();});
+        ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(W*0.876,H*0.754,W*0.008,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(W*0.895,H*0.754,W*0.008,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#1a1a1a'; ctx.beginPath(); ctx.arc(W*0.878,H*0.755,W*0.004,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(W*0.897,H*0.755,W*0.004,0,Math.PI*2); ctx.fill();
+        // Clownfish (orange) near anemone
+        ctx.fillStyle='#ff6010'; ctx.beginPath(); ctx.ellipse(W*0.34,H*0.60,W*0.038,H*0.024,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.moveTo(W*0.378,H*0.60); ctx.lineTo(W*0.406,H*0.580); ctx.lineTo(W*0.406,H*0.620); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(W*0.356,H*0.584); ctx.lineTo(W*0.356,H*0.616); ctx.stroke();
+        ctx.fillStyle='#1a1a1a'; ctx.beginPath(); ctx.arc(W*0.322,H*0.594,W*0.005,0,Math.PI*2); ctx.fill();
+        // Bubble trails
+        ctx.strokeStyle='rgba(200,240,255,0.55)'; ctx.lineWidth=1.5;
+        [[W*0.34,H*0.50,H*0.016],[W*0.36,H*0.38,H*0.010],[W*0.38,H*0.28,H*0.007],[W*0.50,H*0.55,H*0.012],[W*0.52,H*0.44,H*0.008],[W*0.88,H*0.60,H*0.014],[W*0.90,H*0.48,H*0.009]].forEach(([bx,by,br])=>{ctx.beginPath();ctx.arc(bx,by,br,0,Math.PI*2);ctx.stroke();});
       });
     }
   },
@@ -3907,47 +3909,71 @@ const THEMED_LEAGUES = [
     accentColor: '#7a22aa', accentColor2: '#4a0a70', textColor: '#dd88ff',
     drawArt(ctx, W, H) {
       _drawSceneCard(ctx, W, H, 'halloween', (ctx, W, H, HZ) => {
-        // HUGE FULL MOON glow
-        const moonGlow=ctx.createRadialGradient(W*0.72,H*0.14,0,W*0.72,H*0.14,H*0.38); moonGlow.addColorStop(0,'rgba(220,240,70,0.35)'); moonGlow.addColorStop(0.4,'rgba(100,140,20,0.18)'); moonGlow.addColorStop(1,'transparent'); ctx.fillStyle=moonGlow; ctx.fillRect(0,0,W,HZ);
-        ctx.fillStyle='#e8e030'; ctx.beginPath(); ctx.arc(W*0.72,H*0.14,H*0.10,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='rgba(200,200,20,0.55)'; ctx.beginPath(); ctx.arc(W*0.72,H*0.14,H*0.12,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='rgba(150,150,0,0.32)'; [[W*0.68,H*0.12,H*0.022],[W*0.76,H*0.17,H*0.016],[W*0.72,H*0.09,H*0.014]].forEach(([cx,cy,r])=>{ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();});
-        // Clouds drifting across moon
-        ctx.fillStyle='rgba(16,12,22,0.68)'; [[W*0.54,H*0.16,W*0.14,H*0.055],[W*0.78,H*0.13,W*0.12,H*0.048]].forEach(([cx,cy,rx,ry])=>{ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fill();});
-        // HAUNTED MANSION — left side, tall and spooky
-        ctx.fillStyle='#1e1828'; ctx.fillRect(W*0.02,H*0.24,W*0.26,HZ+H*0.08-H*0.24);
-        // Mansion roof gables
-        ctx.fillStyle='#2a2038'; ctx.beginPath(); ctx.moveTo(W*0.02,H*0.24); ctx.lineTo(W*0.08,H*0.10); ctx.lineTo(W*0.14,H*0.24); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(W*0.16,H*0.24); ctx.lineTo(W*0.21,H*0.14); ctx.lineTo(W*0.26,H*0.24); ctx.closePath(); ctx.fill();
-        // Mansion windows — some lit orange
-        ctx.fillStyle='rgba(220,130,20,0.70)'; [[0.04,0.30],[0.10,0.30],[0.17,0.30],[0.04,0.40],[0.17,0.40]].forEach(([wx,wy])=>{ctx.fillRect(W*wx,H*wy,W*0.044,H*0.060);});
-        ctx.fillStyle='rgba(20,10,28,0.90)'; [[0.10,0.40]].forEach(([wx,wy])=>{ctx.fillRect(W*wx,H*wy,W*0.044,H*0.060);});
-        // Spooky tree left — TALL branching dead tree
-        const drawDeadTree=(tx,ty,s)=>{ctx.strokeStyle='#221810'; ctx.lineWidth=s*4.5; ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx,ty-H*s*0.30);ctx.stroke(); ctx.lineWidth=s*2.8; ctx.beginPath();ctx.moveTo(tx,ty-H*s*0.16);ctx.lineTo(tx-W*0.060*s,ty-H*s*0.28);ctx.stroke(); ctx.beginPath();ctx.moveTo(tx,ty-H*s*0.22);ctx.lineTo(tx+W*0.065*s,ty-H*s*0.30);ctx.stroke(); ctx.lineWidth=s*1.8; ctx.beginPath();ctx.moveTo(tx-W*0.060*s,ty-H*s*0.28);ctx.lineTo(tx-W*0.090*s,ty-H*s*0.36);ctx.stroke(); ctx.beginPath();ctx.moveTo(tx-W*0.060*s,ty-H*s*0.28);ctx.lineTo(tx-W*0.032*s,ty-H*s*0.34);ctx.stroke(); ctx.beginPath();ctx.moveTo(tx+W*0.065*s,ty-H*s*0.30);ctx.lineTo(tx+W*0.095*s,ty-H*s*0.38);ctx.stroke(); ctx.beginPath();ctx.moveTo(tx+W*0.065*s,ty-H*s*0.30);ctx.lineTo(tx+W*0.040*s,ty-H*s*0.36);ctx.stroke();};
-        drawDeadTree(W*0.90,H*0.68,1.10);
-        drawDeadTree(W*0.82,H*0.70,0.78);
-        // WITCH ON BROOMSTICK flying across moon
-        ctx.fillStyle='rgba(10,6,18,0.90)';
-        // Broom
-        ctx.strokeStyle='rgba(120,80,20,0.80)'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(W*0.50,H*0.30); ctx.lineTo(W*0.68,H*0.22); ctx.stroke();
-        // Bristles
-        ctx.strokeStyle='rgba(140,100,30,0.70)'; ctx.lineWidth=1.5; [[0.68,0.22,0.74,0.20],[0.68,0.22,0.72,0.24],[0.68,0.22,0.70,0.18]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(W*x1,H*y1);ctx.lineTo(W*x2,H*y2);ctx.stroke();});
-        // Witch silhouette body+hat
-        ctx.fillStyle='rgba(10,6,18,0.92)'; ctx.beginPath(); ctx.ellipse(W*0.56,H*0.275,W*0.022,H*0.026,0.4,0,Math.PI*2); ctx.fill(); // body
-        ctx.beginPath(); ctx.arc(W*0.545,H*0.255,W*0.016,0,Math.PI*2); ctx.fill(); // head
-        ctx.beginPath(); ctx.moveTo(W*0.526,H*0.264); ctx.lineTo(W*0.545,H*0.220); ctx.lineTo(W*0.564,H*0.264); ctx.closePath(); ctx.fill(); // pointed hat
-        // Gravestones
-        ctx.fillStyle='#4a4458'; [[W*0.22,H*0.74,W*0.062,H*0.095],[W*0.36,H*0.72,W*0.056,H*0.090],[W*0.48,H*0.73,W*0.060,H*0.092]].forEach(([gx,gy,gw,gh])=>{ctx.fillRect(gx-gw/2,gy-gh,gw,gh);ctx.beginPath();ctx.arc(gx,gy-gh,gw/2,Math.PI,0);ctx.fill();});
-        ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.font=`bold ${W*0.024}px serif`; ctx.textAlign='center'; ctx.fillText('RIP',W*0.22,H*0.700); ctx.fillText('RIP',W*0.36,H*0.682); ctx.fillText('RIP',W*0.48,H*0.692); ctx.textAlign='left';
-        // GIANT PUMPKIN — right side glowing
-        const pkG=ctx.createRadialGradient(W*0.76,H*0.70,0,W*0.76,H*0.70,H*0.12); pkG.addColorStop(0,'rgba(255,130,10,0.65)'); pkG.addColorStop(1,'transparent'); ctx.fillStyle=pkG; ctx.fillRect(W*0.62,H*0.58,W*0.28,H*0.24);
-        ctx.fillStyle='#e55010'; ctx.beginPath(); ctx.ellipse(W*0.76,H*0.70,W*0.070,H*0.080,0,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='#c83a08'; ctx.beginPath(); ctx.ellipse(W*0.753,H*0.70,W*0.024,H*0.080,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(W*0.767,H*0.70,W*0.024,H*0.080,0,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='rgba(255,155,25,0.90)'; [[W*0.739,H*0.672],[W*0.781,H*0.672]].forEach(([ex,ey])=>{ctx.beginPath();ctx.moveTo(ex-W*0.016,ey);ctx.lineTo(ex,ey-H*0.026);ctx.lineTo(ex+W*0.016,ey);ctx.closePath();ctx.fill();}); // eyes
-        ctx.strokeStyle='rgba(255,155,25,0.90)'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(W*0.760,H*0.710,W*0.028,0,Math.PI); ctx.stroke(); // mouth
-        ctx.strokeStyle='#1e5518'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(W*0.76,H*0.620); ctx.quadraticCurveTo(W*0.77,H*0.598,W*0.775,H*0.582); ctx.stroke();
-        // Bats
-        ctx.fillStyle='rgba(10,4,20,0.88)'; [[0.16,0.26],[0.34,0.32],[0.60,0.20],[0.44,0.38]].forEach(([bx,by])=>{ctx.beginPath();ctx.moveTo(W*bx,H*by);ctx.bezierCurveTo(W*(bx-0.040),H*(by-0.040),W*(bx-0.072),H*(by-0.018),W*(bx-0.062),H*(by+0.012));ctx.lineTo(W*bx,H*(by-0.010));ctx.bezierCurveTo(W*(bx+0.072),H*(by-0.018),W*(bx+0.040),H*(by-0.040),W*bx,H*by);ctx.closePath();ctx.fill();});
+        // BLOOD MOON — dominant, large, eerie orange-red
+        const moonGlow=ctx.createRadialGradient(W*0.68,H*0.16,0,W*0.68,H*0.16,H*0.50); moonGlow.addColorStop(0,'rgba(255,80,10,0.40)'); moonGlow.addColorStop(0.3,'rgba(180,40,0,0.22)'); moonGlow.addColorStop(1,'transparent'); ctx.fillStyle=moonGlow; ctx.fillRect(0,0,W,HZ);
+        ctx.fillStyle='#c83010'; ctx.beginPath(); ctx.arc(W*0.68,H*0.16,H*0.13,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#e84018'; ctx.beginPath(); ctx.arc(W*0.68,H*0.16,H*0.105,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='rgba(100,20,10,0.45)'; [[W*0.64,H*0.13,H*0.028],[W*0.73,H*0.19,H*0.020],[W*0.67,H*0.09,H*0.018],[W*0.72,H*0.12,H*0.014]].forEach(([cx,cy,r])=>{ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();});
+        // Stars
+        [[0.06,0.04,1.8],[0.14,0.11,1.4],[0.24,0.05,2],[0.33,0.19,1.4],[0.42,0.07,1.8],[0.50,0.16,1.2],[0.60,0.03,2],[0.80,0.22,1.6],[0.90,0.06,1.8],[0.94,0.18,1.4],[0.28,0.25,1],[0.52,0.26,1.2]].forEach(([px,py,r])=>{ctx.fillStyle=`rgba(255,220,180,${0.4+r*0.18})`;ctx.beginPath();ctx.arc(W*px,H*py,r,0,Math.PI*2);ctx.fill();});
+        // Dark storm clouds across moon
+        ctx.fillStyle='rgba(14,8,20,0.72)'; [[W*0.50,H*0.14,W*0.18,H*0.060],[W*0.78,H*0.11,W*0.14,H*0.052],[W*0.36,H*0.20,W*0.12,H*0.044]].forEach(([cx,cy,rx,ry])=>{ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fill();});
+        // SPIDER WEB — top-left corner
+        const wox=W*0.02,woy=H*0.04,wr=H*0.20;
+        ctx.strokeStyle='rgba(200,180,255,0.40)'; ctx.lineWidth=1;
+        for(let a=0;a<8;a++){const ang=a/8*Math.PI*2; ctx.beginPath();ctx.moveTo(wox,woy);ctx.lineTo(wox+Math.cos(ang)*wr,woy+Math.sin(ang)*wr);ctx.stroke();}
+        for(let ring=1;ring<=4;ring++){ctx.beginPath();for(let a=0;a<=8;a++){const ang=a/8*Math.PI*2,rr=ring/4*wr;ctx.lineTo(wox+Math.cos(ang)*rr,woy+Math.sin(ang)*rr);}ctx.stroke();}
+        // HAUNTED MANSION — dominant left side, tall & wide
+        ctx.fillStyle='#150f1e'; ctx.fillRect(W*0.01,H*0.20,W*0.32,H*0.45);
+        // Main tower — extra tall centre of mansion
+        ctx.fillStyle='#1a1228'; ctx.fillRect(W*0.11,H*0.06,W*0.10,H*0.20);
+        // Tower pointed turret
+        ctx.fillStyle='#221838'; ctx.beginPath(); ctx.moveTo(W*0.11,H*0.06); ctx.lineTo(W*0.16,H*-0.04); ctx.lineTo(W*0.21,H*0.06); ctx.closePath(); ctx.fill();
+        // Outer gable roofs
+        ctx.fillStyle='#1e1430'; ctx.beginPath(); ctx.moveTo(W*0.01,H*0.20); ctx.lineTo(W*0.07,H*0.08); ctx.lineTo(W*0.13,H*0.20); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(W*0.21,H*0.20); ctx.lineTo(W*0.27,H*0.10); ctx.lineTo(W*0.33,H*0.20); ctx.closePath(); ctx.fill();
+        // Glowing windows — amber and a ghostly green one
+        ctx.fillStyle='rgba(230,120,20,0.80)'; [[0.03,0.26],[0.08,0.26],[0.14,0.26],[0.24,0.26],[0.03,0.36],[0.24,0.36],[0.08,0.46],[0.14,0.46]].forEach(([wx,wy])=>{ctx.fillRect(W*wx,H*wy,W*0.040,H*0.055);});
+        ctx.fillStyle='rgba(20,220,60,0.70)'; ctx.fillRect(W*0.14,H*0.36,W*0.040,H*0.055); // ghostly green window
+        ctx.fillStyle='rgba(220,240,255,0.80)'; ctx.fillRect(W*0.13,H*0.10,W*0.030,H*0.042); // tower window
+        // Window cross bars
+        ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=1.5; [[0.03,0.26],[0.08,0.26],[0.14,0.26],[0.24,0.26],[0.03,0.36],[0.24,0.36],[0.14,0.36]].forEach(([wx,wy])=>{ctx.beginPath();ctx.moveTo(W*(wx+0.020),H*wy);ctx.lineTo(W*(wx+0.020),H*(wy+0.055));ctx.stroke();ctx.beginPath();ctx.moveTo(W*wx,H*(wy+0.028));ctx.lineTo(W*(wx+0.040),H*(wy+0.028));ctx.stroke();});
+        // Iron fence in front of mansion
+        ctx.strokeStyle='#3a2a4a'; ctx.lineWidth=2.5;
+        for(let i=0;i<14;i++){const fx=W*(0.01+i*0.024); ctx.beginPath();ctx.moveTo(fx,HZ+H*0.01);ctx.lineTo(fx,HZ+H*0.09);ctx.stroke(); ctx.fillStyle='#5a3a6a'; ctx.beginPath();ctx.moveTo(fx,HZ+H*0.01);ctx.lineTo(fx-W*0.005,HZ+H*0.02);ctx.lineTo(fx+W*0.005,HZ+H*0.02);ctx.closePath();ctx.fill();}
+        ctx.strokeStyle='#4a3a5a'; ctx.lineWidth=2; ctx.beginPath();ctx.moveTo(W*0.01,HZ+H*0.05);ctx.lineTo(W*0.33,HZ+H*0.05);ctx.stroke();
+        // LARGE DEAD TREES — right side, dramatic
+        const drawTree=(tx,ty,s)=>{ctx.strokeStyle='#1a100c'; ctx.lineWidth=s*5; ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx+W*0.01*s,ty-H*s*0.34);ctx.stroke(); ctx.lineWidth=s*3; ctx.beginPath();ctx.moveTo(tx+W*0.01*s,ty-H*s*0.18);ctx.lineTo(tx-W*0.07*s,ty-H*s*0.32);ctx.stroke(); ctx.beginPath();ctx.moveTo(tx+W*0.01*s,ty-H*s*0.24);ctx.lineTo(tx+W*0.08*s,ty-H*s*0.34);ctx.stroke(); ctx.lineWidth=s*1.8; ctx.beginPath();ctx.moveTo(tx-W*0.07*s,ty-H*s*0.32);ctx.lineTo(tx-W*0.10*s,ty-H*s*0.42);ctx.stroke(); ctx.beginPath();ctx.moveTo(tx-W*0.07*s,ty-H*s*0.32);ctx.lineTo(tx-W*0.04*s,ty-H*s*0.40);ctx.stroke(); ctx.beginPath();ctx.moveTo(tx+W*0.08*s,ty-H*s*0.34);ctx.lineTo(tx+W*0.12*s,ty-H*s*0.44);ctx.stroke(); ctx.beginPath();ctx.moveTo(tx+W*0.08*s,ty-H*s*0.34);ctx.lineTo(tx+W*0.05*s,ty-H*s*0.42);ctx.stroke();};
+        drawTree(W*0.86,H*0.72,1.15); drawTree(W*0.96,H*0.68,0.75);
+        // WITCH ON BROOMSTICK — large, crossing the moon
+        ctx.strokeStyle='#6a3a10'; ctx.lineWidth=3.5; ctx.beginPath(); ctx.moveTo(W*0.42,H*0.32); ctx.lineTo(W*0.66,H*0.20); ctx.stroke();
+        ctx.strokeStyle='#8a5a18'; ctx.lineWidth=2; [[0.66,0.20,0.74,0.17],[0.66,0.20,0.73,0.23],[0.66,0.20,0.71,0.16],[0.66,0.20,0.72,0.25]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(W*x1,H*y1);ctx.lineTo(W*x2,H*y2);ctx.stroke();});
+        ctx.fillStyle='#060410'; ctx.beginPath(); ctx.ellipse(W*0.52,H*0.278,W*0.026,H*0.030,0.45,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(W*0.505,H*0.256,W*0.018,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(W*0.484,H*0.268); ctx.lineTo(W*0.505,H*0.218); ctx.lineTo(W*0.526,H*0.268); ctx.closePath(); ctx.fill();
+        // Witch's cape flowing
+        ctx.beginPath(); ctx.moveTo(W*0.505,H*0.270); ctx.quadraticCurveTo(W*0.48,H*0.310,W*0.462,H*0.298); ctx.quadraticCurveTo(W*0.476,H*0.275,W*0.496,H*0.268); ctx.closePath(); ctx.fill();
+        // GRAVESTONES — eerie graveyard, centre-right ground
+        const graves=[[W*0.40,H*0.76,W*0.058,H*0.088,'RIP'],[W*0.52,H*0.74,W*0.052,H*0.084,'RIP'],[W*0.62,H*0.78,W*0.066,H*0.096,'RIP'],[W*0.46,H*0.80,W*0.042,H*0.066,'†']];
+        graves.forEach(([gx,gy,gw,gh,txt])=>{ctx.fillStyle='#3a2a4a';ctx.fillRect(gx-gw/2,gy-gh,gw,gh);ctx.beginPath();ctx.arc(gx,gy-gh,gw/2,Math.PI,0);ctx.fill(); ctx.fillStyle='rgba(255,255,255,0.35)';ctx.font=`bold ${W*0.022}px serif`;ctx.textAlign='center';ctx.fillText(txt,gx,gy-gh+H*0.040);});
+        ctx.textAlign='left';
+        // GLOWING GHOST rising from grave — centre
+        const ghX=W*0.50, ghY=H*0.62;
+        const ghG=ctx.createRadialGradient(ghX,ghY,0,ghX,ghY,H*0.14); ghG.addColorStop(0,'rgba(180,255,220,0.75)'); ghG.addColorStop(0.5,'rgba(100,220,180,0.40)'); ghG.addColorStop(1,'transparent'); ctx.fillStyle=ghG; ctx.fillRect(ghX-H*0.15,ghY-H*0.15,H*0.30,H*0.30);
+        ctx.fillStyle='rgba(200,255,230,0.82)'; ctx.beginPath(); ctx.arc(ghX,ghY-H*0.06,W*0.040,Math.PI,0); ctx.lineTo(ghX+W*0.040,ghY+H*0.06); ctx.quadraticCurveTo(ghX+W*0.025,ghY+H*0.050,ghX+W*0.013,ghY+H*0.064); ctx.quadraticCurveTo(ghX,ghY+H*0.050,ghX-W*0.013,ghY+H*0.064); ctx.quadraticCurveTo(ghX-W*0.025,ghY+H*0.050,ghX-W*0.040,ghY+H*0.06); ctx.closePath(); ctx.fill();
+        ctx.fillStyle='rgba(10,40,20,0.88)'; ctx.beginPath(); ctx.ellipse(ghX-W*0.016,ghY-H*0.072,W*0.010,H*0.014,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(ghX+W*0.016,ghY-H*0.072,W*0.010,H*0.014,0,0,Math.PI*2); ctx.fill();
+        // GIANT GLOWING PUMPKIN — foreground right
+        const pkG=ctx.createRadialGradient(W*0.80,H*0.72,0,W*0.80,H*0.72,H*0.16); pkG.addColorStop(0,'rgba(255,120,0,0.75)'); pkG.addColorStop(1,'transparent'); ctx.fillStyle=pkG; ctx.fillRect(W*0.64,H*0.58,W*0.32,H*0.28);
+        ctx.fillStyle='#d04808'; ctx.beginPath(); ctx.ellipse(W*0.80,H*0.740,W*0.085,H*0.096,0,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#b83606'; ctx.beginPath(); ctx.ellipse(W*0.791,H*0.740,W*0.028,H*0.096,0,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(W*0.809,H*0.740,W*0.028,H*0.096,0,0,Math.PI*2); ctx.fill();
+        // Carved face glowing
+        ctx.fillStyle='rgba(255,165,30,0.95)'; [[W*0.776,H*0.710],[W*0.824,H*0.710]].forEach(([ex,ey])=>{ctx.beginPath();ctx.moveTo(ex-W*0.019,ey+H*0.005);ctx.lineTo(ex,ey-H*0.030);ctx.lineTo(ex+W*0.019,ey+H*0.005);ctx.closePath();ctx.fill();});
+        ctx.strokeStyle='rgba(255,165,30,0.92)'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(W*0.768,H*0.744); ctx.lineTo(W*0.778,H*0.756); ctx.lineTo(W*0.790,H*0.748); ctx.lineTo(W*0.800,H*0.758); ctx.lineTo(W*0.810,H*0.748); ctx.lineTo(W*0.822,H*0.756); ctx.lineTo(W*0.832,H*0.744); ctx.stroke();
+        ctx.strokeStyle='#1e5518'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(W*0.80,H*0.644); ctx.quadraticCurveTo(W*0.815,H*0.618,W*0.822,H*0.600); ctx.stroke();
+        // Eerie ground mist
+        const mistG=ctx.createLinearGradient(0,HZ,0,H*0.72); mistG.addColorStop(0,'rgba(80,20,120,0.40)'); mistG.addColorStop(1,'transparent'); ctx.fillStyle=mistG; ctx.fillRect(0,HZ,W,H*0.30);
+        // Bats — 6 bats, varied sizes and positions
+        ctx.fillStyle='rgba(8,4,16,0.90)'; [[0.10,0.24,1.0],[0.28,0.31,0.8],[0.44,0.36,1.2],[0.61,0.18,0.9],[0.74,0.32,0.7],[0.38,0.44,0.6]].forEach(([bx,by,s])=>{ctx.beginPath();ctx.moveTo(W*bx,H*by);ctx.bezierCurveTo(W*(bx-0.044*s),H*(by-0.044*s),W*(bx-0.076*s),H*(by-0.018*s),W*(bx-0.065*s),H*(by+0.014*s));ctx.lineTo(W*bx,H*(by-0.012*s));ctx.bezierCurveTo(W*(bx+0.076*s),H*(by-0.018*s),W*(bx+0.044*s),H*(by-0.044*s),W*bx,H*by);ctx.closePath();ctx.fill();});
       });
     }
   },
