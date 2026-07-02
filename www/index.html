@@ -1424,6 +1424,7 @@ window.addEventListener('resize', resize);
 let state = 'menu'; // menu, ready, ballcoming, hit, result
 let runs = 0;
 let ballsBowled = 0;
+const BALLS_PER_MATCH = 20; // 20-ball innings (T20 style)
 let best = parseInt(localStorage.getItem('flickyBest') || '0');
 hudBest.textContent = 'BEST: ' + best; if(menuBestVal) menuBestVal.textContent = best;
 requestAnimationFrame(() => { drawMenuLogo(); updateMenuHUD(); });
@@ -2192,11 +2193,12 @@ function getEquipStat(slot, stat) {
 
 // ========== CHEST SYSTEM ==========
 const CHEST_TYPES = {
-  wooden: { name:'WOODEN', color:'#8B6914', openTime: 0,        slots:1, cards:{min:1,max:2},  gems:{min:0,max:3},  coins:{min:20, max:50},  rarity:[0.90,0.10,0.00,0.00] },
-  bronze: { name:'BRONZE', color:'#cd7f32', openTime: 2*3600,   slots:1, cards:{min:1,max:3},  gems:{min:0,max:5},  coins:{min:30, max:80},  rarity:[0.80,0.18,0.02,0.00] },
-  silver: { name:'SILVER', color:'#c0c0c0', openTime: 8*3600,   slots:2, cards:{min:3,max:6},  gems:{min:3,max:12}, coins:{min:80, max:200}, rarity:[0.60,0.30,0.09,0.01] },
-  gold:   { name:'GOLD',   color:'#f4d03f', openTime:12*3600,   slots:3, cards:{min:5,max:10}, gems:{min:8,max:25}, coins:{min:200,max:500}, rarity:[0.40,0.35,0.20,0.05] },
-  elite:  { name:'ELITE',  color:'#9b59b6', openTime:24*3600,   slots:4, cards:{min:8,max:16}, gems:{min:20,max:60},coins:{min:500,max:1500},rarity:[0.20,0.35,0.30,0.15] },
+  wooden:    { name:'WOODEN',    color:'#8B6914', openTime: 0,        slots:1, cards:{min:1,max:2},   gems:{min:0,max:3},   coins:{min:20,  max:50},   rarity:[0.90,0.10,0.00,0.00] },
+  bronze:    { name:'BRONZE',    color:'#cd7f32', openTime: 2*3600,   slots:1, cards:{min:1,max:3},   gems:{min:0,max:5},   coins:{min:30,  max:80},   rarity:[0.80,0.18,0.02,0.00] },
+  silver:    { name:'SILVER',    color:'#c0c0c0', openTime: 8*3600,   slots:2, cards:{min:3,max:6},   gems:{min:3,max:12},  coins:{min:80,  max:200},  rarity:[0.60,0.30,0.09,0.01] },
+  gold:      { name:'GOLD',      color:'#f4d03f', openTime:12*3600,   slots:3, cards:{min:5,max:10},  gems:{min:8,max:25},  coins:{min:200, max:500},  rarity:[0.40,0.35,0.20,0.05] },
+  elite:     { name:'ELITE',     color:'#9b59b6', openTime:24*3600,   slots:4, cards:{min:8,max:16},  gems:{min:20,max:60}, coins:{min:500, max:1500}, rarity:[0.20,0.35,0.30,0.15] },
+  legendary: { name:'LEGENDARY', color:'#f59e0b', openTime:24*3600,   slots:4, cards:{min:12,max:20}, gems:{min:40,max:80}, coins:{min:1000,max:3000}, rarity:[0.05,0.20,0.40,0.35] },
 };
 
 function loadChestSlots() {
@@ -5805,18 +5807,6 @@ function renderChestTab(container) {
             });
             slot.appendChild(gemBtn);
 
-            const adBtn = document.createElement('button');
-            adBtn.className = 'chestSlotBtn watch-ad';
-            adBtn.innerHTML = '▶ WATCH AD — <span style="color:#22c55e">-1H</span>';
-            adBtn.addEventListener('click', () => {
-              // simulate rewarded ad — reduce timer by 1 hour
-              const reduction = 3600;
-              chest.openingStarted = Math.min(Date.now(), chest.openingStarted + reduction * 1000);
-              saveChestSlots();
-              showMessage('⏩ 1 hour removed!', '#22c55e', 1500);
-              renderSlots();
-            });
-            slot.appendChild(adBtn);
           }
         } else {
           drawChestArt(artCanvas, chest.type, 0);
@@ -6278,18 +6268,31 @@ function findNearestFielder(shotAngle) {
   return { f: best, diff: bestDiff, canSave };
 }
 
-// send the nearest fielder to where the ball ends up (targetFrac = fraction
-// of field radius, matches animateHit's targetDist) so every non-boundary
-// ball is visibly fielded
+// send the nearest fielder to where the ball ends up.
+// If no fielder is within 50° of the shot (genuine gap), pick whoever is
+// physically closest to the landing spot so the animation looks natural.
 function sendFielderToBall(shotAngle, targetFrac, nearFielder) {
   if (!nearFielder) return;
-  const f = nearFielder.f;
   const rad = shotAngle * Math.PI/180;
   const sx = W/2 + Math.sin(rad) * W * FIELD_RX * targetFrac;
   const sy = PITCH_BOTTOM() - Math.cos(rad) * H * FIELD_RY * targetFrac;
+
+  let f;
+  if (nearFielder.diff <= 50) {
+    // fielder is reasonably close to the shot line — send them
+    f = nearFielder.f;
+  } else {
+    // genuine gap: pick the fielder physically nearest the landing spot
+    let best = null, bestDist = Infinity;
+    fielders.forEach(fd => {
+      const d = Math.hypot(fd.baseX - sx, fd.baseY - sy);
+      if (d < bestDist) { bestDist = d; best = fd; }
+    });
+    f = best || nearFielder.f;
+  }
   f.chasing = true;
   f.target = {x: sx, y: sy};
-  f.diving = targetFrac < 0.15; // dive for true dot balls right near them
+  f.diving = targetFrac < 0.15;
 }
 
 function animateHit(angle, distance, callback, targetDist) {
@@ -6454,7 +6457,20 @@ function caughtOut() {
 
 function nextOrEnd() {
   hideMessage();
-  startBallSequence(); // endless - keep going until out
+  if (ballsBowled >= BALLS_PER_MATCH) {
+    // All balls bowled — innings complete regardless of wicket
+    showMessage('INNINGS OVER!', '#f4d03f');
+    flash = 0.4; flashColor = '100,200,100';
+    triggerShake(8, 8);
+    setTimeout(() => endGame(), 1800);
+  } else if (ballsBowled > 0 && ballsBowled % 6 === 0) {
+    // End of an over
+    const overNum = ballsBowled / 6;
+    showMessage('END OF OVER ' + overNum, '#f4d03f', 1200);
+    setTimeout(() => startBallSequence(), 1300);
+  } else {
+    startBallSequence();
+  }
 }
 
 // stores the data needed to render a shareable result card after each match
@@ -8090,27 +8106,43 @@ function drawSceneScoreboard() {
   ctx.strokeStyle = border; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.roundRect(bX+0.75, bY+0.75, bW-1.5, bH-1.5, br); ctx.stroke();
 
-  // centre divider (same hue as border, dimmed)
-  ctx.fillStyle = border.replace(')',',0.3)').replace('#','rgba(0,0,0,0.3)');
-  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(bX+bW/2-0.5, bY+bH*0.12, 1, bH*0.76);
+  // dividers drawn inside the text section below
 
   ctx.textAlign = 'center';
 
-  // RUNS
   const labelSz = Math.max(8, bH * 0.22);
   const runsSz  = Math.max(18, bH * 0.54);
-  ctx.fillStyle = runsLabelCol; ctx.font = `bold ${labelSz}px monospace`;
-  ctx.fillText('RUNS', bX + bW*0.25, bY + bH*0.30);
-  ctx.fillStyle = runsValCol; ctx.font = `900 ${runsSz}px sans-serif`;
-  ctx.fillText(String(runs), bX + bW*0.25, bY + bH*0.88);
 
-  // TARGET — urgent colour override when close
+  // Dividers at 33% and 66%
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.fillRect(bX + bW*0.333 - 0.5, bY + bH*0.12, 1, bH*0.76);
+  ctx.fillRect(bX + bW*0.666 - 0.5, bY + bH*0.12, 1, bH*0.76);
+
+  // RUNS (left third)
+  ctx.fillStyle = runsLabelCol; ctx.font = `bold ${labelSz}px monospace`;
+  ctx.fillText('RUNS', bX + bW*0.167, bY + bH*0.30);
+  ctx.fillStyle = runsValCol; ctx.font = `900 ${runsSz}px sans-serif`;
+  ctx.fillText(String(runs), bX + bW*0.167, bY + bH*0.88);
+
+  // BALLS (centre third) — over.ball format, colour urgent when low
+  const ballsLeft = Math.max(0, BALLS_PER_MATCH - ballsBowled);
+  const oversDone = Math.floor(ballsBowled / 6);
+  const ballInOver = ballsBowled % 6;
+  const overStr = oversDone + '.' + ballInOver;
+  const ballsColor = ballsLeft <= 6 ? '#ff4444' : ballsLeft <= 12 ? '#f4d03f' : runsValCol;
+  ctx.fillStyle = runsLabelCol; ctx.font = `bold ${labelSz}px monospace`;
+  ctx.fillText('OVER', bX + bW*0.500, bY + bH*0.30);
+  ctx.fillStyle = ballsColor; ctx.font = `900 ${Math.max(14, bH*0.46)}px sans-serif`;
+  ctx.fillText(overStr, bX + bW*0.500, bY + bH*0.88);
+
+  // TARGET (right third) — show NEED when run rate matters
   const tgtSz = Math.max(14, bH * 0.44);
   const tgtColor = runsLeft <= 10 ? '#ff4444' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
+  const rrRequired = ballsLeft > 0 ? (runsLeft / ballsLeft).toFixed(1) : '—';
   ctx.fillStyle = tgtLabelCol; ctx.font = `bold ${labelSz}px monospace`;
-  ctx.fillText('TARGET', bX + bW*0.75, bY + bH*0.30);
+  ctx.fillText('NEED', bX + bW*0.833, bY + bH*0.30);
   ctx.fillStyle = tgtColor; ctx.font = `900 ${tgtSz}px sans-serif`;
-  ctx.fillText(String(displayTarget), bX + bW*0.75, bY + bH*0.88);
+  ctx.fillText(String(runsLeft > 0 ? runsLeft : '✓'), bX + bW*0.833, bY + bH*0.88);
 
   ctx.textAlign = 'left';
 
@@ -8123,6 +8155,20 @@ function drawSceneScoreboard() {
   if (pct > 0.01) { ctx.fillStyle = barColor; ctx.fillRect(bX, ebY, bW*pct, ebH); }
   ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 0.5;
   ctx.strokeRect(bX, ebY, bW, ebH);
+
+  // Over dots: 6 dots below energy bar, filled = bowled this over
+  const dotY  = ebY + ebH + H * 0.007;
+  const dotR  = Math.max(2.5, H * 0.004);
+  const dotGap = dotR * 3.2;
+  const totalDotW = 5 * dotGap;
+  const dotStartX = bX + bW/2 - totalDotW/2;
+  for (let i = 0; i < 6; i++) {
+    const cx2 = dotStartX + i * dotGap;
+    const filled = i < ballInOver;
+    ctx.beginPath(); ctx.arc(cx2, dotY + dotR, dotR, 0, Math.PI*2);
+    ctx.fillStyle = filled ? border : 'rgba(255,255,255,0.2)';
+    ctx.fill();
+  }
 }
 
 function drawGroundRings(colorA, colorB, horizonBlend) {
