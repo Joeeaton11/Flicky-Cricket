@@ -17,8 +17,8 @@
 </style>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; user-select:none; }
-  html,body { width:100%; height:100%; overflow:hidden; background:#2a8c3e; font-family: 'Courier New', monospace; }
-  #game { display:block; width:100%; height:100%; touch-action:none; }
+  html,body { width:100%; height:100%; height:100dvh; overflow:hidden; background:#2a8c3e; font-family: 'Courier New', monospace; }
+  #game { display:block; width:100%; height:100%; height:100dvh; touch-action:none; }
   #hud {
     position:absolute; top:0; left:0; width:100%; padding:6px 16px;
     display:flex; justify-content:flex-end; color:#fff; font-weight:bold;
@@ -835,6 +835,26 @@
     transform:translateY(-50%) scale(1) rotateY(0deg);
     opacity:1; pointer-events:all;
   }
+  /* Pop from chest — card flies up from bottom */
+  @keyframes cardFlyUp {
+    0%   { transform:translateY(55%) scale(0.28) rotateY(25deg); opacity:0; }
+    40%  { opacity:1; }
+    70%  { transform:translateY(-54%) scale(1.06) rotateY(-4deg); }
+    85%  { transform:translateY(-49%) scale(0.97) rotateY(2deg); }
+    100% { transform:translateY(-50%) scale(1)    rotateY(0deg);  opacity:1; }
+  }
+  #chestCardPopup.pop-in {
+    animation: cardFlyUp 0.55s cubic-bezier(0.22,1,0.36,1) forwards;
+    opacity:1; pointer-events:all;
+  }
+  /* Badge bounce when count ticks up */
+  @keyframes badgePop {
+    0%   { transform:scale(1); }
+    35%  { transform:scale(1.55); }
+    65%  { transform:scale(0.9); }
+    100% { transform:scale(1); }
+  }
+  .badge-pop { animation: badgePop 0.35s ease forwards; }
 
   /* ════════════════════════════════
      TRADING CARD SHELL
@@ -1655,12 +1675,14 @@ muteBtn.addEventListener('click', () => {
 let W, H;
 let fieldersReady = false;
 function resize() {
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
+  const vv = window.visualViewport;
+  W = canvas.width  = vv ? Math.round(vv.width)  : window.innerWidth;
+  H = canvas.height = vv ? Math.round(vv.height) : window.innerHeight;
   if (fieldersReady) layoutFielders();
 }
 resize();
 window.addEventListener('resize', resize);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 
 // ---------- GAME STATE ----------
 let state = 'menu'; // menu, ready, ballcoming, hit, result
@@ -14766,7 +14788,7 @@ function showChestOpenAnimation(chestType, rewards, onDone) {
   chestTapHint.style.display   = 'none';
   chestRevealScreen.classList.remove('active');
   chestRevealScreen.style.display = 'none';
-  chestCardPopup.classList.remove('visible');
+  chestCardPopup.classList.remove('visible', 'pop-in');
   chestCoinPopup.classList.remove('visible');
   document.getElementById('chestOpenDoneBtn').classList.remove('visible');
   document.getElementById('chestSkipBtn').style.display = 'flex';
@@ -14900,7 +14922,7 @@ function _onRevealTap() {
   _updateRemainingBadge();
 
   // Hide both popups, then show the right one
-  chestCardPopup.classList.remove('visible');
+  chestCardPopup.classList.remove('visible', 'pop-in');
   chestCoinPopup.classList.remove('visible');
 
   if (item.type === 'coins' || item.type === 'gems') {
@@ -14981,10 +15003,25 @@ function _showCardPopup(c, count) {
   slotEl.textContent = slot.toUpperCase();
   slotEl.style.background = { bat:'#1d4ed8', gloves:'#0f766e', pads:'#b45309', helmet:'#7c3aed', shoes:'#be185d' }[slot] || '#374151';
 
-  // +N pill rarity colour and count
+  // +N pill — start at +1, tick up to count with per-card bounces
   const plusOneEl = document.getElementById('chestCardPlusOne');
   plusOneEl.style.setProperty('--rarity-col', rc);
-  plusOneEl.textContent = '+' + count;
+  plusOneEl.textContent = '+1';
+  // Cancel any previous ticker
+  if (plusOneEl._tickTimeout) { clearTimeout(plusOneEl._tickTimeout); plusOneEl._tickTimeout = null; }
+  if (count > 1) {
+    let shown = 1;
+    const tick = () => {
+      shown++;
+      plusOneEl.textContent = '+' + shown;
+      plusOneEl.classList.remove('badge-pop');
+      void plusOneEl.offsetWidth; // reflow to restart animation
+      plusOneEl.classList.add('badge-pop');
+      hapticTap();
+      if (shown < count) plusOneEl._tickTimeout = setTimeout(tick, 480);
+    };
+    plusOneEl._tickTimeout = setTimeout(tick, 520);
+  }
 
   // Name
   document.getElementById('chestCardName').textContent = c.name;
@@ -15013,7 +15050,12 @@ function _showCardPopup(c, count) {
   const artCanvas = document.getElementById('chestCardArtCanvas');
   _drawItemCardArt(artCanvas, c, rc, rbg);
 
-  requestAnimationFrame(() => chestCardPopup.classList.add('visible'));
+  // Fly-up pop from chest
+  chestCardPopup.classList.remove('visible', 'pop-in');
+  void chestCardPopup.offsetWidth; // reflow to restart animation
+  requestAnimationFrame(() => {
+    chestCardPopup.classList.add('pop-in');
+  });
 }
 
 function _drawItemCardArt(canvas, card, rc, rbg) {
