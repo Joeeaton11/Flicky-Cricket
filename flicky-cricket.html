@@ -3411,6 +3411,7 @@ fieldersReady = true;
 // umpire state
 let umpireSignal = null; // 'out', 'four', 'six', null
 let umpireSignalTimer = 0;
+let umpireSignalPhase = 0; // drives four-signal arm sweep
 
 function layoutFielders(walkToNewPos) {
   fielders.forEach(f => {
@@ -3420,6 +3421,9 @@ function layoutFielders(walkToNewPos) {
     f.baseX = cx; f.baseY = cy;
     if (!walkToNewPos) {
       f.x = cx; f.y = cy;
+    } else {
+      // Brief start then snap: move for ~10 frames then teleport
+      f.snapDelay = 10;
     }
     f.chasing = false;
     f.reached = false;
@@ -3445,21 +3449,29 @@ function updateFielders() {
         f.stridePhase = 0;
       }
     } else {
-      // smooth walk back to base position — slow enough to be visible
+      // Walk/snap back to base position
       const dxb = f.baseX - f.x;
       const dyb = f.baseY - f.y;
       const db = Math.hypot(dxb, dyb);
       if (db > 1) {
-        // walk at a fixed pixel speed (slower than sprint), with gentle lerp finish
-        const walkSpeed = f.speed * 60 * 0.55;
-        const step = Math.min(walkSpeed, db);
-        f.x += (dxb / db) * step;
-        f.y += (dyb / db) * step;
-        if (!f.stridePhase) f.stridePhase = 0;
-        f.stridePhase += 0.14; // slower stride cadence for walking
+        if (f.snapDelay !== undefined && f.snapDelay > 0) {
+          // Brief start: walk fast for snapDelay frames then snap
+          const walkSpeed = f.speed * 60 * 0.55;
+          f.x += (dxb / db) * Math.min(walkSpeed, db);
+          f.y += (dyb / db) * Math.min(walkSpeed, db);
+          if (!f.stridePhase) f.stridePhase = 0;
+          f.stridePhase += 0.14;
+          f.snapDelay--;
+        } else {
+          // Snap directly to position
+          f.x = f.baseX; f.y = f.baseY;
+          f.stridePhase = 0;
+          f.snapDelay = undefined;
+        }
       } else {
         f.x = f.baseX; f.y = f.baseY;
         f.stridePhase = 0;
+        f.snapDelay = undefined;
       }
     }
   });
@@ -6805,7 +6817,7 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
         else if (fatigued && rawPower > 1.5) displayMsg = 'TIRED... ' + outcome;
         showMessage(displayMsg, color, 900);
       }
-      if (outcome === 'FOUR!') { umpireSignal = 'four'; umpireSignalTimer = 60; }
+      if (outcome === 'FOUR!') { umpireSignal = 'four'; umpireSignalTimer = 60; umpireSignalPhase = 0; }
       if (outcome === 'SIX!') { umpireSignal = 'six'; umpireSignalTimer = 60; }
       setTimeout(nextOrEnd, 1000);
     }
@@ -7769,7 +7781,7 @@ function drawField() {
   // umpire stands directly behind the bowler's stumps (same line as the
   // pitch), just a little further back, with only a small lateral nudge -
   // not a full pitch-width to the side
-  drawUmpire(W/2 + PITCH_TOP_W()*0.22, PITCH_TOP()-22);
+  drawUmpire(W/2 + PITCH_TOP_W()*0.08, PITCH_TOP()-22);
 
   // fielders (sorted so ones higher on screen draw first - simple depth)
   const sorted = [...fielders].sort((a,b)=>a.y-b.y);
@@ -13780,8 +13792,11 @@ function drawUmpireArms(x, y, ac) {
     ctx.strokeStyle = ac; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(x-4, y-19); ctx.lineTo(x-8, y-32); ctx.moveTo(x+4, y-19); ctx.lineTo(x+8, y-32); ctx.stroke();
   } else if (umpireSignal === 'four' && umpireSignalTimer > 0) {
+    // Sweeping arm: oscillates side to side
+    const tipX = x + Math.sin(umpireSignalPhase) * 12;
     ctx.strokeStyle = ac; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(x-4, y-18); ctx.lineTo(x-14, y-16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x-3, y-18); ctx.lineTo(tipX, y-16); ctx.stroke();
+    ctx.fillStyle = ac; ctx.beginPath(); ctx.arc(tipX, y-16, 1.5, 0, Math.PI*2); ctx.fill();
   } else {
     ctx.strokeStyle = ac; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(x-4, y-19); ctx.lineTo(x-5, y-11); ctx.moveTo(x+4, y-19); ctx.lineTo(x+5, y-11); ctx.stroke();
@@ -13820,8 +13835,10 @@ function drawUmpire(x, y) {
       ctx.strokeStyle = ac; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(x-4, y-19); ctx.lineTo(x-8, y-32); ctx.moveTo(x+4, y-19); ctx.lineTo(x+8, y-32); ctx.stroke();
     } else if (umpireSignal === 'four' && umpireSignalTimer > 0) {
+      const tipX = x + Math.sin(umpireSignalPhase) * 12;
       ctx.strokeStyle = ac; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(x-4, y-18); ctx.lineTo(x-14, y-16); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x-3, y-18); ctx.lineTo(tipX, y-16); ctx.stroke();
+      ctx.fillStyle = ac; ctx.beginPath(); ctx.arc(tipX, y-16, 1.5, 0, Math.PI*2); ctx.fill();
     } else {
       ctx.strokeStyle = ac; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(x-4, y-19); ctx.lineTo(x-5, y-11); ctx.moveTo(x+4, y-19); ctx.lineTo(x+5, y-11); ctx.stroke();
@@ -13873,8 +13890,10 @@ function drawUmpire(x, y) {
       ctx.strokeStyle = ac; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(x-4, y-19); ctx.lineTo(x-8, y-32); ctx.moveTo(x+4, y-19); ctx.lineTo(x+8, y-32); ctx.stroke();
     } else if (umpireSignal === 'four' && umpireSignalTimer > 0) {
+      const tipX = x + Math.sin(umpireSignalPhase) * 12;
       ctx.strokeStyle = ac; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(x-4, y-18); ctx.lineTo(x-14, y-16); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x-3, y-18); ctx.lineTo(tipX, y-16); ctx.stroke();
+      ctx.fillStyle = ac; ctx.beginPath(); ctx.arc(tipX, y-16, 1.5, 0, Math.PI*2); ctx.fill();
     } else {
       ctx.strokeStyle = ac; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(x-4, y-19); ctx.lineTo(x-5, y-11); ctx.moveTo(x+4, y-19); ctx.lineTo(x+5, y-11); ctx.stroke();
@@ -14013,15 +14032,21 @@ function drawUmpire(x, y) {
       ctx.strokeStyle = '#f5f5f0'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(x-4, y-19); ctx.lineTo(x-8, y-32); ctx.moveTo(x+4, y-19); ctx.lineTo(x+8, y-32); ctx.stroke();
     } else if (umpireSignal === 'four' && umpireSignalTimer > 0) {
+      const tipX = x + Math.sin(umpireSignalPhase) * 12;
       ctx.strokeStyle = '#f5f5f0'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(x-4, y-18); ctx.lineTo(x-14, y-16); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x-3, y-18); ctx.lineTo(tipX, y-16); ctx.stroke();
+      ctx.fillStyle = '#e0b894'; ctx.beginPath(); ctx.arc(tipX, y-16, 1.5, 0, Math.PI*2); ctx.fill();
     } else {
       ctx.strokeStyle = '#f5f5f0'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(x-4, y-19); ctx.lineTo(x-5, y-11); ctx.moveTo(x+4, y-19); ctx.lineTo(x+5, y-11); ctx.stroke();
     }
   }
-  if (umpireSignalTimer > 0) umpireSignalTimer--;
-  else umpireSignal = null;
+  if (umpireSignalTimer > 0) {
+    umpireSignalTimer--;
+    if (umpireSignal === 'four') umpireSignalPhase += 0.18;
+  } else {
+    umpireSignal = null;
+  }
 }
 
 const STUMP_COLORS = {
