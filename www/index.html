@@ -2839,6 +2839,21 @@ function earnChest() {
   return true;
 }
 
+function _autoLevelItem(item) {
+  const maxLvl = RARITY_MAX_LEVEL[item.rarity] || 5;
+  let lvl = itemLevels[item.id] || 0;
+  let cards = itemCards[item.id] || 0;
+  // Level 0 → 1: unlock
+  while (lvl < maxLvl) {
+    const needed = item.cardsToLevel[lvl === 0 ? 0 : lvl - 1];
+    if (!needed || cards < needed) break;
+    cards -= needed;
+    lvl++;
+  }
+  itemLevels[item.id] = lvl;
+  itemCards[item.id] = cards;
+}
+
 function openChestRewards(typeName) {
   const cfg = CHEST_TYPES[typeName];
   const numCards  = cfg.cards.min + Math.floor(Math.random() * (cfg.cards.max - cfg.cards.min + 1));
@@ -2871,10 +2886,8 @@ function openChestRewards(typeName) {
     const picked = candidates[Math.floor(Math.random() * candidates.length)];
     itemCards[picked.id] = (itemCards[picked.id] || 0) + 1;
     rewards.cards.push({ id: picked.id, name: picked.name, rarity: picked.rarity });
-    // unlock item if enough cards and not yet owned
-    if (itemLevels[picked.id] === 0 && itemCards[picked.id] >= picked.cardsToLevel[0]) {
-      itemLevels[picked.id] = 1;
-    }
+    // Auto-level: cascade through levels, consuming cards and carrying excess over
+    _autoLevelItem(picked);
   }
   gems += gemReward;
   career.coins += coinReward;
