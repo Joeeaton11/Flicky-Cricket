@@ -1111,6 +1111,8 @@
     padding:8px 10px;
   }
   .achRow.unlocked { border-color:#f4d03f; background:rgba(244,208,63,0.12); }
+  .achRow.gem-claimable { border-color:#a855f7; background:rgba(168,85,247,0.14); cursor:pointer; }
+  .achRow.gem-claimable:active { opacity:0.75; }
   .achBadge {
     font-size:20px; width:30px; height:30px; flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
@@ -1797,6 +1799,14 @@ function saveUnlockedAchievements() {
 }
 let unlockedAchievements = loadUnlockedAchievements();
 
+function loadClaimedAchievementGems() {
+  try { return JSON.parse(localStorage.getItem('flickyAchGemsClaimed') || '[]'); } catch(e) { return []; }
+}
+function saveClaimedAchievementGems() {
+  localStorage.setItem('flickyAchGemsClaimed', JSON.stringify(claimedAchievementGems));
+}
+let claimedAchievementGems = loadClaimedAchievementGems();
+
 // checks all achievements after a match, returns array of newly unlocked ones
 function checkAchievements(runStats) {
   const newly = [];
@@ -1804,7 +1814,10 @@ function checkAchievements(runStats) {
     if (!unlockedAchievements.includes(a.key) && a.check(career, runStats)) {
       unlockedAchievements.push(a.key);
       newly.push(a);
-      if (a.gems) { gems += a.gems; saveEquipmentState(); }
+      if (a.gems) {
+        gems += a.gems; saveEquipmentState();
+        claimedAchievementGems.push(a.key); saveClaimedAchievementGems();
+      }
     }
   });
   if (newly.length) saveUnlockedAchievements();
@@ -4857,11 +4870,28 @@ function renderStatsScreen() {
   achievementsList.innerHTML = '';
   ACHIEVEMENTS.forEach(a => {
     const unlocked = unlockedAchievements.includes(a.key);
+    const gemsClaimed = claimedAchievementGems.includes(a.key);
+    const canClaim = unlocked && a.gems && !gemsClaimed;
+
     const row = document.createElement('div');
-    row.className = 'achRow ' + (unlocked ? 'unlocked' : 'locked');
-    const gemNote = a.gems ? ` \u00b7 \ud83d\udc8e${a.gems}` : '';
-    row.innerHTML = `<div class="achBadge">${unlocked ? '\u2605' : '?'}</div>` +
+    row.className = 'achRow ' + (canClaim ? 'gem-claimable' : unlocked ? 'unlocked' : 'locked');
+
+    const gemNote = canClaim ? ` \u00b7 \ud83d\udc8e${a.gems}` : (a.gems && gemsClaimed) ? ' \u00b7 \ud83d\udc8e\u2713' : '';
+    row.innerHTML =
+      `<div class="achBadge">${unlocked ? '\u2605' : '?'}</div>` +
       `<div class="achText"><div class="achName">${a.name}${gemNote}</div><div class="achDesc">${a.desc}</div></div>`;
+
+    if (canClaim) {
+      row.addEventListener('click', () => {
+        claimedAchievementGems.push(a.key);
+        saveClaimedAchievementGems();
+        grantGems(a.gems);
+        showMessage(`\ud83d\udc8e +${a.gems} GEMS!`, '#a855f7', 1800);
+        hapticBig();
+        renderStatsScreen();
+      });
+    }
+
     achievementsList.appendChild(row);
   });
 }
