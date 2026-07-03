@@ -15055,48 +15055,70 @@ function _showCardPopup(c, count) {
   slotEl.textContent = slot.toUpperCase();
   slotEl.style.background = { bat:'#1d4ed8', gloves:'#0f766e', pads:'#b45309', helmet:'#7c3aed', shoes:'#be185d' }[slot] || '#374151';
 
-  // +N pill — start at +1, tick up to count with per-card bounces
-  const plusOneEl = document.getElementById('chestCardPlusOne');
+  // +N pill — ticks up from +1 to +count, in sync with bar
+  const plusOneEl  = document.getElementById('chestCardPlusOne');
+  const fillEl     = document.getElementById('chestCardProgressBarFill');
+  const progTextEl = document.getElementById('chestCardProgressText');
+  const upgradeEl  = document.getElementById('chestCardUpgradeLabel');
+  const maxEl      = document.getElementById('chestCardMaxLabel');
+
   plusOneEl.style.setProperty('--rarity-col', rc);
-  plusOneEl.textContent = '+1';
-  // Cancel any previous ticker
   if (plusOneEl._tickTimeout) { clearTimeout(plusOneEl._tickTimeout); plusOneEl._tickTimeout = null; }
-  if (count > 1) {
-    let shown = 1;
-    const tick = () => {
-      shown++;
-      plusOneEl.textContent = '+' + shown;
-      plusOneEl.classList.remove('badge-pop');
-      void plusOneEl.offsetWidth; // reflow to restart animation
-      plusOneEl.classList.add('badge-pop');
-      hapticTap();
-      if (shown < count) plusOneEl._tickTimeout = setTimeout(tick, 480);
-    };
-    plusOneEl._tickTimeout = setTimeout(tick, 520);
+
+  // Base card count before these new cards were added
+  const baseCards = Math.max(0, haveCards - count);
+
+  function _pulseBadge(el) {
+    el.classList.remove('badge-pop');
+    void el.offsetWidth;
+    el.classList.add('badge-pop');
   }
+
+  function _updateBar(displayedCards) {
+    if (!needed) {
+      progTextEl.textContent = 'MAX';
+      fillEl.style.width = '100%';
+      return;
+    }
+    progTextEl.textContent = displayedCards + '/' + needed;
+    _pulseBadge(progTextEl);
+    fillEl.style.width = Math.min(1, displayedCards / needed) * 100 + '%';
+    // Status
+    if (curLvl === 0)                            { upgradeEl.textContent = '✦ NEW ITEM UNLOCKED!'; maxEl.textContent = ''; }
+    else if (curLvl >= maxLvl)                   { maxEl.textContent = 'MAX LEVEL ✦'; upgradeEl.textContent = ''; }
+    else if (displayedCards >= needed)           { upgradeEl.textContent = '▲ UPGRADE AVAILABLE!'; maxEl.textContent = ''; }
+    else                                         { upgradeEl.textContent = ''; maxEl.textContent = ''; }
+  }
+
+  // Initialise bar at pre-chest state (no transition for instant reset)
+  fillEl.style.transition = 'none';
+  fillEl.style.width = needed ? Math.min(1, baseCards / needed) * 100 + '%' : '100%';
+  progTextEl.textContent = needed ? baseCards + '/' + needed : 'MAX';
+  upgradeEl.textContent = ''; maxEl.textContent = '';
+
+  // Re-enable bar transition after the reset frame
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    fillEl.style.transition = '';
+  }));
+
+  // Tick each card in one by one after the fly-up lands (~560ms)
+  let shown = 0;
+  const tick = () => {
+    shown++;
+    plusOneEl.textContent = '+' + shown;
+    _pulseBadge(plusOneEl);
+    _updateBar(baseCards + shown);
+    hapticTap();
+    if (shown < count) plusOneEl._tickTimeout = setTimeout(tick, 420);
+  };
+  plusOneEl.textContent = '+0';
+  plusOneEl._tickTimeout = setTimeout(tick, 560);
 
   // Name
   document.getElementById('chestCardName').textContent = c.name;
 
   // Level diamond
   document.getElementById('chestCardLevelDiamond').querySelector('span').textContent = Math.max(1, curLvl);
-
-  // Progress bar (reset → transition → fill)
-  const fillEl = document.getElementById('chestCardProgressBarFill');
-  fillEl.style.transition = 'none'; fillEl.style.width = '0%';
-  document.getElementById('chestCardProgressText').textContent = needed ? haveCards + '/' + needed : 'MAX';
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    fillEl.style.transition = '';
-    fillEl.style.width = (needed ? Math.min(1, haveCards / needed) : 1) * 100 + '%';
-  }));
-
-  // Status label
-  const upgradeEl = document.getElementById('chestCardUpgradeLabel');
-  const maxEl     = document.getElementById('chestCardMaxLabel');
-  if (curLvl === 0)                        { upgradeEl.textContent = '✦ NEW ITEM UNLOCKED!'; maxEl.textContent = ''; }
-  else if (curLvl >= maxLvl)               { maxEl.textContent = 'MAX LEVEL ✦'; upgradeEl.textContent = ''; }
-  else if (needed && haveCards >= needed)  { upgradeEl.textContent = '▲ UPGRADE AVAILABLE!'; maxEl.textContent = ''; }
-  else                                     { upgradeEl.textContent = ''; maxEl.textContent = ''; }
 
   // Full-width art panel
   const artCanvas = document.getElementById('chestCardArtCanvas');
