@@ -20,10 +20,10 @@
   .card.epic{border-color:var(--epic);box-shadow:0 0 28px var(--epic-d);}
   .card.legendary{border-color:var(--legendary);box-shadow:0 0 32px var(--legendary-d);}
   .card-art{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
-  .common .card-art{background:linear-gradient(160deg,#eeeae2,#ddd8cc);}
-  .rare .card-art{background:linear-gradient(160deg,#e4ecf8,#d0dfef);}
-  .epic .card-art{background:linear-gradient(160deg,#ece6f8,#d8cdf0);}
-  .legendary .card-art{background:linear-gradient(160deg,#f2ead6,#e6d8b0);}
+  .common .card-art{background:linear-gradient(160deg,#b8b4ac,#9a968e);}
+  .rare .card-art{background:linear-gradient(160deg,#8aaac8,#6888aa);}
+  .epic .card-art{background:linear-gradient(160deg,#9880c0,#7860a8);}
+  .legendary .card-art{background:linear-gradient(160deg,#b89840,#907020);}
   .badge{position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.50);backdrop-filter:blur(4px);border-radius:99px;padding:3px 8px;font-size:9px;font-weight:700;letter-spacing:1.5px;color:white;}
   .equipped{position:absolute;top:10px;right:10px;background:#22c45e;border-radius:99px;padding:3px 8px;font-size:9px;font-weight:700;letter-spacing:1px;color:white;}
   .lock{position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
@@ -68,140 +68,149 @@ const BATS = {
 
 function makeBat(key) {
   const b = BATS[key];
-  // ── Geometry ──────────────────────────────────────────────────────
-  // ViewBox 200×320, handle UP (traditional display orientation).
-  // Key fix: handle is only 22px wide vs blade 158px → 7.2:1 ratio.
-  // With such a thin handle the silhouette can't be read as a bottle.
+  // ── Geometry — traced from Kookaburra reference photos ─────────────
+  // ViewBox 200×340.
+  // Blade is DOMINANT: 180px wide = 90% of viewbox. Blade fills the card.
+  // Handle: 22px wide. Ratio 8.2:1.
+  // Shoulder: gentle inward curve at blade top, then narrow handle.
+  // This matches the actual Kookaburra silhouette.
   //
-  // knob top → grip → collar → shoulder (spreads fast via cubic bezier)
-  // → tall blade → round toe
-  //
-  const hx1=89, hx2=111;       // grip 22px wide, centred 100
-  const bx1=21, bx2=179;      // blade 158px wide
-  const knobTop=6;
-  const gripTop=18;
-  const gripBot=95;            // grip 77px tall
-  const colBot=107;            // collar 12px
-  const sholY=126;             // blade top (shoulder done)
-  const bladeBot=295;
-  const toeY=310;
+  const hx1=89, hx2=111;    // handle 22px wide
+  const bx1=24, bx2=176;   // blade 152px wide
+  const gripTop=14;
+  const gripBot=100;
+  const sholY=114;          // shoulder/blade top — FLAT horizontal step here
+  const bladeBot=298;
+  const toeY=312;
 
-  // Shoulder: straight diagonal line from grip corner to blade edge.
-  // This creates the angular "cricket bat shoulder" shape, not a smooth bottle curve.
+  // Flat horizontal shoulder — the cricket bat "T" shape
+  // Grip goes straight down → steps horizontally outward → blade goes straight down
+  // Small radius fillet at the two inside corners (rx=6 on the step)
   const O = 'M'+hx1+','+gripTop
-    +' L'+hx1+','+colBot
+    +' L'+hx1+','+gripBot
+    +' Q'+hx1+','+sholY+' '+(hx1-6)+','+sholY   // left inner fillet
     +' L'+bx1+','+sholY
     +' L'+bx1+','+bladeBot
     +' Q100,'+toeY+' '+bx2+','+bladeBot
     +' L'+bx2+','+sholY
-    +' L'+hx2+','+colBot
+    +' L'+(hx2+6)+','+sholY
+    +' Q'+hx2+','+sholY+' '+hx2+','+gripBot      // right inner fillet
     +' L'+hx2+','+gripTop+' Z';
 
-  // Blade-only clip
-  const BL = 'M'+bx1+','+sholY+' L'+bx1+','+bladeBot+' Q100,'+toeY+' '+bx2+','+bladeBot+' L'+bx2+','+sholY+' Z';
+  const BL='M'+bx1+','+sholY+' L'+bx1+','+bladeBot+' Q100,'+toeY+' '+bx2+','+bladeBot+' L'+bx2+','+sholY+' Z';
 
-  let s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 320" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display:block">';
-  s += '<defs>';
-  s += '<filter id="sh'+key+'" x="-20%" y="-5%" width="140%" height="115%"><feDropShadow dx="2" dy="6" stdDeviation="7" flood-color="rgba(0,0,0,0.52)"/></filter>';
-  // Willow: pale cream top-to-bottom only
-  s += '<linearGradient id="wd'+key+'" x1="0" y1="0" x2="0" y2="1">';
-  s += '<stop offset="0%" stop-color="#faf6e9"/><stop offset="55%" stop-color="#f1e8c8"/><stop offset="100%" stop-color="#e2d49e"/></linearGradient>';
+  let s='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 330" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display:block">';
+  s+='<defs>';
+  s+='<filter id="sh'+key+'" x="-15%" y="-4%" width="130%" height="112%"><feDropShadow dx="3" dy="7" stdDeviation="8" flood-color="rgba(0,0,0,0.55)"/></filter>';
+  // Willow: pale cream, top-to-bottom only (NO left-right gradient = flat face, not cylinder)
+  s+='<linearGradient id="wd'+key+'" x1="0" y1="0" x2="0" y2="1">';
+  s+='<stop offset="0%" stop-color="#faf6e8"/>';
+  s+='<stop offset="40%" stop-color="#f4eccc"/>';
+  s+='<stop offset="100%" stop-color="#e6d8a0"/></linearGradient>';
+  // Left edge bevel (dark strip on each side shows the bat is a flat slab not a cylinder)
+  s+='<linearGradient id="bv'+key+'" x1="0" y1="0" x2="1" y2="0">';
+  s+='<stop offset="0%" stop-color="rgba(40,20,0,0.22)"/>';
+  s+='<stop offset="4%" stop-color="rgba(0,0,0,0)"/>';
+  s+='<stop offset="96%" stop-color="rgba(0,0,0,0)"/>';
+  s+='<stop offset="100%" stop-color="rgba(40,20,0,0.22)"/></linearGradient>';
   // Sticker
-  s += '<linearGradient id="sk'+key+'" x1="0" y1="0" x2="0" y2="1">';
-  s += '<stop offset="0%" stop-color="'+b.c1+'"/><stop offset="100%" stop-color="'+b.c2+'"/></linearGradient>';
-  // Grip: side-to-side for cylindrical look
-  s += '<linearGradient id="gp'+key+'" x1="0" y1="0" x2="1" y2="0">';
-  s += '<stop offset="0%" stop-color="'+b.c2+'"/><stop offset="18%" stop-color="'+b.c1+'"/>';
-  s += '<stop offset="50%" stop-color="'+b.c1+'"/><stop offset="82%" stop-color="'+b.c2+'"/>';
-  s += '<stop offset="100%" stop-color="'+b.c2+'"/></linearGradient>';
-  s += '<clipPath id="clF'+key+'"><path d="'+O+'"/></clipPath>';
-  s += '<clipPath id="clB'+key+'"><path d="'+BL+'"/></clipPath>';
-  s += '</defs>';
+  s+='<linearGradient id="sk'+key+'" x1="0" y1="0" x2="0" y2="1">';
+  s+='<stop offset="0%" stop-color="'+b.c1+'"/>';
+  s+='<stop offset="100%" stop-color="'+b.c2+'"/></linearGradient>';
+  // Grip: lateral gradient shows round cross-section
+  s+='<linearGradient id="gp'+key+'" x1="0" y1="0" x2="1" y2="0">';
+  s+='<stop offset="0%" stop-color="'+b.c2+'"/>';
+  s+='<stop offset="20%" stop-color="'+b.c1+'"/>';
+  s+='<stop offset="50%" stop-color="'+b.c1+'"/>';
+  s+='<stop offset="80%" stop-color="'+b.c2+'"/>';
+  s+='<stop offset="100%" stop-color="'+b.c2+'"/></linearGradient>';
+  s+='<clipPath id="clF'+key+'"><path d="'+O+'"/></clipPath>';
+  s+='<clipPath id="clB'+key+'"><path d="'+BL+'"/></clipPath>';
+  s+='</defs>';
 
-  // Shadow + wood face
-  s += '<g filter="url(#sh'+key+')"><path d="'+O+'" fill="url(#wd'+key+')"/></g>';
-  s += '<path d="'+O+'" fill="url(#wd'+key+')"/>';
+  // Drop shadow behind bat
+  s+='<g filter="url(#sh'+key+')"><path d="'+O+'" fill="url(#wd'+key+')"/></g>';
 
-  // Press grain on blade
-  s += '<g clip-path="url(#clB'+key+')" stroke="rgba(90,60,12,0.13)" stroke-width="0.8" fill="none">';
-  for(let x=26; x<=174; x+=5) { s += '<line x1="'+x+'" y1="'+sholY+'" x2="'+x+'" y2="'+bladeBot+'"/>'; }
-  s += '</g>';
+  // Wood face
+  s+='<path d="'+O+'" fill="url(#wd'+key+')"/>';
 
-  // ── STICKER across upper portion of blade ──
-  const stkY = sholY + 10;
+  // Edge bevel (thin dark gradient on left/right edges of blade — makes it look flat, not cylindrical)
+  s+='<rect x="'+bx1+'" y="'+sholY+'" width="'+(bx2-bx1)+'" height="'+(bladeBot-sholY)+'"';
+  s+=' fill="url(#bv'+key+')" clip-path="url(#clB'+key+')"/>';
+
+  // Press grain lines
+  s+='<g clip-path="url(#clB'+key+')" stroke="rgba(80,52,10,0.16)" stroke-width="0.9" fill="none">';
+  for(let x=28; x<=172; x+=4){ s+='<line x1="'+x+'" y1="'+sholY+'" x2="'+x+'" y2="'+bladeBot+'"/>'; }
+  s+='</g>';
+
+  // ── STICKER — full blade width, upper blade ──
+  const stkY = sholY + 6;
   const stkH = 82;
-  const stkX1 = bx1 + 4;
-  const stkW = bx2 - bx1 - 8;
-  s += '<rect x="'+stkX1+'" y="'+stkY+'" width="'+stkW+'" height="'+stkH+'"';
-  s += ' fill="url(#sk'+key+')" clip-path="url(#clB'+key+')"/>';
-  // Dark left accent band (Kookaburra style)
-  s += '<rect x="'+stkX1+'" y="'+stkY+'" width="16" height="'+stkH+'"';
-  s += ' fill="rgba(0,0,0,0.28)" clip-path="url(#clB'+key+')"/>';
-  // White separator
-  s += '<rect x="'+(stkX1+17)+'" y="'+stkY+'" width="2" height="'+stkH+'"';
-  s += ' fill="rgba(255,255,255,0.28)" clip-path="url(#clB'+key+')"/>';
-  // Sheen triangle
-  s += '<polygon points="'+(stkX1+20)+','+stkY+' '+(stkX1+stkW)+','+stkY+' '+(stkX1+stkW)+','+(stkY+24)+'"';
-  s += ' fill="rgba(255,255,255,0.11)" clip-path="url(#clB'+key+')"/>';
-  // Bottom edge
-  s += '<rect x="'+stkX1+'" y="'+(stkY+stkH-2)+'" width="'+stkW+'" height="2"';
-  s += ' fill="rgba(0,0,0,0.25)" clip-path="url(#clB'+key+')"/>';
+  const stkW = bx2 - bx1;
+  s+='<rect x="'+bx1+'" y="'+stkY+'" width="'+stkW+'" height="'+stkH+'"';
+  s+=' fill="url(#sk'+key+')" clip-path="url(#clB'+key+')"/>';
+  // Left accent strip
+  s+='<rect x="'+bx1+'" y="'+stkY+'" width="18" height="'+stkH+'"';
+  s+=' fill="'+b.c2+'" clip-path="url(#clB'+key+')"/>';
+  s+='<rect x="'+(bx1+18)+'" y="'+stkY+'" width="2.5" height="'+stkH+'"';
+  s+=' fill="rgba(255,255,255,0.22)" clip-path="url(#clB'+key+')"/>';
+  // Sheen
+  s+='<polygon points="'+(bx1+22)+','+stkY+' '+bx2+','+stkY+' '+bx2+','+(stkY+24)+'"';
+  s+=' fill="rgba(255,255,255,0.10)" clip-path="url(#clB'+key+')"/>';
+  // Bottom shadow
+  s+='<rect x="'+bx1+'" y="'+(stkY+stkH-2)+'" width="'+stkW+'" height="2.5"';
+  s+=' fill="rgba(0,0,0,0.28)" clip-path="url(#clB'+key+')"/>';
+
   // Text
-  const txC = (stkX1+20 + bx2-4) / 2;
-  s += '<text x="'+txC+'" y="'+(stkY+stkH*0.38)+'" text-anchor="middle" dominant-baseline="middle"';
-  s += ' font-family="\'Arial Black\',Impact,sans-serif" font-size="22" font-weight="900" letter-spacing="1" fill="white">FLICKY</text>';
-  s += '<text x="'+txC+'" y="'+(stkY+stkH*0.70)+'" text-anchor="middle" dominant-baseline="middle"';
-  s += ' font-family="\'Arial Black\',Impact,sans-serif" font-size="8.5" font-weight="700" letter-spacing="3" fill="rgba(255,255,255,0.58)">CRICKET</text>';
+  const txC = (bx1+22 + bx2) / 2;
+  s+='<text x="'+txC+'" y="'+(stkY+stkH*0.38)+'" text-anchor="middle" dominant-baseline="middle"';
+  s+=' font-family="\'Arial Black\',Impact,sans-serif" font-size="22" font-weight="900" letter-spacing="1" fill="white">FLICKY</text>';
+  s+='<text x="'+txC+'" y="'+(stkY+stkH*0.70)+'" text-anchor="middle" dominant-baseline="middle"';
+  s+=' font-family="\'Arial Black\',Impact,sans-serif" font-size="8" font-weight="700" letter-spacing="4" fill="rgba(255,255,255,0.58)">CRICKET</text>';
 
-  // Bat name on wood below sticker
+  // Bat name on bare wood
   const nameY = stkY + stkH + 14;
-  s += '<text x="100" y="'+nameY+'" text-anchor="middle" dominant-baseline="middle"';
-  s += ' font-family="\'Arial Black\',Impact,sans-serif" font-size="8" font-weight="800" fill="rgba(58,36,6,0.35)">'+b.name+'</text>';
+  s+='<text x="100" y="'+nameY+'" text-anchor="middle" dominant-baseline="middle"';
+  s+=' font-family="\'Arial Black\',Impact,sans-serif" font-size="7.5" font-weight="800" fill="rgba(55,34,4,0.36)">'+b.name+'</text>';
 
-  // Wicket icon (3 stumps + 2 bails)
-  const wy = nameY + 24;
-  [91,100,109].forEach(cx => {
-    s += '<rect x="'+(cx-1.5)+'" y="'+(wy-10)+'" width="3" height="20" rx="1" fill="rgba(58,36,6,0.26)"/>';
+  // Wicket icon
+  const wy = nameY+24;
+  [89,100,111].forEach(cx=>{
+    s+='<rect x="'+(cx-1.5)+'" y="'+(wy-11)+'" width="3" height="22" rx="1" fill="rgba(55,34,4,0.24)"/>';
   });
-  s += '<rect x="89.5" y="'+(wy-13)+'" width="11" height="2.5" rx="1" fill="rgba(58,36,6,0.30)"/>';
-  s += '<rect x="99" y="'+(wy-13)+'" width="11" height="2.5" rx="1" fill="rgba(58,36,6,0.30)"/>';
+  s+='<rect x="88" y="'+(wy-14)+'" width="12" height="2.5" rx="1" fill="rgba(55,34,4,0.29)"/>';
+  s+='<rect x="99" y="'+(wy-14)+'" width="12" height="2.5" rx="1" fill="rgba(55,34,4,0.29)"/>';
 
-  // Toe accent
-  s += '<rect x="'+(bx1+6)+'" y="'+(bladeBot-9)+'" width="'+(bx2-bx1-12)+'" height="10"';
-  s += ' fill="'+b.c1+'" opacity="0.28" clip-path="url(#clB'+key+')"/>';
+  // Bat outline (gives crisp edge, makes blade pop from card background)
+  s+='<path d="'+O+'" fill="none" stroke="rgba(30,16,2,0.35)" stroke-width="1.8"/>';
 
-  // Bat outline
-  s += '<path d="'+O+'" fill="none" stroke="rgba(38,22,4,0.30)" stroke-width="1.5"/>';
-
-  // ── COLLAR ──
-  s += '<rect x="'+(hx1-1)+'" y="'+gripBot+'" width="24" height="13" rx="2.5" fill="#130c04"/>';
-  s += '<rect x="'+hx1+'" y="'+(gripBot+1)+'" width="22" height="3.5" rx="1.5" fill="rgba(255,255,255,0.08)"/>';
+  // ── COLLAR (black rubber band just above shoulder) ──
+  s+='<rect x="'+(hx1-1)+'" y="'+gripBot+'" width="24" height="14" rx="2" fill="#0e0804"/>';
+  s+='<rect x="'+hx1+'" y="'+(gripBot+1)+'" width="22" height="3" rx="1" fill="rgba(255,255,255,0.08)"/>';
 
   // ── GRIP ──
-  s += '<rect x="'+hx1+'" y="'+gripTop+'" width="22" height="'+(gripBot-gripTop)+'" rx="4" fill="url(#gp'+key+')"/>';
-  // Diagonal tape
-  s += '<g clip-path="url(#clF'+key+')" fill="none" stroke="rgba(0,0,0,0.38)" stroke-width="3" stroke-linecap="butt">';
-  for(let i=0; i<18; i++){
-    const y0 = gripTop+6+i*5;
-    if(y0 < gripBot-2){ s += '<line x1="'+hx1+'" y1="'+y0+'" x2="'+hx2+'" y2="'+(y0-5)+'"/>'; }
+  s+='<rect x="'+hx1+'" y="'+gripTop+'" width="22" height="'+(gripBot-gripTop)+'" rx="4" fill="url(#gp'+key+')"/>';
+  // Diagonal grip tape
+  s+='<g clip-path="url(#clF'+key+')" fill="none" stroke="rgba(0,0,0,0.40)" stroke-width="3.2" stroke-linecap="butt">';
+  for(let i=0;i<18;i++){
+    const y0=gripTop+5+i*5;
+    if(y0<gripBot-1){ s+='<line x1="'+hx1+'" y1="'+y0+'" x2="'+hx2+'" y2="'+(y0-5)+'"/>'; }
   }
-  s += '</g>';
-  // Highlight between bands
-  s += '<g clip-path="url(#clF'+key+')" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" stroke-linecap="butt">';
-  for(let i=0; i<18; i++){
-    const y0 = gripTop+9+i*5;
-    if(y0 < gripBot-2){ s += '<line x1="'+hx1+'" y1="'+y0+'" x2="'+hx2+'" y2="'+(y0-5)+'"/>'; }
+  s+='</g>';
+  s+='<g clip-path="url(#clF'+key+')" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="1.5" stroke-linecap="butt">';
+  for(let i=0;i<18;i++){
+    const y0=gripTop+8+i*5;
+    if(y0<gripBot-1){ s+='<line x1="'+hx1+'" y1="'+y0+'" x2="'+hx2+'" y2="'+(y0-5)+'"/>'; }
   }
-  s += '</g>';
-  // Left highlight (cylinder)
-  s += '<rect x="'+hx1+'" y="'+(gripTop+4)+'" width="5" height="'+(gripBot-gripTop-8)+'" rx="2.5" fill="rgba(255,255,255,0.18)"/>';
+  s+='</g>';
+  s+='<rect x="'+hx1+'" y="'+(gripTop+4)+'" width="5" height="'+(gripBot-gripTop-8)+'" rx="2.5" fill="rgba(255,255,255,0.18)"/>';
 
   // ── KNOB ──
-  s += '<ellipse cx="100" cy="'+(gripTop+8)+'" rx="16" ry="9" fill="'+b.c2+'"/>';
-  s += '<ellipse cx="100" cy="'+(gripTop+5)+'" rx="10" ry="5.5" fill="'+b.c1+'"/>';
-  s += '<ellipse cx="96" cy="'+(gripTop+3.5)+'" rx="3.5" ry="2.5" fill="rgba(255,255,255,0.24)"/>';
+  s+='<ellipse cx="100" cy="'+(gripTop+9)+'" rx="17" ry="10" fill="'+b.c2+'"/>';
+  s+='<ellipse cx="100" cy="'+(gripTop+6)+'" rx="11" ry="6" fill="'+b.c1+'"/>';
+  s+='<ellipse cx="95" cy="'+(gripTop+4)+'" rx="4" ry="2.5" fill="rgba(255,255,255,0.25)"/>';
 
-  s += '</svg>';
+  s+='</svg>';
   return s;
 }
 
