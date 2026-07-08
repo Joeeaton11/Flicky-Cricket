@@ -111,7 +111,7 @@
   /* ── Bottom action card ── */
   #menuCard {
     width:100%;
-    padding:12px 16px max(env(safe-area-inset-bottom,0px),16px);
+    padding:12px 16px 16px;
     display:flex; flex-direction:column; align-items:stretch; gap:8px;
     background:linear-gradient(to bottom,transparent,rgba(0,10,3,0.98) 22%);
   }
@@ -157,27 +157,35 @@
   #startBtn { transition:transform 80ms ease, box-shadow 80ms ease; }
   #startBtn:active { transform:translateY(5px) scale(0.97); box-shadow:none; animation:none; }
 
-  /* ── 4-button nav bar ── */
-  #menuSecondaryRow {
-    display:grid; grid-template-columns:repeat(4,1fr); gap:8px;
+  /* ── Pinned bottom nav bar ── */
+  #bottomNav {
+    position:fixed; bottom:0; left:0; right:0; z-index:100;
+    display:grid; grid-template-columns:repeat(4,1fr);
+    background:rgba(0,6,2,0.96);
+    border-top:1px solid rgba(255,255,255,0.10);
+    padding-bottom:max(env(safe-area-inset-bottom,0px),4px);
+    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
   }
-  .menuSecBtn {
+  #bottomNav.hidden { display:none !important; }
+  .navBtn {
     font-family:'Arial Black',Arial,sans-serif; font-size:9px; font-weight:900;
-    letter-spacing:0.8px; padding:10px 2px;
-    background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.80);
-    border:1.5px solid rgba(255,255,255,0.14); border-radius:12px; cursor:pointer;
+    letter-spacing:0.8px; padding:10px 2px 8px;
+    background:none; border:none; cursor:pointer;
+    color:rgba(255,255,255,0.40);
     display:flex; flex-direction:column; align-items:center; gap:4px;
-    position:relative;
+    position:relative; transition:color 80ms ease;
+    -webkit-tap-highlight-color:transparent;
   }
-  .menuSecBtn .bIcon { font-size:20px; line-height:1; }
-  .menuSecBtn { transition:transform 80ms ease, background 80ms ease; }
-  .menuSecBtn:active { transform:scale(0.93); background:rgba(255,255,255,0.16); }
+  .navBtn .bIcon { font-size:22px; line-height:1; }
+  .navBtn:active { opacity:0.65; }
+  .navBtn.active { color:#2ecc71; }
+  .navBtn.active .bIcon { filter:drop-shadow(0 0 6px rgba(46,204,113,0.7)); }
   .menuNavBadge {
-    position:absolute; top:-4px; right:-4px;
+    position:absolute; top:6px; right:calc(50% - 18px);
     background:#ef4444; color:#fff; border-radius:10px;
     font-size:8px; font-weight:900; padding:1px 5px;
     font-family:'Arial Black',Arial,sans-serif;
-    border:1.5px solid rgba(0,10,3,1); display:none;
+    border:1.5px solid rgba(0,6,2,1); display:none;
   }
   .menuNavBadge.show { display:block; }
 
@@ -1393,13 +1401,8 @@
     <!-- primary action -->
     <button id="startBtn">&#x25B6;&ensp;PLAY</button>
 
-    <!-- 4-button nav -->
-    <div id="menuSecondaryRow">
-      <button id="customiseBtn" class="menuSecBtn"><span class="bIcon">🎒</span>KIT</button>
-      <button id="chestsMenuBtn" class="menuSecBtn"><span class="bIcon">📦</span>CHESTS<div id="menuChestBadge" class="menuNavBadge"></div></button>
-      <button id="leagueBtn" class="menuSecBtn"><span class="bIcon">🏆</span>LEAGUE</button>
-      <button id="statsBtn" class="menuSecBtn"><span class="bIcon">📊</span>STATS</button>
-    </div>
+    <!-- spacer so content clears the pinned nav bar -->
+    <div style="height:70px;flex-shrink:0;"></div>
 
     <button id="removeAdsBtn" class="hidden">&#x2605;&ensp;REMOVE ADS</button>
     <button id="removeAdsGemBundleBtn" class="hidden">💎&ensp;REMOVE ADS + 100 GEMS · £2.99</button>
@@ -1410,6 +1413,16 @@
     Miss = bowled out. Soft hit to fielder = caught.<br>
     Big swings drain your energy &mdash; mix in some gentle placements.</p>
   </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PINNED BOTTOM NAV BAR
+     ═══════════════════════════════════════════════ -->
+<div id="bottomNav" class="hidden">
+  <button id="customiseBtn" class="navBtn"><span class="bIcon">🎒</span>KIT</button>
+  <button id="chestsMenuBtn" class="navBtn"><span class="bIcon">📦</span>CHESTS<div id="menuChestBadge" class="menuNavBadge"></div></button>
+  <button id="leagueBtn" class="navBtn"><span class="bIcon">🏆</span>LEAGUE</button>
+  <button id="statsBtn" class="navBtn"><span class="bIcon">📊</span>STATS</button>
 </div>
 
 <!-- ═══════════════════════════════════════════════
@@ -1631,10 +1644,40 @@ if (!ctx.roundRect) {
 const hudBest = document.getElementById('best');
 const message = document.getElementById('message');
 const overlay = document.getElementById('overlay');
+const bottomNav = document.getElementById('bottomNav');
 const startBtn = document.getElementById('startBtn');
 const customiseBtn = document.getElementById('customiseBtn');
 const chestsMenuBtn = document.getElementById('chestsMenuBtn');
-if (chestsMenuBtn) chestsMenuBtn.addEventListener('click', () => { customiseScreen.classList.remove('hidden'); openEquipTab('chests'); });
+
+function setNavActive(tab) {
+  if (!bottomNav) return;
+  bottomNav.querySelectorAll('.navBtn').forEach(b => b.classList.remove('active'));
+  if (tab) {
+    const btn = bottomNav.querySelector(`[data-tab="${tab}"]`);
+    if (btn) btn.classList.add('active');
+  }
+}
+function showNav(tab) { if (bottomNav) { bottomNav.classList.remove('hidden'); setNavActive(tab || ''); } }
+function hideNav()    { if (bottomNav) bottomNav.classList.add('hidden'); }
+function closeAllScreens() {
+  overlay.classList.add('hidden');
+  if (customiseScreen) customiseScreen.classList.add('hidden');
+  if (statsScreen)     statsScreen.classList.add('hidden');
+  if (leagueScreen)    leagueScreen.classList.add('hidden');
+}
+
+// assign data-tab attributes to nav buttons
+if (customiseBtn)  customiseBtn.dataset.tab  = 'kit';
+if (chestsMenuBtn) chestsMenuBtn.dataset.tab = 'chests';
+document.getElementById('leagueBtn')  && (document.getElementById('leagueBtn').dataset.tab  = 'league');
+document.getElementById('statsBtn')   && (document.getElementById('statsBtn').dataset.tab   = 'stats');
+
+if (chestsMenuBtn) chestsMenuBtn.addEventListener('click', () => {
+  closeAllScreens();
+  customiseScreen.classList.remove('hidden');
+  openEquipTab('chests');
+  showNav('chests');
+});
 const customiseScreen = document.getElementById('customiseScreen');
 const customiseDoneBtn = document.getElementById('customiseDoneBtn');
 const charCanvas = document.getElementById('charCanvas');
@@ -1692,7 +1735,7 @@ let runs = 0;
 let ballsBowled = 0;
 let best = parseInt(localStorage.getItem('flickyBest') || '0');
 hudBest.textContent = 'BEST: ' + best; if(menuBestVal) menuBestVal.textContent = best;
-requestAnimationFrame(() => { drawMenuLogo(); updateMenuHUD(); });
+requestAnimationFrame(() => { drawMenuLogo(); updateMenuHUD(); showNav(''); });
 
 // ---------- CAREER STATS & COINS ----------
 // 1 coin earned per run scored, persisted as a running total.
@@ -3527,9 +3570,9 @@ function startGame() {
   resultText.style.display = 'none';
   document.getElementById('statusBlock').style.display = 'none';
   shareBtn.classList.add('hidden');
-  overlay.classList.add('hidden');
-  leagueScreen.classList.add('hidden');
+  closeAllScreens();
   muteBtn.classList.add('hidden');
+  hideNav();
   runs = 0;
   ballsBowled = 0;
   thisRunFours = 0;
@@ -3545,48 +3588,56 @@ function startGame() {
 startBtn.addEventListener('click', () => {
   getAudioCtx();
   playUiTap(); hapticTap();
-  overlay.classList.add('hidden');
+  closeAllScreens();
   leagueScreen.classList.remove('hidden');
   renderLeagueScreen();
+  showNav('league');
 });
 
 customiseBtn.addEventListener('click', () => {
-  overlay.classList.add('hidden');
+  closeAllScreens();
   customiseScreen.classList.remove('hidden');
   openEquipTab('kit');
   updateEquipTopBar();
+  showNav('kit');
 });
 
 customiseDoneBtn.addEventListener('click', () => {
-  customiseScreen.classList.add('hidden');
+  closeAllScreens();
   overlay.classList.remove('hidden'); updateMenuHUD();
+  showNav('');
 });
 
 statsBtn.addEventListener('click', () => {
-  overlay.classList.add('hidden');
+  closeAllScreens();
   statsScreen.classList.remove('hidden');
   renderStatsScreen();
+  showNav('stats');
 });
 
 statsDoneBtn.addEventListener('click', () => {
-  statsScreen.classList.add('hidden');
+  closeAllScreens();
   overlay.classList.remove('hidden'); updateMenuHUD();
+  showNav('');
 });
 
 leagueBtn.addEventListener('click', () => {
-  overlay.classList.add('hidden');
+  closeAllScreens();
   leagueScreen.classList.remove('hidden');
   renderLeagueScreen();
+  showNav('league');
 });
 
 leagueDoneBtn.addEventListener('click', () => {
-  leagueScreen.classList.add('hidden');
+  closeAllScreens();
   overlay.classList.remove('hidden'); updateMenuHUD();
+  showNav('');
 });
 
 document.getElementById('leagueBackBtn').addEventListener('click', () => {
-  leagueScreen.classList.add('hidden');
+  closeAllScreens();
   overlay.classList.remove('hidden'); updateMenuHUD();
+  showNav('');
 });
 
 // shows the upcoming league fixture on the main menu - the rival just above
@@ -7591,9 +7642,10 @@ function hideResultScreen() {
             return;
           }
         }
-        overlay.classList.add('hidden');
+        closeAllScreens();
         leagueScreen.classList.remove('hidden');
         renderLeagueScreen();
+        showNav('league');
       }, 120);
     });
   }
@@ -7602,9 +7654,11 @@ function hideResultScreen() {
       playUiTap(); hapticTap();
       hideResultScreen();
       setTimeout(() => {
+        closeAllScreens();
         overlay.classList.remove('hidden');
         muteBtn.classList.remove('hidden');
         updateMenuHUD();
+        showNav('');
       }, 120);
     });
   }
