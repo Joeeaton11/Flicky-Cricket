@@ -3193,6 +3193,7 @@ let popBoundaryParticles = [];
 let popShockwave = null; // {x,y,r,maxR,alpha,color}
 let popTextStartTime = 0;
 let popTextIsSix = false;
+let popTextType = 'boundary'; // 'boundary' | 'wicket' | 'milestone'
 
 function triggerShake(mag, duration) {
   shake.mag = mag;
@@ -6856,7 +6857,7 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
     spawnParticles(bx, by, 'rgba(255,255,255,ALPHA)', 10, distance * 0.7);
     flash = 0.55; flashColor = '244,208,63';
     triggerShake(18, 18);
-    popTextIsSix = true;
+    popTextIsSix = true; popTextType = 'boundary';
     popTextStartTime = performance.now();
     const _bthS = getStadiumBoundaryTheme();
     spawnBoundaryParticles(_bthS.ptcl, _bthS.six.c);
@@ -6869,7 +6870,7 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
     spawnParticles(bx, by, 'rgba(100,220,255,ALPHA)', 12, distance * 0.8);
     flash = 0.35; flashColor = '100,220,255';
     triggerShake(10, 12);
-    popTextIsSix = false;
+    popTextIsSix = false; popTextType = 'boundary';
     popTextStartTime = performance.now();
     const _bthF = getStadiumBoundaryTheme();
     spawnBoundaryParticles(_bthF.ptcl, _bthF.four.c);
@@ -7017,10 +7018,15 @@ function triggerMilestone(score) {
   spawnParticles(W/2, H*0.45, 'rgba(255,255,255,ALPHA)', 20, 0.8);
   spawnParticles(W/2, H*0.45, 'rgba(244,208,63,ALPHA)', 20, 0.9);
   playCrowdCheer(true);
+  popTextType = 'milestone';
+  popTextStartTime = performance.now();
+  const _mth = getMilestoneTheme();
+  spawnBoundaryParticles(_mth.ptcl, _mth.data.c);
+  popShockwave = { x: W/2, y: H*0.4, r: 10, maxR: Math.max(W,H)*0.7, alpha: 0.8, color: _mth.data.c };
   popText = {
     text: score + ' RUNS!',
     x: W/2, y: H * 0.35,
-    life: 100, maxLife: 100,
+    life: 180, maxLife: 180,
     color: '#50dc78', big: true
   };
 }
@@ -7083,6 +7089,12 @@ function bowled() {
   state = 'result';
   showMessage('BOWLED!', '#e74c3c');
   playBowledSound();
+  popTextType = 'wicket';
+  popTextStartTime = performance.now();
+  const _wth = getWicketTheme(false);
+  spawnBoundaryParticles(_wth.ptcl, _wth.data.c);
+  popShockwave = { x: W/2, y: H*0.45, r: 10, maxR: Math.max(W,H)*0.8, alpha: 0.9, color: _wth.data.c };
+  popText = { text: 'BOWLED!', x: W/2, y: H*0.38, life: 200, maxLife: 200, big: true };
   setTimeout(() => endGame(), 2000);
 }
 
@@ -7102,6 +7114,12 @@ function caughtOut() {
   spawnParticles(W/2, H*0.45, 'rgba(255,80,30,ALPHA)', 16, 0.8);
   state = 'result';
   showMessage('CAUGHT OUT!', '#e74c3c');
+  popTextType = 'wicket';
+  popTextStartTime = performance.now();
+  const _wth = getWicketTheme(true);
+  spawnBoundaryParticles(_wth.ptcl, _wth.data.c);
+  popShockwave = { x: W/2, y: H*0.4, r: 10, maxR: Math.max(W,H)*0.75, alpha: 0.85, color: _wth.data.c };
+  popText = { text: 'CAUGHT OUT!', x: W/2, y: H*0.38, life: 200, maxLife: 200, big: true };
   setTimeout(() => endGame(), 2000);
 }
 
@@ -14728,6 +14746,63 @@ function getStadiumBoundaryTheme() {
   return T[key] || T.day;
 }
 
+function getWicketTheme(isCaught) {
+  const key = (currentTimeOfDay && currentTimeOfDay.key) || 'day';
+  const bth = getStadiumBoundaryTheme();
+  // Per-scene wicket danger colors
+  const danger = {
+    day:'#ff2222', evening:'#ff3311', night:'#dd1155', beach:'#ff1144',
+    moon:'#cc1144', pirate:'#cc1111', arctic:'#ff3355', jungle:'#ff2200',
+    westwild:'#cc1111', volcano:'#ff0000', cyberpunk:'#ff0055', carnival:'#ff1155',
+    halloween:'#cc0044', reef:'#ff2233', desert:'#cc1111', christmas:'#cc0000',
+    steampunk:'#bb2200', construction:'#ff2200', medieval:'#cc1122', mars:'#bb1100',
+  };
+  const glow = {
+    day:'rgba(255,30,30,0.95)', evening:'rgba(255,50,20,0.95)', night:'rgba(200,20,80,0.9)',
+    beach:'rgba(255,20,70,0.9)', moon:'rgba(200,20,80,0.85)', pirate:'rgba(200,20,20,0.9)',
+    arctic:'rgba(255,40,80,0.9)', jungle:'rgba(255,30,0,0.9)', westwild:'rgba(200,20,20,0.85)',
+    volcano:'rgba(255,0,0,1)', cyberpunk:'rgba(255,0,80,1)', carnival:'rgba(255,20,80,0.9)',
+    halloween:'rgba(200,0,60,0.9)', reef:'rgba(255,30,50,0.9)', desert:'rgba(200,20,20,0.85)',
+    christmas:'rgba(200,0,0,0.95)', steampunk:'rgba(180,30,0,0.85)', construction:'rgba(255,30,0,0.95)',
+    medieval:'rgba(200,20,30,0.9)', mars:'rgba(180,20,0,0.9)',
+  };
+  const dc = danger[key] || '#ff2222';
+  const gc = glow[key] || 'rgba(255,20,20,0.95)';
+  const sh1 = { c:'#3a0000', x:4, y:4 };
+  const sh2 = { c:'#1a0000', x:8, y:8 };
+  return {
+    font: bth.font,
+    entrance: isCaught ? 'explode' : 'stamp',
+    stagger: isCaught ? 38 : 55,
+    ptcl: 'embers',
+    flashC: 'rgba(220,30,30,0.65)',
+    data: {
+      c: dc, glowC: gc, glowR: 75,
+      sh1c: sh1.c, sh1x: sh1.x, sh1y: sh1.y,
+      sh2c: sh2.c, sh2x: sh2.x, sh2y: sh2.y,
+      sk: '#1a0000', skw: 0.07,
+      sub: isCaught ? 'CAUGHT OUT' : 'BOWLED',
+      subc: dc,
+      rgbSplit: key === 'cyberpunk',
+    }
+  };
+}
+
+function getMilestoneTheme() {
+  const key = (currentTimeOfDay && currentTimeOfDay.key) || 'day';
+  const bth = getStadiumBoundaryTheme();
+  return {
+    font: bth.font, entrance: 'bounce', stagger: 55,
+    ptcl: 'confetti', flashC: 'rgba(80,220,120,0.45)',
+    data: {
+      c: '#50dc78', glowC: 'rgba(80,220,120,0.95)', glowR: 60,
+      sh1c: '#003318', sh1x: 3, sh1y: 3, sh2c: '#001a08', sh2x: 6, sh2y: 6,
+      sk: '#003318', skw: 0.055,
+      sub: 'MILESTONE', subc: '#a0ffcc',
+    }
+  };
+}
+
 /* ── EASING HELPERS ── */
 function _easeOutBack(t) {
   const c1=1.70158,c3=c1+1;
@@ -15022,12 +15097,24 @@ function drawPopText() {
     return;
   }
 
-  // ── BIG BOUNDARY TEXT — per-letter animated ──
-  const TOTAL_DUR = 3200; // ms
+  // ── BIG TEXT — per-letter animated ──
+  const TOTAL_DUR = popTextType === 'boundary' ? 3200 : 2800;
   const elapsed = performance.now() - popTextStartTime;
-  const theme = getStadiumBoundaryTheme();
-  const data = isSix ? theme.six : theme.four;
-  const fontSize = isSix ? Math.round(W * 0.185) : Math.round(W * 0.155);
+
+  let theme, data, fontSize;
+  if (popTextType === 'wicket') {
+    const wt = getWicketTheme(popText.text.indexOf('CAUGHT') >= 0);
+    theme = wt; data = wt.data;
+    fontSize = Math.round(W * (popText.text.length > 6 ? 0.135 : 0.16));
+  } else if (popTextType === 'milestone') {
+    const mt = getMilestoneTheme();
+    theme = mt; data = mt.data;
+    fontSize = Math.round(W * 0.13);
+  } else {
+    theme = getStadiumBoundaryTheme();
+    data = isSix ? theme.six : theme.four;
+    fontSize = isSix ? Math.round(W * 0.185) : Math.round(W * 0.155);
+  }
   const text = popText.text;
   const letters = [...text];
   const stagger = theme.stagger;
