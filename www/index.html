@@ -7992,6 +7992,176 @@ function drawStands() {
   const customScenes = {pirate:drawPirateScene, arctic:drawArcticScene, jungle:drawJungleScene, westwild:drawWestwildScene, volcano:drawVolcanoScene, cyberpunk:drawCyberpunkScene, carnival:drawCarnivalScene, halloween:drawHalloweenScene, reef:drawReefScene, desert:drawDesertScene, christmas:drawChristmasScene, steampunk:drawSteampunkScene, construction:drawConstructionScene, medieval:drawMedievalScene, mars:drawMarsScene};
   if (customScenes[currentTimeOfDay.key]) { customScenes[currentTimeOfDay.key](); return; }
   drawClassicStadium();
+  // Per-league overlay art for Day variants
+  const lgIdx = window._activeLeagueIdx;
+  if (lgIdx === 1) drawCountyGroundOverlay();
+  else if (lgIdx === 2) drawSchoolOvalOverlay();
+}
+
+function drawCountyGroundOverlay() {
+  // Geometry: stands band from skyH to ovalTop
+  const skyH = H * 0.065;
+  const ovalTop = H * 0.16;
+  const bandH = ovalTop - skyH;
+
+  // LEFT — red brick grandstand replacing left portion of stands
+  const gx = 0, gy = skyH, gw = W * 0.38, gh = bandH;
+  // Lower brick body
+  ctx.fillStyle = '#8b3018';
+  ctx.fillRect(gx, gy + gh * 0.35, gw, gh * 0.65);
+  // Upper tier (slightly lighter)
+  ctx.fillStyle = '#a03820';
+  ctx.fillRect(gx, gy, gw * 0.96, gh * 0.42);
+  // Horizontal mortar lines
+  ctx.strokeStyle = 'rgba(50,8,0,0.35)'; ctx.lineWidth = 0.8;
+  [0.14, 0.28, 0.42, 0.56, 0.70, 0.84].forEach(fy => {
+    ctx.beginPath(); ctx.moveTo(gx, gy + gh * fy); ctx.lineTo(gx + gw, gy + gh * fy); ctx.stroke();
+  });
+  // Arch windows — white-painted
+  ctx.fillStyle = 'rgba(200,220,255,0.55)';
+  [0.05, 0.12, 0.19, 0.60, 0.68, 0.76, 0.84, 0.92].forEach(dx => {
+    const wx = gx + gw * dx, wy = gy + gh * 0.55, ww = gw * 0.055, wh = gh * 0.28;
+    ctx.beginPath();
+    ctx.ellipse(wx + ww * 0.5, wy, ww * 0.5, wh * 0.38, 0, Math.PI, 0);
+    ctx.rect(wx, wy, ww, wh * 0.62);
+    ctx.fill();
+  });
+  // White balustrade at tier break
+  ctx.fillStyle = 'rgba(255,255,255,0.90)';
+  ctx.fillRect(gx, gy + gh * 0.35 - H * 0.006, gw, H * 0.006);
+  for (let i = 0; i < 20; i++) {
+    const bx = gx + gw * i / 20;
+    ctx.fillRect(bx + 1, gy + gh * 0.35 - H * 0.014, gw * 0.030, H * 0.014);
+  }
+  // Flagpoles on roofline
+  ctx.strokeStyle = '#bbb'; ctx.lineWidth = 1.2;
+  [0.06, 0.22, 0.40, 0.60, 0.80].forEach((dx, i) => {
+    const fx = gx + gw * dx;
+    ctx.beginPath(); ctx.moveTo(fx, gy); ctx.lineTo(fx, gy - H * 0.022); ctx.stroke();
+    ctx.fillStyle = [' #cc2020','#2020cc','#22aa44','#cc8800','#cc2020'][i];
+    ctx.fillRect(fx, gy - H * 0.022, W * 0.018, H * 0.012);
+  });
+
+  // RIGHT — LED scoreboard on steel legs
+  const sbx = W * 0.64, sby = skyH, sbw = W * 0.35, sbh = bandH;
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(sbx, sby, sbw, sbh);
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(sbx, sby, sbw, sbh);
+  // LED panel rows
+  ctx.fillStyle = 'rgba(255,110,0,0.95)';
+  ctx.font = `bold ${W * 0.022}px monospace`; ctx.textAlign = 'center';
+  ctx.fillText('COUNTY GROUND', sbx + sbw / 2, sby + sbh * 0.30);
+  ctx.fillStyle = 'rgba(255,220,0,0.85)';
+  ctx.font = `${W * 0.016}px monospace`;
+  ctx.fillText('RUNS   WKTS   OVERS', sbx + sbw / 2, sby + sbh * 0.56);
+  ctx.fillStyle = 'rgba(80,255,80,0.92)';
+  ctx.font = `bold ${W * 0.022}px monospace`;
+  ctx.fillText('0        0      0.0', sbx + sbw / 2, sby + sbh * 0.82);
+  ctx.textAlign = 'left';
+  // Steel legs below (into the grass band)
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 3;
+  [[0.10, 0.90], [0.90, 0.90]].forEach(([dx]) => {
+    ctx.beginPath();
+    ctx.moveTo(sbx + sbw * dx, sby + sbh);
+    ctx.lineTo(sbx + sbw * dx, sby + sbh + H * 0.018);
+    ctx.stroke();
+  });
+  // Ad boards along boundary (drawn low in the field)
+  const boardY = ovalTop + H * 0.012;
+  [['#cc2020','COUNTY'], ['#2266cc','CRICKET'], ['#22882a','GROUND'], ['#cc8800','1882']].forEach(([col, txt], i) => {
+    const bax = W * (0.04 + i * 0.23);
+    ctx.fillStyle = col; ctx.fillRect(bax, boardY, W * 0.16, H * 0.018);
+    ctx.fillStyle = '#fff'; ctx.font = `bold ${W * 0.012}px sans-serif`; ctx.textAlign = 'center';
+    ctx.fillText(txt, bax + W * 0.08, boardY + H * 0.013);
+  });
+  ctx.textAlign = 'left';
+}
+
+function drawSchoolOvalOverlay() {
+  const skyH = H * 0.065;
+  const ovalTop = H * 0.16;
+  const bandH = ovalTop - skyH;
+
+  // CHURCH SPIRE — far right, behind stands
+  const spx = W * 0.88, spw = W * 0.038, sph = bandH * 1.6;
+  const spy = skyH - sph * 0.55;
+  ctx.fillStyle = '#b8b0a0';
+  ctx.fillRect(spx - spw / 2, spy + sph * 0.35, spw, sph * 0.65);
+  ctx.fillStyle = '#9a9080';
+  ctx.beginPath();
+  ctx.moveTo(spx - spw * 0.60, spy + sph * 0.35);
+  ctx.lineTo(spx, spy);
+  ctx.lineTo(spx + spw * 0.60, spy + sph * 0.35);
+  ctx.closePath(); ctx.fill();
+  // Arched windows on spire tower
+  ctx.fillStyle = 'rgba(70,90,180,0.40)';
+  [0.50, 0.70].forEach(fy => {
+    ctx.beginPath();
+    ctx.ellipse(spx, spy + sph * fy, spw * 0.22, sph * 0.08, 0, Math.PI, 0);
+    ctx.rect(spx - spw * 0.22, spy + sph * fy, spw * 0.44, sph * 0.08);
+    ctx.fill();
+  });
+
+  // LEFT — wooden bleachers
+  const blx = 0, bly = skyH, blw = W * 0.42, blh = bandH;
+  ctx.fillStyle = '#7a5428';
+  ctx.fillRect(blx, bly, blw, blh);
+  // Step risers (three tiers)
+  ctx.fillStyle = '#9a7040';
+  [0.0, 0.33, 0.66].forEach(fy => {
+    ctx.fillRect(blx, bly + blh * fy, blw, blh * 0.07);
+  });
+  // Vertical plank lines
+  ctx.strokeStyle = 'rgba(30,12,0,0.28)'; ctx.lineWidth = 0.7;
+  for (let i = 0; i < 28; i++) {
+    const px = blx + blw * i / 28;
+    ctx.beginPath(); ctx.moveTo(px, bly); ctx.lineTo(px, bly + blh); ctx.stroke();
+  }
+  // Coloured crowd dots on bleachers
+  const crowdCols = ['#e44', '#44e', '#e84', '#4e4', '#ee4', '#eee', '#e4e', '#4ee'];
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 18; c++) {
+      ctx.fillStyle = crowdCols[(r * 18 + c) % crowdCols.length];
+      ctx.beginPath();
+      ctx.arc(blx + blw * (c + 0.5) / 18, bly + blh * (r * 0.33 + 0.16), W * 0.008, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // RIGHT — old painted wooden scoreboard
+  const scx = W * 0.55, scy = skyH, scw = W * 0.32, sch = bandH;
+  ctx.fillStyle = '#4a3010';
+  ctx.fillRect(scx, scy, scw, sch);
+  // White painted panels
+  ctx.fillStyle = '#f5f0e4';
+  ctx.fillRect(scx + scw * 0.04, scy + sch * 0.06, scw * 0.92, sch * 0.32);
+  ctx.fillStyle = '#e8e2cc';
+  ctx.fillRect(scx + scw * 0.04, scy + sch * 0.44, scw * 0.43, sch * 0.50);
+  ctx.fillRect(scx + scw * 0.53, scy + sch * 0.44, scw * 0.43, sch * 0.50);
+  // Text
+  ctx.fillStyle = '#1a1008';
+  ctx.font = `bold ${W * 0.017}px serif`; ctx.textAlign = 'center';
+  ctx.fillText('THE SCHOOL OVAL', scx + scw / 2, scy + sch * 0.26);
+  ctx.font = `${W * 0.013}px serif`;
+  ctx.fillText('RUNS', scx + scw * 0.255, scy + sch * 0.62);
+  ctx.fillText('WKTS', scx + scw * 0.745, scy + sch * 0.62);
+  ctx.font = `bold ${W * 0.022}px serif`;
+  ctx.fillText('0', scx + scw * 0.255, scy + sch * 0.88);
+  ctx.fillText('0', scx + scw * 0.745, scy + sch * 0.88);
+  ctx.textAlign = 'left';
+  // Scoreboard support posts
+  ctx.fillStyle = '#4a3010';
+  ctx.fillRect(scx + scw * 0.10, scy + sch, scw * 0.055, H * 0.018);
+  ctx.fillRect(scx + scw * 0.84, scy + sch, scw * 0.055, H * 0.018);
+
+  // Picket fence along oval top edge
+  ctx.fillStyle = 'rgba(255,255,255,0.88)';
+  for (let i = 0; i < 38; i++) {
+    const fx = W * i / 38;
+    ctx.fillRect(fx + 1, ovalTop - H * 0.028, W * 0.014, H * 0.028);
+    ctx.fillRect(fx - 1, ovalTop - H * 0.034, W * 0.016, H * 0.007);
+  }
 }
 
 // ──────────────────────────────────────────────────────────────
