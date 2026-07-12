@@ -3121,7 +3121,9 @@ function rollStadiumConditions() {
   if (match) { currentTimeOfDay = match; }
   else if (window._activeLeagueIdx !== undefined && window._activeLeagueIdx !== null) {
     const lg = THEMED_LEAGUES[window._activeLeagueIdx];
-    const sceneMatch = lg && TIME_OF_DAY.find(t => t.key === lg.sceneKey);
+    const scenes = lg && (lg.scenes || [lg.sceneKey]);
+    const pickedKey = scenes && scenes[Math.floor(Math.random()*scenes.length)];
+    const sceneMatch = pickedKey && TIME_OF_DAY.find(t => t.key === pickedKey);
     currentTimeOfDay = sceneMatch || TIME_OF_DAY[Math.floor(Math.random()*TIME_OF_DAY.length)];
   } else {
     currentTimeOfDay = TIME_OF_DAY[Math.floor(Math.random()*TIME_OF_DAY.length)];
@@ -3771,13 +3773,14 @@ function _blendColor(hex1, hex2, t) {
 }
 
 const THEMED_LEAGUES = [
-  // 1 ── Village Green ─────────────────────────────────────────────────────
+  // ── VILLAGE GREEN LEAGUE ─────────────────────────────────────────────────
   {
-    sceneKey: 'day',
-    name: "THE VILLAGE GREEN",
-    subtitle: "Sunny Cricket · The Home Ground",
-    unlock: 0, targetFloor: 20, difficulty: 1.00, entry: 75,
-    winTrophy: 1, lossTrophy: 0, winCoins: 120, lossCoins: 0, winChest: 'bronze',
+    scenes: ['day','county','recground'],
+    sceneKey: 'day', // used for card art only
+    name: "VILLAGE GREEN LEAGUE",
+    subtitle: "English Village Cricket · 3 Grounds · Random Draw",
+    unlock: 0, targetFloor: 24, difficulty: 1.02, entry: 75,
+    winTrophy: 1, lossTrophy: 0, winCoins: 150, lossCoins: 0, winChest: 'bronze',
     accentColor: '#4a9e4a', accentColor2: '#2a6a2a', textColor: '#aaffaa',
     drawArt(ctx, W, H) {
       _drawSceneCard(ctx, W, H, 'day', (ctx, W, H, HZ) => {
@@ -3817,66 +3820,14 @@ const THEMED_LEAGUES = [
       });
     }
   },
-  // 1b ── County Ground ────────────────────────────────────────────────────
+  // ── INDIAN LEAGUE ────────────────────────────────────────────────────────
   {
-    sceneKey: 'county',
-    name: "COUNTY GROUND",
-    subtitle: "Red-Brick Cricket · The Grand Stand",
-    unlock: 0, targetFloor: 22, difficulty: 1.03, entry: 100,
-    winTrophy: 1, lossTrophy: 0, winCoins: 150, lossCoins: 0, winChest: 'bronze',
-    accentColor: '#9e3030', accentColor2: '#6a1a1a', textColor: '#ffc8a0',
-    drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'day', (ctx, W, H, HZ) => {
-        // Sun — upper right, warm afternoon
-        const sg=ctx.createRadialGradient(W*0.82,H*0.13,0,W*0.82,H*0.13,H*0.20); sg.addColorStop(0,'rgba(255,230,80,0.75)'); sg.addColorStop(0.5,'rgba(255,200,40,0.22)'); sg.addColorStop(1,'transparent'); ctx.fillStyle=sg; ctx.fillRect(0,0,W,HZ);
-        ctx.fillStyle='#ffd820'; ctx.beginPath(); ctx.arc(W*0.82,H*0.13,H*0.065,0,Math.PI*2); ctx.fill();
-        // High thin clouds
-        ctx.fillStyle='rgba(255,255,255,0.80)'; [[0.10,0.08,0.13,0.032],[0.30,0.05,0.10,0.026],[0.55,0.07,0.09,0.028],[0.72,0.04,0.07,0.022]].forEach(([cx,cy,rx,ry])=>{ctx.beginPath();ctx.ellipse(W*cx,H*cy,W*rx,H*ry,0,0,Math.PI*2);ctx.fill();});
-        // RED BRICK GRANDSTAND — left, two tiers
-        const gx=W*0.01,gy=HZ-H*0.27,gw=W*0.30,gh=H*0.27;
-        // Lower tier
-        ctx.fillStyle='#8b3018'; ctx.fillRect(gx,gy+gh*0.45,gw,gh*0.55);
-        // Upper tier — slightly narrower, stepped back
-        ctx.fillStyle='#a03820'; ctx.fillRect(gx+gw*0.04,gy,gw*0.92,gh*0.50);
-        // Brick texture — horizontal mortar lines
-        ctx.strokeStyle='rgba(60,10,0,0.30)'; ctx.lineWidth=1;
-        [0.12,0.22,0.32,0.42,0.52,0.62,0.72,0.82,0.92].forEach(fy=>{ ctx.beginPath(); ctx.moveTo(gx,gy+gh*fy); ctx.lineTo(gx+gw,gy+gh*fy); ctx.stroke(); });
-        // White-painted arch windows — lower tier
-        ctx.fillStyle='rgba(200,220,255,0.50)'; [0.05,0.13,0.21,0.58,0.66,0.74,0.82,0.90].forEach(dx=>{ ctx.beginPath(); ctx.ellipse(gx+gw*dx+gw*0.03,gy+gh*0.68,gw*0.035,gh*0.11,0,Math.PI,0); ctx.rect(gx+gw*dx,gy+gh*0.68,gw*0.07,gh*0.12); ctx.fill(); });
-        // Flagpoles along roofline
-        ctx.strokeStyle='#ccc'; ctx.lineWidth=2;
-        [0.08,0.25,0.45,0.65,0.85].forEach(dx=>{ const fx=gx+gw*dx; ctx.beginPath(); ctx.moveTo(fx,gy); ctx.lineTo(fx,gy-H*0.07); ctx.stroke(); ctx.fillStyle=dx===0.25?'#cc2020':dx===0.65?'#2020cc':'#22aa44'; ctx.fillRect(fx,gy-H*0.07,W*0.022,H*0.038); });
-        // White balustrade railing top
-        ctx.fillStyle='rgba(255,255,255,0.88)'; ctx.fillRect(gx,gy+gh*0.45-H*0.012,gw,H*0.012);
-        for(let i=0;i<18;i++){const bx=gx+gw*i/18; ctx.fillRect(bx+1,gy+gh*0.45-H*0.022,gw*0.038,H*0.022);}
-        // SMALL PRESS BOX — right side of grandstand roof
-        ctx.fillStyle='#f0ebe0'; ctx.fillRect(gx+gw*0.70,gy-H*0.04,gw*0.20,H*0.04);
-        ctx.fillStyle='rgba(80,130,200,0.55)'; [[0.72,0],[0.78,0],[0.84,0]].forEach(([dx])=>{ ctx.fillRect(gx+gw*dx,gy-H*0.038,gw*0.04,H*0.028); });
-        // RIGHT SIDE — tall electronic scoreboard
-        const sbx=W*0.68,sby=HZ-H*0.28,sbw=W*0.28,sbh=H*0.25;
-        ctx.fillStyle='#111'; ctx.fillRect(sbx,sby,sbw,sbh);
-        ctx.strokeStyle='#444'; ctx.lineWidth=2; ctx.strokeRect(sbx,sby,sbw,sbh);
-        // LED panel rows
-        ctx.fillStyle='rgba(255,120,0,0.90)'; ctx.font=`bold ${W*0.028}px monospace`; ctx.textAlign='center'; ctx.fillText('COUNTY GROUND',sbx+sbw/2,sby+sbh*0.28);
-        ctx.fillStyle='rgba(255,220,0,0.85)'; ctx.font=`${W*0.022}px monospace`; ctx.fillText('RUNS  WKTS  OVERS',sbx+sbw/2,sby+sbh*0.52);
-        ctx.fillStyle='rgba(80,255,80,0.90)'; ctx.font=`bold ${W*0.030}px monospace`; ctx.fillText('0    0    0.0',sbx+sbw/2,sby+sbh*0.75);
-        // Steel support legs
-        ctx.strokeStyle='#555'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(sbx+sbw*0.15,sby+sbh); ctx.lineTo(sbx+sbw*0.15,HZ); ctx.stroke(); ctx.beginPath(); ctx.moveTo(sbx+sbw*0.85,sby+sbh); ctx.lineTo(sbx+sbw*0.85,HZ); ctx.stroke();
-        // Boundary rope with advertising boards along it
-        ctx.strokeStyle='rgba(255,255,255,0.70)'; ctx.lineWidth=2.5; ctx.setLineDash([8,5]); ctx.beginPath(); ctx.ellipse(W*0.50,HZ+H*0.02,W*0.42,H*0.06,0,0,Math.PI); ctx.stroke(); ctx.setLineDash([]);
-        // Ad boards (coloured rectangles along boundary)
-        [['#cc2020','COUNTY'],[' #2266cc','CRICKET'],['#22882a','GROUND'],['#cc8800','SINCE 1882']].forEach(([col,txt],i)=>{ const bax=W*(0.10+i*0.20); const bay=HZ-H*0.005; ctx.fillStyle=col; ctx.fillRect(bax,bay,W*0.14,H*0.028); ctx.fillStyle='white'; ctx.font=`bold ${W*0.014}px sans-serif`; ctx.textAlign='center'; ctx.fillText(txt,bax+W*0.07,bay+H*0.020); });
-        ctx.textAlign='left';
-      });
-    }
-  },
-  // 1c ── Maidan ─────────────────────────────────────────────────────────────
-  {
-    sceneKey: 'maidan',
-    name: "THE MAIDAN",
-    subtitle: "Mumbai · Open Ground Cricket",
-    unlock: 5, targetFloor: 28, difficulty: 1.08, entry: 150,
-    winTrophy: 1, lossTrophy: 0, winCoins: 200, lossCoins: 0, winChest: 'silver',
+    scenes: ['maidan','colony','villagepitch'],
+    sceneKey: 'maidan', // used for card art only
+    name: "INDIAN LEAGUE",
+    subtitle: "Indian Street Cricket · 3 Grounds · Random Draw",
+    unlock: 5, targetFloor: 34, difficulty: 1.10, entry: 150,
+    winTrophy: 1, lossTrophy: 0, winCoins: 280, lossCoins: 0, winChest: 'silver',
     accentColor: '#e8620a', accentColor2: '#8a3000', textColor: '#ffe0a0',
     drawArt(ctx, W, H) {
       _drawSceneCard(ctx, W, H, 'maidan', (ctx, W, H, HZ) => {
@@ -3985,171 +3936,14 @@ const THEMED_LEAGUES = [
       });
     }
   },
-  // 1d ── Rec Ground ──────────────────────────────────────────────────────────
+  // ── STADIUM LEAGUE ───────────────────────────────────────────────────────
   {
-    sceneKey: 'recground',
-    name: "THE REC GROUND",
-    subtitle: "Sunday League · The Local Club",
-    unlock: 3, targetFloor: 26, difficulty: 1.06, entry: 125,
-    winTrophy: 1, lossTrophy: 0, winCoins: 180, lossCoins: 0, winChest: 'silver',
-    accentColor: '#4a8c3a', accentColor2: '#2a5a1a', textColor: '#b0ffb0',
-    drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'recground', (ctx, W, H, HZ) => {
-        // Overcast English sky
-        const sg=ctx.createLinearGradient(0,0,0,HZ); sg.addColorStop(0,'#8090a8'); sg.addColorStop(0.6,'#b8c4d0'); sg.addColorStop(1,'#d0d8e0');
-        ctx.fillStyle=sg; ctx.fillRect(0,0,W,HZ);
-        // Thin cloud layer
-        ctx.fillStyle='rgba(255,255,255,0.55)'; [[0.08,0.08,0.16,0.04],[0.28,0.05,0.20,0.05],[0.55,0.09,0.14,0.04],[0.78,0.06,0.16,0.05]].forEach(([cx,cy,rx,ry])=>{ ctx.beginPath(); ctx.ellipse(W*cx,H*cy,W*rx,H*ry,0,0,Math.PI*2); ctx.fill(); });
-        // Terraced houses — left, red brick
-        ctx.fillStyle='#8a3a28';
-        [[0.01,0.28,0.09,0.72],[0.09,0.32,0.09,0.68],[0.17,0.24,0.09,0.76],[0.25,0.30,0.09,0.70]].forEach(([bx,by,bw,bh])=>{
-          ctx.fillRect(W*bx,H*by,W*bw,H*bh);
-          // Roof
-          ctx.fillStyle='#4a3020'; ctx.beginPath(); ctx.moveTo(W*bx,H*by); ctx.lineTo(W*(bx+bw/2),H*(by-0.06)); ctx.lineTo(W*(bx+bw),H*by); ctx.closePath(); ctx.fill();
-          // Chimney
-          ctx.fillStyle='#7a3020'; ctx.fillRect(W*(bx+bw*0.30),H*(by-0.09),W*0.018,H*0.05);
-          // Windows
-          ctx.fillStyle='rgba(180,200,220,0.55)'; [[0.15,0.18],[0.55,0.18],[0.15,0.44],[0.55,0.44]].forEach(([wx,wy])=>{ ctx.fillRect(W*(bx+bw*wx),H*(by+bh*wy),W*0.030,H*0.090); });
-          ctx.fillStyle='#8a3a28';
-        });
-        // Small tin stand — centre-left
-        const stx=W*0.34,sty=HZ-H*0.18,stw=W*0.28,sth=H*0.15;
-        ctx.fillStyle='#6a7878'; ctx.fillRect(stx,sty,stw,sth); // corrugated roof
-        ctx.fillStyle='#505858'; for(let i=0;i<8;i++) ctx.fillRect(stx+stw*i/8,sty,stw/16,sth*0.30); // roof ridges
-        ctx.fillStyle='#8a7060'; ctx.fillRect(stx,sty+sth*0.30,stw,sth*0.70); // seating area
-        // Bench seats + spectators
-        ctx.fillStyle='rgba(50,40,30,0.80)'; ctx.fillRect(stx+stw*0.04,sty+sth*0.45,stw*0.92,H*0.012);
-        ctx.fillStyle='rgba(50,40,30,0.80)'; ctx.fillRect(stx+stw*0.04,sty+sth*0.68,stw*0.92,H*0.012);
-        const sPal=['#e84','#44e','#888','#e44','#4e4'];
-        for(let i=0;i<10;i++){ctx.fillStyle=sPal[i%5]; ctx.beginPath(); ctx.arc(stx+stw*(i+0.5)/10,sty+sth*0.38,W*0.012,0,Math.PI*2); ctx.fill();}
-        for(let i=0;i<10;i++){ctx.fillStyle=sPal[(i+2)%5]; ctx.beginPath(); ctx.arc(stx+stw*(i+0.5)/10,sty+sth*0.60,W*0.012,0,Math.PI*2); ctx.fill();}
-        // Overgrown hedge — right side
-        [[0.66,0.55,0.06,0.14],[0.70,0.52,0.07,0.18],[0.74,0.57,0.06,0.13],[0.78,0.50,0.07,0.20],[0.83,0.54,0.06,0.16],[0.88,0.51,0.07,0.19],[0.93,0.56,0.05,0.14]].forEach(([hx,hy,hw,hh])=>{
-          ctx.fillStyle='#2a5a18'; ctx.beginPath(); ctx.ellipse(W*hx,H*hy,W*hw,H*hh,0,0,Math.PI*2); ctx.fill();
-          ctx.fillStyle='#1e4a10'; ctx.beginPath(); ctx.ellipse(W*(hx-hw*0.15),H*(hy+hh*0.2),W*(hw*0.8),H*(hh*0.7),0,0,Math.PI*2); ctx.fill();
-        });
-        // Scoreboard shed — right boundary
-        ctx.fillStyle='#5a4030'; ctx.fillRect(W*0.64,HZ-H*0.17,W*0.12,H*0.12);
-        ctx.fillStyle='#f0ece0'; ctx.fillRect(W*0.66,HZ-H*0.14,W*0.08,H*0.06);
-        ctx.fillStyle='#1a0c04'; ctx.font=`bold ${W*0.012}px monospace`; ctx.textAlign='center';
-        ctx.fillText('RUNS: 0',W*0.70,HZ-H*0.095);
-        // Plastic chairs along boundary
-        ['#e84040','#4060e8','#40c840','#e8c040'].forEach((c,i)=>{ ctx.fillStyle=c; ctx.fillRect(W*(0.02+i*0.055),HZ-H*0.035,W*0.035,H*0.028); });
-        // Scorers hut left
-        ctx.fillStyle='#d0c8a8'; ctx.fillRect(W*0.01,HZ-H*0.08,W*0.08,H*0.06);
-        ctx.fillStyle='#6a5a40'; ctx.beginPath(); ctx.moveTo(W*0.01,HZ-H*0.08); ctx.lineTo(W*0.05,HZ-H*0.115); ctx.lineTo(W*0.09,HZ-H*0.08); ctx.closePath(); ctx.fill();
-        ctx.textAlign='left';
-      });
-    }
-  },
-  // 2a ── Colony Ground ──────────────────────────────────────────────────────
-  {
-    sceneKey: 'colony',
-    name: "THE COLONY GROUND",
-    subtitle: "Mumbai · Housing Colony Cricket",
-    unlock: 10, targetFloor: 32, difficulty: 1.10, entry: 200,
-    winTrophy: 1, lossTrophy: 0, winCoins: 280, lossCoins: 0, winChest: 'silver',
-    accentColor: '#d04820', accentColor2: '#901800', textColor: '#ffc090',
-    drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'colony', (ctx, W, H, HZ) => {
-        // Hot Mumbai afternoon sky
-        const sg=ctx.createLinearGradient(0,0,0,HZ); sg.addColorStop(0,'#7898b8'); sg.addColorStop(0.6,'#c0d0d8'); sg.addColorStop(1,'#d8d0b0');
-        ctx.fillStyle=sg; ctx.fillRect(0,0,W,HZ);
-        // Colony apartment blocks — left cluster
-        ctx.fillStyle='#c8c0a8';
-        [[0.00,0.15,0.12,0.85],[0.11,0.20,0.11,0.80],[0.21,0.12,0.13,0.88]].forEach(([bx,by,bw,bh])=>{
-          ctx.fillRect(W*bx,H*by,W*bw,H*bh);
-          // Balconies
-          ctx.fillStyle='rgba(100,90,75,0.70)';
-          for(let r=0;r<4;r++) for(let c=0;c<3;c++) ctx.fillRect(W*(bx+bw*(c*0.28+0.08)),H*(by+bh*(r*0.20+0.12)),W*(bw*0.20),H*0.06);
-          // Clothes on lines
-          ['#e84','#4e4','#eee','#e44','#44e'].forEach((cl,ci)=>{ ctx.fillStyle=cl; ctx.fillRect(W*(bx+bw*0.15+ci*W*bw*0.12),H*(by+bh*0.07),W*(bw*0.08),H*0.022); });
-          // AC units
-          ctx.fillStyle='#909090';
-          for(let c=0;c<3;c++) ctx.fillRect(W*(bx+bw*(c*0.28+0.18)),H*(by+bh*0.34),W*(bw*0.10),H*0.03);
-          ctx.fillStyle='#c8c0a8';
-        });
-        // Right cluster
-        ctx.fillStyle='#b8b0a0';
-        [[0.66,0.18,0.12,0.82],[0.77,0.14,0.12,0.86],[0.88,0.22,0.12,0.78]].forEach(([bx,by,bw,bh])=>{
-          ctx.fillRect(W*bx,H*by,W*bw,H*bh);
-          ctx.fillStyle='rgba(90,80,65,0.65)';
-          for(let r=0;r<4;r++) for(let c=0;c<3;c++) ctx.fillRect(W*(bx+bw*(c*0.28+0.08)),H*(by+bh*(r*0.20+0.12)),W*(bw*0.20),H*0.06);
-          ctx.fillStyle='#b8b0a0';
-        });
-        // Chai stall — left boundary
-        ctx.fillStyle='#8a6030'; ctx.fillRect(W*0.01,HZ-H*0.12,W*0.12,H*0.10);
-        ctx.fillStyle='#c8a050'; ctx.fillRect(W*0.01,HZ-H*0.12,W*0.12,H*0.018); // awning
-        ctx.fillStyle='rgba(200,120,40,0.90)'; ctx.fillRect(W*0.03,HZ-H*0.09,W*0.03,H*0.04); // chai pot
-        // Auto-rickshaw — right boundary
-        ctx.fillStyle='#f5a623'; ctx.fillRect(W*0.80,HZ-H*0.09,W*0.14,H*0.07);
-        ctx.fillStyle='#333'; ctx.beginPath(); ctx.arc(W*0.84,HZ-H*0.025,W*0.020,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(W*0.92,HZ-H*0.025,W*0.020,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='rgba(80,180,255,0.40)'; ctx.fillRect(W*0.81,HZ-H*0.085,W*0.10,H*0.040); // windscreen
-        // Dusty ground
-        const dg=ctx.createLinearGradient(0,HZ*0.6,0,HZ); dg.addColorStop(0,'#a09050'); dg.addColorStop(1,'#b8a060');
-        ctx.fillStyle=dg; ctx.fillRect(0,HZ*0.6,W,HZ*0.4+2);
-        ctx.fillStyle='rgba(120,90,30,0.50)'; [[0.15,0.82,0.08,0.025],[0.65,0.78,0.10,0.025],[0.40,0.90,0.07,0.020]].forEach(([px,py,pw,ph])=>{ ctx.beginPath(); ctx.ellipse(W*px,H*py,W*pw,H*ph,0,0,Math.PI*2); ctx.fill(); });
-        // Chalk boundary circle
-        ctx.strokeStyle='rgba(255,255,220,0.70)'; ctx.lineWidth=2; ctx.setLineDash([5,5]);
-        ctx.beginPath(); ctx.ellipse(W*0.50,HZ+H*0.02,W*0.44,H*0.065,0,0,Math.PI); ctx.stroke(); ctx.setLineDash([]);
-        ctx.textAlign='left';
-      });
-    }
-  },
-  // 2b ── Village Pitch ───────────────────────────────────────────────────────
-  {
-    sceneKey: 'villagepitch',
-    name: "THE VILLAGE PITCH",
-    subtitle: "Rural India · Red Earth Cricket",
-    unlock: 15, targetFloor: 36, difficulty: 1.12, entry: 250,
-    winTrophy: 1, lossTrophy: 0, winCoins: 340, lossCoins: 0, winChest: 'silver',
-    accentColor: '#c86018', accentColor2: '#803800', textColor: '#ffd090',
-    drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'villagepitch', (ctx, W, H, HZ) => {
-        // Warm golden afternoon sky
-        const sg=ctx.createLinearGradient(0,0,0,HZ); sg.addColorStop(0,'#c8904a'); sg.addColorStop(0.5,'#e8c068'); sg.addColorStop(1,'#f0d888');
-        ctx.fillStyle=sg; ctx.fillRect(0,0,W,HZ);
-        // Temple gopuram silhouette — centre-right
-        ctx.fillStyle='#8a6828';
-        const tpx=W*0.72,tpy=H*0.06,tpw=W*0.10,tph=H*0.42;
-        ctx.fillRect(tpx,tpy+tph*0.30,tpw,tph*0.70);
-        ctx.fillRect(tpx+tpw*0.12,tpy+tph*0.18,tpw*0.76,tph*0.15);
-        ctx.fillRect(tpx+tpw*0.22,tpy+tph*0.08,tpw*0.56,tph*0.12);
-        ctx.fillRect(tpx+tpw*0.30,tpy,tpw*0.40,tph*0.10);
-        ctx.beginPath(); ctx.moveTo(tpx+tpw*0.35,tpy); ctx.lineTo(tpx+tpw*0.50,tpy-H*0.06); ctx.lineTo(tpx+tpw*0.65,tpy); ctx.closePath(); ctx.fill();
-        // Horizontal decorative tiers
-        ctx.fillStyle='#a07838'; [0.28,0.42,0.55].forEach(ty=>{ ctx.fillRect(tpx-tpw*0.05,tpy+tph*ty,tpw*1.10,tph*0.04); });
-        // Mango trees
-        [[0.06,0.32,0.07],[0.13,0.26,0.085],[0.88,0.30,0.07],[0.93,0.34,0.06]].forEach(([tx,ty,tr])=>{
-          ctx.fillStyle='#6b3a10'; ctx.fillRect(W*tx-W*0.010,H*ty,W*0.020,HZ-H*ty);
-          ctx.fillStyle='#2a6a10'; ctx.beginPath(); ctx.arc(W*tx,H*ty,W*tr,0,Math.PI*2); ctx.fill();
-          ctx.fillStyle='#1a5008'; ctx.beginPath(); ctx.arc(W*(tx-tr*0.3),H*(ty+tr*0.4),W*(tr*0.75),0,Math.PI*2); ctx.fill();
-          ctx.fillStyle='#3a8020'; ctx.beginPath(); ctx.arc(W*(tx+tr*0.2),H*(ty-tr*0.1),W*(tr*0.65),0,Math.PI*2); ctx.fill();
-        });
-        // Thatched shelter — left boundary
-        ctx.fillStyle='#d4a040'; ctx.beginPath(); ctx.moveTo(W*0.01,HZ-H*0.04); ctx.lineTo(W*0.15,HZ-H*0.18); ctx.lineTo(W*0.29,HZ-H*0.04); ctx.closePath(); ctx.fill(); // thatch roof
-        ctx.fillStyle='#c09030'; ctx.fillRect(W*0.01,HZ-H*0.04,W*0.28,H*0.005); // eave line
-        ctx.fillStyle='#8a6028'; ctx.fillRect(W*0.04,HZ-H*0.04,W*0.018,H*0.04); ctx.fillRect(W*0.24,HZ-H*0.04,W*0.018,H*0.04); // bamboo posts
-        // People sitting under shelter
-        ['#e84848','#e8c030','#f5f5f5','#4444e8'].forEach((c,i)=>{ ctx.fillStyle=c; ctx.beginPath(); ctx.arc(W*(0.06+i*0.05),HZ-H*0.025,W*0.013,0,Math.PI*2); ctx.fill(); });
-        // Red earth ground
-        const rg=ctx.createLinearGradient(0,HZ*0.55,0,HZ); rg.addColorStop(0,'#a05828'); rg.addColorStop(0.5,'#b06830'); rg.addColorStop(1,'#c07840');
-        ctx.fillStyle=rg; ctx.fillRect(0,HZ*0.55,W,HZ*0.45+2);
-        // Cracked earth texture
-        ctx.strokeStyle='rgba(80,35,10,0.35)'; ctx.lineWidth=1;
-        [[0.20,0.72,0.09,0.78],[0.45,0.76,0.12,0.82],[0.70,0.70,0.08,0.77],[0.30,0.85,0.06,0.90],[0.60,0.88,0.10,0.82]].forEach(([x1,y1,x2,y2])=>{ ctx.beginPath(); ctx.moveTo(W*x1,H*y1); ctx.lineTo(W*x2,H*y2); ctx.stroke(); });
-        ctx.textAlign='left';
-      });
-    }
-  },
-  // 3a ── Home Ground ────────────────────────────────────────────────────────
-  {
-    sceneKey: 'homeground',
-    name: "THE HOME GROUND",
-    subtitle: "Test Cricket · The Grand Old Ground",
-    unlock: 22, targetFloor: 44, difficulty: 1.15, entry: 350,
-    winTrophy: 1, lossTrophy: 0, winCoins: 480, lossCoins: 0, winChest: 'gold',
+    scenes: ['homeground','bigground','coliseum'],
+    sceneKey: 'homeground', // used for card art only
+    name: "STADIUM LEAGUE",
+    subtitle: "Grand Stadium Cricket · 3 Grounds · Random Draw",
+    unlock: 22, targetFloor: 55, difficulty: 1.18, entry: 350,
+    winTrophy: 1, lossTrophy: 0, winCoins: 600, lossCoins: 0, winChest: 'gold',
     accentColor: '#c8a020', accentColor2: '#806600', textColor: '#ffe890',
     drawArt(ctx, W, H) {
       _drawSceneCard(ctx, W, H, 'homeground', (ctx, W, H, HZ) => {
@@ -4160,135 +3954,27 @@ const THEMED_LEAGUES = [
         // Grand pavilion — left, cream/white with red brick base
         const px=W*0.01,py=HZ-H*0.30,pw=W*0.35,ph=H*0.30;
         ctx.fillStyle='#ede8d0'; ctx.fillRect(px,py,pw,ph);
-        ctx.fillStyle='#8a3520'; ctx.fillRect(px,py+ph*0.65,pw,ph*0.35); // brick base
+        ctx.fillStyle='#8a3520'; ctx.fillRect(px,py+ph*0.65,pw,ph*0.35);
         // Central clock tower
         ctx.fillStyle='#e8e0c8'; ctx.fillRect(px+pw*0.40,py-H*0.22,pw*0.20,H*0.22);
         ctx.fillStyle='#8a3520'; ctx.beginPath(); ctx.moveTo(px+pw*0.38,py-H*0.22); ctx.lineTo(px+pw*0.50,py-H*0.34); ctx.lineTo(px+pw*0.62,py-H*0.22); ctx.closePath(); ctx.fill();
-        // Clock face
         ctx.fillStyle='#fff8e8'; ctx.beginPath(); ctx.arc(px+pw*0.50,py-H*0.253,W*0.024,0,Math.PI*2); ctx.fill();
         ctx.strokeStyle='#333'; ctx.lineWidth=1.5;
         ctx.beginPath(); ctx.moveTo(px+pw*0.50,py-H*0.253); ctx.lineTo(px+pw*0.50,py-H*0.278); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(px+pw*0.50,py-H*0.253); ctx.lineTo(px+pw*0.50+W*0.016,py-H*0.253); ctx.stroke();
-        // Long room windows — lower level
         ctx.fillStyle='rgba(80,120,200,0.55)';
         [0.04,0.12,0.20,0.65,0.73,0.81,0.89].forEach(dx=>{ ctx.fillRect(px+pw*dx,py+ph*0.25,pw*0.07,ph*0.22); ctx.fillRect(px+pw*dx,py+ph*0.52,pw*0.07,ph*0.18); });
         // Members stand — right
         const mx=W*0.60,my=HZ-H*0.24,mw=W*0.38,mh=H*0.24;
-        // Tiered seating rows
-        ctx.fillStyle='#2040a0'; ctx.fillRect(mx,my,mw,mh); // base
+        ctx.fillStyle='#2040a0'; ctx.fillRect(mx,my,mw,mh);
         [0,0.25,0.50,0.75].forEach(ry=>{ ctx.fillStyle=ry===0?'#3050c0':'#2840a8'; ctx.fillRect(mx,my+mh*ry,mw,mh*0.25); });
-        // Seat dots
         for(let r=0;r<4;r++) for(let c=0;c<18;c++){
           ctx.fillStyle=((r+c)%3===0)?'#e8e8e8':((r+c)%3===1)?'#2840a8':'#3858c8';
           ctx.fillRect(mx+mw*c/18+1,my+mh*(r*0.22+0.06),mw/18-2,mh*0.15);
         }
-        // Sight screen — right edge
         ctx.fillStyle='#f8f8f8'; ctx.fillRect(W*0.93,HZ-H*0.18,W*0.06,H*0.15);
-        // Gold-painted boundary rope
         ctx.strokeStyle='rgba(200,160,30,0.75)'; ctx.lineWidth=3; ctx.setLineDash([8,5]);
         ctx.beginPath(); ctx.ellipse(W*0.50,HZ+H*0.02,W*0.43,H*0.065,0,0,Math.PI); ctx.stroke(); ctx.setLineDash([]);
-        ctx.textAlign='left';
-      });
-    }
-  },
-  // 3b ── The Big Ground ─────────────────────────────────────────────────────
-  {
-    sceneKey: 'bigground',
-    name: "THE BIG GROUND",
-    subtitle: "International Cricket · Full House",
-    unlock: 35, targetFloor: 55, difficulty: 1.18, entry: 500,
-    winTrophy: 1, lossTrophy: 0, winCoins: 680, lossCoins: 0, winChest: 'gold',
-    accentColor: '#1848c8', accentColor2: '#0c2880', textColor: '#90c8ff',
-    drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'bigground', (ctx, W, H, HZ) => {
-        // Bright international stadium sky
-        const sg=ctx.createLinearGradient(0,0,0,HZ); sg.addColorStop(0,'#1848b8'); sg.addColorStop(0.7,'#5898d8'); sg.addColorStop(1,'#a0c8e8');
-        ctx.fillStyle=sg; ctx.fillRect(0,0,W,HZ);
-        // Full wraparound stands — drawn as arc of tiered seating
-        const stadColors=['#c02020','#2040c0','#e8e8e8','#c02020','#2040c0'];
-        // Left bank
-        for(let t=0;t<5;t++){
-          ctx.fillStyle=stadColors[t]; ctx.fillRect(W*0.01,H*(0.08+t*0.08),W*0.18,H*0.08);
-          // Crowd dots
-          for(let c=0;c<10;c++){ctx.fillStyle=stadColors[(t+c)%5]; ctx.fillRect(W*(0.02+c*0.015),H*(0.09+t*0.08),W*0.010,H*0.05);}
-        }
-        // Right bank
-        for(let t=0;t<5;t++){
-          ctx.fillStyle=stadColors[(t+2)%5]; ctx.fillRect(W*0.81,H*(0.08+t*0.08),W*0.18,H*0.08);
-          for(let c=0;c<10;c++){ctx.fillStyle=stadColors[(t+c+1)%5]; ctx.fillRect(W*(0.82+c*0.015),H*(0.09+t*0.08),W*0.010,H*0.05);}
-        }
-        // Back straight — top centre
-        ctx.fillStyle='#1a3a8a'; ctx.fillRect(W*0.18,H*0.05,W*0.64,H*0.22);
-        for(let t=0;t<3;t++) for(let c=0;c<24;c++){ ctx.fillStyle=stadColors[(t+c)%5]; ctx.fillRect(W*(0.19+c*0.026),H*(0.06+t*0.065),W*0.020,H*0.052); }
-        // Giant scoreboard — top centre
-        ctx.fillStyle='#080c10'; ctx.fillRect(W*0.35,H*0.03,W*0.30,H*0.13);
-        ctx.strokeStyle='#4488ff'; ctx.lineWidth=2; ctx.strokeRect(W*0.35,H*0.03,W*0.30,H*0.13);
-        ctx.fillStyle='rgba(255,120,0,0.90)'; ctx.font=`bold ${W*0.022}px monospace`; ctx.textAlign='center';
-        ctx.fillText('BIG GROUND',W*0.50,H*0.095); ctx.fillStyle='rgba(80,255,80,0.85)';
-        ctx.font=`${W*0.015}px monospace`; ctx.fillText('LIVE CRICKET',W*0.50,H*0.128);
-        // Floodlight pylons — 4 corners
-        [[0.16,0.44],[0.84,0.44]].forEach(([lx,ly])=>{
-          ctx.fillStyle='#889090'; ctx.fillRect(W*lx-W*0.008,H*ly,W*0.016,H*(1-ly));
-          ctx.fillStyle='rgba(255,240,200,0.80)'; ctx.fillRect(W*lx-W*0.030,H*ly-H*0.02,W*0.060,H*0.025);
-        });
-        ctx.textAlign='left';
-      });
-    }
-  },
-  // 3c ── The Coliseum ───────────────────────────────────────────────────────
-  {
-    sceneKey: 'coliseum',
-    name: "THE COLISEUM",
-    subtitle: "World Cricket · 80,000 Strong",
-    unlock: 50, targetFloor: 65, difficulty: 1.22, entry: 750,
-    winTrophy: 1, lossTrophy: 0, winCoins: 1000, lossCoins: 0, winChest: 'gold',
-    accentColor: '#e83020', accentColor2: '#a00c00', textColor: '#ffc8b0',
-    drawArt(ctx, W, H) {
-      _drawSceneCard(ctx, W, H, 'coliseum', (ctx, W, H, HZ) => {
-        // Night-ish deep blue floodlit sky
-        const sg=ctx.createLinearGradient(0,0,0,HZ); sg.addColorStop(0,'#08101e'); sg.addColorStop(0.7,'#182848'); sg.addColorStop(1,'#203560');
-        ctx.fillStyle=sg; ctx.fillRect(0,0,W,HZ);
-        // Stars
-        ctx.fillStyle='rgba(255,255,255,0.60)';
-        [[0.10,0.04],[0.22,0.10],[0.40,0.03],[0.58,0.08],[0.75,0.05],[0.88,0.12],[0.30,0.14],[0.65,0.13]].forEach(([sx,sy])=>{ ctx.beginPath(); ctx.arc(W*sx,H*sy,1.2,0,Math.PI*2); ctx.fill(); });
-        // Massive tiered stadium — left
-        [[0.01,0.10,0.22,0.90],[0.01,0.30,0.20,0.70],[0.01,0.50,0.18,0.50]].forEach(([bx,by,bw,bh],t)=>{
-          const tCol=['#3a0808','#280606','#1e0404'][t]; ctx.fillStyle=tCol; ctx.fillRect(W*bx,H*by,W*bw,H*bh);
-          // Crowd — white/red dots
-          for(let r=0;r<3;r++) for(let c=0;c<8;c++){
-            ctx.fillStyle=((r+c)%2===0)?'rgba(255,255,255,0.70)':'rgba(220,50,30,0.80)';
-            ctx.fillRect(W*(bx+bw*c/8+0.005),H*(by+bh*(r/4+0.08)),W*(bw*0.08),H*(bh*0.18));
-          }
-        });
-        // Right bank
-        [[0.77,0.10,0.22,0.90],[0.79,0.30,0.20,0.70],[0.81,0.50,0.18,0.50]].forEach(([bx,by,bw,bh],t)=>{
-          const tCol=['#3a0808','#280606','#1e0404'][t]; ctx.fillStyle=tCol; ctx.fillRect(W*bx,H*by,W*bw,H*bh);
-          for(let r=0;r<3;r++) for(let c=0;c<8;c++){
-            ctx.fillStyle=((r+c)%2===0)?'rgba(255,255,255,0.70)':'rgba(220,50,30,0.80)';
-            ctx.fillRect(W*(bx+bw*c/8+0.005),H*(by+bh*(r/4+0.08)),W*(bw*0.08),H*(bh*0.18));
-          }
-        });
-        // Back straight
-        ctx.fillStyle='#2a0606'; ctx.fillRect(W*0.22,H*0.05,W*0.56,H*0.28);
-        for(let r=0;r<4;r++) for(let c=0;c<20;c++){
-          ctx.fillStyle=((r+c)%3===0)?'rgba(255,255,255,0.65)':((r+c)%3===1)?'rgba(220,40,20,0.75)':'rgba(40,40,40,0.80)';
-          ctx.fillRect(W*(0.23+c*0.027),H*(0.06+r*0.058),W*0.022,H*0.046);
-        }
-        // 4 giant floodlight pylons
-        [[0.18,0.38],[0.34,0.25],[0.66,0.25],[0.82,0.38]].forEach(([lx,ly])=>{
-          ctx.fillStyle='#607070'; ctx.fillRect(W*lx-W*0.006,H*ly,W*0.012,H*(1-ly));
-          // Floodlight glow
-          const fg=ctx.createRadialGradient(W*lx,H*ly,0,W*lx,H*ly,W*0.06); fg.addColorStop(0,'rgba(255,245,200,0.90)'); fg.addColorStop(1,'transparent');
-          ctx.fillStyle=fg; ctx.fillRect(W*(lx-0.07),H*(ly-0.04),W*0.14,H*0.08);
-          ctx.fillStyle='rgba(255,245,180,0.85)'; ctx.fillRect(W*(lx-0.03),H*(ly-0.015),W*0.060,H*0.020);
-        });
-        // Scoreboard
-        ctx.fillStyle='#040810'; ctx.fillRect(W*0.38,H*0.03,W*0.24,H*0.10);
-        ctx.fillStyle='rgba(255,80,0,0.90)'; ctx.font=`bold ${W*0.018}px monospace`; ctx.textAlign='center';
-        ctx.fillText('COLISEUM',W*0.50,H*0.068);
-        ctx.fillStyle='rgba(80,255,80,0.80)'; ctx.font=`${W*0.012}px monospace`; ctx.fillText('80,000 CROWD',W*0.50,H*0.105);
-        // Field flood-glow overlay
-        ctx.fillStyle='rgba(255,245,200,0.06)'; ctx.fillRect(0,HZ*0.55,W,HZ*0.45);
         ctx.textAlign='left';
       });
     }
