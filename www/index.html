@@ -8249,63 +8249,15 @@ function drawCountyGroundScene() {
     ctx.lineWidth=1.8;
   }
 
-  // ── CROWD in grandstand ──
-  const SHIRTS=['#e74c3c','#1f5fa8','#f4d03f','#2a8c3e','#ffffff','#e67e22','#9b59b6','#16a085','#cc3333'];
-  const SKINS=['#c49060','#e8c090','#8a5030','#d4a070','#b87840','#f0d0a0'];
-  const SEATS=['#c82828','#181880','#c82828','#228820','#c82828','#181880'];
-  // Upper tier crowd (3 rows)
-  for(let r=0;r<3;r++){
-    const ry=oTop+gh*0.06+r*gh*0.12;
-    const rowH=gh*0.09, headR=gh*0.038;
-    const dotW=W*0.016, dotGap=W*0.003;
-    const numSeats=Math.floor(gw/(dotW+dotGap));
-    for(let s=0;s<numSeats;s++){
-      const sx=s*(dotW+dotGap);
-      if(sx+dotW>gw) break;
-      const hash=(r*31+s*17)%100;
-      const empty=hash>92;
-      const seatIdx=Math.floor(s/5)%SEATS.length;
-      ctx.fillStyle=empty?'#4a1010':SHIRTS[(hash+s*3+r*7)%SHIRTS.length];
-      ctx.fillRect(sx,ry,dotW,rowH*0.70);
-      if(!empty && headR>=2){
-        ctx.fillStyle=SKINS[(hash+s+r)%SKINS.length];
-        ctx.beginPath(); ctx.arc(sx+dotW/2,ry-headR*0.55,headR*0.75,0,Math.PI*2); ctx.fill();
-        if(hash%6===0){ // raised arm
-          ctx.strokeStyle=SHIRTS[(hash+s+4)%SHIRTS.length]; ctx.lineWidth=0.8;
-          ctx.beginPath(); ctx.moveTo(sx+dotW/2,ry+rowH*0.15);
-          ctx.lineTo(sx+dotW*0.5+(hash%2===0?-dotW*0.55:dotW*0.55),ry-rowH*0.35); ctx.stroke();
-        }
-      }
-    }
-    // Seat colours (empty seats)
-    for(let s=0;s<numSeats;s++){
-      const sx=s*(dotW+dotGap);
-      const hash=(r*31+s*17)%100;
-      if(hash>92){
-        const seatIdx=Math.floor(s/5)%SEATS.length;
-        ctx.fillStyle=SEATS[seatIdx]; ctx.fillRect(sx,ry,dotW,rowH*0.70);
-      }
-    }
-  }
-  // Lower tier crowd (2 rows, below balustrade)
-  for(let r=0;r<2;r++){
-    const ry=oTop+gh*0.50+r*gh*0.10;
-    const rowH=gh*0.08, headR=gh*0.034;
-    const dotW=W*0.016, dotGap=W*0.003;
-    const numSeats=Math.floor(gw/(dotW+dotGap));
-    for(let s=0;s<numSeats;s++){
-      const sx=s*(dotW+dotGap);
-      if(sx+dotW>gw) break;
-      const hash=(r*53+s*23+100)%100;
-      const empty=hash>90;
-      ctx.fillStyle=empty?'#3a1010':SHIRTS[(hash+s*5+r*11)%SHIRTS.length];
-      ctx.fillRect(sx,ry,dotW,rowH*0.72);
-      if(!empty && headR>=2){
-        ctx.fillStyle=SKINS[(hash+s+r+2)%SKINS.length];
-        ctx.beginPath(); ctx.arc(sx+dotW/2,ry-headR*0.50,headR*0.72,0,Math.PI*2); ctx.fill();
-      }
-    }
-  }
+  // ── CROWD in grandstand — tonal wash suggests packed stands ──
+  // Upper seating zone (between windows and balustrade)
+  const upCrowdG = ctx.createLinearGradient(0,oTop+gh*0.32,0,oTop+gh*0.44);
+  upCrowdG.addColorStop(0,'rgba(120,30,20,0.55)'); upCrowdG.addColorStop(1,'rgba(80,20,10,0.70)');
+  ctx.fillStyle=upCrowdG; ctx.fillRect(0,oTop+gh*0.32,gw,gh*0.12);
+  // Lower seating zone (below balustrade)
+  const loCrowdG = ctx.createLinearGradient(0,oTop+gh*0.60,0,oTop+gh*0.76);
+  loCrowdG.addColorStop(0,'rgba(100,24,14,0.60)'); loCrowdG.addColorStop(1,'rgba(60,14,6,0.72)');
+  ctx.fillStyle=loCrowdG; ctx.fillRect(0,oTop+gh*0.60,gw,gh*0.16);
 
   // Fascia strip (club colours — deep navy)
   const fasciaG=ctx.createLinearGradient(0,oTop-H*0.012,0,oTop);
@@ -8399,32 +8351,48 @@ function drawCountyGroundScene() {
 
   ctx.textAlign='left';
 
-  // ── LAYER 5: RIGHT SIDE STAND (simple, behind scoreboard) ──
-  const rseatCols=['#181880','#c82828','#181880'];
-  for(let y=Math.ceil(oTop);y<H*0.55;y++){
-    const lx=ocx+hw(y);
-    if(lx>=W) continue;
-    const rw=W-lx;
-    const si=Math.floor((y-oTop)/(H*0.040))%3;
-    ctx.fillStyle='#141424'; ctx.fillRect(lx,y,rw,1);
-    // Crowd dots
-    if((y-Math.ceil(oTop))%Math.round(H*0.040)<Math.round(H*0.022)){
-      for(let x=lx+2;x<W-2;x+=W*0.019){
-        const hash=((y*7+x*3)&0xff)%100;
-        if(hash>88) continue;
-        ctx.fillStyle=SHIRTS[hash%SHIRTS.length];
-        ctx.fillRect(x,y,W*0.014,H*0.014);
-      }
-    }
+  // ── LAYER 5: RIGHT SIDE STAND — tiered terrace, clean architectural ──
+  // Dark covered terrace background (right of oval top, clipped to the right margin)
+  ctx.save();
+  ctx.beginPath();
+  // Path along the oval right edge from oTop down to H*0.55, then fill right to W
+  const rsTopX = ocx + hw(oTop);
+  ctx.moveTo(rsTopX, oTop);
+  for(let y=oTop;y<=H*0.56;y+=2){ const rx2=ocx+hw(y); ctx.lineTo(rx2,y); }
+  ctx.lineTo(W, H*0.56); ctx.lineTo(W, oTop); ctx.closePath();
+  const rsBg = ctx.createLinearGradient(rsTopX,oTop,W,oTop);
+  rsBg.addColorStop(0,'#1a1a2a'); rsBg.addColorStop(1,'#0e0e1c');
+  ctx.fillStyle=rsBg; ctx.fill();
+  ctx.restore();
+
+  // Terrace tier lines — horizontal bands suggesting stepped rows
+  ctx.strokeStyle='rgba(80,80,120,0.50)'; ctx.lineWidth=1;
+  const tierCount=7;
+  for(let t=0;t<tierCount;t++){
+    const ty=oTop + t*(H*0.56-oTop)/tierCount;
+    const lx2=ocx+hw(ty);
+    if(lx2>=W) continue;
+    ctx.beginPath(); ctx.moveTo(lx2,ty); ctx.lineTo(W,ty); ctx.stroke();
   }
-  // Right stand fascia
-  const rfasciaY=oTop-H*0.012;
-  for(let y=Math.ceil(oTop);y<oTop+H*0.010;y++){
-    const lx=ocx+hw(y); if(lx>=W) continue;
-    const g2=ctx.createLinearGradient(lx,rfasciaY,W,rfasciaY);
-    g2.addColorStop(0,'#1a2890'); g2.addColorStop(1,'#0e1a60');
-    ctx.fillStyle=g2; ctx.fillRect(lx,y,W-lx,1);
-  }
+  // Muted crowd wash on right stand — no individual dots
+  const rsCrowdG=ctx.createLinearGradient(0,oTop,0,H*0.56);
+  rsCrowdG.addColorStop(0,'rgba(30,30,60,0.40)'); rsCrowdG.addColorStop(1,'rgba(10,10,30,0.60)');
+  ctx.save();
+  ctx.beginPath();
+  for(let y=oTop;y<=H*0.56;y+=2){ const rx2=ocx+hw(y); ctx.lineTo(rx2,y); }
+  ctx.lineTo(W, H*0.56); ctx.lineTo(W, oTop); ctx.closePath();
+  ctx.fillStyle=rsCrowdG; ctx.fill();
+  ctx.restore();
+  // Navy fascia strip running along the oval rim on the right
+  ctx.save();
+  ctx.beginPath();
+  const fasStartY=oTop-H*0.001, fasEndY=oTop+H*0.012;
+  for(let y=fasStartY;y<=fasEndY;y+=1){ const rx2=ocx+hw(y); ctx.lineTo(rx2,y); }
+  ctx.lineTo(W,fasEndY); ctx.lineTo(W,fasStartY); ctx.closePath();
+  const rfG=ctx.createLinearGradient(0,fasStartY,0,fasEndY);
+  rfG.addColorStop(0,'#1a2890'); rfG.addColorStop(1,'#0e1a60');
+  ctx.fillStyle=rfG; ctx.fill();
+  ctx.restore();
 
   // ── LAYER 6: ADVERTISING BOARDS ──
   const adY=oTop-H*0.016, adH=H*0.018;
@@ -8449,8 +8417,8 @@ function drawCountyGroundScene() {
   });
   ctx.textAlign='left';
 
-  // ── LAYER 7: 30-YARD FIELDING CIRCLE ──
-  ctx.strokeStyle='rgba(255,255,255,0.48)'; ctx.lineWidth=2; ctx.setLineDash([10,6]);
+  // ── LAYER 7: 30-YARD FIELDING CIRCLE (very subtle) ──
+  ctx.strokeStyle='rgba(255,255,255,0.14)'; ctx.lineWidth=1.5; ctx.setLineDash([8,8]);
   ctx.beginPath(); ctx.ellipse(ocx,ocy,orx*0.48,ory*0.48,0,0,Math.PI*2); ctx.stroke();
   ctx.setLineDash([]);
 
