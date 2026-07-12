@@ -7995,210 +7995,355 @@ function drawCountyGroundScene() {
   const ocx = W/2, ocy = H*FIELD_CY, orx = W*FIELD_RX, ory = H*FIELD_RY;
   const oTop = ocy - ory; // ≈ H*0.23
 
-  // ══════════════════════════════════════════════════════
-  //  COUNTY GROUND — backdrop clipped to H*0.23
-  //  Full grandstand facade visible behind the oval,
-  //  narrow brick side-wall strips below, corner props.
-  // ══════════════════════════════════════════════════════
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,oTop); ctx.clip();
 
-  // ── SKY: English afternoon, bright blue ──
+  // ── SKY: rich English summer afternoon ──
   const skyG = ctx.createLinearGradient(0,0,0,oTop);
-  skyG.addColorStop(0,'#4a90d4'); skyG.addColorStop(0.5,'#7ab8e8');
-  skyG.addColorStop(1,'#c4e0f4');
+  skyG.addColorStop(0,'#3070b8'); skyG.addColorStop(0.38,'#5898d4');
+  skyG.addColorStop(0.72,'#8abce8'); skyG.addColorStop(1,'#b8d8f0');
   ctx.fillStyle=skyG; ctx.fillRect(0,0,W,oTop);
 
-  // ── GRANDSTAND FACADE — fills lower 55% of backdrop ──
-  // This is the main visual: a red-brick Victorian grandstand seen behind the oval
-  const gsTop = oTop*0.45, gsH = oTop*0.55, gsBot = oTop;
+  // Warm horizon glow
+  const horizG=ctx.createLinearGradient(0,oTop*0.65,0,oTop);
+  horizG.addColorStop(0,'rgba(240,228,200,0)'); horizG.addColorStop(1,'rgba(240,228,200,0.22)');
+  ctx.fillStyle=horizG; ctx.fillRect(0,oTop*0.65,W,oTop*0.35);
 
-  // Lower brick body
+  // Sun — right of centre, afternoon height
+  const sx=W*0.76, sy=oTop*0.22;
+  const sunHalo=ctx.createRadialGradient(sx,sy,0,sx,sy,H*0.22);
+  sunHalo.addColorStop(0,'rgba(255,248,200,0.55)'); sunHalo.addColorStop(0.35,'rgba(255,230,150,0.22)');
+  sunHalo.addColorStop(0.70,'rgba(255,210,80,0.07)'); sunHalo.addColorStop(1,'rgba(255,210,80,0)');
+  ctx.fillStyle=sunHalo; ctx.fillRect(0,0,W,oTop);
+  ctx.fillStyle='#fffce0'; ctx.beginPath(); ctx.arc(sx,sy,oTop*0.068,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(sx,sy,oTop*0.042,0,Math.PI*2); ctx.fill();
+
+  // Clouds — proper English cumulus, 3 groups
+  function cloud(cx,cy,scx,scy,alpha){
+    ctx.save(); ctx.globalAlpha=alpha;
+    const g=ctx.createRadialGradient(cx,cy-scy*0.3,0,cx,cy,scx);
+    g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.55,'rgba(245,250,255,0.90)');
+    g.addColorStop(1,'rgba(230,240,252,0)');
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.ellipse(cx,cy,scx,scy,0,0,Math.PI*2); ctx.fill();
+    // Shadow underside
+    const sg=ctx.createLinearGradient(cx,cy,cx,cy+scy*0.8);
+    sg.addColorStop(0,'rgba(180,200,230,0)'); sg.addColorStop(1,'rgba(160,185,220,0.28)');
+    ctx.fillStyle=sg; ctx.beginPath(); ctx.ellipse(cx,cy+scy*0.25,scx*0.85,scy*0.45,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  cloud(W*0.10,oTop*0.26,W*0.095,oTop*0.11,0.96);
+  cloud(W*0.195,oTop*0.18,W*0.065,oTop*0.080,0.88);
+  cloud(W*0.06,oTop*0.32,W*0.055,oTop*0.065,0.78);
+  cloud(W*0.38,oTop*0.34,W*0.080,oTop*0.095,0.90);
+  cloud(W*0.44,oTop*0.24,W*0.050,oTop*0.068,0.80);
+  cloud(W*0.32,oTop*0.40,W*0.040,oTop*0.052,0.72);
+
+  // ── GRANDSTAND FACADE — Victorian red-brick, fills lower 58% of backdrop ──
+  const gsTop = oTop*0.42, gsH = oTop*0.58, gsBot = oTop;
+
+  // Brick body — rich warm red gradient, sunlit top, shadowed base
   const brickG = ctx.createLinearGradient(0, gsTop, 0, gsBot);
-  brickG.addColorStop(0,'#b84028'); brickG.addColorStop(0.5,'#9a3018'); brickG.addColorStop(1,'#7a2010');
+  brickG.addColorStop(0,'#c44830'); brickG.addColorStop(0.28,'#b03820');
+  brickG.addColorStop(0.65,'#8c2c16'); brickG.addColorStop(1,'#701e0c');
   ctx.fillStyle=brickG; ctx.fillRect(0, gsTop, W, gsH);
 
-  // Horizontal mortar courses
-  ctx.strokeStyle='rgba(40,8,2,0.28)'; ctx.lineWidth=0.9;
-  for(let y=gsTop; y<gsBot; y+=oTop*0.055){
+  // Brick courses — horizontal mortar
+  ctx.strokeStyle='rgba(40,6,0,0.22)'; ctx.lineWidth=0.9;
+  const courseH=oTop*0.050;
+  for(let y=gsTop; y<gsBot; y+=courseH){
     ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
   }
   // Staggered vertical joints
-  ctx.strokeStyle='rgba(40,8,2,0.16)'; ctx.lineWidth=0.7;
-  let brow=0;
-  for(let y=gsTop; y<gsBot; y+=oTop*0.055, brow++){
-    const off=(brow%2)*W*0.022;
-    for(let x=off; x<W; x+=W*0.044){
-      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y+oTop*0.055); ctx.stroke();
-    }
+  ctx.strokeStyle='rgba(40,6,0,0.14)'; ctx.lineWidth=0.7;
+  let brow2=0;
+  for(let y=gsTop; y<gsBot; y+=courseH, brow2++){
+    const off=(brow2%2)*W*0.020;
+    for(let x=off; x<W; x+=W*0.040){ ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y+courseH); ctx.stroke(); }
   }
 
-  // Pale stone string course at mid-height
-  const scY = gsTop + gsH*0.48;
-  ctx.fillStyle='#ddd4b4'; ctx.fillRect(0, scY, W, oTop*0.032);
-  ctx.fillStyle='rgba(0,0,0,0.18)'; ctx.fillRect(0, scY+oTop*0.032, W, oTop*0.006);
+  // Sunlight glaze on upper brick face
+  const sunGlaze=ctx.createLinearGradient(0,gsTop,0,gsTop+gsH*0.35);
+  sunGlaze.addColorStop(0,'rgba(255,220,160,0.14)'); sunGlaze.addColorStop(1,'rgba(255,220,160,0)');
+  ctx.fillStyle=sunGlaze; ctx.fillRect(0,gsTop,W,gsH*0.35);
 
-  // Arched windows — upper section (10 across full width)
-  const winCount=10, winPad=W*0.012;
+  // ── PILASTERS (stone columns between windows) ──
+  const pilW=W*0.010, pilCount=11;
+  ctx.fillStyle='#d4caa8';
+  for(let i=0;i<=pilCount;i++){
+    const px=i*(W/pilCount)-pilW*0.5;
+    ctx.fillRect(px, gsTop, pilW, gsH);
+    // Capital top
+    ctx.fillRect(px-pilW*0.3, gsTop, pilW*1.6, oTop*0.016);
+  }
+
+  // Pale stone string course at mid-height (separates upper/lower tiers)
+  const scY = gsTop + gsH*0.48;
+  ctx.fillStyle='#ddd0a8'; ctx.fillRect(0, scY, W, oTop*0.035);
+  // Shadow below cornice
+  const cornShadow=ctx.createLinearGradient(0,scY+oTop*0.035,0,scY+oTop*0.055);
+  cornShadow.addColorStop(0,'rgba(0,0,0,0.22)'); cornShadow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=cornShadow; ctx.fillRect(0,scY+oTop*0.035,W,oTop*0.020);
+
+  // ── UPPER ARCHED WINDOWS (10 across) ──
+  const winCount=10, winPad=W*0.008;
   const winSpan=(W-winPad*2)/winCount;
-  const winW=winSpan*0.55, winH=oTop*0.18;
-  const winTop=gsTop+gsH*0.06;
-  ctx.fillStyle='rgba(160,210,250,0.55)';
+  const winW=winSpan*0.58, winH=oTop*0.20;
+  const winTop=gsTop+gsH*0.055;
   for(let i=0;i<winCount;i++){
     const wx=winPad+i*winSpan+(winSpan-winW)*0.5;
-    const archCY=winTop+winW*0.5;
-    // Arch + rect opening
-    ctx.beginPath();
-    ctx.arc(wx+winW*0.5, archCY, winW*0.5, Math.PI, 0);
-    ctx.rect(wx, archCY, winW, winH-winW*0.5);
-    ctx.fill();
-    // Stone surround
-    ctx.strokeStyle='rgba(220,210,185,0.85)'; ctx.lineWidth=1.6;
-    ctx.beginPath();
-    ctx.arc(wx+winW*0.5, archCY, winW*0.5, Math.PI, 0);
+    const archR=winW*0.5, archCY=winTop+archR;
+
+    // Interior — warm amber crowd glow
+    ctx.fillStyle='rgba(200,110,50,0.55)';
+    ctx.beginPath(); ctx.arc(wx+archR, archCY, archR, Math.PI, 0); ctx.rect(wx, archCY, winW, winH-archR); ctx.fill();
+
+    // Glass panes — cool sky blue over the glow
+    ctx.globalAlpha=0.50;
+    ctx.fillStyle='rgba(140,200,248,1)';
+    ctx.beginPath(); ctx.arc(wx+archR, archCY, archR*0.85, Math.PI, 0); ctx.rect(wx+archR*0.15, archCY, winW*0.70, (winH-archR)*0.85); ctx.fill();
+    ctx.globalAlpha=1;
+
+    // Glass highlight diagonal streak
+    ctx.strokeStyle='rgba(255,255,255,0.45)'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(wx+winW*0.22, winTop+winH*0.18); ctx.lineTo(wx+winW*0.44, winTop+winH*0.48); ctx.stroke();
+
+    // Stone arch surround
+    ctx.strokeStyle='rgba(215,205,178,0.92)'; ctx.lineWidth=2.0;
+    ctx.beginPath(); ctx.arc(wx+archR, archCY, archR, Math.PI, 0);
     ctx.moveTo(wx, archCY); ctx.lineTo(wx, winTop+winH);
     ctx.moveTo(wx+winW, archCY); ctx.lineTo(wx+winW, winTop+winH);
     ctx.stroke();
+
+    // Keystone
+    ctx.fillStyle='#c8c0a0';
+    ctx.beginPath(); ctx.moveTo(wx+archR-W*0.007, winTop+W*0.003); ctx.lineTo(wx+archR+W*0.007, winTop+W*0.003);
+    ctx.lineTo(wx+archR+W*0.005, winTop+oTop*0.030); ctx.lineTo(wx+archR-W*0.005, winTop+oTop*0.030); ctx.closePath(); ctx.fill();
+
     // Stone sill
-    ctx.fillStyle='#c8c0a0'; ctx.fillRect(wx-2, winTop+winH, winW+4, oTop*0.018);
-    ctx.fillStyle='rgba(160,210,250,0.55)';
+    ctx.fillStyle='#beb8a0'; ctx.fillRect(wx-2, winTop+winH, winW+4, oTop*0.020);
+    ctx.fillStyle='rgba(0,0,0,0.20)'; ctx.fillRect(wx-2, winTop+winH+oTop*0.020, winW+4, oTop*0.005);
   }
 
-  // Lower windows — rectangular, below string course (8 across)
+  // ── LOWER RECTANGULAR WINDOWS (8 across, below string course) ──
   const lwCount=8, lwSpan=W/lwCount;
-  const lwW=lwSpan*0.40, lwH=oTop*0.12, lwTop=scY+oTop*0.05;
-  ctx.fillStyle='rgba(140,195,240,0.40)';
+  const lwW=lwSpan*0.42, lwH=oTop*0.130, lwTop2=scY+oTop*0.048;
   for(let i=0;i<lwCount;i++){
     const lx=(i+0.5)*lwSpan-lwW*0.5;
-    ctx.fillRect(lx, lwTop, lwW, lwH);
-    ctx.strokeStyle='rgba(205,198,175,0.70)'; ctx.lineWidth=1.2;
-    ctx.strokeRect(lx, lwTop, lwW, lwH);
-    ctx.fillStyle='rgba(140,195,240,0.40)';
+    // Interior glow
+    ctx.fillStyle='rgba(160,100,40,0.45)'; ctx.fillRect(lx, lwTop2, lwW, lwH);
+    // Glass
+    ctx.fillStyle='rgba(140,195,245,0.45)'; ctx.fillRect(lx+2, lwTop2+2, lwW-4, lwH-4);
+    // Highlight streak
+    ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(lx+lwW*0.20,lwTop2+lwH*0.15); ctx.lineTo(lx+lwW*0.42,lwTop2+lwH*0.55); ctx.stroke();
+    // Stone surround
+    ctx.strokeStyle='rgba(200,192,168,0.80)'; ctx.lineWidth=1.4; ctx.strokeRect(lx, lwTop2, lwW, lwH);
+    // Sill
+    ctx.fillStyle='#b0a888'; ctx.fillRect(lx-2, lwTop2+lwH, lwW+4, oTop*0.016);
   }
 
-  // Crowd colour wash visible through upper windows
-  ctx.globalAlpha=0.38;
-  ctx.fillStyle='#c84030';
-  for(let i=0;i<winCount;i++){
-    const wx=winPad+i*winSpan+(winSpan-winW)*0.5;
-    ctx.fillRect(wx+1, winTop+winW*0.5, winW-2, winH-winW*0.5-1);
+  // ── VERANDA / MEMBERS' COVERED BALCONY — front of grandstand ──
+  // A white-painted iron canopy running the full width just above oTop
+  const verandaY = gsBot - oTop*0.04, verandaH = oTop*0.04;
+  ctx.fillStyle='#f0ece0'; ctx.fillRect(0, verandaY, W, verandaH);
+  // Iron support posts
+  ctx.strokeStyle='rgba(60,50,30,0.55)'; ctx.lineWidth=1.8;
+  for(let i=0;i<14;i++){
+    const vx=i*(W/13);
+    ctx.beginPath(); ctx.moveTo(vx, verandaY); ctx.lineTo(vx, verandaY+verandaH); ctx.stroke();
   }
-  ctx.globalAlpha=1;
+  // Canopy shadow
+  const canShadow=ctx.createLinearGradient(0,verandaY+verandaH,0,verandaY+verandaH+oTop*0.014);
+  canShadow.addColorStop(0,'rgba(0,0,0,0.28)'); canShadow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=canShadow; ctx.fillRect(0,verandaY+verandaH,W,oTop*0.014);
 
-  // Slate pitched roof across full width
-  const roofBot = gsTop, roofTop2 = gsTop - oTop*0.10;
-  ctx.fillStyle='#3a3a50';
-  ctx.beginPath(); ctx.rect(0, roofTop2, W, gsTop-roofTop2); ctx.fill();
-  // Roof ridge highlight
-  ctx.fillStyle='#4a4a62'; ctx.fillRect(0, roofTop2, W, oTop*0.010);
-  // Slate lines
-  ctx.strokeStyle='rgba(22,22,32,0.30)'; ctx.lineWidth=0.8;
-  for(let y=roofTop2; y<roofBot; y+=oTop*0.020){
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
-  }
+  // Club name banner on veranda fascia
+  ctx.fillStyle='#0e1a60'; ctx.fillRect(0, verandaY, W, verandaH*0.32);
+  ctx.fillStyle='rgba(255,255,255,0.82)'; ctx.font=`bold ${verandaH*0.28}px Georgia, serif`; ctx.textAlign='center';
+  ctx.fillText('COUNTY CRICKET CLUB  ·  EST. 1882', W*0.5, verandaY+verandaH*0.26);
+  ctx.textAlign='left';
 
-  // Flagpoles along the roofline — 6 evenly spaced
-  const flagCols=['#cc2020','#1a2a8c','#cc2020','#228832','#cc2020','#1a2a8c'];
+  // ── SLATE ROOF across full width ──
+  const roofBot2 = gsTop, roofTop2 = gsTop - oTop*0.115;
+  const roofG=ctx.createLinearGradient(0,roofTop2,0,roofBot2);
+  roofG.addColorStop(0,'#484860'); roofG.addColorStop(0.4,'#3a3a52'); roofG.addColorStop(1,'#2e2e42');
+  ctx.fillStyle=roofG; ctx.fillRect(0, roofTop2, W, roofBot2-roofTop2);
+  // Slate texture lines
+  ctx.strokeStyle='rgba(20,20,32,0.28)'; ctx.lineWidth=0.8;
+  for(let y=roofTop2; y<roofBot2; y+=oTop*0.018){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  // Ridge capping — bright strip
+  ctx.fillStyle='#6868808'; ctx.fillRect(0, roofTop2, W, oTop*0.012);
+  ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fillRect(0, roofTop2, W, oTop*0.005);
+  // Gutter line
+  ctx.fillStyle='rgba(20,20,36,0.60)'; ctx.fillRect(0, roofBot2-oTop*0.008, W, oTop*0.008);
+
+  // Chimney stacks (3 pairs)
+  [[W*0.12,roofTop2-oTop*0.040],[W*0.50,roofTop2-oTop*0.048],[W*0.86,roofTop2-oTop*0.040]].forEach(([cx2,cy2])=>{
+    ctx.fillStyle='#8c2818'; ctx.fillRect(cx2-W*0.016,cy2,W*0.032,oTop*0.065);
+    ctx.fillStyle='#6a1c0e'; ctx.fillRect(cx2-W*0.018,cy2,W*0.036,oTop*0.012);
+    // Smoke wisps
+    ctx.strokeStyle='rgba(200,200,210,0.28)'; ctx.lineWidth=2; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(cx2,cy2); ctx.quadraticCurveTo(cx2+W*0.010,cy2-oTop*0.04,cx2+W*0.006,cy2-oTop*0.10); ctx.stroke();
+    ctx.lineCap='butt';
+  });
+
+  // ── FLAGPOLES — 6 along roofline ──
+  const flagPalette=['#cc2020','#1a2a8c','#cc2020','#228832','#cc8800','#1a2a8c'];
   for(let i=0;i<6;i++){
-    const fx=W*(0.06+i*0.18);
-    ctx.strokeStyle='#b0b0c0'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(fx,roofTop2); ctx.lineTo(fx,roofTop2-oTop*0.18); ctx.stroke();
-    ctx.fillStyle=flagCols[i];
+    const fx=W*(0.06+i*0.175);
+    ctx.strokeStyle='#c0bcd8'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(fx,roofTop2); ctx.lineTo(fx,roofTop2-oTop*0.22); ctx.stroke();
+    ctx.fillStyle=flagPalette[i];
     ctx.beginPath();
-    ctx.moveTo(fx,roofTop2-oTop*0.18);
-    ctx.lineTo(fx+W*0.045,roofTop2-oTop*0.155);
-    ctx.lineTo(fx+W*0.044,roofTop2-oTop*0.125);
-    ctx.lineTo(fx,roofTop2-oTop*0.132);
+    ctx.moveTo(fx,roofTop2-oTop*0.22);
+    ctx.lineTo(fx+W*0.048,roofTop2-oTop*0.200);
+    ctx.lineTo(fx+W*0.047,roofTop2-oTop*0.168);
+    ctx.lineTo(fx,roofTop2-oTop*0.178);
     ctx.closePath(); ctx.fill();
-    if(flagCols[i]==='#cc2020'){
-      ctx.strokeStyle='rgba(255,255,255,0.65)'; ctx.lineWidth=0.9;
-      ctx.beginPath(); ctx.moveTo(fx+W*0.006,roofTop2-oTop*0.180); ctx.lineTo(fx+W*0.006,roofTop2-oTop*0.132); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(fx,roofTop2-oTop*0.156); ctx.lineTo(fx+W*0.044,roofTop2-oTop*0.156); ctx.stroke();
+    // St George cross on red
+    if(flagPalette[i]==='#cc2020'){
+      ctx.strokeStyle='rgba(255,255,255,0.72)'; ctx.lineWidth=1.0;
+      ctx.beginPath(); ctx.moveTo(fx+W*0.007,roofTop2-oTop*0.220); ctx.lineTo(fx+W*0.007,roofTop2-oTop*0.178); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(fx,roofTop2-oTop*0.199); ctx.lineTo(fx+W*0.047,roofTop2-oTop*0.199); ctx.stroke();
     }
   }
 
-  // CLOCK TOWER — centre, rising above roofline
-  const twx=W*0.50, twBot=roofTop2, twW=W*0.064, twH=oTop*0.34;
-  ctx.fillStyle='#ccc4a8'; ctx.fillRect(twx-twW/2, twBot-twH, twW, twH);
-  // Shadow side
-  ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(twx+twW*0.35, twBot-twH, twW*0.15, twH);
-  // Bell-arch openings (2)
-  ctx.fillStyle='rgba(20,12,6,0.62)';
-  [-twW*0.24,twW*0.24].forEach(ox=>{
-    const ax=twx+ox, ay=twBot-twH+twH*0.12;
-    ctx.beginPath(); ctx.arc(ax, ay+twH*0.07, twW*0.14, Math.PI, 0);
-    ctx.rect(ax-twW*0.14, ay+twH*0.07, twW*0.28, twH*0.10); ctx.fill();
+  // ── CLOCK TOWER — larger, more ornate ──
+  const twx2=W*0.50, twBot2=roofTop2, twW2=W*0.078, twH2=oTop*0.42;
+  // Tower body — stone ashlar
+  const towG=ctx.createLinearGradient(twx2-twW2/2,0,twx2+twW2/2,0);
+  towG.addColorStop(0,'#d0c8a8'); towG.addColorStop(0.4,'#e0d8b8'); towG.addColorStop(1,'#b8b09a');
+  ctx.fillStyle=towG; ctx.fillRect(twx2-twW2/2, twBot2-twH2, twW2, twH2);
+  // Corner quoins
+  ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.fillRect(twx2-twW2/2, twBot2-twH2, W*0.008, twH2);
+  ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(twx2+twW2/2-W*0.008, twBot2-twH2, W*0.008, twH2);
+  // Stone course lines
+  ctx.strokeStyle='rgba(0,0,0,0.10)'; ctx.lineWidth=0.8;
+  for(let y=twBot2-twH2; y<twBot2; y+=oTop*0.060){ ctx.beginPath(); ctx.moveTo(twx2-twW2/2,y); ctx.lineTo(twx2+twW2/2,y); ctx.stroke(); }
+  // Bell chamber openings (pointed arches, top section)
+  ctx.fillStyle='rgba(15,10,5,0.72)';
+  [-twW2*0.22,twW2*0.22].forEach(ox=>{
+    const ax2=twx2+ox, ay2=twBot2-twH2+twH2*0.10;
+    ctx.beginPath(); ctx.arc(ax2, ay2+twH2*0.07, twW2*0.14, Math.PI, 0);
+    ctx.rect(ax2-twW2*0.14, ay2+twH2*0.07, twW2*0.28, twH2*0.12); ctx.fill();
+    // Light glow from inside bell chamber
+    ctx.fillStyle='rgba(255,220,100,0.18)';
+    ctx.beginPath(); ctx.arc(ax2, ay2+twH2*0.07, twW2*0.11, Math.PI, 0); ctx.fill();
+    ctx.fillStyle='rgba(15,10,5,0.72)';
   });
-  // Clock face
-  const ck_cx=twx, ck_cy=twBot-twH*0.52, ck_r=twW*0.34;
-  const ckG=ctx.createRadialGradient(ck_cx-ck_r*0.2,ck_cy-ck_r*0.2,0,ck_cx,ck_cy,ck_r);
-  ckG.addColorStop(0,'#fffef2'); ckG.addColorStop(1,'#ede5ca');
-  ctx.fillStyle=ckG; ctx.beginPath(); ctx.arc(ck_cx,ck_cy,ck_r,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#1e1408'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(ck_cx,ck_cy,ck_r,0,Math.PI*2); ctx.stroke();
-  ctx.strokeStyle='#0e0a04'; ctx.lineWidth=1.8; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(ck_cx,ck_cy); ctx.lineTo(ck_cx+ck_r*0.50,ck_cy-ck_r*0.18); ctx.stroke();
-  ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(ck_cx,ck_cy); ctx.lineTo(ck_cx-ck_r*0.08,ck_cy-ck_r*0.72); ctx.stroke();
-  ctx.lineCap='butt';
-  // Spire
-  ctx.fillStyle='#28283c';
-  ctx.beginPath(); ctx.moveTo(twx-twW/2-2,twBot-twH); ctx.lineTo(twx,twBot-twH-oTop*0.14); ctx.lineTo(twx+twW/2+2,twBot-twH); ctx.closePath(); ctx.fill();
-  // Weathervane ball
-  ctx.strokeStyle='#8888a0'; ctx.lineWidth=1.4;
-  ctx.beginPath(); ctx.moveTo(twx,twBot-twH-oTop*0.14); ctx.lineTo(twx,twBot-twH-oTop*0.22); ctx.stroke();
-  ctx.fillStyle='#8888a0'; ctx.beginPath(); ctx.arc(twx,twBot-twH-oTop*0.22,W*0.007,0,Math.PI*2); ctx.fill();
-
-  // HOT-AIR BALLOON — left sky, classic county detail
-  const bl_x=W*0.22, bl_y=oTop*0.30, bl_r=oTop*0.16;
-  const balG=ctx.createRadialGradient(bl_x-bl_r*0.3,bl_y-bl_r*0.3,0,bl_x,bl_y,bl_r);
-  balG.addColorStop(0,'#f05040'); balG.addColorStop(0.5,'#cc2818'); balG.addColorStop(1,'#8a1008');
-  ctx.fillStyle=balG; ctx.beginPath(); ctx.arc(bl_x,bl_y,bl_r,0,Math.PI*2); ctx.fill();
-  // Panel stripe lines
-  ctx.strokeStyle='rgba(255,255,255,0.25)'; ctx.lineWidth=0.9;
-  for(let p=0;p<6;p++){
-    const a=-Math.PI/2+p*(Math.PI/3);
-    ctx.beginPath(); ctx.moveTo(bl_x,bl_y-bl_r); ctx.quadraticCurveTo(bl_x+Math.cos(a)*bl_r*1.15,bl_y+Math.sin(a)*bl_r*0.20, bl_x+Math.cos(a)*bl_r,bl_y+Math.sin(a)*bl_r); ctx.stroke();
+  // Clock face — large, cream with gold numerals
+  const ck2_cx=twx2, ck2_cy=twBot2-twH2*0.48, ck2_r=twW2*0.38;
+  // Face shadow ring
+  ctx.fillStyle='rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.arc(ck2_cx,ck2_cy,ck2_r*1.08,0,Math.PI*2); ctx.fill();
+  const ckFG=ctx.createRadialGradient(ck2_cx-ck2_r*0.18,ck2_cy-ck2_r*0.18,0,ck2_cx,ck2_cy,ck2_r);
+  ckFG.addColorStop(0,'#fffff8'); ckFG.addColorStop(0.7,'#f8f0d8'); ckFG.addColorStop(1,'#e8deba');
+  ctx.fillStyle=ckFG; ctx.beginPath(); ctx.arc(ck2_cx,ck2_cy,ck2_r,0,Math.PI*2); ctx.fill();
+  // Hour marks
+  ctx.fillStyle='#2a1808';
+  for(let h=0;h<12;h++){
+    const ha=h*Math.PI/6-Math.PI/2;
+    const mr=h%3===0?ck2_r*0.80:ck2_r*0.86;
+    const mr2=ck2_r*(h%3===0?0.62:0.74);
+    ctx.beginPath(); ctx.moveTo(ck2_cx+Math.cos(ha)*mr, ck2_cy+Math.sin(ha)*mr);
+    ctx.lineTo(ck2_cx+Math.cos(ha)*mr2, ck2_cy+Math.sin(ha)*mr2);
+    ctx.lineWidth=h%3===0?2.2:1.2; ctx.strokeStyle='#2a1808'; ctx.stroke();
   }
+  // Hands — 3:47 (cricket tea break)
+  ctx.strokeStyle='#1a0e04'; ctx.lineCap='round';
+  ctx.lineWidth=2.4; ctx.beginPath(); ctx.moveTo(ck2_cx,ck2_cy); ctx.lineTo(ck2_cx+ck2_r*0.52*Math.cos(Math.PI*0.5-Math.PI/6*3),ck2_cy+ck2_r*0.52*Math.sin(Math.PI*0.5-Math.PI/6*3)); ctx.stroke();
+  ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(ck2_cx,ck2_cy); ctx.lineTo(ck2_cx+ck2_r*0.76*Math.cos(-Math.PI*0.42),ck2_cy+ck2_r*0.76*Math.sin(-Math.PI*0.42)); ctx.stroke();
+  ctx.fillStyle='#cc2020'; ctx.beginPath(); ctx.arc(ck2_cx,ck2_cy,ck2_r*0.07,0,Math.PI*2); ctx.fill();
+  ctx.lineCap='butt';
+  // Crenellated parapet
+  ctx.fillStyle='#c8c0a2';
+  for(let i=0;i<6;i++){
+    const px2=twx2-twW2/2+i*(twW2/6);
+    if(i%2===0) ctx.fillRect(px2, twBot2-twH2-oTop*0.042, twW2/6, oTop*0.042);
+  }
+  // Spire
+  const spireBase=twBot2-twH2-oTop*0.018;
+  ctx.fillStyle='#38384e';
+  ctx.beginPath(); ctx.moveTo(twx2-twW2*0.44,spireBase); ctx.lineTo(twx2,spireBase-oTop*0.20); ctx.lineTo(twx2+twW2*0.44,spireBase); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#48485e'; ctx.beginPath(); ctx.moveTo(twx2-twW2*0.44,spireBase); ctx.lineTo(twx2,spireBase-oTop*0.20); ctx.lineTo(twx2,spireBase); ctx.closePath(); ctx.fill();
+  // Finial
+  ctx.strokeStyle='#9898a8'; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(twx2,spireBase-oTop*0.20); ctx.lineTo(twx2,spireBase-oTop*0.29); ctx.stroke();
+  ctx.fillStyle='#9898a8'; ctx.beginPath(); ctx.arc(twx2,spireBase-oTop*0.29,W*0.008,0,Math.PI*2); ctx.fill();
+
+  // ── HOT-AIR BALLOON — left sky, striped, larger ──
+  const bl_x=W*0.17, bl_y=oTop*0.24, bl_r=oTop*0.195;
+  // Main envelope base
+  ctx.fillStyle='rgba(240,240,240,0.95)'; ctx.beginPath(); ctx.arc(bl_x,bl_y,bl_r,0,Math.PI*2); ctx.fill();
+  // Colour stripes (6 panels: red, white, red, blue, white, blue)
+  const pCols=['#cc2020','#f0f0f0','#cc2020','#1a2a8c','#f0f0f0','#1a2a8c'];
+  ctx.save(); ctx.beginPath(); ctx.arc(bl_x,bl_y,bl_r,0,Math.PI*2); ctx.clip();
+  for(let p=0;p<6;p++){
+    const a0=-Math.PI/2+p*(Math.PI/3), a1=a0+Math.PI/3;
+    ctx.fillStyle=pCols[p];
+    ctx.beginPath(); ctx.moveTo(bl_x,bl_y); ctx.arc(bl_x,bl_y,bl_r*1.1,a0,a1); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
   // Highlight
-  const balHi=ctx.createRadialGradient(bl_x-bl_r*0.35,bl_y-bl_r*0.35,0,bl_x,bl_y,bl_r);
-  balHi.addColorStop(0,'rgba(255,255,255,0.32)'); balHi.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=balHi; ctx.beginPath(); ctx.arc(bl_x,bl_y,bl_r,0,Math.PI*2); ctx.fill();
-  // Basket + ropes
-  const bsk_y=bl_y+bl_r+oTop*0.020;
-  ctx.fillStyle='#7a5220'; ctx.fillRect(bl_x-W*0.020,bsk_y,W*0.040,oTop*0.060);
-  ctx.strokeStyle='rgba(90,60,20,0.70)'; ctx.lineWidth=1;
-  [[bl_x-W*0.014,bl_x-W*0.020],[bl_x+W*0.014,bl_x+W*0.020]].forEach(([fx,tx])=>{
-    ctx.beginPath(); ctx.moveTo(fx,bl_y+bl_r); ctx.lineTo(tx,bsk_y); ctx.stroke();
+  const balHi2=ctx.createRadialGradient(bl_x-bl_r*0.38,bl_y-bl_r*0.38,0,bl_x,bl_y,bl_r);
+  balHi2.addColorStop(0,'rgba(255,255,255,0.46)'); balHi2.addColorStop(0.55,'rgba(255,255,255,0.08)'); balHi2.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=balHi2; ctx.beginPath(); ctx.arc(bl_x,bl_y,bl_r,0,Math.PI*2); ctx.fill();
+  // Envelope outline
+  ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(bl_x,bl_y,bl_r,0,Math.PI*2); ctx.stroke();
+  // Burner glow at base
+  const bsk2_y=bl_y+bl_r*0.78;
+  const burnG=ctx.createRadialGradient(bl_x,bsk2_y,0,bl_x,bsk2_y,bl_r*0.28);
+  burnG.addColorStop(0,'rgba(255,200,60,0.70)'); burnG.addColorStop(1,'rgba(255,120,20,0)');
+  ctx.fillStyle=burnG; ctx.beginPath(); ctx.arc(bl_x,bsk2_y,bl_r*0.28,0,Math.PI*2); ctx.fill();
+  // Ropes
+  ctx.strokeStyle='rgba(80,56,18,0.65)'; ctx.lineWidth=1.0;
+  const bsk_y2=bl_y+bl_r+oTop*0.028;
+  [[-bl_r*0.52,-W*0.022],[bl_r*0.52,W*0.022],[-bl_r*0.22,-W*0.010],[bl_r*0.22,W*0.010]].forEach(([fy,tx])=>{
+    ctx.beginPath(); ctx.moveTo(bl_x+fy*0.4,bl_y+bl_r*0.55); ctx.lineTo(bl_x+tx,bsk_y2); ctx.stroke();
   });
+  // Basket
+  ctx.fillStyle='#8a6030'; ctx.fillRect(bl_x-W*0.022,bsk_y2,W*0.044,oTop*0.058);
+  ctx.strokeStyle='rgba(60,40,10,0.50)'; ctx.lineWidth=1.0; ctx.strokeRect(bl_x-W*0.022,bsk_y2,W*0.044,oTop*0.058);
+  // Wicker detail
+  ctx.strokeStyle='rgba(60,40,10,0.30)'; ctx.lineWidth=0.7;
+  ctx.beginPath(); ctx.moveTo(bl_x,bsk_y2); ctx.lineTo(bl_x,bsk_y2+oTop*0.058); ctx.stroke();
 
   ctx.restore(); // end backdrop clip
 
-  // ── SIDE WALLS: narrow red-brick strips like Volcano uses ──
-  const wallW = W*0.028;
-  // Left brick wall strip
-  const lwG=ctx.createLinearGradient(0,oTop,wallW,oTop);
-  lwG.addColorStop(0,'#7a2010'); lwG.addColorStop(1,'#9a3018');
-  ctx.fillStyle=lwG; ctx.fillRect(0, oTop, wallW, H-oTop);
-  // Mortar courses on left wall
-  ctx.strokeStyle='rgba(35,5,0,0.38)'; ctx.lineWidth=1;
-  for(let y=oTop;y<H;y+=H*0.032){
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(wallW,y); ctx.stroke();
-  }
-  // Ivy/shadow cast by grandstand
-  const ivyG=ctx.createLinearGradient(0,oTop,0,oTop+H*0.15);
-  ivyG.addColorStop(0,'rgba(20,50,20,0.30)'); ivyG.addColorStop(1,'rgba(20,50,20,0)');
-  ctx.fillStyle=ivyG; ctx.fillRect(0,oTop,wallW,H*0.15);
+  // ── SIDE WALLS: narrow red-brick strips ──
+  const wallW = W*0.030;
+  // Left wall
+  const lwBG=ctx.createLinearGradient(0,oTop,wallW,oTop);
+  lwBG.addColorStop(0,'#6a1c0c'); lwBG.addColorStop(1,'#9a2e18');
+  ctx.fillStyle=lwBG; ctx.fillRect(0, oTop, wallW, H-oTop);
+  ctx.strokeStyle='rgba(35,5,0,0.32)'; ctx.lineWidth=0.9;
+  for(let y=oTop;y<H;y+=H*0.030){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(wallW,y); ctx.stroke(); }
+  // Ivy shadow
+  const ivG2=ctx.createLinearGradient(0,oTop,0,oTop+H*0.18);
+  ivG2.addColorStop(0,'rgba(18,48,14,0.35)'); ivG2.addColorStop(1,'rgba(18,48,14,0)');
+  ctx.fillStyle=ivG2; ctx.fillRect(0,oTop,wallW,H*0.18);
 
-  // Right brick wall strip
-  const rwG=ctx.createLinearGradient(W-wallW,oTop,W,oTop);
-  rwG.addColorStop(0,'#9a3018'); rwG.addColorStop(1,'#7a2010');
-  ctx.fillStyle=rwG; ctx.fillRect(W-wallW, oTop, wallW, H-oTop);
-  ctx.strokeStyle='rgba(35,5,0,0.38)'; ctx.lineWidth=1;
-  for(let y=oTop;y<H;y+=H*0.032){
-    ctx.beginPath(); ctx.moveTo(W-wallW,y); ctx.lineTo(W,y); ctx.stroke();
-  }
+  // Right wall
+  const rwBG=ctx.createLinearGradient(W-wallW,oTop,W,oTop);
+  rwBG.addColorStop(0,'#9a2e18'); rwBG.addColorStop(1,'#6a1c0c');
+  ctx.fillStyle=rwBG; ctx.fillRect(W-wallW, oTop, wallW, H-oTop);
+  ctx.strokeStyle='rgba(35,5,0,0.32)'; ctx.lineWidth=0.9;
+  for(let y=oTop;y<H;y+=H*0.030){ ctx.beginPath(); ctx.moveTo(W-wallW,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // ── SIGHT SCREEN — bottom-right corner, outside oval ──
+  const ssX=W*0.82, ssY=H*0.86, ssW=W*0.14, ssH=H*0.10;
+  // Posts
+  ctx.fillStyle='#444444'; [[ssX+ssW*0.15,ssY],[ssX+ssW*0.85,ssY]].forEach(([px,py])=>{
+    ctx.fillRect(px-W*0.005,py,W*0.010,ssH);
+  });
+  // Board (white with slight shadow gradient)
+  const ssg=ctx.createLinearGradient(ssX,ssY,ssX+ssW,ssY);
+  ssg.addColorStop(0,'#f4f4f4'); ssg.addColorStop(0.5,'#ffffff'); ssg.addColorStop(1,'#e0e0e0');
+  ctx.fillStyle=ssg; ctx.fillRect(ssX,ssY,ssW,ssH*0.80);
+  ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=1.2; ctx.strokeRect(ssX,ssY,ssW,ssH*0.80);
 
   // ── AD BOARDS along boundary ──
-  const adY=oTop-H*0.017, adH=H*0.017;
+  const adY=oTop-H*0.018, adH=H*0.018;
   const ADS=[
     {bg:'#cc2020',tc:'#fff',txt:'COUNTY CC'},
     {bg:'#1a4a8c',tc:'#fff',txt:'CASTLE ALE'},
@@ -8207,26 +8352,26 @@ function drawCountyGroundScene() {
     {bg:'#cc8800',tc:'#fff',txt:"JOHN SMITH'S"},
     {bg:'#060618',tc:'#00aaff',txt:'SKY SPORTS'},
     {bg:'#cc2020',tc:'#f0d060',txt:'EST 1882'},
-    {bg:'#2a2a7a',tc:'#fff',txt:'TOURIST BD'},
+    {bg:'#1a2a8c',tc:'#fff',txt:'TOURIST BD'},
   ];
   const bw2=W/ADS.length;
   ADS.forEach((ad,i)=>{
     const bx2=i*bw2;
     ctx.fillStyle=ad.bg; ctx.fillRect(bx2,adY,bw2-1,adH);
-    ctx.fillStyle='rgba(255,255,255,0.16)'; ctx.fillRect(bx2,adY,bw2-1,adH*0.3);
-    ctx.fillStyle=ad.tc; ctx.font=`bold ${adH*0.52}px sans-serif`; ctx.textAlign='center';
-    ctx.fillText(ad.txt,bx2+bw2/2,adY+adH*0.75);
+    ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fillRect(bx2,adY,bw2-1,adH*0.32);
+    ctx.fillStyle=ad.tc; ctx.font=`bold ${adH*0.54}px sans-serif`; ctx.textAlign='center';
+    ctx.fillText(ad.txt,bx2+bw2/2,adY+adH*0.76);
+    ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.fillRect(bx2+bw2-1,adY,1,adH);
   });
   ctx.textAlign='left';
 
   // ── BOUNDARY ROPE ──
-  ctx.strokeStyle='rgba(255,255,255,0.80)'; ctx.lineWidth=3;
-  ctx.beginPath(); ctx.ellipse(ocx,ocy,orx*0.95,ory*0.95,0,0,Math.PI*2); ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.ellipse(ocx,ocy,orx*0.96,ory*0.96,0,0,Math.PI*2); ctx.stroke();
 
-  // ── GROUND RINGS (mowing pattern highlight) ──
-  drawGroundRings('#2a7a2e','#1e6022','rgba(255,255,255,0.04)');
+  // ── GROUND RINGS — brighter lush greens ──
+  drawGroundRings('#347838','#287230','rgba(255,255,255,0.06)');
 
-  // ── SCOREBOARD HUD ──
   drawSceneScoreboard();
 }
 
