@@ -10790,74 +10790,126 @@ function drawSceneScoreboard() {
   const [bg0,bg1,border,runsLabelCol,runsValCol,tgtLabelCol,tgtValCol,leftTint,rightTint] = th;
 
   // Rounded scoreboard panel
-  const bW  = W * 0.82;
-  const bH  = H * 0.072;
+  const bW  = W * 0.84;
+  const bH  = H * 0.086;
   const bX  = (W - bW) / 2;
-  const bY  = H * 0.010;
-  const br  = bH * 0.28; // corner radius
+  const bY  = H * 0.008;
+  const br  = bH * 0.32;
 
   const displayTarget = Math.max(target, window._leagueTargetFloor || 0);
   const runsLeft = Math.max(0, displayTarget - runs);
+  const sbTheme = getStadiumTextTheme();
 
-  // drop shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.beginPath(); ctx.roundRect(bX+3, bY+4, bW, bH, br); ctx.fill();
+  // Outer glow around the whole panel
+  ctx.save();
+  ctx.shadowColor = border; ctx.shadowBlur = 18;
+  ctx.strokeStyle = border; ctx.lineWidth = 0;
+  ctx.beginPath(); ctx.roundRect(bX, bY, bW, bH, br); ctx.stroke();
+  ctx.restore();
 
-  // board body
+  // Deep drop shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 5;
+  ctx.fillStyle = 'rgba(0,0,0,0.01)';
+  ctx.beginPath(); ctx.roundRect(bX, bY, bW, bH, br); ctx.fill();
+  ctx.restore();
+
+  // Board body gradient
   const boardGrad = ctx.createLinearGradient(bX, bY, bX, bY+bH);
   boardGrad.addColorStop(0, bg0); boardGrad.addColorStop(1, bg1);
   ctx.fillStyle = boardGrad;
   ctx.beginPath(); ctx.roundRect(bX, bY, bW, bH, br); ctx.fill();
 
-  // left half tint
+  // Left half tint
   ctx.save();
-  ctx.beginPath(); ctx.roundRect(bX, bY, bW/2, bH, [br, 0, 0, br]); ctx.clip();
+  ctx.beginPath(); ctx.roundRect(bX, bY, bW/2, bH, [br,0,0,br]); ctx.clip();
   ctx.fillStyle = leftTint; ctx.fillRect(bX, bY, bW/2, bH);
   ctx.restore();
 
-  // right half tint
+  // Right half tint
   ctx.save();
-  ctx.beginPath(); ctx.roundRect(bX+bW/2, bY, bW/2, bH, [0, br, br, 0]); ctx.clip();
+  ctx.beginPath(); ctx.roundRect(bX+bW/2, bY, bW/2, bH, [0,br,br,0]); ctx.clip();
   ctx.fillStyle = rightTint; ctx.fillRect(bX+bW/2, bY, bW/2, bH);
   ctx.restore();
 
-  // themed border
-  ctx.strokeStyle = border; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.roundRect(bX+0.75, bY+0.75, bW-1.5, bH-1.5, br); ctx.stroke();
+  // Glass shine — top-edge highlight
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(bX, bY, bW, bH*0.48, [br,br,0,0]); ctx.clip();
+  const shineGrad = ctx.createLinearGradient(bX, bY, bX, bY+bH*0.48);
+  shineGrad.addColorStop(0, 'rgba(255,255,255,0.10)');
+  shineGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = shineGrad; ctx.fillRect(bX, bY, bW, bH*0.48);
+  ctx.restore();
 
-  // centre divider
-  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(bX+bW/2-0.5, bY+bH*0.12, 1, bH*0.76);
+  // Border with glow
+  ctx.save();
+  ctx.shadowColor = border; ctx.shadowBlur = 8;
+  ctx.strokeStyle = border; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.roundRect(bX+0.9, bY+0.9, bW-1.8, bH-1.8, br); ctx.stroke();
+  ctx.restore();
+
+  // Centre divider — subtle glow line
+  ctx.save();
+  ctx.shadowColor = border; ctx.shadowBlur = 6;
+  ctx.fillStyle = border.replace(')', ',0.35)').replace('rgb(','rgba(') || 'rgba(255,255,255,0.18)';
+  ctx.fillRect(bX+bW/2-0.75, bY+bH*0.10, 1.5, bH*0.80);
+  ctx.restore();
 
   ctx.textAlign = 'center';
 
-  // RUNS
-  const labelSz = Math.max(8, bH * 0.22);
-  const runsSz  = Math.max(18, bH * 0.54);
-  const sbTheme = getStadiumTextTheme();
-  ctx.fillStyle = runsLabelCol; ctx.font = `bold ${labelSz}px ${sbTheme.font}`;
-  ctx.fillText('RUNS', bX + bW*0.25, bY + bH*0.30);
-  ctx.fillStyle = runsValCol; ctx.font = `900 ${runsSz}px ${sbTheme.font}`;
-  ctx.fillText(String(runs), bX + bW*0.25, bY + bH*0.88);
+  const labelSz = Math.max(7, bH * 0.20);
+  const runsSz  = Math.max(20, bH * 0.60);
+  const tgtSz   = Math.max(16, bH * 0.50);
 
-  // TARGET — urgent colour override when close
-  const tgtSz = Math.max(14, bH * 0.44);
-  const tgtColor = runsLeft <= 10 ? '#ff4444' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
-  ctx.fillStyle = tgtLabelCol; ctx.font = `bold ${labelSz}px ${sbTheme.font}`;
-  ctx.fillText('TARGET', bX + bW*0.75, bY + bH*0.30);
-  ctx.fillStyle = tgtColor; ctx.font = `900 ${tgtSz}px ${sbTheme.font}`;
-  ctx.fillText(String(displayTarget), bX + bW*0.75, bY + bH*0.88);
+  // Helper: draw glowing number
+  function _glowNum(text, x, y, sz, valCol, glowCol) {
+    ctx.save();
+    ctx.font = `900 ${sz}px ${sbTheme.font}`;
+    ctx.shadowColor = glowCol; ctx.shadowBlur = 20;
+    ctx.fillStyle = glowCol; ctx.fillText(text, x, y);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = valCol; ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  // Helper: draw small label with letter-spacing simulation
+  function _label(text, x, y, col) {
+    ctx.save();
+    ctx.font = `700 ${labelSz}px ${sbTheme.font}`;
+    ctx.fillStyle = col;
+    ctx.letterSpacing = '2px';
+    ctx.fillText(text, x, y);
+    ctx.letterSpacing = '0px';
+    ctx.restore();
+  }
+
+  // RUNS
+  _label('RUNS', bX+bW*0.25, bY+bH*0.295, runsLabelCol);
+  _glowNum(String(runs), bX+bW*0.25, bY+bH*0.875, runsSz, runsValCol, runsLabelCol.replace(/[\d.]+\)$/, '0.6)'));
+
+  // TARGET — urgent colour when close
+  const urgentCol = runsLeft <= 10 ? '#ff3333' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
+  const urgentGlow = runsLeft <= 10 ? 'rgba(255,40,40,0.6)' : runsLeft <= 30 ? 'rgba(255,210,0,0.5)' : tgtLabelCol.replace(/[\d.]+\)$/, '0.5)');
+  _label('TARGET', bX+bW*0.75, bY+bH*0.295, tgtLabelCol);
+  _glowNum(String(displayTarget), bX+bW*0.75, bY+bH*0.875, tgtSz, urgentCol, urgentGlow);
 
   ctx.textAlign = 'left';
 
-  // Energy bar — slim strip below the board
-  const ebY = bY + bH + H * 0.005;
-  const ebH = Math.max(3, H * 0.006);
+  // Energy bar — slightly thicker, rounded ends
+  const ebY = bY + bH + H * 0.004;
+  const ebH = Math.max(3, H * 0.007);
+  const ebR = ebH / 2;
   const pct = Math.max(0, Math.min(1, energy / MAX_ENERGY));
   const barColor = pct > 0.6 ? '#39ff6a' : pct > ENERGY_LOW_THRESHOLD / MAX_ENERGY ? '#f4d03f' : '#e74c3c';
-  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(bX, ebY, bW, ebH);
-  if (pct > 0.01) { ctx.fillStyle = barColor; ctx.fillRect(bX, ebY, bW*pct, ebH); }
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 0.5;
-  ctx.strokeRect(bX, ebY, bW, ebH);
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.beginPath(); ctx.roundRect(bX, ebY, bW, ebH, ebR); ctx.fill();
+  if (pct > 0.01) {
+    ctx.save();
+    ctx.shadowColor = barColor; ctx.shadowBlur = 8;
+    ctx.fillStyle = barColor;
+    ctx.beginPath(); ctx.roundRect(bX, ebY, bW*pct, ebH, ebR); ctx.fill();
+    ctx.restore();
+  }
 }
 
 function drawGroundRings(colorA, colorB, horizonBlend) {
