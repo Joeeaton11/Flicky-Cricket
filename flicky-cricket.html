@@ -17623,125 +17623,293 @@ function drawPierScene() {
 
 // ── DUSK STADIUM SCENE — League 6b: The Floodlit ─────────────────────────
 function drawDuskStadiumScene() {
-  ctx.fillStyle='#0e1820'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#080c14'; ctx.fillRect(0,0,W,H);
 
+  // ── Helper: draw a single person silhouette (head + shoulders) ──
+  function drawPerson(px, py, scale, col) {
+    ctx.fillStyle=col;
+    // Head
+    ctx.beginPath(); ctx.arc(px, py-scale*1.8, scale*0.9, 0, Math.PI*2); ctx.fill();
+    // Shoulders/body
+    ctx.beginPath();
+    ctx.moveTo(px-scale*1.4, py+scale*0.4);
+    ctx.quadraticCurveTo(px-scale*1.0, py-scale*0.4, px, py-scale*0.8);
+    ctx.quadraticCurveTo(px+scale*1.0, py-scale*0.4, px+scale*1.4, py+scale*0.4);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // ── Sky clip region ──
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Sky — deep orange-red on left fading to dark navy right: sun just set
-  const sg=ctx.createLinearGradient(0,0,W,H*0.23);
-  sg.addColorStop(0,'#c83808'); sg.addColorStop(0.25,'#e06020');
-  sg.addColorStop(0.50,'#882828'); sg.addColorStop(0.75,'#281838'); sg.addColorStop(1,'#100820');
-  const sg2=ctx.createLinearGradient(0,0,0,H*0.23);
-  sg2.addColorStop(0,'#0e0818'); sg2.addColorStop(0.30,'#1c1028'); sg2.addColorStop(0.65,'#501828'); sg2.addColorStop(1,'#d04020');
-  ctx.fillStyle=sg2; ctx.fillRect(0,0,W,H*0.23);
+  // Sky — deep ink blue, last ember of sunset at horizon-left
+  const sg=ctx.createLinearGradient(0,0,0,H*0.23);
+  sg.addColorStop(0,'#02040e'); sg.addColorStop(0.35,'#080c1c'); sg.addColorStop(0.72,'#1a0c1e'); sg.addColorStop(0.90,'#6a1808'); sg.addColorStop(1,'#d03010');
+  ctx.fillStyle=sg; ctx.fillRect(0,0,W,H*0.23);
+  // Faint sunset smear top-left
+  const sl=ctx.createRadialGradient(0,H*0.23,0,0,H*0.23,H*0.28);
+  sl.addColorStop(0,'rgba(200,80,10,0.40)'); sl.addColorStop(0.5,'rgba(180,50,5,0.12)'); sl.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=sl; ctx.fillRect(0,0,W*0.55,H*0.23);
 
-  // Thin horizon blaze — vivid orange band
-  ctx.fillStyle='rgba(240,90,20,0.55)'; ctx.fillRect(0,H*0.205,W,H*0.010);
-  ctx.fillStyle='rgba(255,140,40,0.30)'; ctx.fillRect(0,H*0.195,W,H*0.010);
-
-  // Stars — right half of sky only
-  [[0.55,0.06,1.8],[0.64,0.02,2.0],[0.72,0.10,1.5],[0.80,0.04,2.2],[0.88,0.12,1.6],[0.94,0.02,1.9],[0.60,0.18,1.2],[0.76,0.20,1.0],[0.92,0.16,1.4]].forEach(([sx,sy,r])=>{
-    ctx.fillStyle=`rgba(200,210,255,${0.4+r/2.2*0.5})`;
+  // Stars
+  [[0.12,0.06,1.6],[0.22,0.02,2.0],[0.30,0.12,1.4],[0.42,0.04,1.8],[0.52,0.15,1.2],[0.60,0.03,2.1],[0.68,0.10,1.5],[0.76,0.02,1.9],[0.84,0.13,1.3],[0.92,0.05,2.0],[0.97,0.15,1.4],[0.18,0.18,1.0],[0.48,0.20,1.0],[0.80,0.20,1.1]].forEach(([sx,sy,r])=>{
+    ctx.fillStyle=`rgba(210,220,255,${0.35+r*0.15})`;
     ctx.beginPath(); ctx.arc(W*sx,H*sy,r,0,Math.PI*2); ctx.fill();
   });
 
-  // HUGE floodlight towers — 4 dominant
-  [[W*0.08,H*0.04,true],[W*0.26,H*0.06,true],[W*0.74,H*0.06,true],[W*0.92,H*0.04,true]].forEach(([lx,ly,lit])=>{
-    // Tower pole — thick structural
-    ctx.fillStyle='#2a3040'; ctx.fillRect(lx-W*0.012,ly,W*0.024,H*0.19);
-    // Cross braces
-    ctx.strokeStyle='#2a3040'; ctx.lineWidth=2;
-    [0.25,0.55,0.80].forEach(yf=>{
-      ctx.beginPath(); ctx.moveTo(lx-W*0.012,ly+H*0.19*yf); ctx.lineTo(lx+W*0.012,ly+H*0.19*(yf+0.12)); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(lx+W*0.012,ly+H*0.19*yf); ctx.lineTo(lx-W*0.012,ly+H*0.19*(yf+0.12)); ctx.stroke();
+  // 4 floodlight towers in sky band
+  [[W*0.06,H*0.01],[W*0.24,H*0.04],[W*0.76,H*0.04],[W*0.94,H*0.01]].forEach(([lx,ly])=>{
+    // Structural tower — tapered
+    ctx.fillStyle='#1e2838';
+    ctx.beginPath();
+    ctx.moveTo(lx-W*0.018,ly+H*0.195); ctx.lineTo(lx-W*0.010,ly); ctx.lineTo(lx+W*0.010,ly); ctx.lineTo(lx+W*0.018,ly+H*0.195);
+    ctx.closePath(); ctx.fill();
+    // Cross bracing
+    ctx.strokeStyle='rgba(30,40,60,0.85)'; ctx.lineWidth=1.5;
+    [0.28,0.52,0.76].forEach(yf=>{
+      const y1=ly+H*0.195*yf, y2=ly+H*0.195*(yf+0.24);
+      ctx.beginPath(); ctx.moveTo(lx-W*0.016+(W*0.016-W*0.008)*yf,y1); ctx.lineTo(lx+W*0.016-(W*0.016-W*0.008)*(yf+0.24),y2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(lx+W*0.016-(W*0.016-W*0.008)*yf,y1); ctx.lineTo(lx-W*0.016+(W*0.016-W*0.008)*(yf+0.24),y2); ctx.stroke();
     });
-    // Light head — wide bracket
-    ctx.fillStyle='#404858'; ctx.fillRect(lx-W*0.044,ly-H*0.016,W*0.088,H*0.020);
-    // Individual bulbs
-    ctx.fillStyle='rgba(255,252,220,0.98)';
-    for(let b=-4;b<=4;b++) ctx.fillRect(lx+b*W*0.009,ly-H*0.014,W*0.006,H*0.012);
-    // Big floodlight cone
-    const lc=ctx.createRadialGradient(lx,ly,0,lx,H*0.25,H*0.22);
-    lc.addColorStop(0,'rgba(255,252,220,0.35)');
-    lc.addColorStop(0.3,'rgba(255,245,200,0.14)');
-    lc.addColorStop(0.7,'rgba(255,235,180,0.05)');
-    lc.addColorStop(1,'rgba(255,220,160,0)');
+    // Outreach arm
+    ctx.fillStyle='#252e40'; ctx.fillRect(lx-W*0.052,ly-H*0.010,W*0.104,H*0.014);
+    // Lamp array housing
+    ctx.fillStyle='#303848'; ctx.fillRect(lx-W*0.048,ly-H*0.022,W*0.096,H*0.014);
+    // Individual bulbs — blazing white-hot
+    ctx.save(); ctx.shadowColor='rgba(255,252,200,1)'; ctx.shadowBlur=10;
+    ctx.fillStyle='#fffde0';
+    for(let b=-5;b<=5;b++) { ctx.beginPath(); ctx.arc(lx+b*W*0.008,ly-H*0.016,W*0.004,0,Math.PI*2); ctx.fill(); }
+    ctx.restore();
+    // Wide light cone — screen blend
+    ctx.save(); ctx.globalCompositeOperation='screen';
+    const lc=ctx.createLinearGradient(lx,ly,lx,H*0.25);
+    lc.addColorStop(0,'rgba(255,250,210,0.30)'); lc.addColorStop(0.4,'rgba(255,245,190,0.10)'); lc.addColorStop(1,'rgba(255,240,170,0)');
     ctx.fillStyle=lc;
-    ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx-W*0.18,H*0.25); ctx.lineTo(lx+W*0.18,H*0.25); ctx.closePath(); ctx.fill();
-    // Glowing head
-    ctx.save(); ctx.shadowColor='rgba(255,252,200,0.90)'; ctx.shadowBlur=20;
-    ctx.fillStyle='rgba(255,252,220,0.95)'; ctx.fillRect(lx-W*0.040,ly-H*0.014,W*0.080,H*0.012); ctx.restore();
+    ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx-W*0.22,H*0.25); ctx.lineTo(lx+W*0.22,H*0.25); ctx.closePath(); ctx.fill();
+    ctx.restore();
   });
 
-  // Stadium stands — packed, silhouette crowd
-  ctx.fillStyle='#18202c';
-  ctx.beginPath(); ctx.moveTo(0,H*0.23); ctx.lineTo(0,H*0.175);
-  ctx.quadraticCurveTo(W*0.12,H*0.145,W*0.24,H*0.168);
-  ctx.quadraticCurveTo(W*0.36,H*0.188,W*0.50,H*0.155);
-  ctx.quadraticCurveTo(W*0.64,H*0.188,W*0.76,H*0.168);
-  ctx.quadraticCurveTo(W*0.88,H*0.145,W,H*0.175);
+  // Stadium upper tier — concrete structure across full backdrop
+  ctx.fillStyle='#0e1520';
+  ctx.beginPath();
+  ctx.moveTo(0,H*0.23); ctx.lineTo(0,H*0.200);
+  ctx.quadraticCurveTo(W*0.10,H*0.172,W*0.25,H*0.186);
+  ctx.quadraticCurveTo(W*0.38,H*0.200,W*0.50,H*0.168);
+  ctx.quadraticCurveTo(W*0.62,H*0.200,W*0.75,H*0.186);
+  ctx.quadraticCurveTo(W*0.90,H*0.172,W,H*0.200);
   ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
 
-  // Crowd rows — colourful flashes
-  ctx.save(); ctx.globalAlpha=0.55;
-  const crowdCols=['#e82020','#1a60d8','#e8d020','#20a840','#e87020','#e8e8e8'];
-  for(let r=0;r<3;r++){
-    for(let c=0;c<28;c++){
-      const ccx=W*(c/28), ccy=H*(0.160+r*0.018), ccs=W*0.028;
-      ctx.fillStyle=crowdCols[(c+r*3)%crowdCols.length];
-      ctx.beginPath(); ctx.arc(ccx+ccs/2,ccy,W*0.008,0,Math.PI*2); ctx.fill();
+  // Crowd stand tiers — 5 rows of actual people silhouettes
+  // Seed deterministic so same render every time
+  const crowdTeamA='#1a4fc8', crowdTeamB='#c81818', crowdNeutral='#e8e0d0', crowdGold='#d8a820';
+  const rowConfigs=[
+    {y:0.157, count:34, scale:2.4, teamRatio:0.45},
+    {y:0.168, count:30, scale:2.6, teamRatio:0.50},
+    {y:0.180, count:26, scale:2.8, teamRatio:0.55},
+    {y:0.193, count:22, scale:3.0, teamRatio:0.42},
+    {y:0.208, count:18, scale:3.2, teamRatio:0.48},
+  ];
+  rowConfigs.forEach(({y,count,scale,teamRatio},ri)=>{
+    for(let c=0;c<count;c++){
+      const px=W*(c+0.5)/count;
+      const py=H*y;
+      // Simple hash for deterministic colour
+      const hash=(c*7+ri*13)%17;
+      let col;
+      if(hash<5) col=crowdTeamA;
+      else if(hash<9) col=crowdTeamB;
+      else if(hash<12) col=crowdNeutral;
+      else if(hash===12) col=crowdGold;
+      else col=`hsl(${(c*41+ri*67)%360},60%,45%)`;
+      drawPerson(px, py, scale, col);
     }
-  }
+  });
+
+  // Phone screens/lighters — tiny glowing dots scattered in crowd
+  ctx.save(); ctx.globalCompositeOperation='screen';
+  [[0.08,0.163,'#88aaff'],[0.18,0.158,'#ffeeaa'],[0.33,0.170,'#88aaff'],[0.45,0.162,'#aaffcc'],[0.60,0.155,'#ffeeaa'],[0.70,0.168,'#88aaff'],[0.82,0.160,'#ffccaa'],[0.92,0.166,'#88aaff'],[0.14,0.178,'#ffeeaa'],[0.38,0.183,'#88aaff'],[0.55,0.177,'#ffccaa'],[0.78,0.172,'#ffeeaa']].forEach(([px,py,col])=>{
+    ctx.fillStyle=col; ctx.fillRect(W*px-W*0.006,H*py-H*0.004,W*0.012,H*0.006);
+  });
   ctx.restore();
 
-  ctx.restore();
+  ctx.restore(); // end sky clip
 
-  // Ground — vivid floodlit green
+  // ── GROUND — vivid floodlit green ──
   const gg=ctx.createLinearGradient(0,H*0.23,0,H);
-  gg.addColorStop(0,'#1c5a22'); gg.addColorStop(0.4,'#165018'); gg.addColorStop(1,'#103c12');
+  gg.addColorStop(0,'#1d5c24'); gg.addColorStop(0.30,'#175018'); gg.addColorStop(1,'#0e3c10');
   ctx.fillStyle=gg; ctx.fillRect(0,H*0.23,W,H*0.77);
 
-  drawGroundRings('#1e6425','#165018',0);
-
-  // Bright floodlight pool on field — centre glow
-  const fp=ctx.createRadialGradient(W*0.50,H*0.58,0,W*0.50,H*0.58,W*0.45);
-  fp.addColorStop(0,'rgba(255,252,220,0.18)');
-  fp.addColorStop(0.4,'rgba(255,248,200,0.08)');
-  fp.addColorStop(1,'rgba(255,240,180,0)');
-  ctx.fillStyle=fp; ctx.fillRect(0,H*0.23,W,H*0.77);
-
-  // Left prop — scoreboard display, big LED style
+  // ── STADIUM WRAPS INTO SIDE CORNERS ──
+  // Left grandstand bank curving from horizon down into the left corner
   {
-    const bx=W*0.020, by=H*0.300;
-    ctx.fillStyle='#080e08'; ctx.fillRect(bx,by,W*0.110,H*0.110);
-    ctx.strokeStyle='rgba(0,200,0,0.35)'; ctx.lineWidth=2; ctx.strokeRect(bx,by,W*0.110,H*0.110);
-    // LED panel glow
-    ctx.save(); ctx.shadowColor='rgba(0,220,0,0.4)'; ctx.shadowBlur=12;
-    ctx.fillStyle='rgba(0,180,0,0.15)'; ctx.fillRect(bx+W*0.006,by+H*0.008,W*0.098,H*0.094); ctx.restore();
-    // Score numbers
-    ctx.fillStyle='rgba(0,240,0,0.90)'; ctx.font=`bold ${W*0.022}px monospace`;
-    ctx.textAlign='center'; ctx.fillText('47',bx+W*0.055,by+H*0.048);
-    ctx.font=`${W*0.012}px monospace`;
-    ctx.fillStyle='rgba(0,200,0,0.70)'; ctx.fillText('RUNS',bx+W*0.055,by+H*0.068);
-    ctx.fillText('TGT: 82',bx+W*0.055,by+H*0.088); ctx.textAlign='left';
+    ctx.fillStyle='#0c1218';
+    ctx.beginPath();
+    ctx.moveTo(0,H*0.23); ctx.lineTo(W*0.14,H*0.23);
+    ctx.quadraticCurveTo(W*0.06,H*0.28,W*0.02,H*0.36);
+    ctx.lineTo(0,H*0.40); ctx.closePath(); ctx.fill();
+
+    // 4 rows of crowd in left corner stand
+    [[0.22,3.2,0.36],[0.30,3.0,0.38],[0.38,2.8,0.40],[0.46,2.6,0.42]].forEach(([yf,sc,xEnd],ri)=>{
+      const bandH=H*(yf+0.02), bandX=W*(0.14-yf*0.10);
+      const rowCount=Math.floor((W*xEnd-bandX)/8);
+      for(let c=0;c<rowCount;c++){
+        const px=bandX+(W*xEnd-bandX)*(c+0.5)/rowCount;
+        const hash=(c*11+ri*7)%13;
+        const col=hash<4?crowdTeamA:hash<7?crowdTeamB:hash<10?crowdNeutral:`hsl(${(c*53+ri*37)%360},55%,42%)`;
+        drawPerson(px, bandH, sc, col);
+      }
+    });
   }
-  // Right prop — TV broadcast gantry
+  // Right grandstand bank
   {
-    const rx=W*0.858, ry=H*0.270;
-    // Gantry arm
-    ctx.strokeStyle='#303848'; ctx.lineWidth=4;
-    ctx.beginPath(); ctx.moveTo(rx+W*0.120,ry); ctx.lineTo(rx,ry); ctx.lineTo(rx,ry+H*0.060); ctx.stroke();
-    // Camera body
-    ctx.fillStyle='#181e28'; ctx.fillRect(rx-W*0.012,ry-H*0.018,W*0.040,H*0.028);
-    ctx.fillStyle='#080e18'; ctx.beginPath(); ctx.arc(rx-W*0.012,ry-H*0.004,W*0.014,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='rgba(60,100,180,0.6)'; ctx.beginPath(); ctx.arc(rx-W*0.012,ry-H*0.004,W*0.008,0,Math.PI*2); ctx.fill();
-    // Red recording light
-    ctx.fillStyle='#ff2020'; ctx.save(); ctx.shadowColor='#ff0000'; ctx.shadowBlur=8;
-    ctx.beginPath(); ctx.arc(rx+W*0.022,ry-H*0.012,W*0.005,0,Math.PI*2); ctx.fill(); ctx.restore();
-    // Cable down
-    ctx.strokeStyle='#1a2030'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(rx+W*0.014,ry+H*0.010); ctx.quadraticCurveTo(rx+W*0.030,ry+H*0.040,rx+W*0.018,ry+H*0.080); ctx.stroke();
+    ctx.fillStyle='#0c1218';
+    ctx.beginPath();
+    ctx.moveTo(W,H*0.23); ctx.lineTo(W*0.86,H*0.23);
+    ctx.quadraticCurveTo(W*0.94,H*0.28,W*0.98,H*0.36);
+    ctx.lineTo(W,H*0.40); ctx.closePath(); ctx.fill();
+
+    [[0.22,3.2,0.64],[0.30,3.0,0.62],[0.38,2.8,0.60],[0.46,2.6,0.58]].forEach(([yf,sc,xStart],ri)=>{
+      const bandH=H*(yf+0.02), bandX=W*(0.86+yf*0.10);
+      const rowCount=Math.floor((bandX-W*xStart)/8);
+      for(let c=0;c<rowCount;c++){
+        const px=W*xStart+(bandX-W*xStart)*(c+0.5)/rowCount;
+        const hash=(c*11+ri*7)%13;
+        const col=hash<4?crowdTeamA:hash<7?crowdTeamB:hash<10?crowdNeutral:`hsl(${(c*53+ri*37)%360},55%,42%)`;
+        drawPerson(px, bandH, sc, col);
+      }
+    });
+  }
+
+  drawGroundRings('#1f6628','#175018',0);
+
+  // Floodlight pool — central bright wash over pitch
+  ctx.save(); ctx.globalCompositeOperation='screen';
+  const fp=ctx.createRadialGradient(W*0.50,H*0.55,0,W*0.50,H*0.55,W*0.44);
+  fp.addColorStop(0,'rgba(255,252,200,0.22)'); fp.addColorStop(0.35,'rgba(255,248,190,0.10)'); fp.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=fp; ctx.fillRect(0,H*0.23,W,H*0.77);
+  // 4 individual floodlight shafts from towers down to ground
+  [[0.06],[0.24],[0.76],[0.94]].forEach(([lxf])=>{
+    const lx=W*lxf;
+    const ls=ctx.createLinearGradient(lx,H*0.02,W*0.50,H*0.60);
+    ls.addColorStop(0,'rgba(255,252,220,0.08)'); ls.addColorStop(1,'rgba(255,250,210,0)');
+    ctx.fillStyle=ls;
+    ctx.beginPath(); ctx.moveTo(lx-W*0.01,H*0.02); ctx.lineTo(W*0.50-W*0.04,H*0.60); ctx.lineTo(W*0.50+W*0.04,H*0.60); ctx.lineTo(lx+W*0.01,H*0.02); ctx.closePath(); ctx.fill();
+  });
+  ctx.restore();
+
+  // ── LEFT PROP: Giant LED scoreboard on gantry ──
+  // Oval left edge at y=0.35 → x≈W*0.136; keep right edge ≤ W*0.120
+  {
+    const bx=W*0.000, by=H*0.290;
+    // Gantry scaffold
+    ctx.strokeStyle='#1c2230'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(bx,by+H*0.130); ctx.lineTo(bx+W*0.090,by+H*0.130); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx+W*0.090,by+H*0.130); ctx.lineTo(bx+W*0.090,by); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx,by+H*0.130); ctx.lineTo(bx+W*0.040,by); ctx.stroke();
+    // Board face
+    ctx.fillStyle='#060e06'; ctx.fillRect(bx,by,W*0.108,H*0.105);
+    ctx.save(); ctx.shadowColor='rgba(0,230,0,0.50)'; ctx.shadowBlur=16;
+    ctx.strokeStyle='rgba(0,200,0,0.45)'; ctx.lineWidth=2; ctx.strokeRect(bx,by,W*0.108,H*0.105);
+    ctx.restore();
+    // Pixel grid shimmer
+    ctx.save(); ctx.globalAlpha=0.08;
+    for(let row=0;row<5;row++) for(let col2=0;col2<6;col2++){
+      ctx.fillStyle=`hsl(${col2*40+row*20},80%,50%)`;
+      ctx.fillRect(bx+W*0.006+col2*W*0.016,by+H*0.010+row*H*0.014,W*0.012,H*0.010);
+    }
+    ctx.restore();
+    // Score text
+    ctx.fillStyle='rgba(0,255,0,0.92)'; ctx.font=`bold ${W*0.028}px monospace`; ctx.textAlign='center';
+    ctx.fillText('47',bx+W*0.054,by+H*0.048);
+    ctx.font=`${W*0.011}px monospace`; ctx.fillStyle='rgba(0,210,0,0.75)';
+    ctx.fillText('RUNS',bx+W*0.054,by+H*0.066);
+    ctx.fillText('TGT: 82',bx+W*0.054,by+H*0.082);
+    ctx.fillText('OVER 12.4',bx+W*0.054,by+H*0.096);
+    ctx.textAlign='left';
+    // Green halo glow
+    ctx.save(); ctx.globalCompositeOperation='screen';
+    const bg2=ctx.createRadialGradient(bx+W*0.054,by+H*0.052,0,bx+W*0.054,by+H*0.052,W*0.080);
+    bg2.addColorStop(0,'rgba(0,200,0,0.20)'); bg2.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=bg2; ctx.fillRect(bx,by,W*0.115,H*0.115);
+    ctx.restore();
+  }
+
+  // ── RIGHT PROP: TV commentary gantry + camera spider-cam cable ──
+  // Oval right at y=0.32 → x≈W*0.872; left edge ≥ W*0.880
+  {
+    const rx=W*0.880, ry=H*0.268;
+    // Main gantry scaffold
+    ctx.strokeStyle='#1c2230'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(W,ry); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx,ry+H*0.100); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W,ry); ctx.lineTo(W,ry+H*0.100); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rx,ry+H*0.100); ctx.lineTo(W,ry+H*0.100); ctx.stroke();
+    // Commentary box windows
+    ctx.fillStyle='#0a0e18'; ctx.fillRect(rx,ry,W*0.12,H*0.065);
+    ctx.fillStyle='rgba(180,200,240,0.18)';
+    [0,1,2].forEach(i=>{ ctx.fillRect(rx+W*0.008+i*W*0.036,ry+H*0.010,W*0.026,H*0.038); });
+    // "ON AIR" light
+    ctx.save(); ctx.shadowColor='#ff2020'; ctx.shadowBlur=12;
+    ctx.fillStyle='#ff2020'; ctx.beginPath(); ctx.arc(rx+W*0.112,ry+H*0.012,W*0.007,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle='rgba(255,80,80,0.80)'; ctx.font=`bold ${W*0.010}px sans-serif`; ctx.textAlign='center';
+    ctx.fillText('ON AIR',rx+W*0.112,ry+H*0.030); ctx.textAlign='left';
+    // TV camera on arm
+    const cx2=rx-W*0.014, cy2=ry+H*0.020;
+    ctx.strokeStyle='#252e40'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(rx,cy2); ctx.lineTo(cx2,cy2); ctx.stroke();
+    ctx.fillStyle='#181e2c'; ctx.fillRect(cx2-W*0.030,cy2-H*0.015,W*0.030,H*0.022);
+    ctx.fillStyle='#080c18'; ctx.beginPath(); ctx.arc(cx2-W*0.030,cy2-H*0.004,W*0.012,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(80,120,200,0.65)'; ctx.beginPath(); ctx.arc(cx2-W*0.030,cy2-H*0.004,W*0.007,0,Math.PI*2); ctx.fill();
+    // Spider-cam cable going up-left
+    ctx.strokeStyle='rgba(40,50,70,0.60)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(cx2-W*0.018,cy2-H*0.008); ctx.lineTo(W*0.50,H*0.30); ctx.stroke();
+  }
+
+  // ── BOTTOM CORNERS: dugout + drinks ──
+  // Left — players bench / dugout
+  {
+    const bx=W*0.000, by=H*0.840;
+    // Bench back wall — concrete block
+    ctx.fillStyle='#12181e'; ctx.fillRect(bx,by,W*0.128,H*0.058);
+    ctx.strokeStyle='rgba(40,60,80,0.50)'; ctx.lineWidth=1; ctx.strokeRect(bx,by,W*0.128,H*0.058);
+    // Canopy
+    ctx.fillStyle='#0a1018'; ctx.fillRect(bx,by-H*0.014,W*0.128,H*0.016);
+    ctx.strokeStyle='rgba(30,80,160,0.60)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(bx,by-H*0.014); ctx.lineTo(bx+W*0.128,by-H*0.014); ctx.stroke();
+    // 4 seated players — side profile silhouettes
+    [W*0.014,W*0.040,W*0.066,W*0.096].forEach((px,i)=>{
+      const py2=by+H*0.030;
+      // Body
+      ctx.fillStyle=i<2?'#1a3a90':'#8c1010';
+      ctx.beginPath(); ctx.ellipse(px,py2,W*0.010,H*0.018,0,0,Math.PI*2); ctx.fill();
+      // Head
+      ctx.fillStyle='rgba(200,160,120,0.90)'; ctx.beginPath(); ctx.arc(px+W*0.004,py2-H*0.022,W*0.008,0,Math.PI*2); ctx.fill();
+      // Helmet on batter (player 3)
+      if(i===2){ ctx.fillStyle='#8c1010'; ctx.beginPath(); ctx.arc(px+W*0.004,py2-H*0.024,W*0.009,0,Math.PI,true); ctx.fill(); }
+    });
+    // Bench plank
+    ctx.fillStyle='rgba(80,100,80,0.60)'; ctx.fillRect(bx+W*0.004,by+H*0.040,W*0.118,H*0.006);
+  }
+  // Right — drinks station
+  {
+    const rx=W*0.876, ry=H*0.848;
+    ctx.fillStyle='#12181e'; ctx.fillRect(rx,ry,W*0.120,H*0.050);
+    ctx.strokeStyle='rgba(40,60,80,0.50)'; ctx.lineWidth=1; ctx.strokeRect(rx,ry,W*0.120,H*0.050);
+    // Table
+    ctx.fillStyle='rgba(200,180,140,0.25)'; ctx.fillRect(rx+W*0.006,ry+H*0.010,W*0.050,H*0.032);
+    // Water coolers
+    [[rx+W*0.010,ry+H*0.012,'#1848a0'],[rx+W*0.032,ry+H*0.012,'#1848a0']].forEach(([bx2,by2,col])=>{
+      ctx.fillStyle=col; ctx.fillRect(bx2,by2,W*0.016,H*0.026);
+      ctx.fillStyle='rgba(180,220,255,0.40)'; ctx.fillRect(bx2+W*0.004,by2+H*0.003,W*0.008,H*0.012);
+    });
+    // Physio standing figure
+    const phx=rx+W*0.076, phy=ry+H*0.010;
+    ctx.fillStyle='#f0f0f0'; ctx.beginPath(); ctx.ellipse(phx,phy+H*0.020,W*0.010,H*0.018,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(200,160,120,0.90)'; ctx.beginPath(); ctx.arc(phx,phy+H*0.002,W*0.008,0,Math.PI*2); ctx.fill();
+    // Red cross on physio
+    ctx.fillStyle='#e02020'; ctx.font=`bold ${W*0.010}px sans-serif`; ctx.textAlign='center';
+    ctx.fillText('+',phx,phy+H*0.016); ctx.textAlign='left';
   }
 
   drawSceneScoreboard();
