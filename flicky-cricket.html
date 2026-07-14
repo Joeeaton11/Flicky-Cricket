@@ -18742,132 +18742,217 @@ function drawCanopyScene() {
 
 // ── RIVERBANK SCENE — League 7c: The Rainforest ──────────────────────────
 function drawRiverbankScene() {
-  ctx.fillStyle='#0c2010'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#0c1a08'; ctx.fillRect(0,0,W,H);
 
-  ctx.save();
-  ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
+  // ── Helper: organic jungle blob ──
+  function jBlob(cx,cy,rx,ry,bumps,seed){
+    ctx.beginPath();
+    const steps=28;
+    for(let s=0;s<=steps;s++){
+      const a=(s/steps)*Math.PI*2;
+      const n=Math.sin(a*bumps+seed)*0.20+Math.sin(a*(bumps+2)+seed*1.7)*0.10+Math.sin(a*(bumps-1)+seed*0.5)*0.08;
+      const px=cx+Math.cos(a)*rx*(1+n), py=cy+Math.sin(a)*ry*(1+n);
+      s===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+  }
 
-  // Sky — humid tropical haze, pale blue-green at horizon
+  // ── Helper: reed ──
+  function reed(rx,ry,h,sway){
+    ctx.strokeStyle='#5a7c28'; ctx.lineWidth=2.2;
+    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.quadraticCurveTo(rx+sway*0.5,ry-h*0.5,rx+sway,ry-h); ctx.stroke();
+    ctx.fillStyle='#6a4010';
+    ctx.beginPath(); ctx.ellipse(rx+sway,ry-h,W*0.005,H*0.020,0.15,0,Math.PI*2); ctx.fill();
+  }
+
+  // ── Helper: water lily ──
+  function lily(lx,ly,r){
+    ctx.fillStyle='#1e5c10';
+    ctx.beginPath(); ctx.arc(lx,ly,r,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(8,30,6,0.40)';
+    ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx,ly-r); ctx.arc(lx,ly,r,-Math.PI/2,-Math.PI/6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#f0a0b8';
+    ctx.beginPath(); ctx.arc(lx,ly,r*0.22,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff0a0';
+    ctx.beginPath(); ctx.arc(lx,ly,r*0.10,0,Math.PI*2); ctx.fill();
+  }
+
+  // ── BACKDROP ──
+  ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
+
+  // Sky — late afternoon gold, humid haze at horizon
   const sg=ctx.createLinearGradient(0,0,0,H*0.23);
-  sg.addColorStop(0,'#3a78c8'); sg.addColorStop(0.40,'#5a9ad8'); sg.addColorStop(0.70,'#88c4d8'); sg.addColorStop(0.88,'#a8d8b8'); sg.addColorStop(1,'#c8e8c0');
+  sg.addColorStop(0,'#2a60b8'); sg.addColorStop(0.30,'#4a90d0'); sg.addColorStop(0.58,'#90c8d8'); sg.addColorStop(0.78,'#b8dfc0'); sg.addColorStop(1,'#d0edd8');
   ctx.fillStyle=sg; ctx.fillRect(0,0,W,H*0.23);
 
-  // Hazy sun — white-hot through humidity
-  const sx=W*0.56, sy=H*0.065;
-  const sgl=ctx.createRadialGradient(sx,sy,0,sx,sy,H*0.16);
-  sgl.addColorStop(0,'rgba(255,255,240,0.92)'); sgl.addColorStop(0.2,'rgba(255,250,210,0.40)'); sgl.addColorStop(0.5,'rgba(255,245,200,0.15)'); sgl.addColorStop(1,'rgba(255,240,190,0)');
-  ctx.fillStyle=sgl; ctx.fillRect(sx-H*0.16,0,H*0.32,H*0.23);
-  ctx.fillStyle='#fffff0'; ctx.beginPath(); ctx.arc(sx,sy,H*0.035,0,Math.PI*2); ctx.fill();
+  // Sun — hazy gold disc
+  const sx=W*0.62, sy=H*0.055;
+  const sunG=ctx.createRadialGradient(sx,sy,0,sx,sy,H*0.14);
+  sunG.addColorStop(0,'rgba(255,250,200,0.95)'); sunG.addColorStop(0.18,'rgba(255,230,140,0.55)');
+  sunG.addColorStop(0.45,'rgba(255,210,100,0.18)'); sunG.addColorStop(1,'rgba(255,200,80,0)');
+  ctx.fillStyle=sunG; ctx.fillRect(0,0,W,H*0.23);
+  ctx.fillStyle='#fff8d0'; ctx.beginPath(); ctx.arc(sx,sy,H*0.032,0,Math.PI*2); ctx.fill();
 
-  // River — winding through mid-backdrop
-  const rv=ctx.createLinearGradient(0,H*0.12,0,H*0.23);
-  rv.addColorStop(0,'#1888a8'); rv.addColorStop(0.5,'#1070a0'); rv.addColorStop(1,'#0c5888');
-  ctx.fillStyle=rv;
+  // Distant river — wide, silver-gold, reflecting sky
+  const rvG=ctx.createLinearGradient(0,H*0.10,0,H*0.23);
+  rvG.addColorStop(0,'#6ab8d8'); rvG.addColorStop(0.30,'#4898c0'); rvG.addColorStop(0.65,'#2878a8'); rvG.addColorStop(1,'#1a5c88');
+  ctx.fillStyle=rvG;
   ctx.beginPath();
-  ctx.moveTo(0,H*0.16); ctx.quadraticCurveTo(W*0.20,H*0.13,W*0.38,H*0.155);
-  ctx.quadraticCurveTo(W*0.58,H*0.18,W*0.72,H*0.155);
-  ctx.quadraticCurveTo(W*0.86,H*0.130,W,H*0.148);
+  ctx.moveTo(0,H*0.14); ctx.bezierCurveTo(W*0.18,H*0.11,W*0.36,H*0.13,W*0.50,H*0.125);
+  ctx.bezierCurveTo(W*0.64,H*0.12,W*0.80,H*0.14,W,H*0.13);
   ctx.lineTo(W,H*0.23); ctx.lineTo(0,H*0.23); ctx.closePath(); ctx.fill();
 
-  // River shimmer
-  ctx.strokeStyle='rgba(180,240,255,0.35)'; ctx.lineWidth=1.5;
-  [[H*0.170,0.008],[H*0.188,0.006],[H*0.205,0.007]].forEach(([by,amp])=>{
-    ctx.beginPath(); ctx.moveTo(W*0.05,by);
-    for(let i=0;i<=12;i++) ctx.lineTo(W*0.05+W*0.90*i/12,by+H*amp*(i%2===0?1:-1));
+  // River sun reflection — bright shimmer stripe
+  ctx.save(); ctx.globalCompositeOperation='screen';
+  const refG=ctx.createLinearGradient(W*0.35,H*0.14,W*0.70,H*0.18);
+  refG.addColorStop(0,'rgba(255,240,150,0)'); refG.addColorStop(0.35,'rgba(255,240,150,0.45)'); refG.addColorStop(0.65,'rgba(255,240,150,0.45)'); refG.addColorStop(1,'rgba(255,240,150,0)');
+  ctx.fillStyle=refG; ctx.fillRect(W*0.25,H*0.13,W*0.55,H*0.10); ctx.restore();
+
+  // River ripple lines
+  ctx.strokeStyle='rgba(180,230,255,0.30)'; ctx.lineWidth=1.2;
+  [[H*0.155],[H*0.173],[H*0.191],[H*0.208]].forEach(([by],ri)=>{
+    ctx.beginPath(); ctx.moveTo(W*0.02,by);
+    for(let k=0;k<=14;k++) ctx.lineTo(W*0.02+W*0.96*k/14, by+H*0.006*Math.sin(k*1.2+ri));
     ctx.stroke();
   });
 
-  // Dense jungle walls left and right
-  const jColors=['#0a2a06','#123410','#0e2808','#183810','#0c2206'];
-  // Left wall
-  for(let i=0;i<10;i++){
-    const jx=W*(i*0.032-0.02), jy=H*(0.04+Math.abs(Math.sin(i*2.1))*0.12);
-    const jr=W*(0.055+Math.abs(Math.sin(i*3.3))*0.038);
-    ctx.fillStyle=jColors[i%jColors.length]; ctx.beginPath(); ctx.arc(jx,jy,jr,0,Math.PI*2); ctx.fill();
-  }
-  // Right wall
-  for(let i=0;i<10;i++){
-    const jx=W*(0.72+i*0.035), jy=H*(0.04+Math.abs(Math.sin(i*1.8+2))*0.12);
-    const jr=W*(0.050+Math.abs(Math.sin(i*4.1))*0.035);
-    ctx.fillStyle=jColors[(i+3)%jColors.length]; ctx.beginPath(); ctx.arc(jx,jy,jr,0,Math.PI*2); ctx.fill();
-  }
+  // Far riverbank — low dark strip across middle
+  ctx.fillStyle='#1a3a10';
+  ctx.beginPath(); ctx.moveTo(0,H*0.115); ctx.bezierCurveTo(W*0.25,H*0.105,W*0.60,H*0.108,W,H*0.112);
+  ctx.lineTo(W,H*0.135); ctx.bezierCurveTo(W*0.60,H*0.132,W*0.25,H*0.130,0,H*0.138); ctx.closePath(); ctx.fill();
 
-  // Exotic birds — kingfisher pair over river
-  ctx.fillStyle='#1848c8'; ctx.beginPath(); ctx.ellipse(W*0.42,H*0.135,W*0.014,H*0.008,0.2,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#e85010'; ctx.beginPath(); ctx.ellipse(W*0.42-W*0.012,H*0.137,W*0.010,H*0.005,-0.2,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#2858d0'; ctx.beginPath(); ctx.ellipse(W*0.48,H*0.128,W*0.013,H*0.008,-0.3,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#e86018'; ctx.beginPath(); ctx.ellipse(W*0.48+W*0.012,H*0.130,W*0.010,H*0.005,0.3,0,Math.PI*2); ctx.fill();
+  // Far bank jungle — organic blobs, 3 depth layers
+  [{col:'#0c2006',items:[{x:W*0.05,y:H*0.095,rx:W*0.06,ry:H*0.040,b:4,s:1.2},{x:W*0.17,y:H*0.085,rx:W*0.068,ry:H*0.046,b:5,s:2.8},{x:W*0.30,y:H*0.092,rx:W*0.062,ry:H*0.042,b:4,s:0.6},{x:W*0.44,y:H*0.080,rx:W*0.072,ry:H*0.048,b:6,s:3.4},{x:W*0.58,y:H*0.088,rx:W*0.065,ry:H*0.044,b:4,s:1.9},{x:W*0.72,y:H*0.082,rx:W*0.070,ry:H*0.046,b:5,s:4.1},{x:W*0.86,y:H*0.090,rx:W*0.063,ry:H*0.043,b:4,s:2.3},{x:W*0.97,y:H*0.088,rx:W*0.060,ry:H*0.041,b:5,s:0.8}]},
+   {col:'#102808',items:[{x:W*0.10,y:H*0.100,rx:W*0.055,ry:H*0.038,b:5,s:3.1},{x:W*0.23,y:H*0.096,rx:W*0.060,ry:H*0.040,b:4,s:1.5},{x:W*0.38,y:H*0.098,rx:W*0.058,ry:H*0.039,b:6,s:2.2},{x:W*0.52,y:H*0.094,rx:W*0.062,ry:H*0.042,b:4,s:3.8},{x:W*0.66,y:H*0.099,rx:W*0.056,ry:H*0.038,b:5,s:0.4},{x:W*0.80,y:H*0.097,rx:W*0.059,ry:H*0.040,b:4,s:2.9},{x:W*0.93,y:H*0.101,rx:W*0.054,ry:H*0.037,b:5,s:1.3}]},
+   {col:'#183a0e',items:[{x:W*0.03,y:H*0.108,rx:W*0.048,ry:H*0.034,b:4,s:2.5},{x:W*0.14,y:H*0.104,rx:W*0.052,ry:H*0.036,b:5,s:0.9},{x:W*0.26,y:H*0.110,rx:W*0.050,ry:H*0.034,b:4,s:3.6},{x:W*0.40,y:H*0.106,rx:W*0.054,ry:H*0.037,b:6,s:1.7},{x:W*0.54,y:H*0.108,rx:W*0.049,ry:H*0.033,b:4,s:4.2},{x:W*0.68,y:H*0.104,rx:W*0.053,ry:H*0.036,b:5,s:2.0},{x:W*0.82,y:H*0.109,rx:W*0.051,ry:H*0.035,b:4,s:0.7},{x:W*0.96,y:H*0.107,rx:W*0.047,ry:H*0.033,b:5,s:3.3}]}
+  ].forEach(({col,items})=>{ ctx.fillStyle=col; items.forEach(({x,y,rx,ry,b,s})=>{ jBlob(x,y,rx,ry,b,s); ctx.fill(); }); });
 
-  // Mist over river
-  const mist=ctx.createLinearGradient(0,H*0.145,0,H*0.23);
-  mist.addColorStop(0,'rgba(220,240,230,0)'); mist.addColorStop(0.4,'rgba(220,240,230,0.14)'); mist.addColorStop(0.8,'rgba(220,240,230,0.22)'); mist.addColorStop(1,'rgba(220,240,230,0.08)');
-  ctx.fillStyle=mist; ctx.fillRect(0,H*0.145,W,H*0.085);
+  // Kingfisher perched on branch over river
+  {const kx=W*0.38,ky=H*0.128;
+  ctx.strokeStyle='#4a2a10'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(W*0.30,ky+H*0.008); ctx.lineTo(W*0.48,ky); ctx.stroke();
+  ctx.fillStyle='#0040c0'; ctx.beginPath(); ctx.ellipse(kx,ky-H*0.010,W*0.016,H*0.009,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#ff6010'; ctx.beginPath(); ctx.ellipse(kx-W*0.010,ky-H*0.008,W*0.012,H*0.006,-0.3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.ellipse(kx+W*0.005,ky-H*0.015,W*0.005,H*0.004,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#101010'; ctx.beginPath(); ctx.arc(kx+W*0.007,ky-H*0.016,W*0.0022,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#202020'; ctx.beginPath(); ctx.moveTo(kx+W*0.016,ky-H*0.010); ctx.lineTo(kx+W*0.028,ky-H*0.008); ctx.lineTo(kx+W*0.016,ky-H*0.006); ctx.fill();}
+
+  // River mist — soft atmospheric haze
+  const mist=ctx.createLinearGradient(0,H*0.135,0,H*0.23);
+  mist.addColorStop(0,'rgba(210,235,225,0)'); mist.addColorStop(0.3,'rgba(210,235,225,0.12)');
+  mist.addColorStop(0.75,'rgba(210,235,225,0.28)'); mist.addColorStop(1,'rgba(210,235,225,0.10)');
+  ctx.fillStyle=mist; ctx.fillRect(0,H*0.135,W,H*0.095);
+
+  // Foreground near-bank jungle walls — thick organic masses
+  [{col:'#0a1e06',items:[{x:W*-0.02,y:H*0.18,rx:W*0.10,ry:H*0.065,b:5,s:1.1},{x:W*0.10,y:H*0.17,rx:W*0.085,ry:H*0.058,b:4,s:2.7}]},
+   {col:'#142e08',items:[{x:W*0.00,y:H*0.20,rx:W*0.082,ry:H*0.055,b:6,s:0.5},{x:W*0.12,y:H*0.195,rx:W*0.075,ry:H*0.050,b:4,s:3.2}]},
+   {col:'#0a1e06',items:[{x:W*1.02,y:H*0.18,rx:W*0.10,ry:H*0.065,b:5,s:4.0},{x:W*0.90,y:H*0.17,rx:W*0.085,ry:H*0.058,b:4,s:1.8}]},
+   {col:'#142e08',items:[{x:W*1.00,y:H*0.20,rx:W*0.082,ry:H*0.055,b:6,s:2.4},{x:W*0.88,y:H*0.195,rx:W*0.075,ry:H*0.050,b:4,s:0.2}]}
+  ].forEach(({col,items})=>{ ctx.fillStyle=col; items.forEach(({x,y,rx,ry,b,s})=>{ jBlob(x,y,rx,ry,b,s); ctx.fill(); }); });
 
   ctx.restore();
 
-  // Ground — muddy riverbank, reeds, wet earth
+  // Ground — lush riverbank, dark damp earth
   const gg=ctx.createLinearGradient(0,H*0.23,0,H);
-  gg.addColorStop(0,'#3a5c28'); gg.addColorStop(0.2,'#2a4a1a'); gg.addColorStop(0.5,'#1e3810'); gg.addColorStop(1,'#162c0c');
+  gg.addColorStop(0,'#2e5422'); gg.addColorStop(0.18,'#223e18'); gg.addColorStop(0.45,'#1a3010'); gg.addColorStop(1,'#12240a');
   ctx.fillStyle=gg; ctx.fillRect(0,H*0.23,W,H*0.77);
 
-  drawGroundRings('#2e5020','#223c18',0);
+  drawGroundRings('#2a4c1e','#1e3c14',0);
 
-  // Left side — bamboo grove
+  // ── LEFT PROP — bamboo grove with hanging vines ──
   {
-    const bx=W*0.028;
-    ctx.fillStyle='#3a6818';
-    [[bx,H*0.25,W*0.010],[bx+W*0.018,H*0.27,W*0.009],[bx+W*0.034,H*0.24,W*0.011],[bx+W*0.050,H*0.26,W*0.010],[bx+W*0.066,H*0.25,W*0.008]].forEach(([stx,sty,stw])=>{
-      ctx.fillRect(stx-stw/2,sty,stw,H*0.75);
-      // Bamboo nodes
-      ctx.fillStyle='rgba(50,100,20,0.60)';
-      [H*0.35,H*0.50,H*0.65,H*0.80].forEach(ny=>{ ctx.fillRect(stx-stw/2-1,ny,stw+2,H*0.008); });
-      ctx.fillStyle='#3a6818';
-    });
-    // Bamboo leaves at tops
-    ctx.fillStyle='#2a8020';
-    [[bx,H*0.26],[bx+W*0.018,H*0.28],[bx+W*0.034,H*0.25],[bx+W*0.052,H*0.27]].forEach(([lx2,ly2])=>{
-      for(let a=-0.5;a<=0.5;a+=0.25){
-        ctx.save(); ctx.translate(lx2,ly2); ctx.rotate(a);
-        ctx.beginPath(); ctx.ellipse(0,-H*0.030,W*0.020,H*0.006,0,0,Math.PI*2); ctx.fill(); ctx.restore();
+    const bx=W*0.022;
+    // Vines dangling from top
+    ctx.strokeStyle='#1e4010'; ctx.lineWidth=1.8;
+    [[bx+W*0.010,H*0.23,H*0.55,W*0.006],[bx+W*0.030,H*0.23,H*0.48,W*-0.005],[bx+W*0.055,H*0.23,H*0.60,W*0.008]].forEach(([vx,vy,vl,sw])=>{
+      ctx.beginPath(); ctx.moveTo(vx,vy); ctx.quadraticCurveTo(vx+sw*0.5,vy+vl*0.5,vx+sw,vy+vl); ctx.stroke();
+      // Leaves on vine
+      for(let lv=0.25;lv<0.85;lv+=0.22){
+        ctx.fillStyle='#2a5c14'; ctx.save(); ctx.translate(vx+sw*lv,vy+vl*lv); ctx.rotate(lv*2.8);
+        ctx.beginPath(); ctx.ellipse(0,0,W*0.016,H*0.006,0,0,Math.PI*2); ctx.fill(); ctx.restore();
       }
     });
+    // Bamboo stalks
+    [[bx,H*0.26,W*0.010,'#4a7c22'],[bx+W*0.020,H*0.25,W*0.009,'#3e6e1c'],[bx+W*0.038,H*0.27,W*0.011,'#4a7c22'],[bx+W*0.056,H*0.25,W*0.010,'#3e6e1c'],[bx+W*0.074,H*0.26,W*0.008,'#4a7c22']].forEach(([stx,sty,stw,sc])=>{
+      ctx.fillStyle=sc; ctx.fillRect(stx-stw/2,sty,stw,H*0.75);
+      ctx.fillStyle='rgba(30,70,10,0.55)';
+      [H*0.38,H*0.52,H*0.66,H*0.80].forEach(ny=>ctx.fillRect(stx-stw/2-1,ny,stw+2,H*0.007));
+    });
+    // Bamboo leaf fans at top
+    [[bx+W*0.010,H*0.26],[bx+W*0.030,H*0.25],[bx+W*0.055,H*0.27],[bx+W*0.075,H*0.26]].forEach(([lx,ly])=>{
+      for(let a=-0.6;a<=0.6;a+=0.20){
+        ctx.fillStyle=`hsl(${110+a*15},52%,${28+Math.abs(a)*8}%)`;
+        ctx.save(); ctx.translate(lx,ly); ctx.rotate(a);
+        ctx.beginPath(); ctx.ellipse(W*0.010,-H*0.028,W*0.022,H*0.006,0,0,Math.PI*2); ctx.fill(); ctx.restore();
+      }
+    });
+    // Lily pads at base of bamboo
+    [[bx+W*0.012,H*0.82],[bx+W*0.040,H*0.88],[bx+W*0.068,H*0.79]].forEach(([lx,ly])=>lily(lx,ly,W*0.020));
   }
 
-  // Right side — river reeds and lily pads
+  // ── RIGHT PROP — dense reed bed + crocodile ──
   {
-    const rx=W*0.890;
-    // Reed stalks
-    ctx.strokeStyle='#4a7820'; ctx.lineWidth=2.5;
-    [[rx,H*0.30],[rx+W*0.018,H*0.28],[rx+W*0.034,H*0.32],[rx+W*0.050,H*0.29],[rx+W*0.070,H*0.31],[rx-W*0.018,H*0.29]].forEach(([stx,sty])=>{
-      ctx.beginPath(); ctx.moveTo(stx,sty+H*0.50); ctx.lineTo(stx+W*0.006,sty); ctx.stroke();
-      // Reed head
-      ctx.fillStyle='#5a3a08'; ctx.beginPath(); ctx.ellipse(stx+W*0.006,sty,W*0.006,H*0.022,0,0,Math.PI*2); ctx.fill();
-    });
-    // Lily pads (small circles on muddy bank)
-    ctx.fillStyle='#2a6010';
-    [[rx-W*0.010,H*0.440],[rx+W*0.025,H*0.520],[rx+W*0.055,H*0.460],[rx-W*0.005,H*0.590]].forEach(([lx2,ly2])=>{
-      ctx.beginPath(); ctx.arc(lx2,ly2,W*0.018,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#e82040'; ctx.beginPath(); ctx.arc(lx2,ly2,W*0.005,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#2a6010';
-    });
-  }
-
-  // Crocodile — lurking at edge of scene
-  {
-    const crx=W*0.130, cry=H*0.910;
-    ctx.fillStyle='#2a4a18';
-    ctx.beginPath(); ctx.ellipse(crx,cry,W*0.065,H*0.014,0.1,0,Math.PI*2); ctx.fill();
+    const rx=W*0.882;
+    // Muddy water patch
+    const mudG=ctx.createRadialGradient(rx+W*0.04,H*0.75,0,rx+W*0.04,H*0.75,W*0.085);
+    mudG.addColorStop(0,'#2a4c30'); mudG.addColorStop(0.55,'#1e3820'); mudG.addColorStop(1,'rgba(20,40,16,0)');
+    ctx.fillStyle=mudG; ctx.fillRect(rx-W*0.01,H*0.65,W*0.13,H*0.35);
+    // Lily pads in mud patch
+    [[rx+W*0.010,H*0.72],[rx+W*0.050,H*0.80],[rx+W*0.025,H*0.88]].forEach(([lx,ly])=>lily(lx,ly,W*0.018));
+    // Reeds
+    [[rx+W*0.002,H*0.30,H*0.26,-W*0.005],[rx+W*0.020,H*0.28,H*0.28,W*0.003],[rx+W*0.038,H*0.32,H*0.24,W*0.006],[rx+W*0.056,H*0.29,H*0.27,-W*0.004],[rx+W*0.075,H*0.31,H*0.25,W*0.005],[rx+W*0.090,H*0.28,H*0.29,-W*0.003],[rx-W*0.015,H*0.30,H*0.26,W*0.004]].forEach(([stx,sty,ht,sw])=>reed(stx,sty,ht,sw));
+    // Crocodile
+    const crx=rx-W*0.050, cry=H*0.900;
+    const crocG=ctx.createLinearGradient(crx-W*0.07,cry,crx+W*0.08,cry);
+    crocG.addColorStop(0,'#1e4014'); crocG.addColorStop(0.5,'#2e5820'); crocG.addColorStop(1,'#1a3810');
+    ctx.fillStyle=crocG;
+    ctx.beginPath(); ctx.ellipse(crx,cry,W*0.075,H*0.016,0.08,0,Math.PI*2); ctx.fill();
     // Head
-    ctx.beginPath(); ctx.ellipse(crx+W*0.065,cry-H*0.004,W*0.028,H*0.010,0.05,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#2a5018';
+    ctx.beginPath(); ctx.ellipse(crx+W*0.076,cry-H*0.004,W*0.032,H*0.011,0.05,0,Math.PI*2); ctx.fill();
+    // Snout tip
+    ctx.fillStyle='#223c14';
+    ctx.beginPath(); ctx.ellipse(crx+W*0.108,cry-H*0.005,W*0.012,H*0.007,0.05,0,Math.PI*2); ctx.fill();
     // Teeth
-    ctx.fillStyle='#e8e0c8'; ctx.strokeStyle='#2a4a18'; ctx.lineWidth=0.5;
-    for(let i=0;i<5;i++){ ctx.beginPath(); ctx.moveTo(crx+W*0.048+i*W*0.008,cry-H*0.010); ctx.lineTo(crx+W*0.048+i*W*0.008,cry-H*0.018); ctx.lineTo(crx+W*0.052+i*W*0.008,cry-H*0.010); ctx.closePath(); ctx.fill(); }
-    // Eye
-    ctx.fillStyle='#d8c020'; ctx.beginPath(); ctx.arc(crx+W*0.074,cry-H*0.012,W*0.006,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#080808'; ctx.beginPath(); ctx.arc(crx+W*0.075,cry-H*0.012,W*0.003,0,Math.PI*2); ctx.fill();
-    // Scales bumps on back
-    ctx.fillStyle='#1e3a10';
-    for(let i=0;i<8;i++) ctx.beginPath(),ctx.arc(crx-W*0.040+i*W*0.014,cry-H*0.014,W*0.005,0,Math.PI*2),ctx.fill();
+    ctx.fillStyle='#ddd8c0';
+    for(let i=0;i<6;i++){
+      ctx.beginPath(); ctx.moveTo(crx+W*0.058+i*W*0.008,cry-H*0.010);
+      ctx.lineTo(crx+W*0.060+i*W*0.008,cry-H*0.020);
+      ctx.lineTo(crx+W*0.064+i*W*0.008,cry-H*0.010); ctx.closePath(); ctx.fill();
+    }
+    // Eye — slit pupil
+    ctx.fillStyle='#c8b818'; ctx.beginPath(); ctx.ellipse(crx+W*0.082,cry-H*0.015,W*0.007,H*0.006,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#0a0a0a'; ctx.beginPath(); ctx.ellipse(crx+W*0.082,cry-H*0.015,W*0.002,H*0.005,0,0,Math.PI*2); ctx.fill();
+    // Scute ridge
+    ctx.fillStyle='#1e3c10';
+    for(let i=0;i<9;i++) { ctx.beginPath(); ctx.arc(crx-W*0.045+i*W*0.014,cry-H*0.016,W*0.006,Math.PI,0); ctx.fill(); }
+    // Tail tapering
+    ctx.fillStyle='#1e4014';
+    ctx.beginPath(); ctx.moveTo(crx-W*0.075,cry); ctx.quadraticCurveTo(crx-W*0.110,cry-H*0.008,crx-W*0.135,cry+H*0.006); ctx.lineTo(crx-W*0.075,cry+H*0.014); ctx.closePath(); ctx.fill();
+  }
+
+  // ── BOTTOM-LEFT corner — water hyacinth clump + heron ──
+  {
+    // Heron standing in shallows
+    const hx=W*0.058, hy=H*0.810;
+    ctx.fillStyle='#d8d8d0'; ctx.beginPath(); ctx.ellipse(hx,hy,W*0.012,H*0.028,0,0,Math.PI*2); ctx.fill();
+    // Neck
+    ctx.strokeStyle='#c8c8c0'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(hx,hy-H*0.028); ctx.quadraticCurveTo(hx+W*0.008,hy-H*0.055,hx+W*0.004,hy-H*0.072); ctx.stroke();
+    // Head
+    ctx.fillStyle='#e0e0d8'; ctx.beginPath(); ctx.arc(hx+W*0.004,hy-H*0.078,W*0.010,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#101010'; ctx.beginPath(); ctx.arc(hx+W*0.008,hy-H*0.080,W*0.003,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#c8a820';
+    ctx.beginPath(); ctx.moveTo(hx+W*0.012,hy-H*0.078); ctx.lineTo(hx+W*0.030,hy-H*0.081); ctx.lineTo(hx+W*0.012,hy-H*0.075); ctx.fill();
+    // Legs
+    ctx.strokeStyle='#b0a880'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(hx-W*0.004,hy+H*0.028); ctx.lineTo(hx-W*0.006,hy+H*0.058); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hx+W*0.006,hy+H*0.028); ctx.lineTo(hx+W*0.008,hy+H*0.058); ctx.stroke();
+    // Water hyacinth flowers around base
+    [[hx-W*0.02,hy+H*0.045],[hx+W*0.025,hy+H*0.050],[hx+W*0.005,hy+H*0.065]].forEach(([fx,fy])=>{
+      ctx.fillStyle='#7060c8'; ctx.beginPath(); ctx.arc(fx,fy,W*0.012,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#9080e0'; ctx.beginPath(); ctx.arc(fx,fy,W*0.007,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#f0e030'; ctx.beginPath(); ctx.arc(fx,fy,W*0.003,0,Math.PI*2); ctx.fill();
+    });
   }
 
   drawSceneScoreboard();
