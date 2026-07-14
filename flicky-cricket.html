@@ -16536,142 +16536,308 @@ function drawTwilightScene() {
 
 // ── AFTERGLOW SCENE — League 4c: The Dusk Oval ──────────────────────────
 function drawAfterglowScene() {
-  // Base fill — deep purple night already settling
-  ctx.fillStyle='#080616'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#04020e'; ctx.fillRect(0,0,W,H);
 
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Sky gradient — pure black at top, deep purple, final pink-orange ribbon at horizon
+  // Sky — deep indigo fading to shocking magenta/orange at horizon
   const sg=ctx.createLinearGradient(0,0,0,H*0.23);
-  sg.addColorStop(0,'#010108');
-  sg.addColorStop(0.10,'#060416');
-  sg.addColorStop(0.30,'#0c0828');
-  sg.addColorStop(0.55,'#1a0e3a');
-  sg.addColorStop(0.74,'#3a1448');
-  sg.addColorStop(0.86,'#8a2040');
-  sg.addColorStop(0.94,'#d04840');
-  sg.addColorStop(1,'#e86030');
+  sg.addColorStop(0.00,'#010110');
+  sg.addColorStop(0.10,'#04021e');
+  sg.addColorStop(0.25,'#0c0630');
+  sg.addColorStop(0.42,'#1e0848');
+  sg.addColorStop(0.58,'#4a0a5c');
+  sg.addColorStop(0.72,'#8a1050');
+  sg.addColorStop(0.84,'#c82848');
+  sg.addColorStop(0.93,'#e85030');
+  sg.addColorStop(1.00,'#f07020');
   ctx.fillStyle=sg; ctx.fillRect(0,0,W,H*0.23);
 
-  // Final afterglow ribbon — thin, vivid, at the very horizon
-  const ag=ctx.createLinearGradient(0,H*0.195,0,H*0.23);
-  ag.addColorStop(0,'rgba(220,80,40,0)');
-  ag.addColorStop(0.4,'rgba(220,80,40,0.35)');
-  ag.addColorStop(0.8,'rgba(240,100,50,0.55)');
-  ag.addColorStop(1,'rgba(200,60,20,0.30)');
-  ctx.fillStyle=ag; ctx.fillRect(0,H*0.195,W,H*0.035);
+  // Horizon bloom — wide radial burst centred below horizon
+  const hb=ctx.createRadialGradient(W*0.5,H*0.26,0,W*0.5,H*0.26,W*0.65);
+  hb.addColorStop(0,'rgba(240,80,40,0.55)');
+  hb.addColorStop(0.30,'rgba(200,40,80,0.25)');
+  hb.addColorStop(0.65,'rgba(120,10,60,0.08)');
+  hb.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=hb; ctx.fillRect(0,H*0.12,W,H*0.11);
 
-  // Many more stars — night is in
-  const stars2=[];
-  for(let i=0;i<38;i++) stars2.push([(Math.sin(i*7.31+1)*0.5+0.5),(Math.sin(i*3.77+0.9)*0.5+0.5)*0.88,0.8+Math.abs(Math.sin(i*5.09))*1.6]);
-  stars2.forEach(([sx,sy,r])=>{
-    ctx.fillStyle=`rgba(210,215,255,${0.4+r/2.4*0.55})`;
+  // Thin iridescent cloud streaks catching last light
+  [[H*0.055,W*0.10,W*0.55,'rgba(220,100,160,0.18)'],[H*0.072,W*0.35,W*0.50,'rgba(240,120,80,0.16)'],[H*0.040,W*0.55,W*0.38,'rgba(200,80,140,0.14)']].forEach(([cy,cx,cw,col])=>{
+    const cg=ctx.createLinearGradient(cx,cy-H*0.008,cx+cw,cy+H*0.008);
+    cg.addColorStop(0,'rgba(0,0,0,0)'); cg.addColorStop(0.3,col); cg.addColorStop(0.7,col); cg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=cg;
+    ctx.save(); ctx.beginPath(); ctx.ellipse(cx+cw/2,cy,cw/2,H*0.006,0,0,Math.PI*2); ctx.fill(); ctx.restore();
+  });
+
+  // Stars — many, denser upper sky
+  const starData=[];
+  for(let i=0;i<55;i++) starData.push([(Math.sin(i*7.31+1)*0.5+0.5),(Math.sin(i*3.77+0.9)*0.5+0.5)*0.82,0.7+Math.abs(Math.sin(i*5.09))*1.8]);
+  starData.forEach(([sx,sy,r])=>{
+    // Only draw stars in dark upper portion (avoid horizon glow)
+    const alpha=sy<0.55?0.5+r/2.5*0.5:0.15;
+    ctx.fillStyle=`rgba(215,218,255,${alpha})`;
     ctx.beginPath(); ctx.arc(W*sx,H*sy*0.22,r,0,Math.PI*2); ctx.fill();
+    // Cross-spike on brightest
+    if(r>2.1){
+      ctx.strokeStyle=`rgba(215,218,255,${alpha*0.5})`;
+      ctx.lineWidth=r*0.4;
+      ctx.beginPath(); ctx.moveTo(W*sx-r*3,H*sy*0.22); ctx.lineTo(W*sx+r*3,H*sy*0.22); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(W*sx,H*sy*0.22-r*3); ctx.lineTo(W*sx,H*sy*0.22+r*3); ctx.stroke();
+    }
   });
 
-  // Milky Way — faint diagonal smear
-  const mwG=ctx.createLinearGradient(0,H*0.01,W*0.7,H*0.18);
-  mwG.addColorStop(0,'rgba(160,150,210,0)');
-  mwG.addColorStop(0.3,'rgba(160,150,210,0.10)');
-  mwG.addColorStop(0.6,'rgba(180,170,220,0.15)');
-  mwG.addColorStop(1,'rgba(160,150,210,0)');
-  ctx.fillStyle=mwG;
-  ctx.save(); ctx.transform(1,0.22,-0.08,1,0,0); ctx.fillRect(0,0,W*1.1,H*0.20); ctx.restore();
+  // Milky Way — wide faint arc
+  const mwg=ctx.createLinearGradient(W*0.05,H*0.02,W*0.80,H*0.19);
+  mwg.addColorStop(0,'rgba(180,160,230,0)');
+  mwg.addColorStop(0.25,'rgba(180,160,230,0.07)');
+  mwg.addColorStop(0.55,'rgba(200,180,240,0.14)');
+  mwg.addColorStop(0.80,'rgba(180,160,230,0.06)');
+  mwg.addColorStop(1,'rgba(180,160,230,0)');
+  ctx.fillStyle=mwg;
+  ctx.save(); ctx.transform(1,0.18,-0.06,1,0,0); ctx.fillRect(0,0,W*1.1,H*0.22); ctx.restore();
 
-  // Moon — full, rising right
-  const mx=W*0.86, my=H*0.095;
-  const mg=ctx.createRadialGradient(mx,my,0,mx,my,H*0.058);
-  mg.addColorStop(0,'rgba(240,235,200,0.96)');
-  mg.addColorStop(0.6,'rgba(220,215,175,0.35)');
-  mg.addColorStop(1,'rgba(200,195,155,0)');
-  ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(mx,my,H*0.058,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#ede8c8'; ctx.beginPath(); ctx.arc(mx,my,H*0.034,0,Math.PI*2); ctx.fill();
-  // Moon craters
-  ctx.fillStyle='rgba(180,174,140,0.45)';
-  [[mx-H*0.010,my+H*0.008,H*0.007],[mx+H*0.012,my-H*0.012,H*0.005],[mx-H*0.004,my-H*0.018,H*0.004]].forEach(([cx,cy,cr])=>{
-    ctx.beginPath(); ctx.arc(cx,cy,cr,0,Math.PI*2); ctx.fill();
-  });
-  // Moonlight glow
-  ctx.save(); ctx.globalAlpha=0.18;
-  const mlg=ctx.createRadialGradient(mx,my,H*0.034,mx,my,H*0.14);
-  mlg.addColorStop(0,'rgba(220,220,190,0.5)'); mlg.addColorStop(1,'rgba(220,220,190,0)');
-  ctx.fillStyle=mlg; ctx.beginPath(); ctx.arc(mx,my,H*0.14,0,Math.PI*2); ctx.fill();
-  ctx.restore();
+  // Venus — brilliant point near horizon, left of centre
+  {
+    const vx=W*0.30,vy=H*0.175;
+    const vg=ctx.createRadialGradient(vx,vy,0,vx,vy,W*0.030);
+    vg.addColorStop(0,'rgba(255,240,200,1)'); vg.addColorStop(0.2,'rgba(255,220,160,0.7)'); vg.addColorStop(1,'rgba(255,200,120,0)');
+    ctx.fillStyle=vg; ctx.fillRect(vx-W*0.030,vy-W*0.030,W*0.060,W*0.060);
+    ctx.fillStyle='#fffff8'; ctx.beginPath(); ctx.arc(vx,vy,2.6,0,Math.PI*2); ctx.fill();
+    // 4-point star spike
+    ctx.strokeStyle='rgba(255,245,210,0.70)'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(vx-10,vy); ctx.lineTo(vx+10,vy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(vx,vy-10); ctx.lineTo(vx,vy+10); ctx.stroke();
+  }
 
-  // Stadium silhouette — dark mass
-  ctx.fillStyle='rgba(4,3,14,0.96)';
+  // Jupiter — dimmer, upper sky
+  {
+    const jx=W*0.68,jy=H*0.060;
+    const jg=ctx.createRadialGradient(jx,jy,0,jx,jy,W*0.014);
+    jg.addColorStop(0,'rgba(255,230,180,0.90)'); jg.addColorStop(1,'rgba(255,230,180,0)');
+    ctx.fillStyle=jg; ctx.fillRect(jx-W*0.014,jy-W*0.014,W*0.028,W*0.028);
+    ctx.fillStyle='rgba(240,225,175,0.95)'; ctx.beginPath(); ctx.arc(jx,jy,2.0,0,Math.PI*2); ctx.fill();
+  }
+
+  // Full moon — large, warm-tinted from dust in the afterglow air
+  {
+    const mx=W*0.84,my=H*0.088;
+    // Atmospheric halo
+    const mhalo=ctx.createRadialGradient(mx,my,H*0.032,mx,my,H*0.10);
+    mhalo.addColorStop(0,'rgba(255,220,160,0.25)'); mhalo.addColorStop(0.5,'rgba(220,180,100,0.08)'); mhalo.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=mhalo; ctx.beginPath(); ctx.arc(mx,my,H*0.10,0,Math.PI*2); ctx.fill();
+    // Moon disc — warm cream tint from dust
+    ctx.fillStyle='#f0e8c0'; ctx.beginPath(); ctx.arc(mx,my,H*0.036,0,Math.PI*2); ctx.fill();
+    // Subtle craters
+    ctx.fillStyle='rgba(190,178,138,0.50)';
+    [[mx-H*0.011,my+H*0.008,H*0.007],[mx+H*0.013,my-H*0.011,H*0.005],[mx-H*0.003,my-H*0.019,H*0.004],[mx+H*0.004,my+H*0.018,H*0.004]].forEach(([cx,cy,cr])=>{
+      ctx.beginPath(); ctx.arc(cx,cy,cr,0,Math.PI*2); ctx.fill();
+    });
+    // Warm glow spill
+    ctx.save(); ctx.globalAlpha=0.22;
+    const mg2=ctx.createRadialGradient(mx,my,H*0.036,mx,my,H*0.15);
+    mg2.addColorStop(0,'rgba(255,230,160,0.6)'); mg2.addColorStop(1,'rgba(255,200,100,0)');
+    ctx.fillStyle=mg2; ctx.beginPath(); ctx.arc(mx,my,H*0.15,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  // Dense crowd silhouette — packed heads along horizon
+  ctx.fillStyle='rgba(3,2,12,0.97)';
   ctx.beginPath();
-  ctx.moveTo(0,H*0.23); ctx.lineTo(0,H*0.182);
-  ctx.quadraticCurveTo(W*0.10,H*0.148,W*0.20,H*0.178);
-  ctx.quadraticCurveTo(W*0.32,H*0.212,W*0.42,H*0.168);
-  ctx.quadraticCurveTo(W*0.50,H*0.145,W*0.58,H*0.168);
-  ctx.quadraticCurveTo(W*0.68,H*0.212,W*0.80,H*0.178);
-  ctx.quadraticCurveTo(W*0.90,H*0.148,W,H*0.182);
+  ctx.moveTo(0,H*0.23); ctx.lineTo(0,H*0.190);
+  for(let i=0;i<=28;i++){
+    const fx=W*i/28;
+    const baseY=H*(0.175+Math.sin(i*1.7)*0.006+Math.sin(i*3.1)*0.004);
+    const headR=W*(0.006+Math.abs(Math.sin(i*2.3))*0.003);
+    ctx.arc(fx,baseY,headR,Math.PI,0,false);
+  }
   ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
 
-  // Floodlights — all 4 on and blazing
-  [[W*0.10,H*0.115],[W*0.30,H*0.155],[W*0.70,H*0.155],[W*0.90,H*0.115]].forEach(([lx,ly])=>{
-    ctx.fillStyle='#06051a'; ctx.fillRect(lx-W*0.009,ly,W*0.018,H*0.115);
-    ctx.fillStyle='#c0d0e8'; ctx.fillRect(lx-W*0.034,ly-H*0.012,W*0.068,H*0.016);
-    // Big bright cone
-    const lc=ctx.createRadialGradient(lx,ly,0,lx,H*0.25,H*0.16);
-    lc.addColorStop(0,'rgba(255,248,220,0.28)');
-    lc.addColorStop(0.4,'rgba(240,230,190,0.10)');
-    lc.addColorStop(1,'rgba(220,210,170,0)');
+  // Floodlight towers — all 4 blazing, screen-blend cones
+  [[W*0.11,H*0.112,true],[W*0.31,H*0.152,true],[W*0.69,H*0.152,true],[W*0.89,H*0.112,true]].forEach(([lx,ly,on])=>{
+    // Mast
+    ctx.fillStyle='#06051c'; ctx.fillRect(lx-W*0.008,ly,W*0.016,H*0.088);
+    // Cross arm
+    ctx.fillStyle='#08071e'; ctx.fillRect(lx-W*0.032,ly-H*0.012,W*0.064,H*0.014);
+    // Lamp bar glow
+    ctx.save(); ctx.shadowColor='rgba(255,248,210,0.9)'; ctx.shadowBlur=20;
+    ctx.fillStyle='rgba(255,248,220,0.98)'; ctx.fillRect(lx-W*0.030,ly-H*0.010,W*0.060,H*0.012);
+    ctx.restore();
+    // Beam cone — screen blend
+    ctx.save(); ctx.globalCompositeOperation='screen';
+    const lc=ctx.createLinearGradient(lx,ly,lx,H*0.25);
+    lc.addColorStop(0,'rgba(255,248,220,0.30)'); lc.addColorStop(0.5,'rgba(255,240,190,0.08)'); lc.addColorStop(1,'rgba(255,230,160,0)');
     ctx.fillStyle=lc;
-    ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx-W*0.14,H*0.25); ctx.lineTo(lx+W*0.14,H*0.25); ctx.closePath(); ctx.fill();
-    // Bulb glow
-    ctx.save(); ctx.shadowColor='rgba(255,245,200,0.8)'; ctx.shadowBlur=16;
-    ctx.fillStyle='rgba(255,248,220,0.95)'; ctx.fillRect(lx-W*0.030,ly-H*0.010,W*0.060,H*0.012); ctx.restore();
+    ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx-W*0.16,H*0.25); ctx.lineTo(lx+W*0.16,H*0.25); ctx.closePath(); ctx.fill();
+    ctx.restore();
   });
 
-  ctx.restore();
+  ctx.restore(); // end sky clip
 
-  // Ground — near-black with subtle moonlight tint
+  // Ground — very dark, drenched in purple afterglow from horizon
   const gg=ctx.createLinearGradient(0,H*0.23,0,H);
-  gg.addColorStop(0,'#0a1210'); gg.addColorStop(0.5,'#091010'); gg.addColorStop(1,'#070e0e');
+  gg.addColorStop(0,'#0e0a18'); gg.addColorStop(0.15,'#0a0812'); gg.addColorStop(1,'#060610');
   ctx.fillStyle=gg; ctx.fillRect(0,H*0.23,W,H*0.77);
 
-  drawGroundRings('#111e14','#0a1610',0);
+  drawGroundRings('#110e1c','#0c0a16',0);
 
-  // Moonlight reflection on field — soft silver strip
-  const mr2=ctx.createLinearGradient(W*0.50-W*0.25,H*0.50,W*0.50+W*0.25,H*0.50);
-  mr2.addColorStop(0,'rgba(200,200,180,0)');
-  mr2.addColorStop(0.5,'rgba(200,200,180,0.06)');
-  mr2.addColorStop(1,'rgba(200,200,180,0)');
-  ctx.fillStyle=mr2; ctx.fillRect(0,H*0.30,W,H*0.50);
+  // Afterglow colour wash over near side of pitch
+  const agw=ctx.createLinearGradient(0,H*0.23,0,H*0.50);
+  agw.addColorStop(0,'rgba(180,40,80,0.14)'); agw.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=agw; ctx.fillRect(0,H*0.23,W,H*0.27);
 
-  // Left prop — bat/ball vendor cart under floodlight
+  // Floodlight ground pools — screen blend
+  ctx.save(); ctx.globalCompositeOperation='screen';
+  [[W*0.11],[W*0.31],[W*0.69],[W*0.89]].forEach(([lx])=>{
+    const gp=ctx.createRadialGradient(lx,H*0.44,0,lx,H*0.44,W*0.22);
+    gp.addColorStop(0,'rgba(255,248,200,0.18)'); gp.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=gp; ctx.fillRect(lx-W*0.22,H*0.30,W*0.44,H*0.28);
+  });
+  ctx.restore();
+
+  // ── LEFT PROP: Photography media tower ──
+  // Oval left edge at y=H*0.300 ≈ W*0.384, so keep right of that. Place against left edge boundary
   {
-    const bx=W*0.024, by=H*0.380;
-    // Cart body
-    ctx.fillStyle='#1a2a22'; ctx.fillRect(bx,by,W*0.088,H*0.072);
-    ctx.strokeStyle='rgba(80,160,80,0.22)'; ctx.lineWidth=1.2; ctx.strokeRect(bx,by,W*0.088,H*0.072);
-    // Awning
-    ctx.fillStyle='#0a1a10'; ctx.fillRect(bx-W*0.006,by-H*0.012,W*0.100,H*0.014);
-    ctx.strokeStyle='rgba(60,120,60,0.30)'; ctx.lineWidth=1; ctx.strokeRect(bx-W*0.006,by-H*0.012,W*0.100,H*0.014);
-    // Lit inside glow
-    ctx.save(); ctx.shadowColor='rgba(180,220,160,0.4)'; ctx.shadowBlur=14;
-    ctx.fillStyle='rgba(140,190,120,0.18)'; ctx.fillRect(bx+W*0.008,by+H*0.008,W*0.072,H*0.056); ctx.restore();
-    // Wheels
-    ctx.fillStyle='#0e1810'; [bx+W*0.016,bx+W*0.068].forEach(wx=>{ ctx.beginPath(); ctx.arc(wx,by+H*0.072,H*0.010,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='rgba(60,100,60,0.4)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(wx,by+H*0.072,H*0.010,0,Math.PI*2); ctx.stroke(); });
+    const px=W*0.008, py=H*0.268;
+    const pw=W*0.108, ph=H*0.128;
+    // Tower legs — cross-braced metal
+    ctx.strokeStyle='rgba(60,50,120,0.60)'; ctx.lineWidth=W*0.004;
+    [[px+pw*0.15,py+ph,px+pw*0.40,py+ph*0.30],[px+pw*0.40,py+ph,px+pw*0.15,py+ph*0.30]].forEach(([x1,y1,x2,y2])=>{
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    });
+    ctx.beginPath(); ctx.moveTo(px+pw*0.15,py+ph); ctx.lineTo(px+pw*0.15,py); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px+pw*0.40,py+ph); ctx.lineTo(px+pw*0.40,py); ctx.stroke();
+    // Platform top
+    ctx.fillStyle='#0c0e1c'; ctx.fillRect(px+pw*0.04,py,pw*0.46,H*0.014);
+    ctx.strokeStyle='rgba(80,70,160,0.40)'; ctx.lineWidth=1; ctx.strokeRect(px+pw*0.04,py,pw*0.46,H*0.014);
+    // Camera body on platform
+    ctx.fillStyle='#1a1828'; ctx.fillRect(px+pw*0.10,py-H*0.024,pw*0.30,H*0.026);
+    ctx.fillStyle='rgba(60,80,200,0.35)'; ctx.beginPath(); ctx.arc(px+pw*0.16,py-H*0.011,W*0.018,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(100,120,240,0.70)'; ctx.beginPath(); ctx.arc(px+pw*0.16,py-H*0.011,W*0.010,0,Math.PI*2); ctx.fill();
+    // REC light — red dot
+    ctx.save(); ctx.shadowColor='rgba(255,40,40,0.9)'; ctx.shadowBlur=10;
+    ctx.fillStyle='#ff3030'; ctx.beginPath(); ctx.arc(px+pw*0.34,py-H*0.020,W*0.007,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    // Sat dish on tower side
+    ctx.strokeStyle='rgba(100,90,180,0.50)'; ctx.lineWidth=W*0.005;
+    ctx.beginPath(); ctx.arc(px+pw*0.56,py+ph*0.18,W*0.022,-Math.PI*0.7,Math.PI*0.1); ctx.stroke();
+    ctx.strokeStyle='rgba(100,90,180,0.40)'; ctx.lineWidth=W*0.003;
+    ctx.beginPath(); ctx.moveTo(px+pw*0.56,py+ph*0.18); ctx.lineTo(px+pw*0.64,py+ph*0.10); ctx.stroke();
+    // Operator figure on platform
+    ctx.fillStyle='rgba(20,16,40,0.90)';
+    ctx.beginPath(); ctx.arc(px+pw*0.34,py-H*0.034,W*0.009,0,Math.PI*2); ctx.fill(); // head
+    ctx.fillRect(px+pw*0.27,py-H*0.028,W*0.014,H*0.020); // body
   }
-  // Right prop — small stands, spectators heading out
+
+  // ── RIGHT PROP: Scoreboard with LED afterglow colours ──
+  // Oval right edge at y=H*0.310 ≈ W*0.872 — keep left edge >= W*0.878
   {
-    const rx=W*0.888, ry=H*0.340;
-    ctx.fillStyle='#0c1418'; ctx.fillRect(rx,ry,W*0.088,H*0.100);
-    ctx.strokeStyle='rgba(60,80,120,0.20)'; ctx.lineWidth=1; ctx.strokeRect(rx,ry,W*0.088,H*0.100);
-    // Rows
-    [0,0.35,0.65].forEach(rf=>{
-      ctx.fillStyle=`rgba(40,60,90,${0.3-rf*0.08})`; ctx.fillRect(rx,ry+H*0.100*rf,W*0.088,H*0.030);
+    const sx=W*0.878, sy=H*0.275;
+    const sw=W*0.118, sh=H*0.110;
+    // Board body
+    const sbg=ctx.createLinearGradient(sx,sy,sx,sy+sh);
+    sbg.addColorStop(0,'#0a0814'); sbg.addColorStop(1,'#070512');
+    ctx.fillStyle=sbg; ctx.fillRect(sx,sy,sw,sh);
+    ctx.strokeStyle='rgba(160,60,200,0.45)'; ctx.lineWidth=1.5; ctx.strokeRect(sx,sy,sw,sh);
+    // LED screen area — glowing magenta/orange
+    ctx.fillStyle='#0e0618'; ctx.fillRect(sx+W*0.008,sy+H*0.012,sw-W*0.016,sh*0.55);
+    const led=ctx.createLinearGradient(sx,sy,sx+sw,sy);
+    led.addColorStop(0,'rgba(200,40,120,0.60)'); led.addColorStop(0.5,'rgba(240,80,40,0.70)'); led.addColorStop(1,'rgba(200,40,120,0.60)');
+    ctx.fillStyle=led; ctx.fillRect(sx+W*0.010,sy+H*0.014,sw-W*0.020,sh*0.18);
+    // Score text row
+    ctx.save(); ctx.shadowColor='rgba(240,100,60,0.80)'; ctx.shadowBlur=10;
+    ctx.fillStyle='rgba(255,200,80,0.95)'; ctx.font=`bold ${W*0.022}px monospace`; ctx.textAlign='center';
+    ctx.fillText('47  3  12.4',sx+sw/2,sy+sh*0.38);
+    ctx.restore();
+    // Label row
+    ctx.fillStyle='rgba(180,120,220,0.65)'; ctx.font=`${W*0.012}px monospace`; ctx.textAlign='center';
+    ctx.fillText('RUNS  WKT  OVR',sx+sw/2,sy+sh*0.52);
+    ctx.textAlign='left';
+    // Pixel dot matrix texture — tiny magenta dots
+    ctx.fillStyle='rgba(200,60,140,0.18)';
+    for(let dr=0;dr<3;dr++) for(let dc=0;dc<7;dc++){
+      ctx.fillRect(sx+W*0.014+dc*W*0.013,sy+H*0.062+dr*H*0.010,W*0.005,H*0.005);
+    }
+    // Support post
+    ctx.fillStyle='#080612'; ctx.fillRect(sx+sw*0.45,sy+sh,W*0.012,H*0.018);
+    // Glow halo around board
+    ctx.save(); ctx.globalAlpha=0.12;
+    const shalo=ctx.createRadialGradient(sx+sw/2,sy+sh/2,0,sx+sw/2,sy+sh/2,W*0.12);
+    shalo.addColorStop(0,'rgba(200,60,160,0.6)'); shalo.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=shalo; ctx.fillRect(sx-W*0.04,sy-H*0.02,sw+W*0.08,sh+H*0.04); ctx.restore();
+  }
+
+  // ── BOTTOM-LEFT: Side-profile dugout (same layout as 4b) ──
+  {
+    const bx=0, by=H*0.840;
+    const bw=W*0.128, bh=H*0.090;
+    const gsh=ctx.createLinearGradient(bx,by+bh,bx,by+bh+H*0.012);
+    gsh.addColorStop(0,'rgba(0,0,0,0.30)'); gsh.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=gsh; ctx.fillRect(bx,by+bh,bw,H*0.012);
+    ctx.fillStyle='#080614'; ctx.fillRect(bx,by+H*0.010,bw*0.06,bh);
+    ctx.fillStyle='#0e0c1e'; ctx.fillRect(bx,by,bw+W*0.004,H*0.011);
+    ctx.fillStyle='rgba(160,80,200,0.18)'; ctx.fillRect(bx,by+H*0.010,bw+W*0.004,H*0.002);
+    const cu=ctx.createLinearGradient(0,by+H*0.012,0,by+H*0.028);
+    cu.addColorStop(0,'rgba(200,120,255,0.10)'); cu.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=cu; ctx.fillRect(bx,by+H*0.011,bw,H*0.020);
+    ctx.save(); ctx.globalAlpha=0.20; ctx.fillStyle='#a060ff';
+    ctx.fillRect(bx+bw-W*0.012,by+H*0.011,W*0.012,bh*0.70); ctx.restore();
+    ctx.strokeStyle='rgba(140,80,220,0.30)'; ctx.lineWidth=1.5;
+    ctx.strokeRect(bx+bw-W*0.012,by+H*0.011,W*0.012,bh*0.70);
+    ctx.fillStyle='#0c0a1c'; ctx.fillRect(bx+W*0.010,by+H*0.054,bw-W*0.018,H*0.010);
+    ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(bx+W*0.010,by+H*0.054,bw-W*0.018,H*0.003);
+    const profKits=['#1a2880','#1a2880','#801a1a'];
+    [0,1,2].forEach(i=>{
+      const ppx=bx+W*0.022+i*(bw-W*0.030)/2.5, ppy=by+H*0.048;
+      const kit=profKits[i];
+      ctx.fillStyle=kit; ctx.beginPath(); ctx.ellipse(ppx,ppy,W*0.014,H*0.018,0.15,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(225,220,205,0.80)'; ctx.fillRect(ppx-W*0.007,ppy+H*0.015,W*0.020,H*0.018);
+      if(i===2){
+        ctx.fillStyle='rgba(245,240,228,0.85)';
+        ctx.fillRect(ppx-W*0.010,ppy+H*0.014,W*0.009,H*0.022);
+        ctx.fillRect(ppx+W*0.001,ppy+H*0.014,W*0.009,H*0.022);
+        ctx.strokeStyle='rgba(155,144,118,0.55)'; ctx.lineWidth=W*0.002;
+        [H*0.005,H*0.012,H*0.018].forEach(off=>{ ctx.beginPath(); ctx.moveTo(ppx-W*0.010,ppy+H*0.014+off); ctx.lineTo(ppx+W*0.010,ppy+H*0.014+off); ctx.stroke(); });
+      }
+      ctx.fillStyle='rgba(200,162,122,0.85)'; ctx.beginPath(); ctx.arc(ppx+W*0.006,ppy-H*0.022,W*0.010,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=kit; ctx.beginPath(); ctx.arc(ppx+W*0.006,ppy-H*0.025,W*0.011,Math.PI,0); ctx.fill();
+      ctx.fillStyle=kit; ctx.beginPath(); ctx.moveTo(ppx+W*0.016,ppy-H*0.025); ctx.lineTo(ppx+W*0.024,ppy-H*0.019); ctx.lineTo(ppx+W*0.010,ppy-H*0.017); ctx.closePath(); ctx.fill();
     });
-    // Tiny figures — leaving
-    ctx.fillStyle='rgba(8,10,16,0.85)';
-    [rx+W*0.012,rx+W*0.028,rx+W*0.044,rx+W*0.060,rx+W*0.074].forEach((fx,i)=>{
-      ctx.beginPath(); ctx.arc(fx,ry+H*0.078,W*0.007,0,Math.PI*2); ctx.fill();
-      ctx.fillRect(fx-W*0.006,ry+H*0.086,W*0.012,H*0.016);
+    ctx.fillStyle='#0a0840';
+    ctx.beginPath(); ctx.ellipse(bx+W*0.095,by+bh-H*0.008,W*0.022,H*0.008,0.10,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#0c0a1c'; ctx.fillRect(bx+bw-W*0.008,by+H*0.011,W*0.007,bh);
+  }
+
+  // ── BOTTOM-RIGHT: Drinks station (safe corner) ──
+  {
+    const rx=W*0.876, ry=H*0.855;
+    const gsh2=ctx.createLinearGradient(0,ry+H*0.060,0,ry+H*0.072);
+    gsh2.addColorStop(0,'rgba(0,0,0,0.25)'); gsh2.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=gsh2; ctx.fillRect(rx,ry+H*0.060,W*0.124,H*0.012);
+    ctx.save(); ctx.shadowColor='rgba(60,160,255,0.55)'; ctx.shadowBlur=18;
+    ctx.fillStyle='#080e28'; ctx.fillRect(rx+W*0.025,ry+H*0.010,W*0.065,H*0.042); ctx.restore();
+    ctx.strokeStyle='rgba(60,140,220,0.40)'; ctx.lineWidth=H*0.004; ctx.strokeRect(rx+W*0.025,ry+H*0.010,W*0.065,H*0.042);
+    ctx.fillStyle='rgba(60,180,255,0.18)'; ctx.fillRect(rx+W*0.025,ry+H*0.010,W*0.065,H*0.042);
+    ctx.strokeStyle='rgba(100,160,220,0.60)'; ctx.lineWidth=W*0.005;
+    ctx.beginPath(); ctx.moveTo(rx+W*0.038,ry+H*0.010); ctx.lineTo(rx+W*0.075,ry+H*0.010); ctx.stroke();
+    ctx.save(); ctx.translate(rx+W*0.025,ry+H*0.010); ctx.rotate(-0.35);
+    ctx.fillStyle='#080e28'; ctx.fillRect(0,-H*0.012,W*0.065,H*0.012);
+    ctx.strokeStyle='rgba(60,140,220,0.40)'; ctx.lineWidth=1; ctx.strokeRect(0,-H*0.012,W*0.065,H*0.012); ctx.restore();
+    const lidGlow=ctx.createRadialGradient(rx+W*0.057,ry+H*0.010,0,rx+W*0.057,ry+H*0.010,W*0.055);
+    lidGlow.addColorStop(0,'rgba(60,180,255,0.22)'); lidGlow.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=lidGlow; ctx.fillRect(rx,ry,W*0.140,H*0.040);
+    ctx.fillStyle='rgba(140,200,240,0.55)';
+    [rx+W*0.035,rx+W*0.058,rx+W*0.078].forEach(bx2=>{
+      ctx.fillRect(bx2,ry,W*0.012,H*0.012);
+      ctx.fillStyle='rgba(200,230,255,0.40)'; ctx.fillRect(bx2+W*0.002,ry,W*0.004,H*0.010);
+      ctx.fillStyle='rgba(140,200,240,0.55)';
     });
+    const mx2=rx+W*0.008, my2=ry+H*0.008;
+    ctx.fillStyle='rgba(215,220,210,0.70)'; ctx.beginPath(); ctx.ellipse(mx2,my2-H*0.018,W*0.012,H*0.020,0,0,Math.PI*2); ctx.fill();
+    ctx.fillRect(mx2-W*0.012,my2,W*0.024,H*0.038);
+    ctx.fillStyle='rgba(195,162,124,0.75)'; ctx.beginPath(); ctx.arc(mx2,my2-H*0.038,W*0.010,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(20,10,60,0.85)'; ctx.beginPath(); ctx.arc(mx2,my2-H*0.042,W*0.010,Math.PI,0); ctx.fill();
+    ctx.fillRect(mx2-W*0.010,my2-H*0.042,W*0.020,H*0.004);
   }
 
   drawSceneScoreboard();
