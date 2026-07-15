@@ -19309,207 +19309,134 @@ function drawGlacierScene() {
   function ovalLX(fy){ return W*(0.5-0.46*Math.sqrt(Math.max(0,1-Math.pow((fy-0.60)/0.37,2)))); }
   function ovalRX(fy){ return W*(0.5+0.46*Math.sqrt(Math.max(0,1-Math.pow((fy-0.60)/0.37,2)))); }
 
-  // ── 1. OUTSIDE-OVAL: unified glacier (sky above ridge + ice walls in corners) ──
-  // One clip = full canvas minus oval interior (evenodd rule creates the hole).
-  // No horizontal cutoff — the glacier face above flows straight into the corner walls.
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0,0,W,H);
-  ctx.ellipse(W*0.5,H*0.60,W*0.46,H*0.37,0,0,Math.PI*2);
-  ctx.clip('evenodd');
+  // ── BACKDROP: distinct glacier face in the distance ──
+  ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Sky gradient — fills the area above the glacier ridge
-  const sky=ctx.createLinearGradient(0,0,0,H*0.50);
-  sky.addColorStop(0,'#04162c'); sky.addColorStop(0.28,'#0a2e5a');
-  sky.addColorStop(0.62,'#1a6090'); sky.addColorStop(1,'#2e88b6');
-  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+  const sky=ctx.createLinearGradient(0,0,0,H*0.23);
+  sky.addColorStop(0,'#04162c'); sky.addColorStop(0.30,'#0a2e5a'); sky.addColorStop(0.65,'#1a6090'); sky.addColorStop(1,'#3a90be');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.23);
 
-  // Sky — deep arctic blue, cloudless, cold
-  // Sun — pale, high, left side — casting raking light across the glacier
   const sunX=W*0.18, sunY=H*0.040;
   const sunHalo=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,W*0.18);
   sunHalo.addColorStop(0,'rgba(255,252,235,0.28)'); sunHalo.addColorStop(0.45,'rgba(180,220,255,0.10)'); sunHalo.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=sunHalo; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=sunHalo; ctx.fillRect(0,0,W,H*0.23);
   ctx.fillStyle='#fff8f0'; ctx.beginPath(); ctx.arc(sunX,sunY,W*0.028,0,Math.PI*2); ctx.fill();
   ctx.strokeStyle='rgba(255,238,200,0.20)'; ctx.lineWidth=W*0.009;
   ctx.beginPath(); ctx.arc(sunX,sunY,W*0.068,0,Math.PI*2); ctx.stroke();
   ctx.lineWidth=W*0.004;
   ctx.beginPath(); ctx.arc(sunX,sunY,W*0.100,0,Math.PI*2); ctx.stroke();
 
-  // Jagged glacier ridge
   const ridgePts=[
     [0.00,0.195],[0.04,0.178],[0.09,0.188],[0.14,0.162],[0.19,0.148],[0.24,0.165],
     [0.30,0.128],[0.35,0.108],[0.40,0.096],[0.46,0.112],[0.52,0.086],[0.57,0.074],
     [0.62,0.090],[0.67,0.068],[0.72,0.082],[0.77,0.062],[0.82,0.078],[0.87,0.058],
     [0.92,0.072],[0.96,0.090],[1.00,0.110]
   ];
-
-  // Glacier body — everything from the ridge downward.
-  // Clipped to outside-oval so it fills the backdrop above AND the corner walls below,
-  // all as one continuous mass of ice with no horizontal seam.
-  const iceBodyG=ctx.createLinearGradient(0,H*0.07,0,H*0.82);
-  iceBodyG.addColorStop(0,'rgba(14,62,112,0.97)');
-  iceBodyG.addColorStop(0.15,'rgba(18,78,132,0.94)');
-  iceBodyG.addColorStop(0.42,'rgba(24,96,152,0.90)');
-  iceBodyG.addColorStop(0.72,'rgba(32,112,165,0.84)');
-  iceBodyG.addColorStop(1,'rgba(44,128,178,0.74)');
-  ctx.fillStyle=iceBodyG;
-  ctx.beginPath();
-  ctx.moveTo(0,H);
-  ctx.lineTo(0,H*ridgePts[0][1]);
+  const baseG=ctx.createLinearGradient(0,0,0,H*0.23);
+  baseG.addColorStop(0,'#021828'); baseG.addColorStop(0.30,'#0a3858'); baseG.addColorStop(0.70,'#1a6080'); baseG.addColorStop(1,'#2a7898');
+  ctx.fillStyle=baseG; ctx.fillRect(0,0,W,H*0.23);
+  const mainIceG=ctx.createLinearGradient(0,H*0.06,0,H*0.23);
+  mainIceG.addColorStop(0,'rgba(40,140,200,0.0)'); mainIceG.addColorStop(0.15,'rgba(30,120,180,0.55)'); mainIceG.addColorStop(0.55,'rgba(20,100,160,0.80)'); mainIceG.addColorStop(1,'rgba(10,70,120,0.90)');
+  ctx.fillStyle=mainIceG;
+  ctx.beginPath(); ctx.moveTo(0,H*0.23);
   ridgePts.forEach(([x,y])=>ctx.lineTo(W*x,H*y));
-  ctx.lineTo(W,H);
-  ctx.closePath(); ctx.fill();
-
-  // Sunlit face panels — left-facing facets catch the sun
-  [
-    {pts:[[0.30,0.128],[0.35,0.108],[0.35,0.82],[0.30,0.82]], col:'rgba(155,228,255,0.30)'},
-    {pts:[[0.52,0.086],[0.57,0.074],[0.57,0.82],[0.52,0.82]], col:'rgba(140,218,255,0.26)'},
-    {pts:[[0.77,0.062],[0.82,0.078],[0.82,0.82],[0.77,0.82]], col:'rgba(172,234,255,0.28)'},
-    {pts:[[0.87,0.058],[0.92,0.072],[0.92,0.82],[0.87,0.82]], col:'rgba(182,240,255,0.36)'},
-  ].forEach(({pts,col})=>{
-    ctx.fillStyle=col;
-    ctx.beginPath(); ctx.moveTo(W*pts[0][0],H*pts[0][1]);
-    pts.slice(1).forEach(([px,py])=>ctx.lineTo(W*px,H*py));
-    ctx.closePath(); ctx.fill();
-  });
-
-  // Shadow face panels
-  [
-    {pts:[[0.35,0.108],[0.40,0.096],[0.40,0.82],[0.35,0.82]], col:'rgba(4,22,52,0.36)'},
-    {pts:[[0.57,0.074],[0.62,0.090],[0.62,0.82],[0.57,0.82]], col:'rgba(4,20,48,0.30)'},
-    {pts:[[0.82,0.078],[0.87,0.058],[0.87,0.82],[0.82,0.82]], col:'rgba(6,24,54,0.26)'},
-  ].forEach(({pts,col})=>{
-    ctx.fillStyle=col;
-    ctx.beginPath(); ctx.moveTo(W*pts[0][0],H*pts[0][1]);
-    pts.slice(1).forEach(([px,py])=>ctx.lineTo(W*px,H*py));
-    ctx.closePath(); ctx.fill();
-  });
-
-  // Horizontal strata — compressed ice layers, full-width so they read in both backdrop and corners
-  ctx.lineCap='butt';
-  ctx.strokeStyle='rgba(62,142,202,0.19)'; ctx.lineWidth=1.0;
-  [0.145,0.163,0.182,0.198,0.213,0.232,0.258,0.292,0.338,0.396,0.465,0.545].forEach(fy=>{
-    ctx.beginPath(); ctx.moveTo(0,H*fy); ctx.lineTo(W,H*fy); ctx.stroke();
-  });
-
-  // Crevasses — extend well into the corner regions
+  ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
+  [{pts:[[0.30,0.128],[0.35,0.108],[0.35,0.23],[0.30,0.23]],col:'rgba(180,235,255,0.38)'},{pts:[[0.52,0.086],[0.57,0.074],[0.57,0.23],[0.52,0.23]],col:'rgba(160,225,255,0.32)'},{pts:[[0.77,0.062],[0.82,0.078],[0.82,0.23],[0.77,0.23]],col:'rgba(190,240,255,0.35)'},{pts:[[0.87,0.058],[0.92,0.072],[0.92,0.23],[0.87,0.23]],col:'rgba(200,245,255,0.42)'}].forEach(({pts,col})=>{ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(W*pts[0][0],H*pts[0][1]);pts.forEach(([px,py])=>ctx.lineTo(W*px,H*py));ctx.closePath();ctx.fill();});
+  [{pts:[[0.35,0.108],[0.40,0.096],[0.40,0.23],[0.35,0.23]],col:'rgba(5,30,60,0.40)'},{pts:[[0.57,0.074],[0.62,0.090],[0.62,0.23],[0.57,0.23]],col:'rgba(5,25,55,0.35)'},{pts:[[0.82,0.078],[0.87,0.058],[0.87,0.23],[0.82,0.23]],col:'rgba(8,30,60,0.30)'}].forEach(({pts,col})=>{ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(W*pts[0][0],H*pts[0][1]);pts.forEach(([px,py])=>ctx.lineTo(W*px,H*py));ctx.closePath();ctx.fill();});
+  ctx.strokeStyle='rgba(60,140,200,0.22)'; ctx.lineWidth=1.2; ctx.lineCap='butt';
+  [0.145,0.165,0.185,0.200,0.212].forEach(fy=>{ctx.beginPath();ctx.moveTo(0,H*fy);ctx.lineTo(W,H*fy);ctx.stroke();});
   ctx.lineCap='round';
-  [
-    [[0.19,0.148],[0.21,0.208],[0.20,0.310],[0.19,0.445]],
-    [[0.35,0.108],[0.33,0.172],[0.34,0.272],[0.35,0.395]],
-    [[0.52,0.086],[0.54,0.152],[0.52,0.252],[0.50,0.368]],
-    [[0.67,0.068],[0.65,0.136],[0.66,0.232],[0.68,0.345]],
-    [[0.82,0.078],[0.84,0.144],[0.83,0.242],[0.82,0.352]],
-  ].forEach(pts=>{
-    ctx.strokeStyle='rgba(4,20,48,0.78)'; ctx.lineWidth=W*0.006;
-    ctx.beginPath(); ctx.moveTo(W*pts[0][0],H*pts[0][1]);
-    for(let i=1;i<pts.length;i++) ctx.lineTo(W*pts[i][0],H*pts[i][1]);
-    ctx.stroke();
-    ctx.strokeStyle='rgba(100,202,255,0.22)'; ctx.lineWidth=W*0.0016;
-    ctx.beginPath(); ctx.moveTo(W*pts[0][0]-W*0.003,H*pts[0][1]);
-    for(let i=1;i<pts.length;i++) ctx.lineTo(W*pts[i][0]-W*0.003,H*pts[i][1]);
-    ctx.stroke();
-  });
-
-  // Meltwater streaks — continue down into corners
-  ctx.strokeStyle='rgba(38,180,222,0.26)'; ctx.lineWidth=W*0.0022; ctx.lineCap='round';
-  [[0.25,0.155,0.27,0.56],[0.43,0.100,0.42,0.56],[0.60,0.090,0.61,0.56],[0.74,0.075,0.75,0.56]].forEach(([x1,y1,x2,y2])=>{
-    ctx.beginPath(); ctx.moveTo(W*x1,H*y1); ctx.quadraticCurveTo(W*(x1+0.010),H*((y1+y2)/2),W*x2,H*y2); ctx.stroke();
-  });
-
-  // Seracs along the ridge
+  [[[0.19,0.148],[0.22,0.175],[0.21,0.205],[0.20,0.23]],[[0.35,0.108],[0.33,0.145],[0.34,0.180],[0.35,0.23]],[[0.52,0.086],[0.54,0.130],[0.52,0.168],[0.50,0.23]],[[0.67,0.068],[0.65,0.110],[0.66,0.158],[0.68,0.23]],[[0.82,0.078],[0.84,0.118],[0.83,0.160],[0.82,0.23]]].forEach(pts=>{ctx.strokeStyle='rgba(4,20,48,0.85)';ctx.lineWidth=W*0.006;ctx.beginPath();ctx.moveTo(W*pts[0][0],H*pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(W*pts[i][0],H*pts[i][1]);ctx.stroke();ctx.strokeStyle='rgba(100,200,255,0.28)';ctx.lineWidth=W*0.002;ctx.beginPath();ctx.moveTo(W*pts[0][0]-W*0.004,H*pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(W*pts[i][0]-W*0.004,H*pts[i][1]);ctx.stroke();});
+  ctx.strokeStyle='rgba(40,180,220,0.30)'; ctx.lineWidth=W*0.003; ctx.lineCap='round';
+  [[0.25,0.155,0.27,0.23],[0.43,0.100,0.42,0.23],[0.60,0.090,0.61,0.23],[0.74,0.075,0.75,0.23]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(W*x1,H*y1);ctx.quadraticCurveTo(W*(x1+0.010),H*((y1+y2)/2),W*x2,H*y2);ctx.stroke();});
   ctx.setLineDash([]);
-  [[0.40,0.096,0.022,0.062],[0.57,0.074,0.026,0.070],[0.77,0.062,0.030,0.078],[0.87,0.058,0.020,0.055]].forEach(([fx,fy,hw,ht])=>{
-    const sG=ctx.createLinearGradient(W*(fx-hw),0,W*(fx+hw),0);
-    sG.addColorStop(0,'rgba(148,220,255,0.88)'); sG.addColorStop(0.45,'rgba(212,248,255,0.93)'); sG.addColorStop(1,'rgba(72,154,204,0.56)');
-    ctx.fillStyle=sG;
-    ctx.beginPath();
-    ctx.moveTo(W*(fx-hw*0.3),H*fy); ctx.lineTo(W*(fx-hw),H*(fy+ht)); ctx.lineTo(W*(fx+hw),H*(fy+ht)); ctx.lineTo(W*(fx+hw*0.4),H*fy);
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(18,56,100,0.42)';
-    ctx.beginPath();
-    ctx.moveTo(W*(fx+hw*0.4),H*fy); ctx.lineTo(W*(fx+hw),H*(fy+ht)); ctx.lineTo(W*(fx+hw*0.7),H*(fy+ht));
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.66)';
-    ctx.beginPath(); ctx.ellipse(W*fx,H*fy,W*hw*0.25,H*0.008,0,0,Math.PI*2); ctx.fill();
-  });
-
-  // Snow crest glow along ridge top
-  const snowCrest=ctx.createLinearGradient(0,H*0.05,0,H*0.15);
-  snowCrest.addColorStop(0,'rgba(226,248,255,0.40)'); snowCrest.addColorStop(1,'rgba(226,248,255,0)');
+  [[0.40,0.096,0.022,0.062],[0.57,0.074,0.026,0.070],[0.77,0.062,0.030,0.078],[0.87,0.058,0.020,0.055]].forEach(([fx,fy,hw,ht])=>{const sG=ctx.createLinearGradient(W*(fx-hw),0,W*(fx+hw),0);sG.addColorStop(0,'rgba(160,230,255,0.90)');sG.addColorStop(0.45,'rgba(220,250,255,0.95)');sG.addColorStop(1,'rgba(80,160,210,0.60)');ctx.fillStyle=sG;ctx.beginPath();ctx.moveTo(W*(fx-hw*0.3),H*fy);ctx.lineTo(W*(fx-hw),H*(fy+ht));ctx.lineTo(W*(fx+hw),H*(fy+ht));ctx.lineTo(W*(fx+hw*0.4),H*fy);ctx.closePath();ctx.fill();ctx.fillStyle='rgba(20,60,100,0.45)';ctx.beginPath();ctx.moveTo(W*(fx+hw*0.4),H*fy);ctx.lineTo(W*(fx+hw),H*(fy+ht));ctx.lineTo(W*(fx+hw*0.7),H*(fy+ht));ctx.closePath();ctx.fill();ctx.fillStyle='rgba(255,255,255,0.70)';ctx.beginPath();ctx.ellipse(W*fx,H*fy,W*hw*0.25,H*0.008,0,0,Math.PI*2);ctx.fill();});
+  const snowCrest=ctx.createLinearGradient(0,H*0.05,0,H*0.12);
+  snowCrest.addColorStop(0,'rgba(230,250,255,0.45)'); snowCrest.addColorStop(1,'rgba(230,250,255,0)');
   ctx.fillStyle=snowCrest;
-  ctx.beginPath(); ctx.moveTo(0,H*0.24);
+  ctx.beginPath(); ctx.moveTo(0,H*0.195);
   ridgePts.forEach(([x,y])=>ctx.lineTo(W*x,H*y));
-  ctx.lineTo(W,H*0.24); ctx.closePath(); ctx.fill();
+  ctx.lineTo(W,H*0.195); ctx.closePath(); ctx.fill();
+  const glazeG=ctx.createLinearGradient(0,H*0.06,0,H*0.23);
+  glazeG.addColorStop(0,'rgba(160,230,255,0.12)'); glazeG.addColorStop(0.5,'rgba(100,190,240,0.06)'); glazeG.addColorStop(1,'rgba(50,140,200,0.0)');
+  ctx.fillStyle=glazeG; ctx.fillRect(0,0,W,H*0.23);
 
-  // Rim lighting along oval left boundary — inner face of left wall lit by sun
-  {
-    const steps=55, rimW=W*0.045;
-    const rimLG=ctx.createLinearGradient(ovalLX(0.42),0,ovalLX(0.42)+rimW,0);
-    rimLG.addColorStop(0,'rgba(162,230,255,0.42)'); rimLG.addColorStop(1,'rgba(162,230,255,0)');
-    ctx.fillStyle=rimLG;
-    ctx.beginPath();
-    for(let i=0;i<=steps;i++){
-      const fy=0.23+i*(0.74-0.23)/steps;
-      const lx=ovalLX(fy);
-      i===0?ctx.moveTo(lx,H*fy):ctx.lineTo(lx,H*fy);
-    }
-    for(let i=steps;i>=0;i--){
-      const fy=0.23+i*(0.74-0.23)/steps;
-      ctx.lineTo(ovalLX(fy)+rimW,H*fy);
-    }
-    ctx.closePath(); ctx.fill();
-  }
+  ctx.restore(); // end backdrop clip
 
-  // Rim shadow along oval right boundary — right wall in shade
-  {
-    const steps=55, rimW=W*0.040;
-    const rimRG=ctx.createLinearGradient(ovalRX(0.42)-rimW,0,ovalRX(0.42),0);
-    rimRG.addColorStop(0,'rgba(4,18,44,0)'); rimRG.addColorStop(1,'rgba(4,18,44,0.34)');
-    ctx.fillStyle=rimRG;
-    ctx.beginPath();
-    for(let i=0;i<=steps;i++){
-      const fy=0.23+i*(0.74-0.23)/steps;
-      const rx=ovalRX(fy);
-      i===0?ctx.moveTo(rx,H*fy):ctx.lineTo(rx,H*fy);
-    }
-    for(let i=steps;i>=0;i--){
-      const fy=0.23+i*(0.74-0.23)/steps;
-      ctx.lineTo(ovalRX(fy)-rimW,H*fy);
-    }
-    ctx.closePath(); ctx.fill();
-  }
-
-  // Cold glaze across whole outside region
-  const glazeG=ctx.createLinearGradient(0,H*0.06,0,H*0.60);
-  glazeG.addColorStop(0,'rgba(150,226,255,0.09)'); glazeG.addColorStop(0.5,'rgba(100,190,240,0.04)'); glazeG.addColorStop(1,'rgba(50,140,200,0)');
-  ctx.fillStyle=glazeG; ctx.fillRect(0,0,W,H);
-
-  ctx.restore(); // end outside-oval clip
-
-  // ── 2. ICE GROUND inside oval ──
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(W*0.5,H*0.60,W*0.46,H*0.37,0,0,Math.PI*2);
-  ctx.clip();
-
+  // ── FOREGROUND: flat ice ground ──
   const grd=ctx.createLinearGradient(0,H*0.23,0,H);
-  grd.addColorStop(0,'#c6e6f6'); grd.addColorStop(0.14,'#b6d8ec'); grd.addColorStop(0.44,'#a4c8dc'); grd.addColorStop(0.80,'#92b6cc'); grd.addColorStop(1,'#82a6bc');
-  ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
+  grd.addColorStop(0,'#b8dcea'); grd.addColorStop(0.25,'#a4c8dc'); grd.addColorStop(0.60,'#92b6cc'); grd.addColorStop(1,'#80a4ba');
+  ctx.fillStyle=grd; ctx.fillRect(0,H*0.23,W,H*0.77);
 
-  // Sun glare across ice
-  const glare=ctx.createLinearGradient(0,H*0.23,W*0.42,H*0.58);
-  glare.addColorStop(0,'rgba(255,255,255,0.16)'); glare.addColorStop(0.5,'rgba(255,255,255,0.06)'); glare.addColorStop(1,'rgba(255,255,255,0)');
+  // Sun glare across flat ice
+  const glare=ctx.createLinearGradient(0,H*0.23,W*0.44,H*0.58);
+  glare.addColorStop(0,'rgba(255,255,255,0.15)'); glare.addColorStop(0.5,'rgba(255,255,255,0.05)'); glare.addColorStop(1,'rgba(255,255,255,0)');
   ctx.fillStyle=glare; ctx.fillRect(0,H*0.23,W*0.44,H*0.50);
 
+  // ── CORNER WRAPS: glacier curves from backdrop into foreground ──
+  // Each corner fill starts at backdrop colour (top, H*0.23) and fades to transparent
+  // as it descends, so the ground colour shows through below — creating the blend.
+  const steps=64;
+  // Left corner
+  {
+    const cG=ctx.createLinearGradient(0,H*0.23,0,H*0.58);
+    cG.addColorStop(0,'rgba(14,62,112,0.88)');
+    cG.addColorStop(0.30,'rgba(20,80,130,0.64)');
+    cG.addColorStop(0.65,'rgba(30,100,155,0.28)');
+    cG.addColorStop(1,'rgba(44,120,168,0)');
+    ctx.fillStyle=cG;
+    ctx.beginPath(); ctx.moveTo(0,H*0.23);
+    for(let i=0;i<=steps;i++){ const fy=0.23+i*(0.58-0.23)/steps; ctx.lineTo(ovalLX(fy),H*fy); }
+    ctx.lineTo(0,H*0.58); ctx.closePath(); ctx.fill();
+    // Lit rim where ice meets pitch
+    const litG=ctx.createLinearGradient(0,0,W*0.06,0);
+    litG.addColorStop(0,'rgba(155,228,255,0.40)'); litG.addColorStop(1,'rgba(155,228,255,0)');
+    ctx.fillStyle=litG;
+    ctx.beginPath();
+    for(let i=0;i<=steps;i++){ const fy=0.23+i*(0.55-0.23)/steps; const lx=ovalLX(fy); i===0?ctx.moveTo(lx,H*fy):ctx.lineTo(lx,H*fy); }
+    for(let i=steps;i>=0;i--){ const fy=0.23+i*(0.55-0.23)/steps; ctx.lineTo(ovalLX(fy)+W*0.052,H*fy); }
+    ctx.closePath(); ctx.fill();
+    // Strata on left wall
+    ctx.strokeStyle='rgba(60,132,192,0.18)'; ctx.lineWidth=0.9; ctx.lineCap='butt';
+    [0.265,0.305,0.350,0.400,0.455].forEach(fy=>{ ctx.beginPath(); ctx.moveTo(0,H*fy); ctx.lineTo(ovalLX(fy),H*fy); ctx.stroke(); });
+  }
+  // Right corner (shadow side)
+  {
+    const cG=ctx.createLinearGradient(0,H*0.23,0,H*0.58);
+    cG.addColorStop(0,'rgba(8,40,82,0.88)');
+    cG.addColorStop(0.30,'rgba(12,55,105,0.62)');
+    cG.addColorStop(0.65,'rgba(20,75,128,0.26)');
+    cG.addColorStop(1,'rgba(32,95,148,0)');
+    ctx.fillStyle=cG;
+    ctx.beginPath(); ctx.moveTo(W,H*0.23);
+    for(let i=0;i<=steps;i++){ const fy=0.23+i*(0.58-0.23)/steps; ctx.lineTo(ovalRX(fy),H*fy); }
+    ctx.lineTo(W,H*0.58); ctx.closePath(); ctx.fill();
+    // Shadow rim
+    const shadG=ctx.createLinearGradient(W-W*0.06,0,W,0);
+    shadG.addColorStop(0,'rgba(4,18,44,0)'); shadG.addColorStop(1,'rgba(4,18,44,0.32)');
+    ctx.fillStyle=shadG;
+    ctx.beginPath();
+    for(let i=0;i<=steps;i++){ const fy=0.23+i*(0.55-0.23)/steps; const rx=ovalRX(fy); i===0?ctx.moveTo(rx,H*fy):ctx.lineTo(rx,H*fy); }
+    for(let i=steps;i>=0;i--){ const fy=0.23+i*(0.55-0.23)/steps; ctx.lineTo(ovalRX(fy)-W*0.048,H*fy); }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(60,132,192,0.18)'; ctx.lineWidth=0.9; ctx.lineCap='butt';
+    [0.265,0.305,0.350,0.400,0.455].forEach(fy=>{ ctx.beginPath(); ctx.moveTo(W,H*fy); ctx.lineTo(ovalRX(fy),H*fy); ctx.stroke(); });
+  }
+
+  // ── HORIZON BLEND: wide atmospheric haze dissolves backdrop into ground ──
+  // Covers both the centre AND the top of the corner fills — everything at H*0.23 softens.
+  const horizBlend=ctx.createLinearGradient(0,H*0.185,0,H*0.310);
+  horizBlend.addColorStop(0,'rgba(185,222,240,0)');
+  horizBlend.addColorStop(0.35,'rgba(185,222,240,0.55)');
+  horizBlend.addColorStop(0.70,'rgba(185,222,240,0.88)');
+  horizBlend.addColorStop(1,'rgba(185,222,240,1.0)');
+  ctx.fillStyle=horizBlend; ctx.fillRect(0,H*0.185,W,H*0.125);
+
   // Pressure ridges on the flat ice
-  ctx.strokeStyle='rgba(78,138,190,0.20)'; ctx.lineWidth=0.8; ctx.lineCap='butt';
+  ctx.strokeStyle='rgba(78,138,190,0.18)'; ctx.lineWidth=0.8; ctx.lineCap='butt';
   [[0.22,0.50,0.38,0.48],[0.45,0.60,0.58,0.58],[0.28,0.70,0.44,0.68],[0.56,0.72,0.68,0.70]].forEach(([x1,y1,x2,y2])=>{
     ctx.beginPath(); ctx.moveTo(W*x1,H*y1); ctx.lineTo(W*x2,H*y2); ctx.stroke();
   });
-
-  ctx.restore(); // end oval interior clip
 
   drawGroundRings('#b0d4e8','#98c0d4',0);
 
