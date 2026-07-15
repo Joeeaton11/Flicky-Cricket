@@ -19312,19 +19312,27 @@ function drawGlacierScene() {
   // ── BACKDROP: distinct glacier face in the distance ──
   ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Sky — deep polar blue with slight violet at zenith, warming to aquamarine at horizon
+  // Sky — deep polar blue, violet at zenith, aquamarine at horizon
   const sky=ctx.createLinearGradient(0,0,0,H*0.23);
   sky.addColorStop(0,'#040e22'); sky.addColorStop(0.18,'#081e42'); sky.addColorStop(0.45,'#0e3868'); sky.addColorStop(0.75,'#1862a0'); sky.addColorStop(1,'#3898cc');
   ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.23);
 
+  // Faint aurora wisps — barely-there green shimmer in upper sky
+  [{x:0.15,w:0.18,r:0,g:210,b:140,a:0.10},{x:0.48,w:0.22,r:0,g:195,b:168,a:0.09},{x:0.76,w:0.16,r:30,g:180,b:200,a:0.08}].forEach(({x,w,r,g,b,a})=>{
+    const ag=ctx.createLinearGradient(W*x,0,W*(x+w),0);
+    ag.addColorStop(0,`rgba(${r},${g},${b},0)`); ag.addColorStop(0.4,`rgba(${r},${g},${b},${a})`); ag.addColorStop(1,`rgba(${r},${g},${b},0)`);
+    const ayG=ctx.createLinearGradient(0,0,0,H*0.12);
+    ayG.addColorStop(0,`rgba(${r},${g},${b},${a})`); ayG.addColorStop(1,`rgba(${r},${g},${b},0)`);
+    ctx.fillStyle=ag; ctx.fillRect(W*x,0,W*w,H*0.12);
+  });
+
   // Distant mountain silhouettes — barely visible through atmospheric haze
-  ctx.fillStyle='rgba(12,38,72,0.45)';
+  ctx.fillStyle='rgba(10,34,68,0.42)';
   ctx.beginPath(); ctx.moveTo(0,H*0.23);
   [[0.00,0.21],[0.06,0.18],[0.12,0.20],[0.19,0.16],[0.26,0.19],[0.34,0.14],[0.42,0.17],[0.50,0.13],[0.58,0.16],[0.65,0.12],[0.73,0.15],[0.80,0.11],[0.88,0.14],[0.94,0.12],[1.00,0.15]].forEach(([x,y])=>ctx.lineTo(W*x,H*y));
   ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
-  // Atmospheric haze over distant mountains
   const mtnHaze=ctx.createLinearGradient(0,H*0.10,0,H*0.23);
-  mtnHaze.addColorStop(0,'rgba(28,80,140,0)'); mtnHaze.addColorStop(1,'rgba(28,80,140,0.55)');
+  mtnHaze.addColorStop(0,'rgba(18,65,118,0)'); mtnHaze.addColorStop(1,'rgba(18,65,118,0.52)');
   ctx.fillStyle=mtnHaze; ctx.fillRect(0,H*0.10,W,H*0.13);
 
   const sunX=W*0.18, sunY=H*0.040;
@@ -19502,6 +19510,16 @@ function drawGlacierScene() {
     ctx.beginPath(); ctx.moveTo(W*x1,H*y1); ctx.lineTo(W*x2,H*y2); ctx.stroke();
   });
 
+  // Subtle snow drifts — soft elliptical highlights across the ice
+  ctx.lineCap='round';
+  [[0.30,0.44,0.46,0.43],[0.48,0.57,0.60,0.56],[0.35,0.72,0.50,0.71]].forEach(([x1,y1,x2,y2])=>{
+    const dG=ctx.createLinearGradient(W*x1,H*y1,W*x2,H*y2);
+    dG.addColorStop(0,'rgba(232,248,255,0)'); dG.addColorStop(0.5,'rgba(232,248,255,0.18)'); dG.addColorStop(1,'rgba(232,248,255,0)');
+    ctx.fillStyle=dG;
+    const ang=Math.atan2(H*(y2-y1),W*(x2-x1));
+    ctx.beginPath(); ctx.ellipse(W*(x1+x2)/2,H*(y1+y2)/2,W*(x2-x1)*0.55,H*0.008,ang,0,Math.PI*2); ctx.fill();
+  });
+
   drawGroundRings('#b0d4e8','#98c0d4',0);
 
   // ── TOP-LEFT CORNER: RESEARCH CAMP ──
@@ -19511,30 +19529,46 @@ function drawGlacierScene() {
     // Snow drift base
     ctx.fillStyle='rgba(210,238,252,0.50)';
     ctx.beginPath(); ctx.ellipse(cx,cy+H*0.058,W*0.090,H*0.018,0,0,Math.PI*2); ctx.fill();
-    propShadow(cx,cy+H*0.062,W*0.075,H*0.014);
-    // Main red expedition tent
-    ctx.fillStyle='#d42808';
-    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx-W*0.058,cy+H*0.060); ctx.lineTo(cx+W*0.058,cy+H*0.060); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(0,0,0,0.22)';
-    ctx.beginPath(); ctx.moveTo(cx+W*0.008,cy+H*0.002); ctx.lineTo(cx+W*0.058,cy+H*0.060); ctx.lineTo(cx+W*0.020,cy+H*0.060); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='#881408';
-    ctx.beginPath(); ctx.moveTo(cx-W*0.014,cy+H*0.026); ctx.lineTo(cx-W*0.014,cy+H*0.060); ctx.lineTo(cx+W*0.014,cy+H*0.060); ctx.quadraticCurveTo(cx+W*0.016,cy+H*0.042,cx,cy+H*0.026); ctx.closePath(); ctx.fill();
+    propShadow(cx,cy+H*0.068,W*0.090,H*0.014);
+
+    // dome tent helper — looks like a proper dome, not a triangle
+    function domeTent(tx,ty,tw,th,col,shadowCol){
+      const fl=ty+th; // floor y
+      ctx.fillStyle=col;
+      ctx.beginPath();
+      ctx.moveTo(tx-tw,fl);
+      ctx.bezierCurveTo(tx-tw,fl-th*0.55, tx-tw*0.18,ty, tx,ty);
+      ctx.bezierCurveTo(tx+tw*0.18,ty, tx+tw,fl-th*0.55, tx+tw,fl);
+      ctx.closePath(); ctx.fill();
+      // Shadow right half
+      ctx.fillStyle=shadowCol;
+      ctx.beginPath();
+      ctx.moveTo(tx,ty);
+      ctx.bezierCurveTo(tx+tw*0.18,ty, tx+tw,fl-th*0.55, tx+tw,fl);
+      ctx.lineTo(tx+tw*0.15,fl);
+      ctx.bezierCurveTo(tx+tw*0.1,fl-th*0.42, tx+tw*0.06,ty+th*0.28, tx,ty);
+      ctx.closePath(); ctx.fill();
+      // Door opening
+      ctx.fillStyle='rgba(0,0,0,0.38)';
+      ctx.beginPath();
+      ctx.moveTo(tx-tw*0.14,fl);
+      ctx.bezierCurveTo(tx-tw*0.14,fl-th*0.38, tx+tw*0.14,fl-th*0.38, tx+tw*0.14,fl);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // Main red dome tent
+    domeTent(cx, cy+H*0.036, W*0.046, H*0.046, '#c82208','rgba(0,0,0,0.28)');
     // Guy ropes
-    ctx.strokeStyle='rgba(200,215,230,0.55)'; ctx.lineWidth=0.9;
-    [[cx-W*0.022,cy+H*0.015,cx-W*0.075,cy+H*0.064],[cx+W*0.022,cy+H*0.015,cx+W*0.075,cy+H*0.064]].forEach(([x1,y1,x2,y2])=>{
-      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-    });
+    ctx.strokeStyle='rgba(195,212,228,0.52)'; ctx.lineWidth=0.9; ctx.lineCap='round';
+    [[cx-W*0.018,cy+H*0.038,cx-W*0.072,cy+H*0.068],[cx+W*0.018,cy+H*0.038,cx+W*0.072,cy+H*0.068]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();});
     // Flag pole
-    ctx.strokeStyle='rgba(210,220,235,0.92)'; ctx.lineWidth=W*0.004;
-    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,cy-H*0.055); ctx.stroke();
-    ctx.fillStyle='#1040c0';
-    ctx.beginPath(); ctx.moveTo(cx,cy-H*0.055); ctx.lineTo(cx+W*0.030,cy-H*0.046); ctx.lineTo(cx,cy-H*0.037); ctx.closePath(); ctx.fill();
-    // Second smaller orange tent
-    const cx2=cx+W*0.078, cy2=cy+H*0.012;
-    ctx.fillStyle='#e8a018';
-    ctx.beginPath(); ctx.moveTo(cx2,cy2); ctx.lineTo(cx2-W*0.032,cy2+H*0.040); ctx.lineTo(cx2+W*0.032,cy2+H*0.040); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(0,0,0,0.18)';
-    ctx.beginPath(); ctx.moveTo(cx2+W*0.006,cy2+H*0.002); ctx.lineTo(cx2+W*0.032,cy2+H*0.040); ctx.lineTo(cx2+W*0.012,cy2+H*0.040); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(215,225,238,0.90)'; ctx.lineWidth=W*0.004; ctx.lineCap='butt';
+    ctx.beginPath(); ctx.moveTo(cx,cy+H*0.036); ctx.lineTo(cx,cy-H*0.042); ctx.stroke();
+    ctx.fillStyle='#1848cc';
+    ctx.beginPath(); ctx.moveTo(cx,cy-H*0.042); ctx.lineTo(cx+W*0.026,cy-H*0.034); ctx.lineTo(cx,cy-H*0.026); ctx.closePath(); ctx.fill();
+    // Smaller orange dome tent
+    const cx2=cx+W*0.076, cy2=cy+H*0.020;
+    domeTent(cx2, cy2+H*0.022, W*0.028, H*0.030, '#d89010','rgba(0,0,0,0.24)');
     // Crates / equipment
     ctx.fillStyle='rgba(175,200,225,0.85)';
     ctx.fillRect(cx-W*0.088,cy+H*0.035,W*0.024,H*0.020);
