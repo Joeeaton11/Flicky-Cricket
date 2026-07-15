@@ -11751,14 +11751,16 @@ function drawPirateScene() {
 
 function drawArcticScene() {
   const CX=W/2, CY=H*FIELD_CY, RX=W*FIELD_RX, RY=H*FIELD_RY;
+  // ── HELPERS ──
+  function propShadow(x,y,rx,ry){ ctx.fillStyle='rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2); ctx.fill(); }
 
-  // ── BACKDROP clipped strictly above oval top (H*0.23) ──
+  // ── BACKDROP ──
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Sky — deep indigo at top, aurora-green teal glow near horizon
+  // Sky — deep midnight blue-black
   const skyG=ctx.createLinearGradient(0,0,0,H*0.23);
-  skyG.addColorStop(0,'#000510'); skyG.addColorStop(0.22,'#020c1e'); skyG.addColorStop(0.50,'#04182a'); skyG.addColorStop(0.78,'#052e28'); skyG.addColorStop(1,'#073c30');
+  skyG.addColorStop(0,'#000208'); skyG.addColorStop(0.30,'#010610'); skyG.addColorStop(0.65,'#020e18'); skyG.addColorStop(1,'#031820');
   ctx.fillStyle=skyG; ctx.fillRect(0,0,W,H*0.23);
 
   // Stars — dense, varied brightness
@@ -11778,44 +11780,62 @@ function drawArcticScene() {
     ctx.beginPath(); ctx.moveTo(W*fx-r*3,H*fy); ctx.lineTo(W*fx+r*3,H*fy); ctx.moveTo(W*fx,H*fy-r*3); ctx.lineTo(W*fx,H*fy+r*3); ctx.stroke();
   });
 
-  // ── AURORA BOREALIS — vivid sweeping curtains ──
-  function auroraBand(y0,y1,waveAmp,waveFreq,waveOff,r,g,b,alpha){
-    const ag=ctx.createLinearGradient(0,H*y0,0,H*y1);
-    ag.addColorStop(0,`rgba(${r},${g},${b},0)`);
-    ag.addColorStop(0.35,`rgba(${r},${g},${b},${alpha})`);
-    ag.addColorStop(0.65,`rgba(${r},${g},${b},${alpha*0.7})`);
-    ag.addColorStop(1,`rgba(${r},${g},${b},0)`);
-    ctx.fillStyle=ag;
-    ctx.beginPath(); ctx.moveTo(0,H*y0);
-    for(let x=0;x<=W;x+=3) ctx.lineTo(x, H*y0+Math.sin(x*waveFreq+waveOff)*waveAmp);
-    ctx.lineTo(W,H*y1); ctx.lineTo(0,H*y1); ctx.closePath(); ctx.fill();
-  }
-  // Big ambient aurora glow filling entire sky — painted as a gradient block first
-  const aBase=ctx.createLinearGradient(0,0,0,H*0.23);
-  aBase.addColorStop(0,  'rgba(0,160,90,0.0)');
-  aBase.addColorStop(0.15,'rgba(0,200,120,0.45)');
-  aBase.addColorStop(0.50,'rgba(0,180,110,0.38)');
-  aBase.addColorStop(0.80,'rgba(0,140,100,0.22)');
-  aBase.addColorStop(1,  'rgba(0,80,60,0.0)');
-  ctx.fillStyle=aBase; ctx.fillRect(0,0,W,H*0.23);
+  // ── AURORA BOREALIS — tall sweeping curtains emanating from upper sky ──
+  // Ambient green glow
+  const aAmb=ctx.createLinearGradient(0,0,0,H*0.23);
+  aAmb.addColorStop(0,'rgba(0,80,40,0)'); aAmb.addColorStop(0.20,'rgba(0,160,80,0.30)');
+  aAmb.addColorStop(0.55,'rgba(0,200,110,0.50)'); aAmb.addColorStop(0.82,'rgba(0,160,90,0.28)'); aAmb.addColorStop(1,'rgba(0,100,60,0.10)');
+  ctx.fillStyle=aAmb; ctx.fillRect(0,0,W,H*0.23);
 
-  // Layered curtain bands — now clearly visible across full sky height
-  auroraBand(0.00,0.23, H*0.055,0.014,0.0,   0,255,120, 0.60);
-  auroraBand(0.01,0.23, H*0.048,0.018,1.9,   0,210,140, 0.45);
-  auroraBand(0.02,0.23, H*0.042,0.022,0.8,  20,160,255, 0.38);
-  auroraBand(0.04,0.23, H*0.036,0.010,2.5, 140, 50,230, 0.25);
-  // Bright leading edge at top
-  auroraBand(0.00,0.10, H*0.012,0.030,1.1,  80,255,180, 0.50);
-
-  // Vertical shimmer rays — visible full height
-  ctx.globalAlpha=0.16;
-  [0.08,0.22,0.36,0.50,0.64,0.78,0.92].forEach((fx,i)=>{
-    const rg=ctx.createLinearGradient(0,0,0,H*0.23);
-    const col = i%2===0 ? '0,230,140' : '40,160,255';
-    rg.addColorStop(0,`rgba(${col},1.0)`); rg.addColorStop(0.6,`rgba(${col},0.4)`); rg.addColorStop(1,`rgba(${col},0)`);
-    ctx.fillStyle=rg; ctx.fillRect(W*fx-W*0.009,0,W*0.018,H*0.23);
+  // Individual curtain shafts — tall narrow glow columns, wavy at the bottom
+  const curtains=[
+    {x:W*0.05, w:W*0.12, r:0,g:255,b:130, a:0.70, wave:0.0},
+    {x:W*0.18, w:W*0.14, r:0,g:220,b:160, a:0.55, wave:1.2},
+    {x:W*0.32, w:W*0.18, r:20,g:255,b:120, a:0.75, wave:0.5},
+    {x:W*0.48, w:W*0.16, r:0,g:240,b:140, a:0.60, wave:2.1},
+    {x:W*0.62, w:W*0.20, r:60,g:200,b:255, a:0.50, wave:0.8},  // blue-teal shift
+    {x:W*0.76, w:W*0.15, r:0,g:255,b:110, a:0.65, wave:1.7},
+    {x:W*0.88, w:W*0.13, r:140,g:80,b:255, a:0.40, wave:0.3},  // purple fringe
+  ];
+  curtains.forEach(({x,w,r,g,b,a,wave})=>{
+    // Each curtain: fades in at top (near H*0.02), peaks mid-sky, wavy lower edge
+    const cg=ctx.createLinearGradient(0,0,0,H*0.23);
+    cg.addColorStop(0,`rgba(${r},${g},${b},0)`);
+    cg.addColorStop(0.08,`rgba(${r},${g},${b},${a*0.6})`);
+    cg.addColorStop(0.40,`rgba(${r},${g},${b},${a})`);
+    cg.addColorStop(0.80,`rgba(${r},${g},${b},${a*0.55})`);
+    cg.addColorStop(1,`rgba(${r},${g},${b},0)`);
+    ctx.fillStyle=cg;
+    ctx.beginPath();
+    ctx.moveTo(x,0);
+    // Left edge wavy
+    for(let yy=0;yy<=H*0.23;yy+=4){
+      const lx=x+Math.sin(yy*0.022+wave)*W*0.012;
+      yy===0?ctx.moveTo(lx,yy):ctx.lineTo(lx,yy);
+    }
+    // Right edge wavy (in reverse)
+    for(let yy=H*0.23;yy>=0;yy-=4){
+      ctx.lineTo(x+w+Math.sin(yy*0.020+wave+1.5)*W*0.014, yy);
+    }
+    ctx.closePath(); ctx.fill();
   });
-  ctx.globalAlpha=1;
+
+  // Bright inner ray — brightest strip within each curtain
+  ctx.save(); ctx.globalCompositeOperation='screen';
+  curtains.forEach(({x,w,r,g,b,wave})=>{
+    const mx=x+w*0.45;
+    const rayG=ctx.createLinearGradient(mx,0,mx+w*0.3,0);
+    rayG.addColorStop(0,`rgba(${r},${g},${b},0)`);
+    rayG.addColorStop(0.4,`rgba(${r},${g},${b},0.35)`);
+    rayG.addColorStop(1,`rgba(${r},${g},${b},0)`);
+    ctx.fillStyle=rayG; ctx.fillRect(mx,0,w*0.3,H*0.23);
+  });
+  ctx.restore();
+
+  // Purple/magenta upper fringe across the top (where aurora meets space)
+  const purpG=ctx.createLinearGradient(0,0,0,H*0.06);
+  purpG.addColorStop(0,'rgba(180,40,220,0.22)'); purpG.addColorStop(0.5,'rgba(120,20,180,0.12)'); purpG.addColorStop(1,'rgba(80,0,140,0)');
+  ctx.fillStyle=purpG; ctx.fillRect(0,0,W,H*0.06);
 
   // Full moon — large, cold and bright top-right
   const moonX=W*0.84, moonY=H*0.10;
@@ -11940,25 +11960,35 @@ function drawArcticScene() {
 
   ctx.restore(); // end backdrop clip
 
-  // ── SNOWY GROUND — rich layered tundra ──
-  const groundG=ctx.createLinearGradient(0,H*0.26,0,H);
-  groundG.addColorStop(0,'#122840'); groundG.addColorStop(0.06,'#d0e8f8'); groundG.addColorStop(0.25,'#c8e0f0'); groundG.addColorStop(0.6,'#b8d4e8'); groundG.addColorStop(1,'#a8c8de');
-  ctx.fillStyle=groundG; ctx.fillRect(0,H*0.26,W,H*0.74);
-  // Moon light reflection path across the snow
-  const moonPath=ctx.createLinearGradient(W*0.5,H*0.26,W*0.82,H*0.9);
-  moonPath.addColorStop(0,'rgba(210,235,255,0)'); moonPath.addColorStop(0.5,'rgba(210,235,255,0.12)'); moonPath.addColorStop(1,'rgba(210,235,255,0)');
-  ctx.fillStyle=moonPath; ctx.fillRect(0,H*0.26,W,H*0.74);
-  // Snow drifts — organic windswept ridges
-  ctx.fillStyle='rgba(190,220,240,0.28)';
-  [[0.08,0.36,W*0.22,H*0.014],[0.55,0.32,W*0.18,H*0.010],[0.85,0.42,W*0.14,H*0.009],
-   [0.18,0.55,W*0.20,H*0.011],[0.70,0.50,W*0.17,H*0.010],[0.35,0.75,W*0.19,H*0.012],
-   [0.05,0.80,W*0.13,H*0.008],[0.92,0.68,W*0.12,H*0.009]].forEach(([fx,fy,rx2,ry2])=>{
+  // ── SNOWY GROUND — clean snow, no dark seam ──
+  const groundG=ctx.createLinearGradient(0,H*0.23,0,H);
+  groundG.addColorStop(0,'#cce4f4'); groundG.addColorStop(0.20,'#c0daf0'); groundG.addColorStop(0.55,'#b0cce4'); groundG.addColorStop(1,'#9abcda');
+  ctx.fillStyle=groundG; ctx.fillRect(0,H*0.23,W,H*0.77);
+  // Aurora green wash on snow
+  const aSnow=ctx.createLinearGradient(0,H*0.23,0,H*0.50);
+  aSnow.addColorStop(0,'rgba(0,200,100,0.14)'); aSnow.addColorStop(0.6,'rgba(0,160,80,0.06)'); aSnow.addColorStop(1,'rgba(0,100,50,0)');
+  ctx.fillStyle=aSnow; ctx.fillRect(0,H*0.23,W,H*0.27);
+  // Moon reflection path across snow — silvery column
+  const moonPath=ctx.createLinearGradient(W*0.76,H*0.23,W*0.84,H);
+  moonPath.addColorStop(0,'rgba(220,240,255,0.22)'); moonPath.addColorStop(0.5,'rgba(220,240,255,0.10)'); moonPath.addColorStop(1,'rgba(220,240,255,0)');
+  ctx.fillStyle=moonPath; ctx.fillRect(W*0.55,H*0.23,W*0.45,H*0.77);
+  // Snow drifts — soft windswept ridges
+  [[0.08,0.30,W*0.24,H*0.016,0.22],[0.55,0.28,W*0.20,H*0.012,0.18],
+   [0.88,0.38,W*0.16,H*0.010,0.16],[0.20,0.52,W*0.22,H*0.013,0.20],
+   [0.68,0.48,W*0.18,H*0.011,0.18],[0.38,0.72,W*0.20,H*0.013,0.22],
+   [0.06,0.78,W*0.14,H*0.009,0.16],[0.94,0.65,W*0.13,H*0.009,0.14]].forEach(([fx,fy,rx2,ry2,a])=>{
+    ctx.fillStyle=`rgba(200,228,248,${a})`;
     ctx.beginPath(); ctx.ellipse(W*fx,H*fy,rx2,ry2,0,0,Math.PI*2); ctx.fill();
   });
-  // Frozen cracked ice patches — subtle lines
-  ctx.strokeStyle='rgba(160,200,225,0.30)'; ctx.lineWidth=0.7;
-  [[0.25,0.44,0.36,0.46],[0.40,0.50,0.48,0.47],[0.60,0.55,0.72,0.52],[0.15,0.62,0.22,0.65]].forEach(([x1,y1,x2,y2])=>{
+  // Ice crackle lines across pitch
+  ctx.strokeStyle='rgba(170,210,235,0.28)'; ctx.lineWidth=0.8;
+  [[0.22,0.42,0.34,0.44],[0.42,0.50,0.50,0.47],[0.58,0.54,0.70,0.51],[0.14,0.60,0.22,0.63]].forEach(([x1,y1,x2,y2])=>{
     ctx.beginPath(); ctx.moveTo(W*x1,H*y1); ctx.lineTo(W*x2,H*y2); ctx.stroke();
+  });
+  // Snow surface sparkles — tiny bright dots lit by moon
+  ctx.fillStyle='rgba(255,255,255,0.70)';
+  [[0.30,0.35],[0.52,0.28],[0.68,0.40],[0.42,0.55],[0.18,0.48],[0.76,0.32],[0.60,0.65],[0.26,0.70]].forEach(([fx,fy])=>{
+    ctx.beginPath(); ctx.arc(W*fx,H*fy,W*0.0022,0,Math.PI*2); ctx.fill();
   });
 
   // ── ICE FIELD ──
