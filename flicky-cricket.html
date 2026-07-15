@@ -11793,24 +11793,24 @@ function drawArcticScene() {
     {x:W*0.80, w:W*0.18, r:120,g:80,b:255, a:0.44, wave:0.4},
   ];
   curtains.forEach(({x,w,r,g,b,a,wave})=>{
-    // Each curtain: fades in at top (near H*0.02), peaks mid-sky, wavy lower edge
+    // Curtain: strongest glow in upper-mid sky, fading at very top and bottom
     const cg=ctx.createLinearGradient(0,0,0,H*0.23);
     cg.addColorStop(0,`rgba(${r},${g},${b},0)`);
-    cg.addColorStop(0.08,`rgba(${r},${g},${b},${a*0.6})`);
-    cg.addColorStop(0.40,`rgba(${r},${g},${b},${a})`);
-    cg.addColorStop(0.80,`rgba(${r},${g},${b},${a*0.55})`);
+    cg.addColorStop(0.05,`rgba(${r},${g},${b},${a*0.3})`);
+    cg.addColorStop(0.25,`rgba(${r},${g},${b},${a})`);
+    cg.addColorStop(0.60,`rgba(${r},${g},${b},${a*0.7})`);
+    cg.addColorStop(0.88,`rgba(${r},${g},${b},${a*0.25})`);
     cg.addColorStop(1,`rgba(${r},${g},${b},0)`);
     ctx.fillStyle=cg;
     ctx.beginPath();
-    ctx.moveTo(x,0);
-    // Left edge wavy
-    for(let yy=0;yy<=H*0.23;yy+=4){
-      const lx=x+Math.sin(yy*0.022+wave)*W*0.012;
+    // Left edge — gentle sine ripple (aurora folds)
+    for(let yy=0;yy<=H*0.23;yy+=3){
+      const lx=x+Math.sin(yy*0.018+wave)*W*0.016+Math.sin(yy*0.038+wave*1.6)*W*0.006;
       yy===0?ctx.moveTo(lx,yy):ctx.lineTo(lx,yy);
     }
-    // Right edge wavy (in reverse)
-    for(let yy=H*0.23;yy>=0;yy-=4){
-      ctx.lineTo(x+w+Math.sin(yy*0.020+wave+1.5)*W*0.014, yy);
+    // Right edge — independent ripple, reverse
+    for(let yy=H*0.23;yy>=0;yy-=3){
+      ctx.lineTo(x+w+Math.sin(yy*0.016+wave+2.0)*W*0.018+Math.sin(yy*0.035+wave*1.3)*W*0.007, yy);
     }
     ctx.closePath(); ctx.fill();
   });
@@ -11852,38 +11852,62 @@ function drawArcticScene() {
   ctx.beginPath(); ctx.arc(moonX-H*0.008,moonY-H*0.006,H*0.012,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.arc(moonX+H*0.012,moonY+H*0.004,H*0.008,0,Math.PI*2); ctx.fill();
 
-  // ── DISTANT MOUNTAIN RANGE — three silhouette layers, all within H*0.23 ──
-  // Far mountains — faintest, blue-grey
-  ctx.fillStyle='rgba(20,45,72,0.7)';
-  ctx.beginPath(); ctx.moveTo(0,H*0.23);
-  [[0.0,0.17],[0.07,0.15],[0.14,0.17],[0.20,0.14],[0.27,0.12],[0.33,0.14],[0.40,0.13],[0.47,0.11],
-   [0.53,0.13],[0.60,0.11],[0.67,0.12],[0.73,0.10],[0.80,0.12],[0.87,0.14],[0.93,0.12],[1.0,0.16]
-  ].forEach(([x,y])=>ctx.lineTo(W*x,H*y));
-  ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
-  // Mid mountains — darker
-  ctx.fillStyle='rgba(14,30,52,0.85)';
-  ctx.beginPath(); ctx.moveTo(0,H*0.23);
-  [[0.0,0.20],[0.05,0.18],[0.12,0.19],[0.18,0.165],[0.24,0.18],[0.30,0.155],[0.37,0.17],[0.44,0.15],
-   [0.50,0.165],[0.56,0.15],[0.62,0.165],[0.68,0.145],[0.74,0.16],[0.80,0.175],[0.86,0.155],[0.92,0.17],[1.0,0.19]
-  ].forEach(([x,y])=>ctx.lineTo(W*x,H*y));
-  ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
-  // Near ridge — near-black, sharp
-  ctx.fillStyle='rgba(6,14,26,0.95)';
-  ctx.beginPath(); ctx.moveTo(0,H*0.23);
-  [[0.0,0.22],[0.04,0.215],[0.09,0.222],[0.15,0.205],[0.21,0.218],[0.27,0.200],[0.33,0.212],[0.39,0.200],
-   [0.45,0.215],[0.51,0.208],[0.57,0.220],[0.63,0.205],[0.70,0.218],[0.76,0.202],[0.82,0.215],[0.88,0.208],[0.94,0.220],[1.0,0.222]
-  ].forEach(([x,y])=>ctx.lineTo(W*x,H*y));
-  ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
-  // Aurora glow washing over the mountain tops
-  ctx.globalAlpha=0.20;
-  const mGlow=ctx.createLinearGradient(0,H*0.15,0,H*0.23);
-  mGlow.addColorStop(0,'rgba(0,220,130,0.7)'); mGlow.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=mGlow; ctx.fillRect(0,H*0.15,W,H*0.08);
-  ctx.globalAlpha=1;
-  // Snow caps — aurora-tinted green-white
-  ctx.fillStyle='rgba(200,248,230,0.75)';
-  [[0.15,0.205,0.06],[0.27,0.200,0.05],[0.39,0.200,0.055],[0.51,0.208,0.04],[0.63,0.205,0.052],[0.76,0.202,0.048]].forEach(([fx,fy,rw])=>{
-    ctx.beginPath(); ctx.moveTo(W*(fx-rw*0.55),H*(fy+0.010)); ctx.lineTo(W*fx,H*fy); ctx.lineTo(W*(fx+rw*0.55),H*(fy+0.010)); ctx.closePath(); ctx.fill();
+  // ── DISTANT MOUNTAIN RANGE — four atmospheric layers ──
+  // Helper to draw a smooth mountain ridge via bezier curves
+  function mountainRidge(pts, fillStyle){
+    ctx.fillStyle=fillStyle; ctx.beginPath();
+    ctx.moveTo(0,H*0.23);
+    ctx.lineTo(pts[0][0],pts[0][1]);
+    for(let i=0;i<pts.length-1;i++){
+      const mx=(pts[i][0]+pts[i+1][0])/2, my=(pts[i][1]+pts[i+1][1])/2;
+      ctx.quadraticCurveTo(pts[i][0],pts[i][1],mx,my);
+    }
+    ctx.lineTo(pts[pts.length-1][0],pts[pts.length-1][1]);
+    ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
+  }
+  // Farthest range — very faint, hazy blue, barely visible through atmosphere
+  mountainRidge([
+    [W*0.00,H*0.175],[W*0.08,H*0.148],[W*0.17,H*0.160],[W*0.23,H*0.128],[W*0.31,H*0.110],
+    [W*0.39,H*0.130],[W*0.46,H*0.108],[W*0.53,H*0.118],[W*0.60,H*0.098],[W*0.68,H*0.112],
+    [W*0.75,H*0.092],[W*0.83,H*0.118],[W*0.90,H*0.108],[W*1.00,H*0.158]
+  ],'rgba(18,38,68,0.45)');
+  // Far range — atmospheric haze, taller dramatic peaks
+  mountainRidge([
+    [W*0.00,H*0.188],[W*0.06,H*0.162],[W*0.13,H*0.172],[W*0.19,H*0.140],[W*0.25,H*0.118],
+    [W*0.32,H*0.145],[W*0.38,H*0.125],[W*0.44,H*0.138],[W*0.50,H*0.118],[W*0.57,H*0.132],
+    [W*0.63,H*0.112],[W*0.70,H*0.128],[W*0.76,H*0.105],[W*0.82,H*0.138],[W*0.88,H*0.128],[W*1.00,H*0.175]
+  ],'rgba(12,28,52,0.72)');
+  // Mid range — darker, more defined, varied peak heights
+  mountainRidge([
+    [W*0.00,H*0.200],[W*0.05,H*0.180],[W*0.10,H*0.195],[W*0.16,H*0.162],[W*0.22,H*0.172],
+    [W*0.28,H*0.148],[W*0.34,H*0.158],[W*0.40,H*0.140],[W*0.46,H*0.150],[W*0.52,H*0.138],
+    [W*0.58,H*0.148],[W*0.64,H*0.130],[W*0.70,H*0.142],[W*0.76,H*0.128],[W*0.82,H*0.158],[W*0.88,H*0.142],[W*0.95,H*0.162],[W*1.00,H*0.188]
+  ],'rgba(8,18,38,0.88)');
+  // Near ridge — near-black, sharp silhouette
+  mountainRidge([
+    [W*0.00,H*0.215],[W*0.04,H*0.210],[W*0.09,H*0.218],[W*0.14,H*0.200],[W*0.20,H*0.210],
+    [W*0.26,H*0.195],[W*0.32,H*0.208],[W*0.38,H*0.196],[W*0.44,H*0.205],[W*0.50,H*0.200],
+    [W*0.56,H*0.212],[W*0.62,H*0.200],[W*0.68,H*0.210],[W*0.74,H*0.196],[W*0.80,H*0.208],[W*0.86,H*0.198],[W*0.92,H*0.212],[W*1.00,H*0.218]
+  ],'rgba(4,10,22,0.97)');
+  // Aurora glow washing over mountain tops
+  const mGlow=ctx.createLinearGradient(0,H*0.10,0,H*0.23);
+  mGlow.addColorStop(0,'rgba(0,200,120,0.18)'); mGlow.addColorStop(0.6,'rgba(0,160,90,0.10)'); mGlow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=mGlow; ctx.fillRect(0,H*0.10,W,H*0.13);
+  // Snow — scattered natural patches on near & mid peaks, aurora-tinted
+  // Near ridge snow patches (organic shapes, not just triangles)
+  ctx.fillStyle='rgba(210,248,235,0.82)';
+  [[0.14,0.200,0.038],[0.26,0.195,0.032],[0.38,0.196,0.036],[0.50,0.200,0.028],[0.62,0.200,0.034],[0.74,0.196,0.030]].forEach(([fx,fy,hw])=>{
+    ctx.beginPath();
+    ctx.moveTo(W*(fx-hw*0.6),H*(fy+0.010));
+    ctx.quadraticCurveTo(W*(fx-hw*0.1),H*(fy-0.002),W*fx,H*fy);
+    ctx.quadraticCurveTo(W*(fx+hw*0.1),H*(fy-0.002),W*(fx+hw*0.65),H*(fy+0.010));
+    ctx.quadraticCurveTo(W*(fx+hw*0.2),H*(fy+0.016),W*(fx-hw*0.2),H*(fy+0.015));
+    ctx.closePath(); ctx.fill();
+  });
+  // Mid range snow patches — smaller, fainter (distance)
+  ctx.fillStyle='rgba(190,235,220,0.52)';
+  [[0.19,0.140,0.028],[0.40,0.140,0.024],[0.63,0.112,0.026],[0.76,0.105,0.022]].forEach(([fx,fy,hw])=>{
+    ctx.beginPath(); ctx.moveTo(W*(fx-hw),H*(fy+0.008)); ctx.lineTo(W*fx,H*fy); ctx.lineTo(W*(fx+hw),H*(fy+0.008)); ctx.closePath(); ctx.fill();
   });
 
   // ── GLACIER CLIFFS — left and right corners of backdrop ──
@@ -12087,10 +12111,10 @@ function drawArcticScene() {
     ctx.fillStyle='#18182a';
     ctx.beginPath(); ctx.moveTo(px-sz*0.28,py-sz*0.15); ctx.quadraticCurveTo(px-sz*0.50,py+sz*0.05,px-sz*0.30,py+sz*0.25); ctx.lineTo(px-sz*0.22,py+sz*0.10); ctx.closePath(); ctx.fill();
   }
-  // Penguin colony — bottom-left, 3 large penguins spread out. x<W*0.12 safe ✓
-  penguin(W*0.028,H*0.858,H*0.058,true);
-  penguin(W*0.090,H*0.880,H*0.054,false);
-  penguin(W*0.048,H*0.922,H*0.062,false);
+  // Penguin colony — bottom-left. x<W*0.12 safe at y≈H*0.87 ✓
+  penguin(W*0.030,H*0.862,H*0.040,true);
+  penguin(W*0.082,H*0.878,H*0.036,false);
+  penguin(W*0.050,H*0.916,H*0.042,false);
 
   // Sled removed — was overlapping walrus with red runners
 
@@ -12109,10 +12133,10 @@ function drawArcticScene() {
     ctx.beginPath(); ctx.ellipse(bx-sc2*0.55,by+sc2*0.38,sc2*0.22,sc2*0.16,0.2,0,Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.ellipse(bx+sc2*0.10,by+sc2*0.42,sc2*0.22,sc2*0.16,0.2,0,Math.PI*2); ctx.fill();
   }
-  // At y=H*0.60, oval right_edge≈W*0.956. Bear at W*0.880 with sc=H*0.048; head right edge ≈ W*0.953 ✓
-  polarBear(W*0.880,H*0.600,H*0.048);
-  // cub — just below parent
-  {const bx=W*0.870,by=H*0.652,sc2=H*0.028;
+  // Top-right corner: at y=H*0.32, oval right_edge≈W*0.848. Bear at x=W*0.900, safely outside ✓
+  polarBear(W*0.900,H*0.320,H*0.030);
+  // cub beside parent
+  {const bx=W*0.895,by=H*0.362,sc2=H*0.018;
    propShadow(bx,by+sc2*0.7,sc2*1.1,sc2*0.20);
    ctx.fillStyle='#e0ecf4'; ctx.beginPath(); ctx.ellipse(bx,by,sc2*0.70,sc2*0.44,0,0,Math.PI*2); ctx.fill();
    ctx.beginPath(); ctx.arc(bx+sc2*0.62,by-sc2*0.22,sc2*0.36,0,Math.PI*2); ctx.fill();
@@ -12122,7 +12146,7 @@ function drawArcticScene() {
   // ── WALRUS — bottom-right corner ──
   // At y=H*0.945, oval right_edge≈W*0.667. Body left extent: W*0.880-sc*1.10=W*0.880-W*0.094=W*0.786 > W*0.667 ✓
   {
-    const wx=W*0.875, wy=H*0.940, sc=H*0.052;
+    const wx=W*0.878, wy=H*0.942, sc=H*0.038;
     propShadow(wx, wy+sc*0.52, sc*1.6, sc*0.22);
     // Body — large brown-grey blob, lying flat
     const bodyG=ctx.createRadialGradient(wx-sc*0.3,wy-sc*0.2,0,wx,wy,sc*1.2);
