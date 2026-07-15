@@ -19837,17 +19837,17 @@ function drawTundraScene() {
   sky.addColorStop(0,'#0a0a18'); sky.addColorStop(0.4,'#141828'); sky.addColorStop(1,'#1e2830');
   ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.23);
 
-  // Aurora borealis — green-teal curtains
-  for(let a=0;a<4;a++){
-    const ax=W*(0.10+a*0.22), aHue=a%2===0?'rgba(40,220,120,':'rgba(80,180,240,';
-    const aG=ctx.createLinearGradient(ax-W*0.06,0,ax+W*0.06,0);
-    aG.addColorStop(0,'rgba(0,0,0,0)'); aG.addColorStop(0.35,aHue+'0.28)'); aG.addColorStop(0.5,aHue+'0.44)'); aG.addColorStop(0.65,aHue+'0.28)'); aG.addColorStop(1,'rgba(0,0,0,0)');
+  // Aurora borealis — layered curtains, more dramatic
+  [[W*0.10,'rgba(30,210,110,',0.52],[W*0.30,'rgba(70,175,245,',0.46],[W*0.55,'rgba(40,230,130,',0.50],[W*0.75,'rgba(100,160,255,',0.44],[W*0.90,'rgba(50,220,140,',0.36]].forEach(([ax,col,pk])=>{
+    const hw=W*0.08;
+    const aG=ctx.createLinearGradient(ax-hw,0,ax+hw,0);
+    aG.addColorStop(0,'rgba(0,0,0,0)'); aG.addColorStop(0.30,col+(pk*0.55)+')');;aG.addColorStop(0.50,col+pk+')'); aG.addColorStop(0.70,col+(pk*0.55)+')'); aG.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=aG;
     ctx.beginPath();
-    const ay0=H*0.010, ay1=H*0.22;
-    ctx.moveTo(ax-W*0.06,ay0); ctx.bezierCurveTo(ax-W*0.03,ay0+H*0.06,ax+W*0.03,ay0+H*0.04,ax+W*0.06,ay0);
-    ctx.lineTo(ax+W*0.06+W*0.01,ay1); ctx.lineTo(ax-W*0.06-W*0.01,ay1); ctx.closePath(); ctx.fill();
-  }
+    const ay0=H*0.004, ay1=H*0.224;
+    ctx.moveTo(ax-hw,ay0); ctx.bezierCurveTo(ax-hw*0.4,ay0+H*0.055,ax+hw*0.4,ay0+H*0.038,ax+hw,ay0);
+    ctx.lineTo(ax+hw+W*0.012,ay1); ctx.lineTo(ax-hw-W*0.012,ay1); ctx.closePath(); ctx.fill();
+  });
 
   // Stars through cloud gaps
   ctx.fillStyle='rgba(255,255,255,0.7)';
@@ -19876,60 +19876,122 @@ function drawTundraScene() {
 
   drawGroundRings('#20282e','#181e24',0);
 
-  // Blowing snow streaks across field
-  ctx.strokeStyle='rgba(220,240,255,0.18)'; ctx.lineWidth=1;
-  for(let i=0;i<22;i++){
-    const sy=H*(0.25+Math.random()*0.65), len=W*(0.04+Math.random()*0.12);
-    const sx=Math.random()*W;
-    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx+len,sy-H*0.004); ctx.stroke();
-  }
+  // Blowing snow streaks — deterministic positions
+  ctx.lineCap='round';
+  [[0.08,0.27,0.09],[0.22,0.31,0.07],[0.41,0.29,0.11],[0.62,0.34,0.08],[0.81,0.28,0.06],
+   [0.05,0.42,0.13],[0.18,0.48,0.07],[0.35,0.45,0.10],[0.56,0.51,0.08],[0.74,0.43,0.12],
+   [0.88,0.46,0.06],[0.12,0.60,0.09],[0.30,0.58,0.11],[0.50,0.62,0.07],[0.68,0.65,0.10],
+   [0.82,0.59,0.08],[0.03,0.75,0.12],[0.24,0.78,0.07],[0.44,0.72,0.09],[0.65,0.80,0.11],
+   [0.78,0.76,0.06],[0.92,0.70,0.09]].forEach(([fx,fy,fl])=>{
+    ctx.strokeStyle=`rgba(220,238,255,${0.12+fl*0.6})`; ctx.lineWidth=0.9;
+    ctx.beginPath(); ctx.moveTo(W*fx,H*fy); ctx.lineTo(W*(fx+fl),H*(fy-0.004)); ctx.stroke();
+  });
 
-  // LEFT — reindeer silhouette
+  // LEFT — reindeer, upper-left corner outside oval (oval left ≈ W*0.113 at fy=0.40)
   {
-    const dx=W*0.12, dy=H*0.50;
-    ctx.fillStyle='#1a1818';
-    // Body
-    ctx.beginPath(); ctx.ellipse(dx,dy,W*0.048,H*0.030,0.1,0,Math.PI*2); ctx.fill();
-    // Neck
-    ctx.beginPath(); ctx.moveTo(dx+W*0.030,dy-H*0.020); ctx.quadraticCurveTo(dx+W*0.050,dy-H*0.050,dx+W*0.045,dy-H*0.075); ctx.lineTo(dx+W*0.060,dy-H*0.070); ctx.quadraticCurveTo(dx+W*0.065,dy-H*0.040,dx+W*0.048,dy-H*0.010); ctx.closePath(); ctx.fill();
+    const s=1.2, dx=W*0.010, dy=H*0.400;
+    // Ground shadow
+    ctx.fillStyle='rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.ellipse(dx+W*0.028*s, dy+H*0.048*s, W*0.055*s, H*0.009, 0.1, 0, Math.PI*2); ctx.fill();
+    // Body — dark brown, not pure black
+    ctx.fillStyle='#281e18';
+    ctx.beginPath(); ctx.ellipse(dx,dy,W*0.048*s,H*0.030*s,0.1,0,Math.PI*2); ctx.fill();
+    // Winter coat sheen — lighter on the back
+    const coatG=ctx.createLinearGradient(dx,dy-H*0.030*s,dx,dy+H*0.030*s);
+    coatG.addColorStop(0,'rgba(90,68,50,0.65)'); coatG.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=coatG;
+    ctx.beginPath(); ctx.ellipse(dx,dy,W*0.048*s,H*0.030*s,0.1,0,Math.PI*2); ctx.fill();
+    // Snow dusting on back
+    ctx.fillStyle='rgba(210,230,255,0.45)';
+    ctx.beginPath(); ctx.ellipse(dx-W*0.008*s,dy-H*0.022*s,W*0.028*s,H*0.010*s,0.1,0,Math.PI*2); ctx.fill();
+    // Neck + head
+    ctx.fillStyle='#281e18';
+    ctx.beginPath(); ctx.moveTo(dx+W*0.030*s,dy-H*0.020*s); ctx.quadraticCurveTo(dx+W*0.050*s,dy-H*0.050*s,dx+W*0.045*s,dy-H*0.075*s); ctx.lineTo(dx+W*0.060*s,dy-H*0.070*s); ctx.quadraticCurveTo(dx+W*0.065*s,dy-H*0.040*s,dx+W*0.048*s,dy-H*0.010*s); ctx.closePath(); ctx.fill();
     // Antlers
-    ctx.strokeStyle='#1a1818'; ctx.lineWidth=W*0.004;
-    // Left antler
-    ctx.beginPath(); ctx.moveTo(dx+W*0.048,dy-H*0.073); ctx.lineTo(dx+W*0.040,dy-H*0.100); ctx.lineTo(dx+W*0.028,dy-H*0.108); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(dx+W*0.040,dy-H*0.092); ctx.lineTo(dx+W*0.048,dy-H*0.104); ctx.stroke();
-    // Right antler
-    ctx.beginPath(); ctx.moveTo(dx+W*0.058,dy-H*0.072); ctx.lineTo(dx+W*0.068,dy-H*0.098); ctx.lineTo(dx+W*0.080,dy-H*0.106); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(dx+W*0.068,dy-H*0.090); ctx.lineTo(dx+W*0.060,dy-H*0.100); ctx.stroke();
-    // Legs
-    ctx.lineWidth=W*0.006;
-    [[-W*0.018,0],[-W*0.005,0],[W*0.010,0],[W*0.024,0]].forEach(([ox])=>{
-      ctx.beginPath(); ctx.moveTo(dx+ox,dy+H*0.025); ctx.lineTo(dx+ox,dy+H*0.060); ctx.stroke();
+    ctx.strokeStyle='#1c1410'; ctx.lineWidth=W*0.004*s; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(dx+W*0.048*s,dy-H*0.073*s); ctx.lineTo(dx+W*0.040*s,dy-H*0.100*s); ctx.lineTo(dx+W*0.026*s,dy-H*0.110*s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(dx+W*0.038*s,dy-H*0.094*s); ctx.lineTo(dx+W*0.048*s,dy-H*0.106*s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(dx+W*0.030*s,dy-H*0.108*s); ctx.lineTo(dx+W*0.020*s,dy-H*0.115*s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(dx+W*0.058*s,dy-H*0.072*s); ctx.lineTo(dx+W*0.068*s,dy-H*0.098*s); ctx.lineTo(dx+W*0.078*s,dy-H*0.108*s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(dx+W*0.066*s,dy-H*0.091*s); ctx.lineTo(dx+W*0.058*s,dy-H*0.102*s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(dx+W*0.072*s,dy-H*0.097*s); ctx.lineTo(dx+W*0.082*s,dy-H*0.094*s); ctx.stroke();
+    // Legs — slight walking stagger
+    ctx.strokeStyle='#281e18'; ctx.lineWidth=W*0.006*s;
+    [[-W*0.020*s,H*0.056*s],[-W*0.006*s,H*0.062*s],[W*0.010*s,H*0.059*s],[W*0.023*s,H*0.054*s]].forEach(([ox,oy])=>{
+      ctx.beginPath(); ctx.moveTo(dx+ox,dy+H*0.025*s); ctx.lineTo(dx+ox,dy+oy); ctx.stroke();
     });
     // Breath cloud
-    ctx.fillStyle='rgba(200,220,240,0.30)';
-    ctx.beginPath(); ctx.ellipse(dx+W*0.068,dy-H*0.065,W*0.018,H*0.010,-0.3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(200,218,248,0.38)';
+    ctx.beginPath(); ctx.ellipse(dx+W*0.072*s,dy-H*0.066*s,W*0.020*s,H*0.011*s,-0.3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(200,218,248,0.22)';
+    ctx.beginPath(); ctx.ellipse(dx+W*0.090*s,dy-H*0.060*s,W*0.012*s,H*0.008*s,-0.3,0,Math.PI*2); ctx.fill();
   }
 
-  // RIGHT — frost-rimed wooden sign
+  // RIGHT — weathered signpost with lantern, upper-right corner outside oval (oval right ≈ W*0.870 at fy=0.38)
   {
-    const sx=W*0.85, sy=H*0.44;
-    // Post
-    ctx.strokeStyle='#3a2e22'; ctx.lineWidth=W*0.008;
-    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx,sy+H*0.10); ctx.stroke();
-    // Board
-    ctx.fillStyle='#2a2418';
-    ctx.fillRect(sx-W*0.050,sy-H*0.030,W*0.100,H*0.048);
-    // Frost on board
-    ctx.fillStyle='rgba(200,230,255,0.25)';
-    ctx.fillRect(sx-W*0.050,sy-H*0.030,W*0.100,H*0.010);
+    const sx=W*0.950, sy=H*0.360;
+    const bw=W*0.105, bh=H*0.060;
+
+    // Ground shadow
+    ctx.fillStyle='rgba(0,0,0,0.18)';
+    ctx.beginPath(); ctx.ellipse(sx, sy+H*0.074, W*0.028, H*0.007, 0, 0, Math.PI*2); ctx.fill();
+
+    // Post — weathered dark wood
+    ctx.strokeStyle='#3a2e1e'; ctx.lineWidth=W*0.010; ctx.lineCap='butt';
+    ctx.beginPath(); ctx.moveTo(sx, sy-H*0.010); ctx.lineTo(sx, sy+H*0.072); ctx.stroke();
+    ctx.strokeStyle='rgba(70,50,25,0.35)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(sx-W*0.004,sy); ctx.lineTo(sx-W*0.002,sy+H*0.060); ctx.stroke();
+
+    // Board — slightly tilted, weathered wood
+    ctx.save(); ctx.translate(sx, sy); ctx.rotate(-0.04);
+    // Drop shadow
+    ctx.fillStyle='rgba(0,0,0,0.30)';
+    ctx.fillRect(-bw*0.5+W*0.004, -bh*0.5+H*0.004, bw, bh);
+    // Board face
+    const boardG=ctx.createLinearGradient(-bw*0.5,-bh*0.5,-bw*0.5,-bh*0.5+bh);
+    boardG.addColorStop(0,'#2e2214'); boardG.addColorStop(1,'#1a1008');
+    ctx.fillStyle=boardG; ctx.fillRect(-bw*0.5,-bh*0.5,bw,bh);
+    // Frost bloom on board
+    ctx.fillStyle='rgba(200,225,255,0.18)'; ctx.fillRect(-bw*0.5,-bh*0.5,bw,bh*0.20);
+    ctx.fillStyle='rgba(200,225,255,0.10)'; ctx.fillRect(-bw*0.5,-bh*0.5+bh*0.80,bw,bh*0.20);
+    // Board border
+    ctx.strokeStyle='rgba(200,225,255,0.40)'; ctx.lineWidth=1.4;
+    ctx.strokeRect(-bw*0.5,-bh*0.5,bw,bh);
     // Text
-    ctx.fillStyle='#e0d8c0'; ctx.font=`bold ${W*0.028}px Impact,sans-serif`;
-    ctx.textAlign='center'; ctx.fillText('TUNDRA',sx,sy+H*0.010);
-    ctx.font=`${W*0.018}px Impact,sans-serif`; ctx.fillText('CRICKET',sx,sy+H*0.026);
+    ctx.textAlign='center';
+    ctx.fillStyle='rgba(235,222,198,0.95)'; ctx.font=`bold ${W*0.026}px Impact,sans-serif`;
+    ctx.fillText('TUNDRA', 0, -bh*0.5+bh*0.43);
+    ctx.fillStyle='rgba(175,198,230,0.82)'; ctx.font=`${W*0.017}px Impact,sans-serif`;
+    ctx.fillText('CRICKET', 0, -bh*0.5+bh*0.74);
     ctx.textAlign='left';
-    // Snow on top of sign
-    ctx.fillStyle='rgba(220,235,255,0.60)';
-    ctx.beginPath(); ctx.ellipse(sx,sy-H*0.028,W*0.052,H*0.010,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // Snow cap on board top
+    ctx.fillStyle='rgba(225,240,255,0.80)';
+    ctx.beginPath(); ctx.ellipse(sx, sy-bh*0.5-H*0.002, bw*0.53, H*0.012, -0.04, 0, Math.PI*2); ctx.fill();
+
+    // Icicles hanging from board bottom
+    ctx.fillStyle='rgba(185,228,255,0.82)';
+    for(let ic=0;ic<7;ic++){
+      const ixOff=(ic-3)*bw*0.145;
+      const iLen=H*(0.012+((ic*3)%5)*0.007);
+      ctx.beginPath(); ctx.moveTo(sx+ixOff-bw*0.044,sy+bh*0.52); ctx.lineTo(sx+ixOff+bw*0.044,sy+bh*0.52); ctx.lineTo(sx+ixOff,sy+bh*0.52+iLen); ctx.closePath(); ctx.fill();
+    }
+
+    // Hanging lantern
+    const lx=sx+bw*0.18, ly=sy+bh*0.52+H*0.032;
+    ctx.strokeStyle='rgba(90,70,30,0.65)'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(sx, sy+bh*0.52); ctx.lineTo(lx, ly-H*0.014); ctx.stroke();
+    // Glow halo
+    const haloG=ctx.createRadialGradient(lx,ly,0,lx,ly,W*0.038);
+    haloG.addColorStop(0,'rgba(255,165,40,0.28)'); haloG.addColorStop(1,'rgba(255,90,0,0)');
+    ctx.fillStyle=haloG; ctx.beginPath(); ctx.arc(lx,ly,W*0.038,0,Math.PI*2); ctx.fill();
+    // Lantern body
+    const lanG=ctx.createRadialGradient(lx,ly-H*0.003,W*0.003,lx,ly,W*0.013);
+    lanG.addColorStop(0,'rgba(255,200,80,0.98)'); lanG.addColorStop(0.5,'rgba(255,130,30,0.85)'); lanG.addColorStop(1,'rgba(180,70,0,0.40)');
+    ctx.fillStyle=lanG; ctx.beginPath(); ctx.ellipse(lx,ly,W*0.013,H*0.018,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(80,55,15,0.65)'; ctx.lineWidth=1.3;
+    ctx.beginPath(); ctx.ellipse(lx,ly,W*0.013,H*0.018,0,0,Math.PI*2); ctx.stroke();
   }
 
   drawSceneScoreboard();
