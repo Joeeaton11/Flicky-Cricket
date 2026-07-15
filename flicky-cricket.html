@@ -19405,10 +19405,11 @@ function drawGlacierScene() {
   }
   ctx.save(); ridgePath(true); ctx.clip();
   ctx.lineCap='round';
-  ctx.strokeStyle='rgba(0,35,82,0.60)'; ctx.lineWidth=1.4;
-  [[0.142,1.1,6],[0.160,2.4,7],[0.178,0.8,5],[0.196,3.1,6],[0.212,1.7,5],[0.224,2.9,4]].forEach(([fy,seed,amp])=>strataLine(fy,seed,amp));
-  ctx.strokeStyle='rgba(0,190,228,0.28)'; ctx.lineWidth=1.0;
-  [[0.151,4.2,5],[0.168,0.5,6],[0.185,3.8,5],[0.203,1.3,4],[0.219,2.6,5]].forEach(([fy,seed,amp])=>strataLine(fy,seed,amp));
+  // Fewer bands, much higher amplitude so they read as flow lines not a grid
+  ctx.strokeStyle='rgba(0,35,82,0.55)'; ctx.lineWidth=1.6;
+  [[0.138,1.1,18],[0.162,2.4,22],[0.188,0.8,16],[0.214,3.1,20]].forEach(([fy,seed,amp])=>strataLine(fy,seed,amp));
+  ctx.strokeStyle='rgba(0,190,228,0.25)'; ctx.lineWidth=1.1;
+  [[0.150,4.2,15],[0.176,0.5,19],[0.202,3.8,17]].forEach(([fy,seed,amp])=>strataLine(fy,seed,amp));
   ctx.restore();
 
   // Crevasses — jagged irregular fissures, not ruler-straight
@@ -19704,12 +19705,11 @@ function drawGlacierScene() {
 
     propShadow(midX+W*0.01, by1+H*0.012, (bx1-bx0)*0.48, H*0.011);
 
-    // Face gradient — sun from upper-left: bright on left/top, deep on right/base
-    const faceG=ctx.createLinearGradient(bx0, by0, bx1, by1);
+    // Face gradient — bright at top, dark at base (vertical so it reads correctly)
+    const faceG=ctx.createLinearGradient(bx0, by0, bx0, by1);
     faceG.addColorStop(0,'#48cae4');
-    faceG.addColorStop(0.28,'#00b4d8');
-    faceG.addColorStop(0.55,'#0096c7');
-    faceG.addColorStop(0.80,'#0077b6');
+    faceG.addColorStop(0.30,'#00b4d8');
+    faceG.addColorStop(0.62,'#0077b6');
     faceG.addColorStop(1,'#023e8a');
     ctx.fillStyle=faceG; seracPath(); ctx.fill();
 
@@ -19723,32 +19723,25 @@ function drawGlacierScene() {
     shadG.addColorStop(0,'rgba(0,15,55,0)'); shadG.addColorStop(1,'rgba(0,10,45,0.52)');
     ctx.fillStyle=shadG; seracPath(); ctx.fill();
 
-    // Interior detail — strata + fractures clipped to serac shape
+    // Interior detail — fracture cracks only (no horizontal bands = no grid)
     ctx.save(); seracPath(); ctx.clip();
     ctx.lineCap='round';
-    // Strata bands
-    [[0.22,1.4,4],[0.40,2.9,5],[0.58,0.7,4],[0.74,3.2,3]].forEach(([t,seed,amp])=>{
-      const fy=(by0+t*(by1-by0))/H;
-      ctx.strokeStyle='rgba(0,30,85,0.55)'; ctx.lineWidth=1.3; strataLine(fy,seed,amp);
-      ctx.strokeStyle='rgba(0,205,245,0.22)'; ctx.lineWidth=0.8; strataLine(fy-0.002,seed+5,amp*0.6);
-    });
-    // Two fracture cracks
-    [[0.35, [[0,2],[0.2,-5],[0.45,4],[0.65,-3],[0.85,5],[1,-2]]],
-     [0.65, [[0,-3],[0.18,6],[0.38,-4],[0.60,5],[0.80,-5],[1,2]]]].forEach(([fx,pts])=>{
+    [[0.32, [[0,3],[0.18,-7],[0.38,5],[0.58,-6],[0.76,7],[1.00,-3]]],
+     [0.62, [[0,-4],[0.20,8],[0.42,-5],[0.64,6],[0.82,-7],[1.00,4]]]].forEach(([fx,pts])=>{
       const cx2=bx0+(bx1-bx0)*fx;
-      ctx.strokeStyle='rgba(0,8,40,0.78)'; ctx.lineWidth=W*0.005;
+      ctx.strokeStyle='rgba(0,8,40,0.76)'; ctx.lineWidth=W*0.005;
       ctx.beginPath();
       pts.forEach(([t,dx])=>{ const px=cx2+dx,py=by0+t*(by1-by0); t===0?ctx.moveTo(px,py):ctx.lineTo(px,py); });
       ctx.stroke();
-      ctx.strokeStyle='rgba(0,215,248,0.38)'; ctx.lineWidth=W*0.0015;
+      ctx.strokeStyle='rgba(0,215,248,0.36)'; ctx.lineWidth=W*0.0014;
       ctx.beginPath();
       pts.forEach(([t,dx])=>{ const px=cx2+dx-3,py=by0+t*(by1-by0); t===0?ctx.moveTo(px,py):ctx.lineTo(px,py); });
       ctx.stroke();
     });
     ctx.restore();
 
-    // Snow cap along the upper perimeter edges (A→B→C→D)
-    const snowSegs=[segs[0],segs[1],segs[2],segs[3]];
+    // Snow cap along the TOP perimeter edges only: A→B→C→D (segs 0,1,2)
+    const snowSegs=[segs[0],segs[1],segs[2]];
     const snowPts=snowSegs.flatMap((s,i)=>i===0?s:s.slice(1));
     const snowOff=H*0.022;
     const snowG=ctx.createLinearGradient(bx0,by0-snowOff,bx0,by0+snowOff*0.4);
