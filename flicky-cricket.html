@@ -19647,142 +19647,133 @@ function drawGlacierScene() {
     })();
   }
 
-  // ── TOP-RIGHT CORNER: CALVED SERAC (large broken glacier block) ──
+  // ── TOP-RIGHT CORNER: CALVED SERAC (fractured glacier mass) ──
   {
-    // Clip to outside the oval so the serac never overlaps the play field
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0,0,W,H);                                              // clockwise outer rect
-    ctx.ellipse(W*0.5, H*0.60, W*0.46, H*0.37, 0, 0, Math.PI*2, true); // counterclockwise oval
-    ctx.clip();
+    // Serac vertices — irregular polygon hugging the oval edge, all outside it
+    // Oval right edge at each fy: W*0.5 + W*0.46*sqrt(1-((fy-0.60)/0.37)^2)
+    // fy=0.252→W*0.678  fy=0.285→W*0.752  fy=0.320→W*0.817  fy=0.360→W*0.862  fy=0.395→W*0.888
+    // Each vertex is placed a few px to the right of those values
+    const verts = [
+      [W*0.696, H*0.252],  // A — upper-left tip (just past oval at fy=0.252)
+      [W*0.780, H*0.238],  // B — upper notch
+      [W*0.855, H*0.243],  // C — upper-centre peak
+      [W*0.968, H*0.248],  // D — top-right corner
+      [W*0.978, H*0.354],  // E — right lower
+      [W*0.942, H*0.408],  // F — bottom-right
+      [W*0.898, H*0.398],  // G — bottom notch
+      [W*0.874, H*0.368],  // H — left of bottom notch (oval at fy=0.368→W*0.870)
+      [W*0.832, H*0.340],  // I — mid-left step
+      [W*0.768, H*0.308],  // J — left mid (oval at fy=0.308→W*0.782, so W*0.768 is inside!)
+    ];
+    // J is slightly inside oval — push it right: W*0.793
+    verts[9] = [W*0.793, H*0.308];
 
-    const lx=W*0.812, ty=H*0.248;
-    const rx=W*0.972, boty=H*0.400;
-    const midX=(lx+rx)/2;
-
-    propShadow(midX, boty+H*0.014, (rx-lx)*0.50, H*0.013);
-
-    // Corner coords — slight irregularity
-    const TL=[lx,          ty+H*0.010];
-    const TR=[rx-W*0.005,  ty];
-    const BR=[rx,           boty+H*0.004];
-    const BL=[lx+W*0.002,  boty];
-
-    // Pre-bake jagged intermediate points for each edge (deterministic sine noise)
-    const N=12;
-    function jagPts(x0,y0,x1,y1,xAmp,yAmp,seed){
+    const N=8; // jag subdivisions per edge
+    function jagSeg(ax,ay,bx,by,xA,yA,seed){
       return Array.from({length:N+1},(_,i)=>{
         const t=i/N;
-        const n=xAmp*(Math.sin(i*2.1+seed)*0.5+Math.sin(i*4.7+seed*1.6)*0.5);
-        const m=yAmp*(Math.sin(i*3.4+seed*0.8)*0.5+Math.sin(i*7.1+seed*2.2)*0.5);
-        return [x0+(x1-x0)*t+n, y0+(y1-y0)*t+m];
+        const n=xA*(Math.sin(i*2.3+seed)*0.55+Math.sin(i*5.1+seed*1.9)*0.45);
+        const m=yA*(Math.sin(i*3.7+seed*0.6)*0.55+Math.sin(i*6.8+seed*2.5)*0.45);
+        return [ax+(bx-ax)*t+n, ay+(by-ay)*t+m];
       });
     }
-    // Clockwise: top edge TL→TR, right edge TR→BR, bottom edge BR→BL, left edge BL→TL
-    const topEdge   = jagPts(TL[0],TL[1], TR[0],TR[1], W*0.004, H*0.008, 1.2);
-    const rightEdge = jagPts(TR[0],TR[1], BR[0],BR[1], W*0.006, H*0.002, 2.5);
-    const botEdge   = jagPts(BR[0],BR[1], BL[0],BL[1], W*0.004, H*0.005, 0.8);
-    const leftEdge  = jagPts(BL[0],BL[1], TL[0],TL[1], W*0.006, H*0.002, 3.1);
 
-    // Build the closed block outline (clockwise so fill is correct)
-    function blockPath(){
+    // Build perimeter segments with jag noise
+    const segs = verts.map((v,i)=>{
+      const nv=verts[(i+1)%verts.length];
+      const len=Math.hypot(nv[0]-v[0],nv[1]-v[1]);
+      const xA=Math.min(len*0.04,W*0.006), yA=Math.min(len*0.055,H*0.009);
+      return jagSeg(v[0],v[1],nv[0],nv[1],xA,yA,i*1.7+0.9);
+    });
+
+    function seracPath(){
       ctx.beginPath();
-      ctx.moveTo(topEdge[0][0], topEdge[0][1]);
-      topEdge.forEach(([x,y])=>ctx.lineTo(x,y));
-      rightEdge.slice(1).forEach(([x,y])=>ctx.lineTo(x,y));
-      botEdge.slice(1).forEach(([x,y])=>ctx.lineTo(x,y));
-      leftEdge.slice(1).forEach(([x,y])=>ctx.lineTo(x,y));
+      segs.forEach((seg,si)=>{
+        seg.forEach(([x,y],i)=>{
+          if(si===0&&i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        });
+      });
       ctx.closePath();
     }
 
-    // Front face gradient — top bright (lit by sun), base deep blue
-    const faceG=ctx.createLinearGradient(lx, ty, lx, boty);
-    faceG.addColorStop(0,'#00b4d8');
-    faceG.addColorStop(0.35,'#0096c7');
-    faceG.addColorStop(0.70,'#0077b6');
+    // Bounding box for gradients
+    const allX=verts.map(v=>v[0]), allY=verts.map(v=>v[1]);
+    const bx0=Math.min(...allX), bx1=Math.max(...allX);
+    const by0=Math.min(...allY), by1=Math.max(...allY);
+    const midX=(bx0+bx1)*0.5;
+
+    propShadow(midX+W*0.01, by1+H*0.012, (bx1-bx0)*0.48, H*0.011);
+
+    // Face gradient — sun from upper-left: bright on left/top, deep on right/base
+    const faceG=ctx.createLinearGradient(bx0, by0, bx1, by1);
+    faceG.addColorStop(0,'#48cae4');
+    faceG.addColorStop(0.28,'#00b4d8');
+    faceG.addColorStop(0.55,'#0096c7');
+    faceG.addColorStop(0.80,'#0077b6');
     faceG.addColorStop(1,'#023e8a');
-    ctx.fillStyle=faceG; blockPath(); ctx.fill();
+    ctx.fillStyle=faceG; seracPath(); ctx.fill();
 
-    // Left-side sun-lit glow (sun from upper-left)
-    const litG=ctx.createLinearGradient(lx,0,lx+W*0.065,0);
-    litG.addColorStop(0,'rgba(72,202,228,0.48)'); litG.addColorStop(1,'rgba(72,202,228,0)');
-    ctx.fillStyle=litG; blockPath(); ctx.fill();
+    // Lit-face glow on upper-left facets
+    const litG=ctx.createLinearGradient(bx0,by0,bx0+W*0.09,by0+H*0.06);
+    litG.addColorStop(0,'rgba(100,220,245,0.45)'); litG.addColorStop(1,'rgba(100,220,245,0)');
+    ctx.fillStyle=litG; seracPath(); ctx.fill();
 
-    // Right-side shadow
-    const shadG=ctx.createLinearGradient(lx+(rx-lx)*0.55,0,rx,0);
-    shadG.addColorStop(0,'rgba(0,15,50,0)'); shadG.addColorStop(1,'rgba(0,15,50,0.50)');
-    ctx.fillStyle=shadG; blockPath(); ctx.fill();
+    // Shadow on right/bottom
+    const shadG=ctx.createLinearGradient(bx0+(bx1-bx0)*0.5,by0,bx1,by1);
+    shadG.addColorStop(0,'rgba(0,15,55,0)'); shadG.addColorStop(1,'rgba(0,10,45,0.52)');
+    ctx.fillStyle=shadG; seracPath(); ctx.fill();
 
-    // Clip everything inside the block shape
-    ctx.save(); blockPath(); ctx.clip();
-
-    // Jagged horizontal strata across the face
+    // Interior detail — strata + fractures clipped to serac shape
+    ctx.save(); seracPath(); ctx.clip();
     ctx.lineCap='round';
-    [[0.20,1.2,5],[0.36,2.8,4],[0.52,0.6,6],[0.68,3.5,5],[0.82,1.9,4]].forEach(([t,seed,amp])=>{
-      const sy=(ty+t*(boty-ty))/H;
-      ctx.strokeStyle='rgba(0,28,80,0.58)'; ctx.lineWidth=1.4; strataLine(sy, seed, amp);
-      ctx.strokeStyle='rgba(0,200,240,0.26)'; ctx.lineWidth=0.9; strataLine(sy-0.0018, seed+5, amp*0.7);
+    // Strata bands
+    [[0.22,1.4,4],[0.40,2.9,5],[0.58,0.7,4],[0.74,3.2,3]].forEach(([t,seed,amp])=>{
+      const fy=(by0+t*(by1-by0))/H;
+      ctx.strokeStyle='rgba(0,30,85,0.55)'; ctx.lineWidth=1.3; strataLine(fy,seed,amp);
+      ctx.strokeStyle='rgba(0,205,245,0.22)'; ctx.lineWidth=0.8; strataLine(fy-0.002,seed+5,amp*0.6);
     });
-
-    // Jagged vertical fracture crack
-    const crackX=lx+(rx-lx)*0.42;
-    ctx.strokeStyle='rgba(0,10,45,0.80)'; ctx.lineWidth=W*0.006; ctx.lineCap='round';
-    ctx.beginPath();
-    [[0,0],[0.15,-6],[0.30,4],[0.45,-5],[0.62,6],[0.78,-4],[1.00,3]].forEach(([t,dx])=>{
-      const px=crackX+dx, py=ty+t*(boty-ty);
-      t===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
-    }); ctx.stroke();
-    ctx.strokeStyle='rgba(0,210,245,0.40)'; ctx.lineWidth=W*0.0018;
-    ctx.beginPath();
-    [[0,0],[0.15,-9],[0.30,1],[0.45,-8],[0.62,3],[0.78,-7],[1.00,0]].forEach(([t,dx])=>{
-      const px=crackX+dx-4, py=ty+t*(boty-ty);
-      t===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
-    }); ctx.stroke();
-
+    // Two fracture cracks
+    [[0.35, [[0,2],[0.2,-5],[0.45,4],[0.65,-3],[0.85,5],[1,-2]]],
+     [0.65, [[0,-3],[0.18,6],[0.38,-4],[0.60,5],[0.80,-5],[1,2]]]].forEach(([fx,pts])=>{
+      const cx2=bx0+(bx1-bx0)*fx;
+      ctx.strokeStyle='rgba(0,8,40,0.78)'; ctx.lineWidth=W*0.005;
+      ctx.beginPath();
+      pts.forEach(([t,dx])=>{ const px=cx2+dx,py=by0+t*(by1-by0); t===0?ctx.moveTo(px,py):ctx.lineTo(px,py); });
+      ctx.stroke();
+      ctx.strokeStyle='rgba(0,215,248,0.38)'; ctx.lineWidth=W*0.0015;
+      ctx.beginPath();
+      pts.forEach(([t,dx])=>{ const px=cx2+dx-3,py=by0+t*(by1-by0); t===0?ctx.moveTo(px,py):ctx.lineTo(px,py); });
+      ctx.stroke();
+    });
     ctx.restore();
 
-    // Snow blanket on TOP surface — drawn above the top edge
-    const topDepth=H*0.032;
-    // Top surface polygon: above topEdge, representing the flat upper ice surface
-    const topSurfG=ctx.createLinearGradient(lx, ty-topDepth, lx, ty+topDepth*0.3);
-    topSurfG.addColorStop(0,'#d0f0ff'); topSurfG.addColorStop(0.5,'#b8e4f8'); topSurfG.addColorStop(1,'#90c8e4');
-    ctx.fillStyle=topSurfG;
-    ctx.beginPath();
-    // Top of block = top face going back in perspective (slightly above the top edge)
-    ctx.moveTo(topEdge[0][0]-W*0.002, topEdge[0][1]);
-    topEdge.forEach(([x,y])=>ctx.lineTo(x, y-topDepth*0.5));  // shift up
-    ctx.lineTo(topEdge[N][0]+W*0.002, topEdge[N][1]);
-    topEdge.slice().reverse().forEach(([x,y])=>ctx.lineTo(x,y));
-    ctx.closePath(); ctx.fill();
-    // Bright snow on top
-    const snowG=ctx.createLinearGradient(lx, ty-topDepth, lx, ty);
-    snowG.addColorStop(0,'rgba(255,255,255,0.92)'); snowG.addColorStop(1,'rgba(220,248,255,0.45)');
+    // Snow cap along the upper perimeter edges (A→B→C→D)
+    const snowSegs=[segs[0],segs[1],segs[2],segs[3]];
+    const snowPts=snowSegs.flatMap((s,i)=>i===0?s:s.slice(1));
+    const snowOff=H*0.022;
+    const snowG=ctx.createLinearGradient(bx0,by0-snowOff,bx0,by0+snowOff*0.4);
+    snowG.addColorStop(0,'rgba(255,255,255,0.95)'); snowG.addColorStop(1,'rgba(200,245,255,0.30)');
     ctx.fillStyle=snowG;
     ctx.beginPath();
-    ctx.moveTo(topEdge[0][0]-W*0.002, topEdge[0][1]);
-    topEdge.forEach(([x,y])=>ctx.lineTo(x, y-topDepth*0.5));
-    ctx.lineTo(topEdge[N][0]+W*0.002, topEdge[N][1]);
-    topEdge.slice().reverse().forEach(([x,y])=>ctx.lineTo(x,y));
+    snowPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y-snowOff*0.55):ctx.lineTo(x,y-snowOff*0.55));
+    snowPts.slice().reverse().forEach(([x,y])=>ctx.lineTo(x,y));
     ctx.closePath(); ctx.fill();
-    // Crisp top edge highlight
-    ctx.strokeStyle='rgba(235,252,255,0.92)'; ctx.lineWidth=W*0.009; ctx.lineCap='round';
-    ctx.beginPath(); topEdge.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)); ctx.stroke();
+    // Bright crest stroke
+    ctx.strokeStyle='rgba(240,254,255,0.90)'; ctx.lineWidth=W*0.008; ctx.lineCap='round';
+    ctx.beginPath(); snowPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)); ctx.stroke();
 
-    // Icicles hanging from bottom edge
-    ctx.fillStyle='rgba(155,225,250,0.82)';
-    botEdge.forEach(([x,y],i)=>{
-      if(i===0||i===N) return;
-      const il=H*(0.008+((i*7)%6)*0.006);
-      ctx.beginPath(); ctx.moveTo(x-W*0.003,y); ctx.lineTo(x+W*0.003,y); ctx.lineTo(x,y+il); ctx.closePath(); ctx.fill();
+    // Icicles on bottom edges (F→G→H)
+    ctx.fillStyle='rgba(155,228,252,0.80)';
+    [segs[5],segs[6],segs[7]].flatMap(s=>s.slice(1,-1)).forEach(([x,y],i)=>{
+      const il=H*(0.007+((i*5)%5)*0.006);
+      ctx.beginPath(); ctx.moveTo(x-W*0.0025,y); ctx.lineTo(x+W*0.0025,y); ctx.lineTo(x,y+il); ctx.closePath(); ctx.fill();
     });
 
-    // Meltwater pool below block
-    ctx.fillStyle='rgba(0,185,220,0.42)';
-    ctx.beginPath(); ctx.ellipse(midX, boty+H*0.024, (rx-lx)*0.46, H*0.014, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle='rgba(175,238,255,0.36)';
-    ctx.beginPath(); ctx.ellipse(midX-W*0.018, boty+H*0.018, (rx-lx)*0.16, H*0.006, 0, 0, Math.PI*2); ctx.fill();
-
-    ctx.restore(); // end outside-oval clip
+    // Meltwater pool below
+    ctx.fillStyle='rgba(0,185,222,0.40)';
+    ctx.beginPath(); ctx.ellipse(midX, by1+H*0.020, (bx1-bx0)*0.44, H*0.012, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(180,240,255,0.32)';
+    ctx.beginPath(); ctx.ellipse(midX-W*0.015, by1+H*0.014, (bx1-bx0)*0.15, H*0.005, 0, 0, Math.PI*2); ctx.fill();
   }
 
   // ── BOTTOM CORNERS: large meltwater pools with cracked ice ──
