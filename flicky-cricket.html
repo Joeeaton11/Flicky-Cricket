@@ -19390,12 +19390,14 @@ function drawGlacierScene() {
   rightLit.addColorStop(0,'rgba(0,0,0,0)'); rightLit.addColorStop(1,'rgba(130,222,248,0.26)');
   ctx.fillStyle=rightLit; ridgePath(true); ctx.fill();
 
-  // Horizontal compression strata — multiple bands, clearly visible
+  // Horizontal compression strata — clipped to glacier body so lines don't bleed into sky
+  ctx.save(); ridgePath(true); ctx.clip();
   ctx.lineCap='butt';
-  ctx.strokeStyle='rgba(0,35,82,0.60)'; ctx.lineWidth=1.3;
+  ctx.strokeStyle='rgba(0,35,82,0.62)'; ctx.lineWidth=1.3;
   [0.142,0.160,0.178,0.196,0.212,0.224].forEach(fy=>{ctx.beginPath();ctx.moveTo(0,H*fy);ctx.lineTo(W,H*fy);ctx.stroke();});
-  ctx.strokeStyle='rgba(0,190,228,0.32)'; ctx.lineWidth=0.9;
+  ctx.strokeStyle='rgba(0,190,228,0.30)'; ctx.lineWidth=0.9;
   [0.152,0.168,0.186,0.204,0.218].forEach(fy=>{ctx.beginPath();ctx.moveTo(0,H*fy);ctx.lineTo(W,H*fy);ctx.stroke();});
+  ctx.restore();
 
   // Crevasses — near-vertical fissures showing deep interior blue
   ctx.lineCap='round';
@@ -19582,94 +19584,107 @@ function drawGlacierScene() {
     ctx.strokeRect(cx-W*0.088,cy+H*0.022,W*0.024,H*0.012);
   }
 
-  // ── TOP-RIGHT CORNER: CALVED ICE BLOCK (serac) ──
-  // A large chunk of glacier that has broken away — chunky, with a flat top
-  // blanketed in snow and dramatic blue-ice vertical faces
+  // ── TOP-RIGHT CORNER: CALVED SERAC (large broken glacier block) ──
+  // Chunky angular block of ice that has broken from the glacier face.
+  // Drawn with near-vertical sides, visible top surface, clear lit vs shadow faces.
   {
-    const bx=W*0.880, by=H*0.258;   // block centre-x, top-y
-    const bw=W*0.092, bh=H*0.130;   // half-width, height
-    propShadow(bx,by+bh+H*0.012,bw*0.95,H*0.014);
+    // Anchor: left edge of block at x=W*0.810, top at y=H*0.250
+    const lx=W*0.810, ty=H*0.250;   // left-x, top-y of front face
+    const rx=W*0.968, boty=H*0.398; // right-x, bottom-y
 
-    // Rear smaller block (behind main, slightly higher)
-    {
-      const rx=bx+W*0.012, ry=by-H*0.030, rw=bw*0.62, rh=bh*0.68;
-      const rFaceG=ctx.createLinearGradient(rx-rw,ry,rx+rw,ry+rh);
-      rFaceG.addColorStop(0,'#0096c7'); rFaceG.addColorStop(0.55,'#0077b6'); rFaceG.addColorStop(1,'#014e88');
-      ctx.fillStyle=rFaceG;
-      ctx.beginPath();
-      ctx.moveTo(rx-rw,ry+rh);
-      ctx.bezierCurveTo(rx-rw,ry+rh*0.12, rx-rw*0.3,ry, rx,ry);
-      ctx.bezierCurveTo(rx+rw*0.3,ry, rx+rw,ry+rh*0.12, rx+rw,ry+rh);
-      ctx.closePath(); ctx.fill();
-      // Snow top
-      ctx.fillStyle='rgba(232,250,255,0.88)';
-      ctx.beginPath(); ctx.ellipse(rx,ry,rw*0.88,rh*0.12,0,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='rgba(245,255,255,0.60)'; ctx.lineWidth=W*0.004;
-      ctx.beginPath(); ctx.ellipse(rx,ry,rw*0.88,rh*0.12,0,0,Math.PI*2); ctx.stroke();
-    }
+    propShadow((lx+rx)/2, boty+H*0.012, (rx-lx)*0.52, H*0.014);
 
-    // Main ice block — front face
-    const faceG=ctx.createLinearGradient(bx-bw,by,bx+bw,by+bh);
-    faceG.addColorStop(0,'#48cae4');   // lit left face (sun-side)
-    faceG.addColorStop(0.30,'#0096c7');
-    faceG.addColorStop(0.62,'#0077b6');
-    faceG.addColorStop(1,'#023e8a');   // deep base
+    // Block body — define the 4 corners of the front face (slightly irregular)
+    const TL=[lx+W*0.008, ty];            // top-left
+    const TR=[rx-W*0.010, ty+H*0.018];   // top-right (slightly lower, perspective)
+    const BR=[rx, boty];                  // bottom-right
+    const BL=[lx, boty+H*0.005];         // bottom-left (slightly lower)
+
+    // Front face — left-lit, right-shadowed
+    const faceG=ctx.createLinearGradient(TL[0],ty,BR[0],boty);
+    faceG.addColorStop(0,'#48cae4');    // bright lit top-left
+    faceG.addColorStop(0.22,'#00b4d8');
+    faceG.addColorStop(0.50,'#0096c7');
+    faceG.addColorStop(0.78,'#0077b6');
+    faceG.addColorStop(1,'#023e8a');    // deep base
     ctx.fillStyle=faceG;
     ctx.beginPath();
-    ctx.moveTo(bx-bw, by+bh);
-    ctx.bezierCurveTo(bx-bw, by+bh*0.10, bx-bw*0.25, by, bx, by);
-    ctx.bezierCurveTo(bx+bw*0.25, by, bx+bw, by+bh*0.10, bx+bw, by+bh);
+    ctx.moveTo(BL[0],BL[1]);
+    ctx.lineTo(TL[0],TL[1]);
+    ctx.bezierCurveTo(TL[0]+W*0.010,TL[1]-H*0.004, TR[0]-W*0.012,TR[1]-H*0.006, TR[0],TR[1]);
+    ctx.lineTo(BR[0],BR[1]);
     ctx.closePath(); ctx.fill();
 
-    // Shadow right flank — the unlitside is much deeper blue-black
-    ctx.fillStyle='rgba(0,18,55,0.38)';
+    // Shadow overlay on right 40% — sun from upper left
+    const shadG=ctx.createLinearGradient((TL[0]+TR[0])*0.5,0,TR[0],0);
+    shadG.addColorStop(0,'rgba(0,0,0,0)'); shadG.addColorStop(1,'rgba(0,15,50,0.44)');
+    ctx.fillStyle=shadG;
     ctx.beginPath();
-    ctx.moveTo(bx, by);
-    ctx.bezierCurveTo(bx+bw*0.25, by, bx+bw, by+bh*0.10, bx+bw, by+bh);
-    ctx.lineTo(bx+bw*0.25, by+bh);
-    ctx.bezierCurveTo(bx+bw*0.22, by+bh*0.30, bx+bw*0.08, by+bh*0.12, bx, by);
+    ctx.moveTo(BL[0],BL[1]);
+    ctx.lineTo(TL[0],TL[1]);
+    ctx.bezierCurveTo(TL[0]+W*0.010,TL[1]-H*0.004, TR[0]-W*0.012,TR[1]-H*0.006, TR[0],TR[1]);
+    ctx.lineTo(BR[0],BR[1]);
     ctx.closePath(); ctx.fill();
 
-    // Horizontal strata bands on the face — ice compression layers
+    // Top face — snow-covered horizontal surface (perspective strip)
+    const topDepth=H*0.028;  // how deep the top surface looks
+    const tTL=[TL[0]-W*0.004, TL[1]];
+    const tTR=[TR[0]+W*0.005, TR[1]];
+    const tBL=[TL[0]-W*0.002, TL[1]+topDepth];
+    const tBR=[TR[0]+W*0.003, TR[1]+topDepth*0.7];
+    const topG=ctx.createLinearGradient(tTL[0],tTL[1],tBL[0],tBL[1]+topDepth);
+    topG.addColorStop(0,'#e8f8ff'); topG.addColorStop(0.5,'#c8ecf8'); topG.addColorStop(1,'#a8d8ee');
+    ctx.fillStyle=topG;
+    ctx.beginPath();
+    ctx.moveTo(tTL[0],tTL[1]); ctx.lineTo(tTR[0],tTR[1]);
+    ctx.lineTo(tBR[0],tBR[1]); ctx.lineTo(tBL[0],tBL[1]);
+    ctx.closePath(); ctx.fill();
+    // Snow mound on top surface
+    const snowMG=ctx.createLinearGradient(tTL[0],tTL[1],tBL[0],tBL[1]);
+    snowMG.addColorStop(0,'rgba(255,255,255,0.88)'); snowMG.addColorStop(1,'rgba(210,242,255,0.40)');
+    ctx.fillStyle=snowMG;
+    ctx.beginPath();
+    ctx.moveTo(tTL[0],tTL[1]); ctx.lineTo(tTR[0],tTR[1]);
+    ctx.lineTo(tBR[0],tBR[1]); ctx.lineTo(tBL[0],tBL[1]);
+    ctx.closePath(); ctx.fill();
+    // Top edge highlight
+    ctx.strokeStyle='rgba(240,252,255,0.85)'; ctx.lineWidth=W*0.007; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(tTL[0],tTL[1]); ctx.lineTo(tTR[0],tTR[1]); ctx.stroke();
+
+    // Horizontal strata on the front face — clipped to block shape
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(BL[0],BL[1]); ctx.lineTo(TL[0],TL[1]);
+    ctx.bezierCurveTo(TL[0]+W*0.010,TL[1]-H*0.004, TR[0]-W*0.012,TR[1]-H*0.006, TR[0],TR[1]);
+    ctx.lineTo(BR[0],BR[1]); ctx.closePath(); ctx.clip();
     ctx.lineCap='butt';
-    [0.28,0.48,0.66,0.82].forEach(t=>{
-      const sy=by+bh*t;
-      // Approximate left and right edges of the block at this height
-      const leftX = bx - bw*(1-Math.pow(1-t,0.5)*0.1);
-      const rightX = bx + bw*(1-Math.pow(1-t,0.5)*0.1);
-      ctx.strokeStyle='rgba(0,40,95,0.55)'; ctx.lineWidth=1.1;
-      ctx.beginPath(); ctx.moveTo(leftX,sy); ctx.lineTo(rightX,sy); ctx.stroke();
-      ctx.strokeStyle='rgba(100,220,248,0.28)'; ctx.lineWidth=0.7;
-      ctx.beginPath(); ctx.moveTo(leftX,sy-1.5); ctx.lineTo(rightX,sy-1.5); ctx.stroke();
+    [0.22,0.38,0.54,0.70,0.84].forEach(t=>{
+      const sy=ty+t*(boty-ty);
+      ctx.strokeStyle='rgba(0,35,88,0.52)'; ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.moveTo(lx-W*0.01,sy); ctx.lineTo(rx+W*0.01,sy); ctx.stroke();
+      ctx.strokeStyle='rgba(0,200,240,0.26)'; ctx.lineWidth=0.8;
+      ctx.beginPath(); ctx.moveTo(lx-W*0.01,sy-1.5); ctx.lineTo(rx+W*0.01,sy-1.5); ctx.stroke();
     });
+    // Vertical fracture crack down the face
+    ctx.strokeStyle='rgba(0,15,50,0.75)'; ctx.lineWidth=W*0.006; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(lx+W*0.048,ty+H*0.005); ctx.quadraticCurveTo(lx+W*0.044,ty+H*0.08, lx+W*0.050,boty); ctx.stroke();
+    ctx.strokeStyle='rgba(0,200,238,0.44)'; ctx.lineWidth=W*0.002;
+    ctx.beginPath(); ctx.moveTo(lx+W*0.043,ty+H*0.010); ctx.quadraticCurveTo(lx+W*0.038,ty+H*0.08, lx+W*0.044,boty); ctx.stroke();
+    ctx.restore();
 
-    // Vertical crevasse crack down front face
-    ctx.strokeStyle='rgba(0,20,60,0.70)'; ctx.lineWidth=W*0.005; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(bx-bw*0.18, by); ctx.quadraticCurveTo(bx-bw*0.20, by+bh*0.55, bx-bw*0.15, by+bh); ctx.stroke();
-    ctx.strokeStyle='rgba(0,190,230,0.45)'; ctx.lineWidth=W*0.0018;
-    ctx.beginPath(); ctx.moveTo(bx-bw*0.21, by+bh*0.08); ctx.quadraticCurveTo(bx-bw*0.23, by+bh*0.55, bx-bw*0.18, by+bh); ctx.stroke();
-
-    // Snow blanket on top — thick and bright
-    ctx.fillStyle='rgba(240,253,255,0.92)';
-    ctx.beginPath(); ctx.ellipse(bx, by, bw*0.92, bh*0.14, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.55)';
-    ctx.beginPath(); ctx.ellipse(bx-bw*0.12, by-bh*0.02, bw*0.38, bh*0.05, 0.1, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle='rgba(210,248,255,0.70)'; ctx.lineWidth=W*0.005;
-    ctx.beginPath(); ctx.ellipse(bx, by, bw*0.92, bh*0.14, 0, 0, Math.PI*2); ctx.stroke();
-
-    // Small icicles along the base of the block
-    ctx.fillStyle='rgba(160,228,252,0.80)';
-    for(let i=0;i<7;i++){
-      const ix=bx-bw*0.75+i*bw*0.25;
-      const il=H*(0.012+((i*3)%5)*0.006);
-      ctx.beginPath(); ctx.moveTo(ix-W*0.003,by+bh-H*0.002); ctx.lineTo(ix+W*0.003,by+bh-H*0.002); ctx.lineTo(ix,by+bh+il); ctx.closePath(); ctx.fill();
+    // Icicles hanging from the bottom edge
+    ctx.fillStyle='rgba(155,225,250,0.82)';
+    for(let i=0;i<9;i++){
+      const ix=BL[0]+W*0.010+(rx-lx-W*0.018)*i/8;
+      const il=H*(0.010+((i*7)%6)*0.007);
+      ctx.beginPath(); ctx.moveTo(ix-W*0.0028,boty); ctx.lineTo(ix+W*0.0028,boty); ctx.lineTo(ix,boty+il); ctx.closePath(); ctx.fill();
     }
 
-    // Meltwater pool at the block base
-    ctx.fillStyle='rgba(0,180,215,0.42)';
-    ctx.beginPath(); ctx.ellipse(bx,by+bh+H*0.020,bw*0.80,H*0.016,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='rgba(190,240,255,0.36)';
-    ctx.beginPath(); ctx.ellipse(bx-bw*0.18,by+bh+H*0.015,bw*0.30,H*0.008,0,0,Math.PI*2); ctx.fill();
+    // Meltwater channel below block
+    ctx.fillStyle='rgba(0,185,220,0.44)';
+    ctx.beginPath(); ctx.ellipse((lx+rx)/2, boty+H*0.022, (rx-lx)*0.48, H*0.015, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(180,240,255,0.38)';
+    ctx.beginPath(); ctx.ellipse((lx+rx)/2-W*0.020, boty+H*0.016, (rx-lx)*0.18, H*0.006, 0, 0, Math.PI*2); ctx.fill();
   }
 
   // ── BOTTOM CORNERS: large meltwater pools with cracked ice ──
