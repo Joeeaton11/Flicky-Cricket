@@ -19390,25 +19390,43 @@ function drawGlacierScene() {
   rightLit.addColorStop(0,'rgba(0,0,0,0)'); rightLit.addColorStop(1,'rgba(130,222,248,0.26)');
   ctx.fillStyle=rightLit; ridgePath(true); ctx.fill();
 
-  // Horizontal compression strata — clipped to glacier body so lines don't bleed into sky
+  // Jagged strata helper — draws a wobbly compression band across the glacier face
+  // Uses deterministic per-line offsets so each band has its own irregular path
+  function strataLine(fy, seed, amp){
+    const steps=28;
+    ctx.beginPath(); ctx.moveTo(0, H*fy);
+    for(let i=1;i<=steps;i++){
+      const x=W*i/steps;
+      // deterministic "noise" via sine harmonics seeded per line
+      const jag=amp*( Math.sin(i*1.7+seed)*0.45 + Math.sin(i*3.3+seed*1.8)*0.30 + Math.sin(i*5.9+seed*0.7)*0.25 );
+      ctx.lineTo(x, H*fy + jag);
+    }
+    ctx.stroke();
+  }
   ctx.save(); ridgePath(true); ctx.clip();
-  ctx.lineCap='butt';
-  ctx.strokeStyle='rgba(0,35,82,0.62)'; ctx.lineWidth=1.3;
-  [0.142,0.160,0.178,0.196,0.212,0.224].forEach(fy=>{ctx.beginPath();ctx.moveTo(0,H*fy);ctx.lineTo(W,H*fy);ctx.stroke();});
-  ctx.strokeStyle='rgba(0,190,228,0.30)'; ctx.lineWidth=0.9;
-  [0.152,0.168,0.186,0.204,0.218].forEach(fy=>{ctx.beginPath();ctx.moveTo(0,H*fy);ctx.lineTo(W,H*fy);ctx.stroke();});
+  ctx.lineCap='round';
+  ctx.strokeStyle='rgba(0,35,82,0.60)'; ctx.lineWidth=1.4;
+  [[0.142,1.1,6],[0.160,2.4,7],[0.178,0.8,5],[0.196,3.1,6],[0.212,1.7,5],[0.224,2.9,4]].forEach(([fy,seed,amp])=>strataLine(fy,seed,amp));
+  ctx.strokeStyle='rgba(0,190,228,0.28)'; ctx.lineWidth=1.0;
+  [[0.151,4.2,5],[0.168,0.5,6],[0.185,3.8,5],[0.203,1.3,4],[0.219,2.6,5]].forEach(([fy,seed,amp])=>strataLine(fy,seed,amp));
   ctx.restore();
 
-  // Crevasses — near-vertical fissures showing deep interior blue
+  // Crevasses — jagged irregular fissures, not ruler-straight
   ctx.lineCap='round';
-  [{x:0.17,y0:0.148,dx:0.012},{x:0.31,y0:0.122,dx:-0.008},{x:0.50,y0:0.095,dx:0.010},{x:0.67,y0:0.080,dx:-0.008},{x:0.83,y0:0.066,dx:0.010}].forEach(({x,y0,dx})=>{
-    const x1=x+dx*0.5, y1=0.23;
-    ctx.strokeStyle='rgba(0,15,42,0.92)'; ctx.lineWidth=W*0.007;
-    ctx.beginPath(); ctx.moveTo(W*x,H*y0); ctx.quadraticCurveTo(W*(x+dx*0.3),H*((y0+y1)/2),W*x1,H*y1); ctx.stroke();
-    ctx.strokeStyle='rgba(0,130,195,0.58)'; ctx.lineWidth=W*0.0035;
-    ctx.beginPath(); ctx.moveTo(W*(x-0.003),H*y0); ctx.quadraticCurveTo(W*(x+dx*0.3-0.003),H*((y0+y1)/2),W*(x1-0.003),H*y1); ctx.stroke();
-    ctx.strokeStyle='rgba(0,220,255,0.42)'; ctx.lineWidth=W*0.0012;
-    ctx.beginPath(); ctx.moveTo(W*(x-0.006),H*(y0+0.004)); ctx.quadraticCurveTo(W*(x+dx*0.3-0.006),H*((y0+y1)/2+0.01),W*(x1-0.005),H*(y1-0.010)); ctx.stroke();
+  [{x:0.17,y0:0.148,seed:1.1},{x:0.31,y0:0.122,seed:2.3},{x:0.50,y0:0.095,seed:0.7},{x:0.67,y0:0.080,seed:3.2},{x:0.83,y0:0.066,seed:1.8}].forEach(({x,y0,seed})=>{
+    // Build a jagged path downward in small steps
+    function crevassePath(offX){
+      const steps=12; const ySpan=0.23-y0;
+      ctx.beginPath(); ctx.moveTo(W*(x+offX), H*y0);
+      for(let i=1;i<=steps;i++){
+        const t=i/steps;
+        const jx=W*0.010*(Math.sin(t*4.1+seed)*0.6+Math.sin(t*9.3+seed*2)*0.4);
+        ctx.lineTo(W*(x+offX)+jx, H*(y0+t*ySpan));
+      }
+    }
+    ctx.strokeStyle='rgba(0,15,42,0.88)'; ctx.lineWidth=W*0.007; crevassePath(0); ctx.stroke();
+    ctx.strokeStyle='rgba(0,130,195,0.55)'; ctx.lineWidth=W*0.0032; crevassePath(-0.004); ctx.stroke();
+    ctx.strokeStyle='rgba(0,220,255,0.40)'; ctx.lineWidth=W*0.0012; crevassePath(-0.007); ctx.stroke();
   });
 
   // Snow on the ridge — thick white blanket softly above the crest
@@ -19600,77 +19618,106 @@ function drawGlacierScene() {
     const BR=[rx, boty];                  // bottom-right
     const BL=[lx, boty+H*0.005];         // bottom-left (slightly lower)
 
-    // Front face — left-lit, right-shadowed
+    // Helper: build a jagged path along the left or right edge of the block
+    // pts = [[x,y],...] baseline; jitter adds random-ish horizontal offsets
+    function jaggedEdge(pts, jitAmp, seed){
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for(let i=1;i<pts.length;i++){
+        const jx=jitAmp*(Math.sin(i*2.3+seed)*0.55+Math.sin(i*5.7+seed*1.4)*0.45);
+        ctx.lineTo(pts[i][0]+jx, pts[i][1]);
+      }
+    }
+    // Divide left & right edges into several segments for jaggedness
+    const nSeg=10;
+    function edgePts(x0,y0,x1,y1){ return Array.from({length:nSeg+1},(_,i)=>[x0+(x1-x0)*i/nSeg, y0+(y1-y0)*i/nSeg]); }
+    const leftEdge = edgePts(TL[0],TL[1], BL[0],BL[1]);
+    const rightEdge= edgePts(TR[0],TR[1], BR[0],BR[1]);
+
+    // Front face — jagged outline path
+    function blockPath(){
+      ctx.beginPath();
+      jaggedEdge(leftEdge, W*0.007, 1.3);   // left side
+      // top edge from TL to TR, jagged
+      const topSeg=8;
+      for(let i=1;i<=topSeg;i++){
+        const t=i/topSeg;
+        const jy=H*0.006*(Math.sin(i*3.1+0.9)*0.6+Math.sin(i*6.5+2.2)*0.4);
+        ctx.lineTo(TL[0]+t*(TR[0]-TL[0]), TL[1]+t*(TR[1]-TL[1])+jy);
+      }
+      // right edge TRdownward — jagged
+      for(let i=1;i<rightEdge.length;i++){
+        const jx=W*0.006*(Math.sin(i*2.8+2.1)*0.5+Math.sin(i*6.2+0.4)*0.5);
+        ctx.lineTo(rightEdge[i][0]+jx, rightEdge[i][1]);
+      }
+      ctx.closePath();
+    }
+
+    // Fill with gradient
     const faceG=ctx.createLinearGradient(TL[0],ty,BR[0],boty);
-    faceG.addColorStop(0,'#48cae4');    // bright lit top-left
+    faceG.addColorStop(0,'#48cae4');
     faceG.addColorStop(0.22,'#00b4d8');
     faceG.addColorStop(0.50,'#0096c7');
     faceG.addColorStop(0.78,'#0077b6');
-    faceG.addColorStop(1,'#023e8a');    // deep base
-    ctx.fillStyle=faceG;
-    ctx.beginPath();
-    ctx.moveTo(BL[0],BL[1]);
-    ctx.lineTo(TL[0],TL[1]);
-    ctx.bezierCurveTo(TL[0]+W*0.010,TL[1]-H*0.004, TR[0]-W*0.012,TR[1]-H*0.006, TR[0],TR[1]);
-    ctx.lineTo(BR[0],BR[1]);
-    ctx.closePath(); ctx.fill();
+    faceG.addColorStop(1,'#023e8a');
+    ctx.fillStyle=faceG; blockPath(); ctx.fill();
 
-    // Shadow overlay on right 40% — sun from upper left
+    // Shadow overlay on right 40%
     const shadG=ctx.createLinearGradient((TL[0]+TR[0])*0.5,0,TR[0],0);
-    shadG.addColorStop(0,'rgba(0,0,0,0)'); shadG.addColorStop(1,'rgba(0,15,50,0.44)');
-    ctx.fillStyle=shadG;
-    ctx.beginPath();
-    ctx.moveTo(BL[0],BL[1]);
-    ctx.lineTo(TL[0],TL[1]);
-    ctx.bezierCurveTo(TL[0]+W*0.010,TL[1]-H*0.004, TR[0]-W*0.012,TR[1]-H*0.006, TR[0],TR[1]);
-    ctx.lineTo(BR[0],BR[1]);
-    ctx.closePath(); ctx.fill();
+    shadG.addColorStop(0,'rgba(0,0,0,0)'); shadG.addColorStop(1,'rgba(0,15,50,0.46)');
+    ctx.fillStyle=shadG; blockPath(); ctx.fill();
 
-    // Top face — snow-covered horizontal surface (perspective strip)
-    const topDepth=H*0.028;  // how deep the top surface looks
-    const tTL=[TL[0]-W*0.004, TL[1]];
-    const tTR=[TR[0]+W*0.005, TR[1]];
-    const tBL=[TL[0]-W*0.002, TL[1]+topDepth];
-    const tBR=[TR[0]+W*0.003, TR[1]+topDepth*0.7];
-    const topG=ctx.createLinearGradient(tTL[0],tTL[1],tBL[0],tBL[1]+topDepth);
-    topG.addColorStop(0,'#e8f8ff'); topG.addColorStop(0.5,'#c8ecf8'); topG.addColorStop(1,'#a8d8ee');
+    // Clip strata + cracks to block shape
+    ctx.save(); blockPath(); ctx.clip();
+
+    // Jagged strata on the block face
+    ctx.lineCap='round';
+    [[0.22,1.2,5],[0.38,2.8,4],[0.54,0.6,6],[0.70,3.5,5],[0.84,1.9,4]].forEach(([t,seed,amp])=>{
+      const sy=ty+t*(boty-ty);
+      ctx.strokeStyle='rgba(0,30,85,0.55)'; ctx.lineWidth=1.3;
+      strataLine(sy/H, seed, amp); // reuse the jagged-line helper
+      ctx.strokeStyle='rgba(0,200,240,0.25)'; ctx.lineWidth=0.8;
+      strataLine(sy/H-0.002, seed+5, amp*0.7);
+    });
+
+    // Irregular fracture crack — multiple jagged segments
+    ctx.strokeStyle='rgba(0,12,48,0.78)'; ctx.lineWidth=W*0.006;
+    ctx.beginPath();
+    const cx0=lx+W*0.052;
+    [[0.00,0],[0.18,-0.008],[0.35,0.006],[0.52,-0.004],[0.70,0.010],[0.88,-0.006],[1.00,0.004]].forEach(([t,dx])=>
+      t===0?ctx.moveTo(cx0+dx*W, ty+H*0.004):ctx.lineTo(cx0+dx*W, ty+t*(boty-ty)));
+    ctx.stroke();
+    ctx.strokeStyle='rgba(0,200,238,0.42)'; ctx.lineWidth=W*0.002;
+    ctx.beginPath();
+    [[0.00,0],[0.18,-0.012],[0.35,0.002],[0.52,-0.008],[0.70,0.006],[0.88,-0.010],[1.00,0]].forEach(([t,dx])=>
+      t===0?ctx.moveTo(cx0+dx*W-W*0.004, ty+H*0.004):ctx.lineTo(cx0+dx*W-W*0.004, ty+t*(boty-ty)));
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Top face — jagged stepped snow surface
+    const topDepth=H*0.030;
+    const topPts=Array.from({length:9},(_,i)=>{
+      const t=i/8;
+      const jy=H*0.008*(Math.sin(i*2.2+1.0)*0.6+Math.sin(i*5.1+2.3)*0.4);
+      return [TL[0]+t*(TR[0]-TL[0]), TL[1]+t*(TR[1]-TL[1])+jy];
+    });
+    const topG=ctx.createLinearGradient(TL[0],TL[1],TL[0],TL[1]+topDepth);
+    topG.addColorStop(0,'#eafaff'); topG.addColorStop(0.6,'#c2e8f8'); topG.addColorStop(1,'#98cce8');
     ctx.fillStyle=topG;
-    ctx.beginPath();
-    ctx.moveTo(tTL[0],tTL[1]); ctx.lineTo(tTR[0],tTR[1]);
-    ctx.lineTo(tBR[0],tBR[1]); ctx.lineTo(tBL[0],tBL[1]);
+    ctx.beginPath(); ctx.moveTo(TL[0]-W*0.003, TL[1]+topDepth*0.5);
+    topPts.forEach(([x,y])=>ctx.lineTo(x,y));
+    ctx.lineTo(TR[0]+W*0.003, TR[1]+topDepth*0.6);
+    ctx.lineTo(TL[0]-W*0.002, TL[1]+topDepth*1.0);
     ctx.closePath(); ctx.fill();
-    // Snow mound on top surface
-    const snowMG=ctx.createLinearGradient(tTL[0],tTL[1],tBL[0],tBL[1]);
-    snowMG.addColorStop(0,'rgba(255,255,255,0.88)'); snowMG.addColorStop(1,'rgba(210,242,255,0.40)');
-    ctx.fillStyle=snowMG;
-    ctx.beginPath();
-    ctx.moveTo(tTL[0],tTL[1]); ctx.lineTo(tTR[0],tTR[1]);
-    ctx.lineTo(tBR[0],tBR[1]); ctx.lineTo(tBL[0],tBL[1]);
+    // Bright snow on top
+    ctx.fillStyle='rgba(245,255,255,0.80)';
+    ctx.beginPath(); topPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+    ctx.lineTo(TR[0]+W*0.003, TR[1]+topDepth*0.3);
+    ctx.lineTo(TL[0]-W*0.003, TL[1]+topDepth*0.4);
     ctx.closePath(); ctx.fill();
     // Top edge highlight
-    ctx.strokeStyle='rgba(240,252,255,0.85)'; ctx.lineWidth=W*0.007; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(tTL[0],tTL[1]); ctx.lineTo(tTR[0],tTR[1]); ctx.stroke();
-
-    // Horizontal strata on the front face — clipped to block shape
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(BL[0],BL[1]); ctx.lineTo(TL[0],TL[1]);
-    ctx.bezierCurveTo(TL[0]+W*0.010,TL[1]-H*0.004, TR[0]-W*0.012,TR[1]-H*0.006, TR[0],TR[1]);
-    ctx.lineTo(BR[0],BR[1]); ctx.closePath(); ctx.clip();
-    ctx.lineCap='butt';
-    [0.22,0.38,0.54,0.70,0.84].forEach(t=>{
-      const sy=ty+t*(boty-ty);
-      ctx.strokeStyle='rgba(0,35,88,0.52)'; ctx.lineWidth=1.2;
-      ctx.beginPath(); ctx.moveTo(lx-W*0.01,sy); ctx.lineTo(rx+W*0.01,sy); ctx.stroke();
-      ctx.strokeStyle='rgba(0,200,240,0.26)'; ctx.lineWidth=0.8;
-      ctx.beginPath(); ctx.moveTo(lx-W*0.01,sy-1.5); ctx.lineTo(rx+W*0.01,sy-1.5); ctx.stroke();
-    });
-    // Vertical fracture crack down the face
-    ctx.strokeStyle='rgba(0,15,50,0.75)'; ctx.lineWidth=W*0.006; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(lx+W*0.048,ty+H*0.005); ctx.quadraticCurveTo(lx+W*0.044,ty+H*0.08, lx+W*0.050,boty); ctx.stroke();
-    ctx.strokeStyle='rgba(0,200,238,0.44)'; ctx.lineWidth=W*0.002;
-    ctx.beginPath(); ctx.moveTo(lx+W*0.043,ty+H*0.010); ctx.quadraticCurveTo(lx+W*0.038,ty+H*0.08, lx+W*0.044,boty); ctx.stroke();
-    ctx.restore();
+    ctx.strokeStyle='rgba(240,252,255,0.88)'; ctx.lineWidth=W*0.008; ctx.lineCap='round';
+    ctx.beginPath(); topPts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)); ctx.stroke();
 
     // Icicles hanging from the bottom edge
     ctx.fillStyle='rgba(155,225,250,0.82)';
