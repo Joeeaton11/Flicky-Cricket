@@ -19528,17 +19528,30 @@ function drawGlacierScene() {
   horizBlend.addColorStop(1,'rgba(202,238,255,1.0)');
   ctx.fillStyle=horizBlend; ctx.fillRect(0,H*0.188,W,H*0.132);
 
-  // Pressure ridges on flat ice — parallel low ridges from glacier movement
-  ctx.strokeStyle='rgba(60,130,180,0.20)'; ctx.lineWidth=1.0; ctx.lineCap='butt';
-  [[0.20,0.48,0.40,0.46],[0.38,0.60,0.56,0.58],[0.24,0.72,0.46,0.70],[0.52,0.74,0.70,0.72],[0.15,0.84,0.35,0.82]].forEach(([x1,y1,x2,y2])=>{
-    ctx.beginPath(); ctx.moveTo(W*x1,H*y1); ctx.lineTo(W*x2,H*y2); ctx.stroke();
+  // Pressure ridges — gently curved, slight perspective foreshortening toward top
+  ctx.lineCap='round';
+  [[0.18,0.470,0.42,0.458,3.2],[0.36,0.575,0.58,0.562,2.8],[0.22,0.672,0.48,0.660,3.5],[0.50,0.700,0.72,0.690,2.6],[0.14,0.800,0.38,0.792,3.0],[0.44,0.820,0.66,0.812,2.4]].forEach(([x1,y1,x2,y2,seed])=>{
+    // Faint shadow below ridge
+    ctx.strokeStyle='rgba(40,100,155,0.18)'; ctx.lineWidth=2.2;
+    ctx.beginPath(); ctx.moveTo(W*x1,H*y1+1.5); ctx.quadraticCurveTo(W*(x1+x2)/2,H*(y1+y2)/2+1.5+Math.sin(seed)*2,W*x2,H*y2+1.5); ctx.stroke();
+    // Ridge crest — slightly bright
+    ctx.strokeStyle='rgba(200,238,255,0.28)'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(W*x1,H*y1); ctx.quadraticCurveTo(W*(x1+x2)/2,H*(y1+y2)/2+Math.sin(seed)*2,W*x2,H*y2); ctx.stroke();
   });
 
-  // Snow drifts — soft wind-blown highlights, low and long
+  // Wind-scoured sastrugi — short angled ridges (wind-erosion texture)
+  ctx.strokeStyle='rgba(170,220,248,0.18)'; ctx.lineWidth=0.9; ctx.lineCap='round';
+  [[0.32,0.50],[0.42,0.54],[0.55,0.48],[0.28,0.62],[0.48,0.66],[0.62,0.60],[0.36,0.75],[0.54,0.79],[0.40,0.87],[0.58,0.84]].forEach(([fx,fy],i)=>{
+    const ang=-0.25+Math.sin(i*1.7)*0.18;
+    const len=W*(0.024+Math.sin(i*2.3)*0.010);
+    ctx.beginPath(); ctx.moveTo(W*fx,H*fy); ctx.lineTo(W*fx+Math.cos(ang)*len, H*fy+Math.sin(ang)*len*0.3); ctx.stroke();
+  });
+
+  // Snow drifts — soft wind-blown ellipse highlights
   ctx.lineCap='round';
   [[0.28,0.440,0.50,0.435],[0.44,0.558,0.64,0.552],[0.30,0.700,0.56,0.694],[0.18,0.820,0.42,0.815]].forEach(([x1,y1,x2,y2])=>{
     const dG=ctx.createLinearGradient(W*x1,H*y1,W*x2,H*y2);
-    dG.addColorStop(0,'rgba(240,252,255,0)'); dG.addColorStop(0.5,'rgba(240,252,255,0.22)'); dG.addColorStop(1,'rgba(240,252,255,0)');
+    dG.addColorStop(0,'rgba(240,252,255,0)'); dG.addColorStop(0.5,'rgba(240,252,255,0.24)'); dG.addColorStop(1,'rgba(240,252,255,0)');
     ctx.fillStyle=dG;
     const ang=Math.atan2(H*(y2-y1),W*(x2-x1));
     ctx.beginPath(); ctx.ellipse(W*(x1+x2)/2,H*(y1+y2)/2,W*(x2-x1)*0.55,H*0.007,ang,0,Math.PI*2); ctx.fill();
@@ -19593,13 +19606,45 @@ function drawGlacierScene() {
     // Smaller orange dome tent
     const cx2=cx+W*0.076, cy2=cy+H*0.020;
     domeTent(cx2, cy2+H*0.022, W*0.028, H*0.030, '#d89010','rgba(0,0,0,0.24)');
-    // Crates / equipment
-    ctx.fillStyle='rgba(175,200,225,0.85)';
-    ctx.fillRect(cx-W*0.088,cy+H*0.035,W*0.024,H*0.020);
-    ctx.strokeStyle='rgba(90,130,170,0.50)'; ctx.lineWidth=0.8;
-    ctx.strokeRect(cx-W*0.088,cy+H*0.035,W*0.024,H*0.020);
-    ctx.fillRect(cx-W*0.088,cy+H*0.022,W*0.024,H*0.012);
-    ctx.strokeRect(cx-W*0.088,cy+H*0.022,W*0.024,H*0.012);
+    // Crates / equipment — with perspective tops, slats, and stencil marks
+    (function drawCrates(){
+      const cw=W*0.026, ch=H*0.022, tw=W*0.005, th=H*0.008; // body size, top overhang
+      const crateData=[
+        {bx:cx-W*0.094, by:cy+H*0.034, w:cw,   h:ch,   col:'rgba(155,185,215,0.92)', slats:3},
+        {bx:cx-W*0.093, by:cy+H*0.018, w:cw*0.8,h:ch*0.7,col:'rgba(170,195,225,0.88)',slats:2},
+      ];
+      crateData.forEach(({bx,by,w,h,col,slats})=>{
+        // Drop shadow
+        ctx.fillStyle='rgba(0,40,80,0.14)';
+        ctx.fillRect(bx+W*0.003,by+H*0.004,w,h);
+        // Front face
+        ctx.fillStyle=col;
+        ctx.fillRect(bx,by,w,h);
+        // Perspective top (parallelogram)
+        ctx.fillStyle='rgba(210,232,250,0.90)';
+        ctx.beginPath();
+        ctx.moveTo(bx,by); ctx.lineTo(bx+tw,by-th);
+        ctx.lineTo(bx+w+tw,by-th); ctx.lineTo(bx+w,by);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle='rgba(80,120,165,0.55)'; ctx.lineWidth=0.7;
+        ctx.stroke();
+        // Front face border
+        ctx.strokeRect(bx,by,w,h);
+        // Horizontal slats on front face
+        ctx.strokeStyle='rgba(80,120,165,0.35)'; ctx.lineWidth=0.6;
+        for(let s=1;s<slats;s++){
+          const sy=by+h*s/slats;
+          ctx.beginPath(); ctx.moveTo(bx,sy); ctx.lineTo(bx+w,sy); ctx.stroke();
+        }
+        // Vertical centre divider
+        ctx.beginPath(); ctx.moveTo(bx+w*0.5,by); ctx.lineTo(bx+w*0.5,by+h); ctx.stroke();
+        // Stencil mark — small X on front
+        ctx.strokeStyle='rgba(60,100,145,0.28)'; ctx.lineWidth=0.6;
+        const mx=bx+w*0.25, my=by+h*0.5, ms=Math.min(w,h)*0.18;
+        ctx.beginPath(); ctx.moveTo(mx-ms,my-ms); ctx.lineTo(mx+ms,my+ms); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(mx+ms,my-ms); ctx.lineTo(mx-ms,my+ms); ctx.stroke();
+      });
+    })();
   }
 
   // ── TOP-RIGHT CORNER: CALVED SERAC (large broken glacier block) ──
@@ -20548,11 +20593,11 @@ function drawBoundary() {
   } else if (key === 'pirate' || key === 'westwild' || key === 'carnival' || key === 'desert') {
     ctx.strokeStyle = '#6a4420'; ctx.lineWidth = key==='westwild'?6:5; ctx.stroke();
     ctx.setLineDash([3,6]); ctx.strokeStyle = '#caa468'; ctx.lineWidth = 3; ctx.stroke();
-  } else if (key === 'arctic') {
+  } else if (key === 'arctic' || key === 'glacier' || key === 'tundra') {
     // Shadow — deep blue beneath rope
     ctx.strokeStyle = 'rgba(10,40,80,0.50)'; ctx.lineWidth = 5.5; ctx.stroke();
     // Main rope — icy steel-blue cable
-    ctx.strokeStyle = '#8ec8e8'; ctx.lineWidth = 3.4; ctx.stroke();
+    ctx.strokeStyle = key==='glacier'?'#72c4e0':'#8ec8e8'; ctx.lineWidth = 3.4; ctx.stroke();
     // Frost highlight — bright glint along top of rope
     ctx.strokeStyle = 'rgba(220,245,255,0.70)'; ctx.lineWidth = 1.1; ctx.stroke();
   } else if (key === 'jungle') {
