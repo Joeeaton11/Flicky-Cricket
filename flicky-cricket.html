@@ -19441,14 +19441,13 @@ function drawGlacierScene() {
     ctx.beginPath(); ctx.ellipse(W*fx,H*fy,W*hw*0.25,H*0.008,0,0,Math.PI*2); ctx.fill();
   });
 
-  // Snow on ridge top — white dusting over the ice edge
-  ctx.fillStyle='rgba(230,248,255,0.60)';
-  ridgePts.forEach(([x,y],i)=>{
-    if(i>0 && i<ridgePts.length-1){
-      const pw=W*0.018, ph=H*0.014;
-      ctx.beginPath(); ctx.ellipse(W*x,H*y,pw,ph,0,0,Math.PI*2); ctx.fill();
-    }
-  });
+  // Snow dusting on ridge — very subtle, painted as a thin strip along the crest
+  const snowCrest=ctx.createLinearGradient(0,H*0.05,0,H*0.12);
+  snowCrest.addColorStop(0,'rgba(230,250,255,0.45)'); snowCrest.addColorStop(1,'rgba(230,250,255,0)');
+  ctx.fillStyle=snowCrest;
+  ctx.beginPath(); ctx.moveTo(0,H*0.195);
+  ridgePts.forEach(([x,y])=>ctx.lineTo(W*x,H*y));
+  ctx.lineTo(W,H*0.195); ctx.closePath(); ctx.fill();
 
   // Overall glaze — cold blue-white bounce light across whole face
   const glazeG=ctx.createLinearGradient(0,H*0.06,0,H*0.23);
@@ -19480,24 +19479,7 @@ function drawGlacierScene() {
     ctx.beginPath(); ctx.moveTo(W*x1,H*y1); ctx.lineTo(W*x2,H*y2); ctx.stroke();
   });
 
-  // Meltwater pools — turquoise patches on the ice
-  [
-    [0.24,0.48,W*0.055,H*0.018,'rgba(30,160,210,0.45)'],
-    [0.70,0.56,W*0.042,H*0.014,'rgba(25,150,200,0.38)'],
-  ].forEach(([fx,fy,rx2,ry2,col])=>{
-    propShadow(W*fx,H*fy,rx2*1.1,ry2*0.4);
-    ctx.fillStyle=col; ctx.beginPath(); ctx.ellipse(W*fx,H*fy,rx2,ry2,0,0,Math.PI*2); ctx.fill();
-    // Reflection highlight
-    ctx.fillStyle='rgba(180,235,255,0.35)';
-    ctx.beginPath(); ctx.ellipse(W*fx-rx2*0.25,H*fy-ry2*0.25,rx2*0.45,ry2*0.30,0,0,Math.PI*2); ctx.fill();
-    // Edge
-    ctx.strokeStyle='rgba(60,180,230,0.45)'; ctx.lineWidth=1.2;
-    ctx.beginPath(); ctx.ellipse(W*fx,H*fy,rx2,ry2,0,0,Math.PI*2); ctx.stroke();
-  });
-
   drawGroundRings('#b8d8ec','#a0c4d8',0);
-
-  drawSceneScoreboard();
 
   // ── CALVED ICE BLOCK — left side, outside oval ──
   // At y≈H*0.40, oval left_edge≈W*0.108. Block at x=W*0.038 with width W*0.085 → right edge W*0.123 > W*0.108
@@ -19581,16 +19563,35 @@ function drawGlacierScene() {
   {
     const bx=W*0.868, by=H*0.308;
     ctx.fillStyle='rgba(235,248,255,0.88)';
-    // Body
     ctx.beginPath(); ctx.ellipse(bx,by,W*0.018,H*0.008,-0.2,0,Math.PI*2); ctx.fill();
-    // Wing left
     ctx.beginPath(); ctx.moveTo(bx-W*0.005,by-H*0.003); ctx.quadraticCurveTo(bx-W*0.028,by-H*0.014,bx-W*0.038,by+H*0.002); ctx.lineTo(bx-W*0.010,by+H*0.003); ctx.closePath(); ctx.fill();
-    // Wing right
     ctx.beginPath(); ctx.moveTo(bx+W*0.005,by-H*0.003); ctx.quadraticCurveTo(bx+W*0.028,by-H*0.014,bx+W*0.036,by+H*0.002); ctx.lineTo(bx+W*0.010,by+H*0.003); ctx.closePath(); ctx.fill();
-    // Head
     ctx.fillStyle='rgba(215,230,240,0.90)';
     ctx.beginPath(); ctx.arc(bx-W*0.016,by-H*0.004,W*0.008,0,Math.PI*2); ctx.fill();
   }
+
+  // ── MELTWATER POOLS — corners, outside oval ──
+  // Bottom-left: at y=H*0.880, left_edge≈W*0.199. Pool right edge W*0.080 < W*0.199 ✓
+  // Bottom-right: at y=H*0.820, right_edge≈W*0.870. Pool left edge W*0.912 > W*0.870 ✓
+  [
+    [W*0.040,H*0.882,W*0.042,H*0.016,'rgba(30,160,210,0.48)'],
+    [W*0.950,H*0.818,W*0.036,H*0.014,'rgba(25,150,200,0.42)'],
+  ].forEach(([px,py,rx2,ry2,col])=>{
+    ctx.fillStyle=col; ctx.beginPath(); ctx.ellipse(px,py,rx2,ry2,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(190,240,255,0.38)';
+    ctx.beginPath(); ctx.ellipse(px-rx2*0.25,py-ry2*0.28,rx2*0.45,ry2*0.32,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(50,170,220,0.50)'; ctx.lineWidth=1.0;
+    ctx.beginPath(); ctx.ellipse(px,py,rx2,ry2,0,0,Math.PI*2); ctx.stroke();
+  });
+
+  // ── CRAMPON BOOT TRACKS — trail from camp toward ice block ──
+  ctx.fillStyle='rgba(90,140,180,0.40)';
+  [[0.840,0.390],[0.810,0.408],[0.778,0.424],[0.746,0.438],[0.714,0.450],[0.682,0.460],[0.650,0.468]].forEach(([fx,fy],i)=>{
+    const ox=(i%2)*W*0.014-W*0.007;
+    ctx.beginPath(); ctx.ellipse(W*fx+ox,H*fy,W*0.008,H*0.004,0.3,0,Math.PI*2); ctx.fill();
+  });
+
+  drawSceneScoreboard();
 }
 
 function drawTundraScene() {
