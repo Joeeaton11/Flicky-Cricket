@@ -19326,39 +19326,87 @@ function drawGlacierScene() {
   ctx.lineWidth=W*0.004;
   ctx.beginPath(); ctx.arc(sunX,sunY,W*0.100,0,Math.PI*2); ctx.stroke();
 
+  // Ridge control points — smooth glacier crest drawn with quadratic curves
   const ridgePts=[
-    [0.00,0.195],[0.04,0.178],[0.09,0.188],[0.14,0.162],[0.19,0.148],[0.24,0.165],
-    [0.30,0.128],[0.35,0.108],[0.40,0.096],[0.46,0.112],[0.52,0.086],[0.57,0.074],
-    [0.62,0.090],[0.67,0.068],[0.72,0.082],[0.77,0.062],[0.82,0.078],[0.87,0.058],
-    [0.92,0.072],[0.96,0.090],[1.00,0.110]
+    [0.00,0.200],[0.06,0.182],[0.13,0.170],[0.20,0.152],[0.28,0.160],
+    [0.36,0.118],[0.44,0.098],[0.52,0.082],[0.60,0.094],
+    [0.68,0.072],[0.76,0.085],[0.84,0.062],[0.92,0.078],[1.00,0.105]
   ];
+
+  // Helper: draw smooth ridge path using quadratic midpoints
+  function ridgePath(close){
+    ctx.beginPath(); ctx.moveTo(W*ridgePts[0][0],H*ridgePts[0][1]);
+    for(let i=0;i<ridgePts.length-1;i++){
+      const mx=(ridgePts[i][0]+ridgePts[i+1][0])/2;
+      const my=(ridgePts[i][1]+ridgePts[i+1][1])/2;
+      ctx.quadraticCurveTo(W*ridgePts[i][0],H*ridgePts[i][1],W*mx,H*my);
+    }
+    const last=ridgePts[ridgePts.length-1];
+    ctx.lineTo(W*last[0],H*last[1]);
+    if(close){ ctx.lineTo(W,H*0.23); ctx.lineTo(0,H*0.23); ctx.closePath(); }
+  }
+
+  // Deep ice base
   const baseG=ctx.createLinearGradient(0,0,0,H*0.23);
-  baseG.addColorStop(0,'#021828'); baseG.addColorStop(0.30,'#0a3858'); baseG.addColorStop(0.70,'#1a6080'); baseG.addColorStop(1,'#2a7898');
+  baseG.addColorStop(0,'#021828'); baseG.addColorStop(0.28,'#093452'); baseG.addColorStop(0.68,'#175e7a'); baseG.addColorStop(1,'#226888');
   ctx.fillStyle=baseG; ctx.fillRect(0,0,W,H*0.23);
+
+  // Main glacier body — fills from smooth ridge to horizon
   const mainIceG=ctx.createLinearGradient(0,H*0.06,0,H*0.23);
-  mainIceG.addColorStop(0,'rgba(40,140,200,0.0)'); mainIceG.addColorStop(0.15,'rgba(30,120,180,0.55)'); mainIceG.addColorStop(0.55,'rgba(20,100,160,0.80)'); mainIceG.addColorStop(1,'rgba(10,70,120,0.90)');
-  ctx.fillStyle=mainIceG;
-  ctx.beginPath(); ctx.moveTo(0,H*0.23);
-  ridgePts.forEach(([x,y])=>ctx.lineTo(W*x,H*y));
-  ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
-  [{pts:[[0.30,0.128],[0.35,0.108],[0.35,0.23],[0.30,0.23]],col:'rgba(180,235,255,0.38)'},{pts:[[0.52,0.086],[0.57,0.074],[0.57,0.23],[0.52,0.23]],col:'rgba(160,225,255,0.32)'},{pts:[[0.77,0.062],[0.82,0.078],[0.82,0.23],[0.77,0.23]],col:'rgba(190,240,255,0.35)'},{pts:[[0.87,0.058],[0.92,0.072],[0.92,0.23],[0.87,0.23]],col:'rgba(200,245,255,0.42)'}].forEach(({pts,col})=>{ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(W*pts[0][0],H*pts[0][1]);pts.forEach(([px,py])=>ctx.lineTo(W*px,H*py));ctx.closePath();ctx.fill();});
-  [{pts:[[0.35,0.108],[0.40,0.096],[0.40,0.23],[0.35,0.23]],col:'rgba(5,30,60,0.40)'},{pts:[[0.57,0.074],[0.62,0.090],[0.62,0.23],[0.57,0.23]],col:'rgba(5,25,55,0.35)'},{pts:[[0.82,0.078],[0.87,0.058],[0.87,0.23],[0.82,0.23]],col:'rgba(8,30,60,0.30)'}].forEach(({pts,col})=>{ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(W*pts[0][0],H*pts[0][1]);pts.forEach(([px,py])=>ctx.lineTo(W*px,H*py));ctx.closePath();ctx.fill();});
-  ctx.strokeStyle='rgba(60,140,200,0.22)'; ctx.lineWidth=1.2; ctx.lineCap='butt';
-  [0.145,0.165,0.185,0.200,0.212].forEach(fy=>{ctx.beginPath();ctx.moveTo(0,H*fy);ctx.lineTo(W,H*fy);ctx.stroke();});
+  mainIceG.addColorStop(0,'rgba(36,130,195,0.0)'); mainIceG.addColorStop(0.18,'rgba(28,112,172,0.50)'); mainIceG.addColorStop(0.58,'rgba(18,92,152,0.82)'); mainIceG.addColorStop(1,'rgba(10,65,115,0.94)');
+  ctx.fillStyle=mainIceG; ridgePath(true); ctx.fill();
+
+  // Broad sunlit zones — gradients from left, not hard-edged panels
+  [[0.20,0.45,'rgba(185,238,255,0.22)'],[0.50,0.72,'rgba(165,228,255,0.18)'],[0.78,0.96,'rgba(192,242,255,0.24)']].forEach(([x0,x1,col])=>{
+    const pG=ctx.createLinearGradient(W*x0,0,W*x1,0);
+    pG.addColorStop(0,col); pG.addColorStop(0.4,col); pG.addColorStop(1,'rgba(10,65,115,0)');
+    ctx.fillStyle=pG; ridgePath(true); ctx.fill();
+  });
+
+  // Shadow zones between the lit bands
+  [[0.36,0.52,'rgba(4,22,50,0.28)'],[0.60,0.76,'rgba(4,20,48,0.22)']].forEach(([x0,x1,col])=>{
+    const sZ=ctx.createLinearGradient(W*x0,0,W*x1,0);
+    sZ.addColorStop(0,'rgba(4,20,48,0)'); sZ.addColorStop(0.5,col); sZ.addColorStop(1,'rgba(4,20,48,0)');
+    ctx.fillStyle=sZ; ridgePath(true); ctx.fill();
+  });
+
+  // Horizontal compression strata
+  ctx.lineCap='butt'; ctx.strokeStyle='rgba(55,135,195,0.20)'; ctx.lineWidth=1.0;
+  [0.148,0.166,0.184,0.200,0.213].forEach(fy=>{ctx.beginPath();ctx.moveTo(0,H*fy);ctx.lineTo(W,H*fy);ctx.stroke();});
+
+  // Crevasses — curved dark fissures, no triangular shapes
   ctx.lineCap='round';
-  [[[0.19,0.148],[0.22,0.175],[0.21,0.205],[0.20,0.23]],[[0.35,0.108],[0.33,0.145],[0.34,0.180],[0.35,0.23]],[[0.52,0.086],[0.54,0.130],[0.52,0.168],[0.50,0.23]],[[0.67,0.068],[0.65,0.110],[0.66,0.158],[0.68,0.23]],[[0.82,0.078],[0.84,0.118],[0.83,0.160],[0.82,0.23]]].forEach(pts=>{ctx.strokeStyle='rgba(4,20,48,0.85)';ctx.lineWidth=W*0.006;ctx.beginPath();ctx.moveTo(W*pts[0][0],H*pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(W*pts[i][0],H*pts[i][1]);ctx.stroke();ctx.strokeStyle='rgba(100,200,255,0.28)';ctx.lineWidth=W*0.002;ctx.beginPath();ctx.moveTo(W*pts[0][0]-W*0.004,H*pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(W*pts[i][0]-W*0.004,H*pts[i][1]);ctx.stroke();});
-  ctx.strokeStyle='rgba(40,180,220,0.30)'; ctx.lineWidth=W*0.003; ctx.lineCap='round';
-  [[0.25,0.155,0.27,0.23],[0.43,0.100,0.42,0.23],[0.60,0.090,0.61,0.23],[0.74,0.075,0.75,0.23]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(W*x1,H*y1);ctx.quadraticCurveTo(W*(x1+0.010),H*((y1+y2)/2),W*x2,H*y2);ctx.stroke();});
-  ctx.setLineDash([]);
-  [[0.40,0.096,0.022,0.062],[0.57,0.074,0.026,0.070],[0.77,0.062,0.030,0.078],[0.87,0.058,0.020,0.055]].forEach(([fx,fy,hw,ht])=>{const sG=ctx.createLinearGradient(W*(fx-hw),0,W*(fx+hw),0);sG.addColorStop(0,'rgba(160,230,255,0.90)');sG.addColorStop(0.45,'rgba(220,250,255,0.95)');sG.addColorStop(1,'rgba(80,160,210,0.60)');ctx.fillStyle=sG;ctx.beginPath();ctx.moveTo(W*(fx-hw*0.3),H*fy);ctx.lineTo(W*(fx-hw),H*(fy+ht));ctx.lineTo(W*(fx+hw),H*(fy+ht));ctx.lineTo(W*(fx+hw*0.4),H*fy);ctx.closePath();ctx.fill();ctx.fillStyle='rgba(20,60,100,0.45)';ctx.beginPath();ctx.moveTo(W*(fx+hw*0.4),H*fy);ctx.lineTo(W*(fx+hw),H*(fy+ht));ctx.lineTo(W*(fx+hw*0.7),H*(fy+ht));ctx.closePath();ctx.fill();ctx.fillStyle='rgba(255,255,255,0.70)';ctx.beginPath();ctx.ellipse(W*fx,H*fy,W*hw*0.25,H*0.008,0,0,Math.PI*2);ctx.fill();});
-  const snowCrest=ctx.createLinearGradient(0,H*0.05,0,H*0.12);
-  snowCrest.addColorStop(0,'rgba(230,250,255,0.45)'); snowCrest.addColorStop(1,'rgba(230,250,255,0)');
-  ctx.fillStyle=snowCrest;
-  ctx.beginPath(); ctx.moveTo(0,H*0.195);
-  ridgePts.forEach(([x,y])=>ctx.lineTo(W*x,H*y));
-  ctx.lineTo(W,H*0.195); ctx.closePath(); ctx.fill();
+  [
+    [[0.20,0.152],[0.22,0.180],[0.21,0.210],[0.20,0.23]],
+    [[0.36,0.118],[0.34,0.152],[0.35,0.185],[0.36,0.23]],
+    [[0.52,0.082],[0.54,0.122],[0.52,0.162],[0.50,0.23]],
+    [[0.68,0.072],[0.66,0.115],[0.67,0.158],[0.69,0.23]],
+    [[0.84,0.062],[0.86,0.108],[0.85,0.158],[0.84,0.23]],
+  ].forEach(pts=>{
+    ctx.strokeStyle='rgba(4,18,44,0.80)'; ctx.lineWidth=W*0.005;
+    ctx.beginPath(); ctx.moveTo(W*pts[0][0],H*pts[0][1]);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(W*pts[i][0],H*pts[i][1]);
+    ctx.stroke();
+    ctx.strokeStyle='rgba(110,205,255,0.22)'; ctx.lineWidth=W*0.0015;
+    ctx.beginPath(); ctx.moveTo(W*pts[0][0]-W*0.003,H*pts[0][1]);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(W*pts[i][0]-W*0.003,H*pts[i][1]);
+    ctx.stroke();
+  });
+
+  // Meltwater streaks
+  ctx.strokeStyle='rgba(38,178,220,0.28)'; ctx.lineWidth=W*0.0025; ctx.lineCap='round';
+  [[0.26,0.158,0.27,0.23],[0.44,0.102,0.43,0.23],[0.61,0.092,0.62,0.23],[0.75,0.078,0.76,0.23]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath(); ctx.moveTo(W*x1,H*y1); ctx.quadraticCurveTo(W*(x1+0.008),H*((y1+y2)/2),W*x2,H*y2); ctx.stroke();
+  });
+
+  // Snow crest — soft glow along the ridge, no hard shapes
+  const snowCrest=ctx.createLinearGradient(0,H*0.04,0,H*0.14);
+  snowCrest.addColorStop(0,'rgba(228,250,255,0.42)'); snowCrest.addColorStop(1,'rgba(228,250,255,0)');
+  ctx.fillStyle=snowCrest; ridgePath(true); ctx.fill();
+
+  // Cold glaze
   const glazeG=ctx.createLinearGradient(0,H*0.06,0,H*0.23);
-  glazeG.addColorStop(0,'rgba(160,230,255,0.12)'); glazeG.addColorStop(0.5,'rgba(100,190,240,0.06)'); glazeG.addColorStop(1,'rgba(50,140,200,0.0)');
+  glazeG.addColorStop(0,'rgba(155,228,255,0.10)'); glazeG.addColorStop(0.5,'rgba(95,188,238,0.05)'); glazeG.addColorStop(1,'rgba(50,138,200,0)');
   ctx.fillStyle=glazeG; ctx.fillRect(0,0,W,H*0.23);
 
   ctx.restore(); // end backdrop clip
