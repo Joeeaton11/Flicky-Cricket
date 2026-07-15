@@ -19456,139 +19456,219 @@ function drawGlacierScene() {
 
   ctx.restore(); // end backdrop clip
 
+  // Helper: oval left/right edge at a given fractional y
+  function ovalLX(fy){ return W*(0.5-0.46*Math.sqrt(Math.max(0,1-Math.pow((fy-0.60)/0.37,2)))); }
+  function ovalRX(fy){ return W*(0.5+0.46*Math.sqrt(Math.max(0,1-Math.pow((fy-0.60)/0.37,2)))); }
+
   // ── HORIZON BLEND ──
   const horizBlend=ctx.createLinearGradient(0,H*0.195,0,H*0.268);
-  horizBlend.addColorStop(0,'rgba(185,222,240,0)');
-  horizBlend.addColorStop(0.50,'rgba(185,222,240,0.60)');
-  horizBlend.addColorStop(1,'rgba(185,222,240,1)');
+  horizBlend.addColorStop(0,'rgba(178,218,238,0)');
+  horizBlend.addColorStop(0.55,'rgba(178,218,238,0.65)');
+  horizBlend.addColorStop(1,'rgba(178,218,238,1)');
   ctx.fillStyle=horizBlend; ctx.fillRect(0,H*0.195,W,H*0.075);
 
-  // ── GLACIAL ICE GROUND — pale compacted ice ──
+  // ── GLACIAL ICE GROUND ──
   const grd=ctx.createLinearGradient(0,H*0.23,0,H);
-  grd.addColorStop(0,'#b9dced'); grd.addColorStop(0.25,'#a8cee0'); grd.addColorStop(0.60,'#98bcd4'); grd.addColorStop(1,'#88aac4');
+  grd.addColorStop(0,'#b2d8ea'); grd.addColorStop(0.25,'#a0c8dc'); grd.addColorStop(0.60,'#90b8cc'); grd.addColorStop(1,'#80a8bc');
   ctx.fillStyle=grd; ctx.fillRect(0,H*0.23,W,H*0.77);
 
-  // Sun glare streak across the ice
-  const glare=ctx.createLinearGradient(0,H*0.23,W*0.40,H*0.55);
-  glare.addColorStop(0,'rgba(255,255,255,0.18)'); glare.addColorStop(0.4,'rgba(255,255,255,0.08)'); glare.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=glare; ctx.fillRect(0,H*0.23,W*0.40,H*0.45);
+  // Sun glare across the compacted ice
+  const glare=ctx.createLinearGradient(0,H*0.23,W*0.45,H*0.58);
+  glare.addColorStop(0,'rgba(255,255,255,0.16)'); glare.addColorStop(0.5,'rgba(255,255,255,0.06)'); glare.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=glare; ctx.fillRect(0,H*0.23,W*0.45,H*0.50);
 
-  // Pressure ridges / cracks across ice surface
-  ctx.strokeStyle='rgba(80,140,190,0.28)'; ctx.lineWidth=1.0;
-  [[0.15,0.34,0.28,0.36],[0.38,0.42,0.54,0.40],[0.22,0.58,0.36,0.56],[0.60,0.50,0.72,0.52],[0.42,0.70,0.56,0.68]].forEach(([x1,y1,x2,y2])=>{
+  // ── GLACIER CORNER WRAPS — ice walls curving around the oval, adding depth ──
+  // The glacier doesn't just sit at the horizon — it wraps down into the corners,
+  // like standing inside a bowl carved from ice.
+  // Left corner: fills region from screen-left to oval's left boundary
+  {
+    const steps=60;
+    // Deep ice shadow — full left corner fill
+    const lwG=ctx.createLinearGradient(0,H*0.23,ovalLX(0.42),H*0.42);
+    lwG.addColorStop(0,'rgba(10,55,100,0.92)');
+    lwG.addColorStop(0.30,'rgba(18,80,130,0.80)');
+    lwG.addColorStop(0.65,'rgba(30,100,155,0.60)');
+    lwG.addColorStop(1,'rgba(50,120,170,0.20)');
+    ctx.fillStyle=lwG;
+    ctx.beginPath();
+    ctx.moveTo(0,H*0.23);
+    ctx.lineTo(W*0.50,H*0.23); // across to oval origin
+    for(let i=0;i<=steps;i++){
+      const fy=0.23+i*(0.55-0.23)/steps;
+      ctx.lineTo(ovalLX(fy),H*fy);
+    }
+    ctx.lineTo(0,H*0.55);
+    ctx.closePath(); ctx.fill();
+
+    // Lit face — catches sun from left; a brighter strip along the oval boundary edge
+    const litG=ctx.createLinearGradient(ovalLX(0.35),H*0.35,ovalLX(0.35)+W*0.06,H*0.35);
+    litG.addColorStop(0,'rgba(160,225,255,0.55)');
+    litG.addColorStop(1,'rgba(160,225,255,0)');
+    ctx.fillStyle=litG;
+    ctx.beginPath();
+    for(let i=0;i<=steps;i++){
+      const fy=0.23+i*(0.55-0.23)/steps;
+      const lx=ovalLX(fy);
+      i===0?ctx.moveTo(lx,H*fy):ctx.lineTo(lx,H*fy);
+    }
+    for(let i=steps;i>=0;i--){
+      const fy=0.23+i*(0.55-0.23)/steps;
+      ctx.lineTo(ovalLX(fy)+W*0.055,H*fy);
+    }
+    ctx.closePath(); ctx.fill();
+
+    // Ice strata bands — horizontal layering visible in the corner wall
+    ctx.strokeStyle='rgba(60,130,190,0.22)'; ctx.lineWidth=1.0;
+    [0.28,0.33,0.38,0.43,0.48].forEach(fy=>{
+      ctx.beginPath(); ctx.moveTo(0,H*fy); ctx.lineTo(ovalLX(fy),H*fy); ctx.stroke();
+    });
+
+    // Crevasse cracks in the left wall
+    ctx.strokeStyle='rgba(4,22,50,0.60)'; ctx.lineWidth=W*0.005; ctx.lineCap='round';
+    [[0.23,0.270,0.25,0.430],[0.04,0.280,0.06,0.450]].forEach(([fy0,fx0,fy1,fx1])=>{
+      ctx.beginPath(); ctx.moveTo(W*fx0,H*fy0); ctx.quadraticCurveTo(W*(fx0+0.015),H*((fy0+fy1)/2),W*fx1,H*fy1); ctx.stroke();
+    });
+  }
+
+  // Right corner: mirror
+  {
+    const steps=60;
+    const rwG=ctx.createLinearGradient(W,H*0.23,ovalRX(0.42),H*0.42);
+    rwG.addColorStop(0,'rgba(10,55,100,0.92)');
+    rwG.addColorStop(0.30,'rgba(18,80,130,0.80)');
+    rwG.addColorStop(0.65,'rgba(30,100,155,0.60)');
+    rwG.addColorStop(1,'rgba(50,120,170,0.20)');
+    ctx.fillStyle=rwG;
+    ctx.beginPath();
+    ctx.moveTo(W,H*0.23);
+    ctx.lineTo(W*0.50,H*0.23);
+    for(let i=0;i<=steps;i++){
+      const fy=0.23+i*(0.55-0.23)/steps;
+      ctx.lineTo(ovalRX(fy),H*fy);
+    }
+    ctx.lineTo(W,H*0.55);
+    ctx.closePath(); ctx.fill();
+
+    // Shadow face on right (sun comes from left so right wall is in shade)
+    const shadG=ctx.createLinearGradient(ovalRX(0.35)-W*0.06,H*0.35,ovalRX(0.35),H*0.35);
+    shadG.addColorStop(0,'rgba(5,25,55,0)');
+    shadG.addColorStop(1,'rgba(5,25,55,0.45)');
+    ctx.fillStyle=shadG;
+    ctx.beginPath();
+    for(let i=0;i<=steps;i++){
+      const fy=0.23+i*(0.55-0.23)/steps;
+      const rx2=ovalRX(fy);
+      i===0?ctx.moveTo(rx2,H*fy):ctx.lineTo(rx2,H*fy);
+    }
+    for(let i=steps;i>=0;i--){
+      const fy=0.23+i*(0.55-0.23)/steps;
+      ctx.lineTo(ovalRX(fy)-W*0.055,H*fy);
+    }
+    ctx.closePath(); ctx.fill();
+
+    ctx.strokeStyle='rgba(60,130,190,0.22)'; ctx.lineWidth=1.0;
+    [0.28,0.33,0.38,0.43,0.48].forEach(fy=>{
+      ctx.beginPath(); ctx.moveTo(W,H*fy); ctx.lineTo(ovalRX(fy),H*fy); ctx.stroke();
+    });
+
+    ctx.strokeStyle='rgba(4,22,50,0.60)'; ctx.lineWidth=W*0.005; ctx.lineCap='round';
+    [[0.23,0.740,0.25,0.590],[0.04,0.760,0.06,0.580]].forEach(([fy0,fx0,fy1,fx1])=>{
+      ctx.beginPath(); ctx.moveTo(W*fx0,H*fy0); ctx.quadraticCurveTo(W*(fx0-0.015),H*((fy0+fy1)/2),W*fx1,H*fy1); ctx.stroke();
+    });
+  }
+
+  // Pressure ridges across ice surface
+  ctx.strokeStyle='rgba(80,140,190,0.22)'; ctx.lineWidth=0.9;
+  [[0.22,0.50,0.38,0.48],[0.45,0.60,0.58,0.58],[0.28,0.70,0.44,0.68],[0.56,0.72,0.68,0.70]].forEach(([x1,y1,x2,y2])=>{
     ctx.beginPath(); ctx.moveTo(W*x1,H*y1); ctx.lineTo(W*x2,H*y2); ctx.stroke();
   });
 
-  drawGroundRings('#b8d8ec','#a0c4d8',0);
+  drawGroundRings('#b0d4e8','#98c0d4',0);
 
-  // ── CALVED ICE BLOCK — left side, outside oval ──
-  // At y≈H*0.40, oval left_edge≈W*0.108. Block at x=W*0.038 with width W*0.085 → right edge W*0.123 > W*0.108
-  // Move block base to x=W*0.02, width W*0.075, right edge W*0.095 < W*0.108 ✓
+  // ── TOP-LEFT CORNER: RESEARCH CAMP ──
+  // At y=H*0.315, oval_lx≈W*0.208. Camp centred x=W*0.085, right extent W*0.145 < W*0.208 ✓
   {
-    const bx=W*0.020, by=H*0.390, bw=W*0.080, bh=H*0.095;
-    propShadow(bx+bw*0.5, by+bh+H*0.012, bw*0.75, H*0.018);
-    // Main block — irregular polygon
-    const blockG=ctx.createLinearGradient(bx,by,bx+bw,by+bh);
-    blockG.addColorStop(0,'#d8f0ff'); blockG.addColorStop(0.4,'#a8d4f0'); blockG.addColorStop(1,'#5898c8');
-    ctx.fillStyle=blockG;
-    ctx.beginPath();
-    ctx.moveTo(bx+bw*0.15,by);
-    ctx.lineTo(bx+bw*0.85,by+bh*0.05);
-    ctx.lineTo(bx+bw,by+bh*0.35);
-    ctx.lineTo(bx+bw*0.90,by+bh);
-    ctx.lineTo(bx,by+bh);
-    ctx.lineTo(bx,by+bh*0.20);
-    ctx.closePath(); ctx.fill();
-    // Left shadow face
-    ctx.fillStyle='rgba(10,50,100,0.35)';
-    ctx.beginPath(); ctx.moveTo(bx,by+bh*0.20); ctx.lineTo(bx,by+bh); ctx.lineTo(bx+bw*0.18,by+bh); ctx.lineTo(bx+bw*0.15,by); ctx.closePath(); ctx.fill();
-    // Top sunlit face
-    ctx.fillStyle='rgba(230,250,255,0.65)';
-    ctx.beginPath(); ctx.moveTo(bx+bw*0.15,by); ctx.lineTo(bx+bw*0.85,by+bh*0.05); ctx.lineTo(bx+bw*0.68,by+bh*0.08); ctx.lineTo(bx+bw*0.10,by+bh*0.04); ctx.closePath(); ctx.fill();
-    // Crevasse cracks on block face
-    ctx.strokeStyle='rgba(20,80,140,0.45)'; ctx.lineWidth=1.0;
-    ctx.beginPath(); ctx.moveTo(bx+bw*0.35,by+bh*0.05); ctx.lineTo(bx+bw*0.32,by+bh*0.60); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(bx+bw*0.62,by+bh*0.08); ctx.lineTo(bx+bw*0.65,by+bh*0.55); ctx.stroke();
-    // Icicles hanging from base
-    ctx.fillStyle='rgba(160,220,248,0.80)';
-    [0.22,0.34,0.46,0.58,0.70,0.82].forEach((fx,i)=>{
-      const il=H*(0.018+(i%3)*0.008);
-      ctx.beginPath(); ctx.moveTo(bx+bw*fx-W*0.004,by+bh); ctx.lineTo(bx+bw*fx+W*0.004,by+bh); ctx.lineTo(bx+bw*fx,by+bh+il); ctx.closePath(); ctx.fill();
-    });
-  }
-
-  // ── RESEARCH CAMP — right side ──
-  // At y≈H*0.36, oval right_edge≈W*0.840. Tent at x=W*0.880, safely outside ✓
-  {
-    const rx=W*0.880, ry=H*0.355;
+    const cx=W*0.085, cy=H*0.340;
     // Snow drift base
-    ctx.fillStyle='rgba(215,238,252,0.55)';
-    ctx.beginPath(); ctx.ellipse(rx,ry+H*0.060,W*0.085,H*0.018,0,0,Math.PI*2); ctx.fill();
-    propShadow(rx,ry+H*0.065,W*0.070,H*0.014);
-    // Main expedition tent — A-frame geodesic dome style
-    // Side panels
+    ctx.fillStyle='rgba(210,238,252,0.50)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+H*0.058,W*0.090,H*0.018,0,0,Math.PI*2); ctx.fill();
+    propShadow(cx,cy+H*0.062,W*0.075,H*0.014);
+    // Main red expedition tent
     ctx.fillStyle='#d42808';
-    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx-W*0.055,ry+H*0.058); ctx.lineTo(rx+W*0.055,ry+H*0.058); ctx.closePath(); ctx.fill();
-    // Shade side
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx-W*0.058,cy+H*0.060); ctx.lineTo(cx+W*0.058,cy+H*0.060); ctx.closePath(); ctx.fill();
     ctx.fillStyle='rgba(0,0,0,0.22)';
-    ctx.beginPath(); ctx.moveTo(rx+W*0.008,ry+H*0.002); ctx.lineTo(rx+W*0.055,ry+H*0.058); ctx.lineTo(rx+W*0.020,ry+H*0.058); ctx.closePath(); ctx.fill();
-    // Door
-    ctx.fillStyle='#88140a';
-    ctx.beginPath(); ctx.moveTo(rx-W*0.012,ry+H*0.025); ctx.lineTo(rx-W*0.012,ry+H*0.058); ctx.lineTo(rx+W*0.012,ry+H*0.058); ctx.quadraticCurveTo(rx+W*0.015,ry+H*0.040,rx,ry+H*0.025); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx+W*0.008,cy+H*0.002); ctx.lineTo(cx+W*0.058,cy+H*0.060); ctx.lineTo(cx+W*0.020,cy+H*0.060); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#881408';
+    ctx.beginPath(); ctx.moveTo(cx-W*0.014,cy+H*0.026); ctx.lineTo(cx-W*0.014,cy+H*0.060); ctx.lineTo(cx+W*0.014,cy+H*0.060); ctx.quadraticCurveTo(cx+W*0.016,cy+H*0.042,cx,cy+H*0.026); ctx.closePath(); ctx.fill();
     // Guy ropes
-    ctx.strokeStyle='rgba(200,210,220,0.55)'; ctx.lineWidth=0.9;
-    [[rx-W*0.022,ry+H*0.015,rx-W*0.072,ry+H*0.062],[rx+W*0.022,ry+H*0.015,rx+W*0.072,ry+H*0.062]].forEach(([x1,y1,x2,y2])=>{
+    ctx.strokeStyle='rgba(200,215,230,0.55)'; ctx.lineWidth=0.9;
+    [[cx-W*0.022,cy+H*0.015,cx-W*0.075,cy+H*0.064],[cx+W*0.022,cy+H*0.015,cx+W*0.075,cy+H*0.064]].forEach(([x1,y1,x2,y2])=>{
       ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
     });
-    // Flag pole + flag
-    ctx.strokeStyle='rgba(200,210,220,0.90)'; ctx.lineWidth=W*0.004;
-    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx,ry-H*0.052); ctx.stroke();
-    ctx.fillStyle='#1040c0'; ctx.beginPath(); ctx.moveTo(rx,ry-H*0.052); ctx.lineTo(rx+W*0.028,ry-H*0.044); ctx.lineTo(rx,ry-H*0.036); ctx.closePath(); ctx.fill();
-    // Second smaller tent beside it
-    const rx2=rx+W*0.048, ry2=ry+H*0.015;
-    ctx.fillStyle='#e8a020';
-    ctx.beginPath(); ctx.moveTo(rx2,ry2); ctx.lineTo(rx2-W*0.030,ry2+H*0.038); ctx.lineTo(rx2+W*0.030,ry2+H*0.038); ctx.closePath(); ctx.fill();
+    // Flag pole
+    ctx.strokeStyle='rgba(210,220,235,0.92)'; ctx.lineWidth=W*0.004;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,cy-H*0.055); ctx.stroke();
+    ctx.fillStyle='#1040c0';
+    ctx.beginPath(); ctx.moveTo(cx,cy-H*0.055); ctx.lineTo(cx+W*0.030,cy-H*0.046); ctx.lineTo(cx,cy-H*0.037); ctx.closePath(); ctx.fill();
+    // Second smaller orange tent
+    const cx2=cx+W*0.078, cy2=cy+H*0.012;
+    ctx.fillStyle='#e8a018';
+    ctx.beginPath(); ctx.moveTo(cx2,cy2); ctx.lineTo(cx2-W*0.032,cy2+H*0.040); ctx.lineTo(cx2+W*0.032,cy2+H*0.040); ctx.closePath(); ctx.fill();
     ctx.fillStyle='rgba(0,0,0,0.18)';
-    ctx.beginPath(); ctx.moveTo(rx2+W*0.004,ry2+H*0.002); ctx.lineTo(rx2+W*0.030,ry2+H*0.038); ctx.lineTo(rx2+W*0.010,ry2+H*0.038); ctx.closePath(); ctx.fill();
-    // Equipment crates
-    ctx.fillStyle='rgba(180,200,220,0.80)';
-    ctx.fillRect(rx-W*0.082,ry+H*0.038,W*0.022,H*0.018);
-    ctx.strokeStyle='rgba(100,140,180,0.45)'; ctx.lineWidth=0.8; ctx.strokeRect(rx-W*0.082,ry+H*0.038,W*0.022,H*0.018);
-    ctx.fillRect(rx-W*0.082,ry+H*0.026,W*0.022,H*0.010);
-    ctx.strokeRect(rx-W*0.082,ry+H*0.026,W*0.022,H*0.010);
+    ctx.beginPath(); ctx.moveTo(cx2+W*0.006,cy2+H*0.002); ctx.lineTo(cx2+W*0.032,cy2+H*0.040); ctx.lineTo(cx2+W*0.012,cy2+H*0.040); ctx.closePath(); ctx.fill();
+    // Crates / equipment
+    ctx.fillStyle='rgba(175,200,225,0.85)';
+    ctx.fillRect(cx-W*0.088,cy+H*0.035,W*0.024,H*0.020);
+    ctx.strokeStyle='rgba(90,130,170,0.50)'; ctx.lineWidth=0.8;
+    ctx.strokeRect(cx-W*0.088,cy+H*0.035,W*0.024,H*0.020);
+    ctx.fillRect(cx-W*0.088,cy+H*0.022,W*0.024,H*0.012);
+    ctx.strokeRect(cx-W*0.088,cy+H*0.022,W*0.024,H*0.012);
   }
 
-  // ── SNOW PETREL — small white bird silhouette, mid-right ──
-  // At y=H*0.31, oval right_edge≈W*0.820. Bird at x=W*0.870 safe ✓
+  // ── TOP-RIGHT CORNER: CALVED ICE SERAC ──
+  // At y=H*0.305, oval_rx≈W*0.786. Block left extent W*0.848 > W*0.786 ✓
   {
-    const bx=W*0.868, by=H*0.308;
-    ctx.fillStyle='rgba(235,248,255,0.88)';
-    ctx.beginPath(); ctx.ellipse(bx,by,W*0.018,H*0.008,-0.2,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(bx-W*0.005,by-H*0.003); ctx.quadraticCurveTo(bx-W*0.028,by-H*0.014,bx-W*0.038,by+H*0.002); ctx.lineTo(bx-W*0.010,by+H*0.003); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(bx+W*0.005,by-H*0.003); ctx.quadraticCurveTo(bx+W*0.028,by-H*0.014,bx+W*0.036,by+H*0.002); ctx.lineTo(bx+W*0.010,by+H*0.003); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(215,230,240,0.90)';
-    ctx.beginPath(); ctx.arc(bx-W*0.016,by-H*0.004,W*0.008,0,Math.PI*2); ctx.fill();
+    const bx=W*0.930, by=H*0.280, bw=W*0.068, bh=H*0.110;
+    propShadow(bx,by+bh+H*0.010,bw*0.80,H*0.016);
+    // Main block face
+    const bG=ctx.createLinearGradient(bx-bw,by,bx+bw*0.5,by+bh);
+    bG.addColorStop(0,'#d8f0ff'); bG.addColorStop(0.35,'#a8d4f0'); bG.addColorStop(1,'#4880b8');
+    ctx.fillStyle=bG;
+    ctx.beginPath();
+    ctx.moveTo(bx-bw*0.20,by);
+    ctx.lineTo(bx+bw*0.55,by+bh*0.06);
+    ctx.lineTo(bx+bw*0.60,by+bh*0.40);
+    ctx.lineTo(bx+bw*0.50,by+bh);
+    ctx.lineTo(bx-bw*0.80,by+bh);
+    ctx.lineTo(bx-bw,by+bh*0.22);
+    ctx.closePath(); ctx.fill();
+    // Shadow left face
+    ctx.fillStyle='rgba(8,40,90,0.40)';
+    ctx.beginPath(); ctx.moveTo(bx-bw,by+bh*0.22); ctx.lineTo(bx-bw*0.80,by+bh); ctx.lineTo(bx-bw*0.55,by+bh); ctx.lineTo(bx-bw*0.20,by); ctx.closePath(); ctx.fill();
+    // Sunlit top
+    ctx.fillStyle='rgba(225,248,255,0.70)';
+    ctx.beginPath(); ctx.moveTo(bx-bw*0.20,by); ctx.lineTo(bx+bw*0.55,by+bh*0.06); ctx.lineTo(bx+bw*0.35,by+bh*0.10); ctx.lineTo(bx-bw*0.15,by+bh*0.05); ctx.closePath(); ctx.fill();
+    // Crevasse lines
+    ctx.strokeStyle='rgba(15,65,130,0.45)'; ctx.lineWidth=1.0;
+    ctx.beginPath(); ctx.moveTo(bx-bw*0.10,by+bh*0.06); ctx.lineTo(bx-bw*0.14,by+bh*0.70); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx+bw*0.22,by+bh*0.08); ctx.lineTo(bx+bw*0.20,by+bh*0.65); ctx.stroke();
+    // Icicles
+    ctx.fillStyle='rgba(155,215,248,0.82)';
+    [-0.55,-0.35,-0.12,0.10,0.32].forEach((dx,i)=>{
+      const il=H*(0.016+(i%3)*0.007);
+      ctx.beginPath(); ctx.moveTo(bx+bw*dx-W*0.004,by+bh); ctx.lineTo(bx+bw*dx+W*0.004,by+bh); ctx.lineTo(bx+bw*dx,by+bh+il); ctx.closePath(); ctx.fill();
+    });
   }
 
-  // ── MELTWATER POOLS — corners, outside oval ──
-  // Bottom-left: at y=H*0.880, left_edge≈W*0.199. Pool right edge W*0.080 < W*0.199 ✓
-  // Bottom-right: at y=H*0.820, right_edge≈W*0.870. Pool left edge W*0.912 > W*0.870 ✓
+  // ── MELTWATER POOLS — bottom corners, outside oval ──
   [
-    [W*0.040,H*0.882,W*0.042,H*0.016,'rgba(30,160,210,0.48)'],
-    [W*0.950,H*0.818,W*0.036,H*0.014,'rgba(25,150,200,0.42)'],
-  ].forEach(([px,py,rx2,ry2,col])=>{
-    ctx.fillStyle=col; ctx.beginPath(); ctx.ellipse(px,py,rx2,ry2,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='rgba(190,240,255,0.38)';
-    ctx.beginPath(); ctx.ellipse(px-rx2*0.25,py-ry2*0.28,rx2*0.45,ry2*0.32,0,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='rgba(50,170,220,0.50)'; ctx.lineWidth=1.0;
+    [W*0.042,H*0.880,W*0.040,H*0.015],
+    [W*0.952,H*0.820,W*0.034,H*0.013],
+  ].forEach(([px,py,rx2,ry2])=>{
+    ctx.fillStyle='rgba(28,155,208,0.46)'; ctx.beginPath(); ctx.ellipse(px,py,rx2,ry2,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(185,238,255,0.36)'; ctx.beginPath(); ctx.ellipse(px-rx2*0.22,py-ry2*0.26,rx2*0.42,ry2*0.30,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(45,165,218,0.48)'; ctx.lineWidth=0.9;
     ctx.beginPath(); ctx.ellipse(px,py,rx2,ry2,0,0,Math.PI*2); ctx.stroke();
-  });
-
-  // ── CRAMPON BOOT TRACKS — trail from camp toward ice block ──
-  ctx.fillStyle='rgba(90,140,180,0.40)';
-  [[0.840,0.390],[0.810,0.408],[0.778,0.424],[0.746,0.438],[0.714,0.450],[0.682,0.460],[0.650,0.468]].forEach(([fx,fy],i)=>{
-    const ox=(i%2)*W*0.014-W*0.007;
-    ctx.beginPath(); ctx.ellipse(W*fx+ox,H*fy,W*0.008,H*0.004,0.3,0,Math.PI*2); ctx.fill();
   });
 
   drawSceneScoreboard();
