@@ -20694,38 +20694,63 @@ function drawOasisScene() {
 
   // HORIZON palm grove silhouette — lush trees on the dune skyline
   const hz=H*0.23;
-  // Dune ridge
-  ctx.fillStyle='#c8922a';
-  ctx.beginPath(); ctx.moveTo(0,hz);
-  ctx.bezierCurveTo(W*0.08,hz-H*0.030,W*0.16,hz-H*0.042,W*0.24,hz-H*0.016);
-  ctx.bezierCurveTo(W*0.30,hz-H*0.004,W*0.36,hz-H*0.026,W*0.44,hz-H*0.048);
-  ctx.bezierCurveTo(W*0.50,hz-H*0.056,W*0.56,hz-H*0.050,W*0.62,hz-H*0.030);
-  ctx.bezierCurveTo(W*0.68,hz-H*0.010,W*0.72,hz-H*0.036,W*0.80,hz-H*0.054);
-  ctx.bezierCurveTo(W*0.86,hz-H*0.064,W*0.93,hz-H*0.048,W,hz-H*0.020);
-  ctx.lineTo(W,hz+H*0.008); ctx.lineTo(0,hz+H*0.008); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle='rgba(240,200,100,0.38)'; ctx.lineWidth=1.2;
-  ctx.beginPath(); ctx.moveTo(0,hz);
-  ctx.bezierCurveTo(W*0.08,hz-H*0.030,W*0.16,hz-H*0.042,W*0.24,hz-H*0.016);
-  ctx.bezierCurveTo(W*0.30,hz-H*0.004,W*0.36,hz-H*0.026,W*0.44,hz-H*0.048);
-  ctx.bezierCurveTo(W*0.50,hz-H*0.056,W*0.56,hz-H*0.050,W*0.62,hz-H*0.030);
-  ctx.bezierCurveTo(W*0.68,hz-H*0.010,W*0.72,hz-H*0.036,W*0.80,hz-H*0.054);
-  ctx.bezierCurveTo(W*0.86,hz-H*0.064,W*0.93,hz-H*0.048,W,hz-H*0.020); ctx.stroke();
 
-  // Silhouette palm trees along horizon
-  [[W*0.30,hz-H*0.046,H*0.110,-0.08],[W*0.40,hz-H*0.048,H*0.095,0.06],
-   [W*0.48,hz-H*0.052,H*0.120,-0.05],[W*0.56,hz-H*0.050,H*0.088,0.09],
-   [W*0.64,hz-H*0.048,H*0.100,-0.07]].forEach(([px,py,ph,lean])=>{
-    ctx.fillStyle='rgba(30,18,4,0.72)';
-    ctx.strokeStyle='rgba(30,18,4,0.72)'; ctx.lineWidth=W*0.012; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(px,py); ctx.quadraticCurveTo(px+lean*W*0.06,py-ph*0.5,px+lean*W*0.04,py-ph); ctx.stroke();
-    const tipx=px+lean*W*0.04, tipy=py-ph;
-    for(let f=0;f<6;f++){
-      const ang=-Math.PI*0.5+f*(Math.PI/3.2)-Math.PI*0.42;
-      const fl=ph*0.52;
-      ctx.lineWidth=W*0.008-f*0.4; ctx.strokeStyle='rgba(20,40,8,0.65)';
+  // Palm grove positions — defined first so the dune passes through these exact peaks
+  // [x, base_y (= dune crest here), trunk_height, lean]
+  const groveP=[
+    [W*0.26, hz-H*0.048, H*0.105, -0.08],
+    [W*0.40, hz-H*0.056, H*0.118, +0.06],
+    [W*0.54, hz-H*0.052, H*0.096, -0.05],
+    [W*0.68, hz-H*0.050, H*0.108, +0.07],
+  ];
+
+  // Dune ridge — quadratic bezier segments whose ENDPOINTS are the palm peak positions
+  // (endpoints lie exactly on the curve; control points only guide the shape)
+  function dunePath(){
+    ctx.moveTo(0, hz-H*0.008);
+    // valley → peak 1
+    ctx.quadraticCurveTo(W*0.13, hz+H*0.004, groveP[0][0], groveP[0][1]);
+    // peak 1 → peak 2
+    ctx.quadraticCurveTo(W*0.33, hz-H*0.022, groveP[1][0], groveP[1][1]);
+    // peak 2 → peak 3
+    ctx.quadraticCurveTo(W*0.47, hz-H*0.018, groveP[2][0], groveP[2][1]);
+    // peak 3 → peak 4
+    ctx.quadraticCurveTo(W*0.61, hz-H*0.016, groveP[3][0], groveP[3][1]);
+    // peak 4 → right edge
+    ctx.quadraticCurveTo(W*0.84, hz-H*0.004, W, hz-H*0.014);
+  }
+
+  // Filled dune shape
+  const duneG=ctx.createLinearGradient(0,hz-H*0.065,0,hz+H*0.010);
+  duneG.addColorStop(0,'#daa030'); duneG.addColorStop(0.5,'#c8922a'); duneG.addColorStop(1,'#b07820');
+  ctx.fillStyle=duneG;
+  ctx.beginPath(); dunePath();
+  ctx.lineTo(W,hz+H*0.010); ctx.lineTo(0,hz+H*0.010); ctx.closePath(); ctx.fill();
+
+  // Crest highlight
+  ctx.strokeStyle='rgba(245,210,110,0.40)'; ctx.lineWidth=1.4; ctx.lineCap='round';
+  ctx.beginPath(); dunePath(); ctx.stroke();
+
+  // Silhouette palm trees — each grounded exactly at its dune peak
+  groveP.forEach(([px,py,ph,lean])=>{
+    const dark='rgba(22,12,2,0.78)';
+    ctx.strokeStyle=dark; ctx.lineWidth=W*0.014; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(px,py);
+    ctx.quadraticCurveTo(px+lean*W*0.055,py-ph*0.52,px+lean*W*0.042,py-ph); ctx.stroke();
+    // Draw dune fill over trunk base so tree looks embedded (not perched)
+    const embedG=ctx.createLinearGradient(0,py-H*0.010,0,py+H*0.004);
+    embedG.addColorStop(0,'rgba(200,146,42,0)'); embedG.addColorStop(1,'rgba(200,146,42,1)');
+    ctx.fillStyle=embedG;
+    ctx.fillRect(px-W*0.018,py-H*0.010,W*0.036,H*0.014);
+    // Fronds
+    const tipx=px+lean*W*0.042, tipy=py-ph;
+    for(let f=0;f<7;f++){
+      const ang=-Math.PI*0.5+f*(Math.PI/3.4)-Math.PI*0.40;
+      const fl=ph*0.50;
+      ctx.lineWidth=Math.max(W*0.009-f*0.5,0.8); ctx.strokeStyle='rgba(18,36,6,0.68)';
       ctx.beginPath(); ctx.moveTo(tipx,tipy);
-      ctx.quadraticCurveTo(tipx+Math.cos(ang)*fl*0.4,tipy+Math.sin(ang)*fl*0.4+H*0.012,
-                           tipx+Math.cos(ang)*fl,tipy+Math.sin(ang)*fl*0.6); ctx.stroke();
+      ctx.quadraticCurveTo(tipx+Math.cos(ang)*fl*0.42,tipy+Math.sin(ang)*fl*0.42+H*0.010,
+                           tipx+Math.cos(ang)*fl,tipy+Math.sin(ang)*fl*0.58); ctx.stroke();
     }
   });
 
