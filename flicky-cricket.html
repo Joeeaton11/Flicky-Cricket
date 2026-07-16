@@ -19897,16 +19897,17 @@ function drawTundraScene() {
 
   drawGroundRings('#20282e','#181e24',0);
 
-  // Snow drifts banking against the oval edge — left and right
-  [[W*0.038,H*0.55,W*0.048,H*0.038],[W*0.042,H*0.65,W*0.038,H*0.032],[W*0.052,H*0.75,W*0.044,H*0.030],[W*0.044,H*0.84,W*0.040,H*0.028]].forEach(([dx,dy,rx,ry])=>{
-    const dg=ctx.createRadialGradient(dx,dy,0,dx,dy,rx*1.4);
-    dg.addColorStop(0,'rgba(215,232,252,0.58)'); dg.addColorStop(0.5,'rgba(195,218,245,0.32)'); dg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=dg; ctx.beginPath(); ctx.ellipse(dx,dy,rx,ry,0,0,Math.PI*2); ctx.fill();
+  // Snow drifts — subtle windswept crescent shapes hugging the canvas edges
+  ctx.lineCap='round';
+  [[0,H*0.54,W*0.055,H*0.010],[0,H*0.65,W*0.044,H*0.009],[0,H*0.76,W*0.050,H*0.010],[0,H*0.85,W*0.046,H*0.009]].forEach(([dx,dy,rw,rh])=>{
+    const dg=ctx.createLinearGradient(dx,dy,dx+rw*1.6,dy);
+    dg.addColorStop(0,'rgba(210,228,250,0.18)'); dg.addColorStop(0.6,'rgba(195,218,245,0.09)'); dg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=dg; ctx.beginPath(); ctx.ellipse(dx,dy,rw,rh,0,0,Math.PI*2); ctx.fill();
   });
-  [[W*0.962,H*0.55,W*0.048,H*0.038],[W*0.958,H*0.65,W*0.038,H*0.032],[W*0.948,H*0.75,W*0.044,H*0.030],[W*0.956,H*0.84,W*0.040,H*0.028]].forEach(([dx,dy,rx,ry])=>{
-    const dg=ctx.createRadialGradient(dx,dy,0,dx,dy,rx*1.4);
-    dg.addColorStop(0,'rgba(215,232,252,0.58)'); dg.addColorStop(0.5,'rgba(195,218,245,0.32)'); dg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=dg; ctx.beginPath(); ctx.ellipse(dx,dy,rx,ry,0,0,Math.PI*2); ctx.fill();
+  [[W,H*0.54,W*0.055,H*0.010],[W,H*0.65,W*0.044,H*0.009],[W,H*0.76,W*0.050,H*0.010],[W,H*0.85,W*0.046,H*0.009]].forEach(([dx,dy,rw,rh])=>{
+    const dg=ctx.createLinearGradient(dx,dy,dx-rw*1.6,dy);
+    dg.addColorStop(0,'rgba(210,228,250,0.18)'); dg.addColorStop(0.6,'rgba(195,218,245,0.09)'); dg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=dg; ctx.beginPath(); ctx.ellipse(dx,dy,rw,rh,0,0,Math.PI*2); ctx.fill();
   });
 
   // Tundra sedge / grass tufts — dead vegetation poking through snow at oval perimeter
@@ -19936,27 +19937,31 @@ function drawTundraScene() {
     ctx.beginPath(); ctx.moveTo(W*fx,H*fy); ctx.lineTo(W*(fx+fl),H*(fy-0.004)); ctx.stroke();
   });
 
-  // Floating snowflakes scattered across the scene
+  // Animated falling snowflakes — cycle Y position using time
   ctx.lineCap='round';
-  [[0.15,0.35,4.5],[0.28,0.29,3.5],[0.45,0.40,5],[0.60,0.33,3],[0.72,0.44,4],[0.88,0.37,3.5],
-   [0.10,0.54,4],[0.33,0.60,3],[0.52,0.50,5],[0.68,0.58,3.5],[0.84,0.52,4],
-   [0.22,0.71,3.5],[0.44,0.68,4.5],[0.64,0.74,3],[0.78,0.70,5]].forEach(([fx,fy,sz],i)=>{
-    const px=W*fx, py=H*fy, op=0.50+0.30*(i%3)*0.1;
-    ctx.strokeStyle=`rgba(215,235,255,${op})`; ctx.lineWidth=0.9;
-    for(let arm=0;arm<6;arm++){
-      const ang=arm*Math.PI/3;
-      ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px+Math.cos(ang)*sz,py+Math.sin(ang)*sz*0.9); ctx.stroke();
-      // branch nubs
-      const mx=px+Math.cos(ang)*sz*0.55, my=py+Math.sin(ang)*sz*0.55*0.9;
-      const ba=ang+Math.PI*0.4;
-      ctx.beginPath(); ctx.moveTo(mx,my); ctx.lineTo(mx+Math.cos(ba)*sz*0.30,my+Math.sin(ba)*sz*0.30*0.9); ctx.stroke();
-    }
-  });
+  { const t=performance.now()/1000;
+    [[0.15,0.35,4.5,0.00],[0.28,0.29,3.5,0.33],[0.45,0.40,5,0.17],[0.60,0.33,3,0.50],[0.72,0.44,4,0.08],[0.88,0.37,3.5,0.42],
+     [0.10,0.54,4,0.25],[0.33,0.60,3,0.67],[0.52,0.50,5,0.12],[0.68,0.58,3.5,0.55],[0.84,0.52,4,0.38],
+     [0.22,0.71,3.5,0.20],[0.44,0.68,4.5,0.75],[0.64,0.74,3,0.45],[0.78,0.70,5,0.60]].forEach(([fx,fy0,sz,off],i)=>{
+      const speed=0.022+sz*0.003;
+      const fy=fy0+((t*speed+off)%0.72);
+      if(fy>0.97) return;
+      const px=W*fx, py=H*fy, op=0.45+0.25*(i%3)*0.1;
+      ctx.strokeStyle=`rgba(215,235,255,${op})`; ctx.lineWidth=0.9;
+      for(let arm=0;arm<6;arm++){
+        const ang=arm*Math.PI/3;
+        ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px+Math.cos(ang)*sz,py+Math.sin(ang)*sz*0.9); ctx.stroke();
+        const mx=px+Math.cos(ang)*sz*0.55, my=py+Math.sin(ang)*sz*0.55*0.9;
+        const ba=ang+Math.PI*0.4;
+        ctx.beginPath(); ctx.moveTo(mx,my); ctx.lineTo(mx+Math.cos(ba)*sz*0.30,my+Math.sin(ba)*sz*0.30*0.9); ctx.stroke();
+      }
+    });
+  }
 
   // LEFT — Polar bear in upper-left corner (oval left ≈ W*0.161 at fy=0.35)
   // bx=W*0.062, snout tip reaches W*0.148 — safely outside oval
   {
-    const s=0.90, bx=W*0.062, by=H*0.350;
+    const s=0.62, bx=W*0.060, by=H*0.285;
 
     // Ground shadow
     ctx.fillStyle='rgba(0,12,30,0.42)';
