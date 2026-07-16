@@ -14608,12 +14608,11 @@ function drawDesertScene() {
     ctx.stroke();
   }
 
-  // CACTI — organic rounded saguaro shapes using bezier paths
+  // CACTI — organic rounded saguaro; sign mirrors arms so right-side cacti grow outward
   function cactus(cx2,cy2,h,flip){
-    const r=h*0.058; // trunk half-width
-    const sign=flip?-1:1;
+    const r=h*0.058;
+    const sign=flip?-1:1; // -1 = right-side: primary arm goes right (away from oval)
 
-    // Helper: draw a rounded column (trunk or arm) with ridged shading
     function column(x,yTop,yBot,cr,litLeft){
       const cG=ctx.createLinearGradient(x-cr,0,x+cr,0);
       cG.addColorStop(0, litLeft?'#3e8c22':'#1e5210');
@@ -14622,70 +14621,90 @@ function drawDesertScene() {
       cG.addColorStop(1, litLeft?'#1e5210':'#3e8c22');
       ctx.fillStyle=cG;
       ctx.beginPath();
-      ctx.moveTo(x-cr, yBot);
-      ctx.lineTo(x-cr, yTop+cr);
-      ctx.quadraticCurveTo(x-cr,yTop, x,yTop);
-      ctx.quadraticCurveTo(x+cr,yTop, x+cr,yTop+cr);
-      ctx.lineTo(x+cr, yBot);
-      ctx.quadraticCurveTo(x+cr,yBot+cr*0.6, x,yBot+cr*0.8);
-      ctx.quadraticCurveTo(x-cr,yBot+cr*0.6, x-cr,yBot);
+      ctx.moveTo(x-cr,yBot); ctx.lineTo(x-cr,yTop+cr);
+      ctx.quadraticCurveTo(x-cr,yTop,x,yTop); ctx.quadraticCurveTo(x+cr,yTop,x+cr,yTop+cr);
+      ctx.lineTo(x+cr,yBot);
+      ctx.quadraticCurveTo(x+cr,yBot+cr*0.6,x,yBot+cr*0.8);
+      ctx.quadraticCurveTo(x-cr,yBot+cr*0.6,x-cr,yBot);
       ctx.closePath(); ctx.fill();
-      // Vertical ridges
       ctx.strokeStyle='rgba(10,38,5,0.18)'; ctx.lineWidth=0.7; ctx.lineCap='round';
-      [-cr*0.55, 0, cr*0.55].forEach(dx=>{
+      [-cr*0.55,0,cr*0.55].forEach(dx=>{
         ctx.beginPath(); ctx.moveTo(x+dx,yBot-cr*0.3); ctx.lineTo(x+dx,yTop+cr*1.2); ctx.stroke();
       });
     }
 
-    // Trunk
-    column(cx2, cy2-h, cy2, r, true);
+    // Trunk — lit from sun-side (left for left-cactus, right for right-cactus)
+    column(cx2, cy2-h, cy2, r, !flip);
 
-    // Left arm: juts out then curves up
-    const lax=cx2-r*3.4, layJoin=cy2-h*0.64, layTip=cy2-h*0.88;
-    const lArmR=r*0.76;
+    // PRIMARY arm: long, grows AWAY from oval (left for flip=false, right for flip=true)
+    const pax=cx2-sign*r*3.2, payJoin=cy2-h*0.64, payTip=cy2-h*0.88;
+    const pArmR=r*0.76;
     {
-      // Horizontal elbow
-      const cG2=ctx.createLinearGradient(cx2-r,layJoin-lArmR,lax,layJoin+lArmR);
+      const cG2=ctx.createLinearGradient(cx2-sign*r,payJoin-pArmR, pax,payJoin+pArmR);
       cG2.addColorStop(0,'#4a9a28'); cG2.addColorStop(1,'#306814');
       ctx.fillStyle=cG2;
       ctx.beginPath();
-      ctx.moveTo(cx2-r, layJoin-lArmR);
-      ctx.bezierCurveTo(lax+lArmR, layJoin-lArmR,  lax-lArmR*0.2, layJoin-lArmR*1.1,  lax-lArmR*0.2, layJoin);
-      ctx.bezierCurveTo(lax-lArmR*0.2, layJoin+lArmR*0.8,  lax+lArmR, layJoin+lArmR,  cx2-r, layJoin+lArmR);
+      ctx.moveTo(cx2-sign*r, payJoin-pArmR);
+      ctx.bezierCurveTo(pax+sign*pArmR,payJoin-pArmR, pax-sign*pArmR*0.2,payJoin-pArmR*1.1, pax-sign*pArmR*0.2,payJoin);
+      ctx.bezierCurveTo(pax-sign*pArmR*0.2,payJoin+pArmR*0.8, pax+sign*pArmR,payJoin+pArmR, cx2-sign*r,payJoin+pArmR);
       ctx.closePath(); ctx.fill();
-      // Vertical segment curving up
-      column(lax, layTip, layJoin, lArmR, false);
+      column(pax, payTip, payJoin, pArmR, !flip);
     }
 
-    // Right arm (lower, shorter)
-    const rax=cx2+r*2.8, rayJoin=cy2-h*0.50, rayTip=cy2-h*0.70;
-    const rArmR=r*0.68;
+    // SECONDARY arm: shorter, grows toward oval side (contained by smaller reach)
+    const sax=cx2+sign*r*1.9, sayJoin=cy2-h*0.50, sayTip=cy2-h*0.68;
+    const sArmR=r*0.66;
     {
-      const cG3=ctx.createLinearGradient(cx2+r,rayJoin-rArmR,rax,rayJoin+rArmR);
+      const cG3=ctx.createLinearGradient(cx2+sign*r,sayJoin-sArmR, sax,sayJoin+sArmR);
       cG3.addColorStop(0,'#4a9a28'); cG3.addColorStop(1,'#3a7c1a');
       ctx.fillStyle=cG3;
       ctx.beginPath();
-      ctx.moveTo(cx2+r, rayJoin-rArmR);
-      ctx.bezierCurveTo(rax-rArmR, rayJoin-rArmR,  rax+rArmR*0.2, rayJoin-rArmR*1.1,  rax+rArmR*0.2, rayJoin);
-      ctx.bezierCurveTo(rax+rArmR*0.2, rayJoin+rArmR*0.8,  rax-rArmR, rayJoin+rArmR,  cx2+r, rayJoin+rArmR);
+      ctx.moveTo(cx2+sign*r, sayJoin-sArmR);
+      ctx.bezierCurveTo(sax-sign*sArmR,sayJoin-sArmR, sax+sign*sArmR*0.2,sayJoin-sArmR*1.1, sax+sign*sArmR*0.2,sayJoin);
+      ctx.bezierCurveTo(sax+sign*sArmR*0.2,sayJoin+sArmR*0.8, sax-sign*sArmR,sayJoin+sArmR, cx2+sign*r,sayJoin+sArmR);
       ctx.closePath(); ctx.fill();
-      column(rax, rayTip, rayJoin, rArmR, true);
+      column(sax, sayTip, sayJoin, sArmR, !flip);
     }
 
-    // Spine clusters — pairs of tiny pale lines radiating outward
     ctx.strokeStyle='rgba(235,230,180,0.55)'; ctx.lineWidth=0.6; ctx.lineCap='round';
     [[cx2,cy2-h*0.20],[cx2,cy2-h*0.45],[cx2,cy2-h*0.70],[cx2,cy2-h*0.90],
-     [lax,layTip+h*0.06],[lax,layTip+h*0.14],[rax,rayTip+h*0.05],[rax,rayTip+h*0.12]].forEach(([sx2,sy2])=>{
+     [pax,payTip+h*0.06],[pax,payTip+h*0.14],[sax,sayTip+h*0.05],[sax,sayTip+h*0.12]].forEach(([sx2,sy2])=>{
       for(let sp=0;sp<6;sp++){
         const ang=sp*Math.PI/3+0.3;
         ctx.beginPath(); ctx.moveTo(sx2,sy2); ctx.lineTo(sx2+Math.cos(ang)*r*0.9,sy2+Math.sin(ang)*r*0.9); ctx.stroke();
       }
     });
   }
-  cactus(W*0.026,H*0.48,H*0.13,false);
-  cactus(W*0.022,H*0.72,H*0.10,false);
-  cactus(W*0.974,H*0.44,H*0.12,true);
-  cactus(W*0.978,H*0.68,H*0.09,true);
+
+  // Sand-rock cluster helper — rounded sandstone boulders
+  function rocks(rx,ry,sz){
+    [[0,0,sz*1.00,sz*0.62],[sz*1.18,-sz*0.14,sz*0.76,sz*0.50],[-sz*0.90,-sz*0.06,sz*0.58,sz*0.40],[sz*0.42,sz*0.28,sz*0.44,sz*0.30]].forEach(([dx,dy,rw,rh],i)=>{
+      const bG=ctx.createRadialGradient(rx+dx-rw*0.18,ry+dy-rh*0.28,0,rx+dx,ry+dy,rw);
+      bG.addColorStop(0,['#d8b468','#ccaa58','#c4a050','#b89040'][i]);
+      bG.addColorStop(0.65,'#9c7230'); bG.addColorStop(1,'#7a5420');
+      ctx.fillStyle=bG;
+      ctx.beginPath(); ctx.ellipse(rx+dx,ry+dy,rw,rh,i*0.3,0,Math.PI*2); ctx.fill();
+    });
+    // crack lines
+    ctx.strokeStyle='rgba(80,48,8,0.22)'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.moveTo(rx-sz*0.2,ry-sz*0.18); ctx.lineTo(rx+sz*0.3,ry+sz*0.08); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rx+sz*0.6,ry-sz*0.30); ctx.lineTo(rx+sz*0.9,ry+sz*0.12); ctx.stroke();
+  }
+
+  // LEFT side: tall cactus (clear of oasis bottom H*0.418), then shorter below
+  cactus(W*0.024, H*0.610, H*0.115, false);  // top ≈ H*0.495
+  cactus(W*0.024, H*0.800, H*0.090, false);  // top ≈ H*0.710
+  // RIGHT side: mirrored arms grow outward; clear of camel bottom ≈ H*0.395
+  cactus(W*0.976, H*0.600, H*0.105, true);   // top ≈ H*0.495
+  cactus(W*0.976, H*0.790, H*0.085, true);   // top ≈ H*0.705
+
+  // BOTTOM-LEFT corner: rock cluster + small cactus
+  rocks(W*0.076, H*0.912, W*0.030);
+  cactus(W*0.114, H*0.940, H*0.068, false);
+
+  // BOTTOM-RIGHT corner: rock cluster + small cactus
+  rocks(W*0.924, H*0.912, W*0.030);
+  cactus(W*0.886, H*0.940, H*0.068, true);
 
   // LEFT — Oasis: irregular pool + 3 palms, spanning upper-left margin
   // Pool right edges checked against oval_left at each fy — all clear
@@ -14779,9 +14798,9 @@ function drawDesertScene() {
   }
 
   // RIGHT — Dromedary camel facing left, upper-right outside oval
-  // Leftmost point (head) ≈ W*0.870 > oval_right at fy≈0.36 (W*0.856) ✓
+  // Leftmost point (head) cx-W*0.056 ≈ W*0.889 > oval_right at fy≈0.32 (W*0.820) ✓
   {
-    const s=0.68, cx=W*0.945, cy=H*0.368;
+    const s=0.68, cx=W*0.945, cy=H*0.325;
 
     // Ground shadow
     ctx.fillStyle='rgba(100,58,0,0.28)';
