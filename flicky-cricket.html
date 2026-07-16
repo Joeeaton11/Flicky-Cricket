@@ -14525,30 +14525,84 @@ function drawDesertScene() {
     ctx.stroke();
   }
 
-  // CACTI — outer edges, drawn after dunes so they sit on top
-  ctx.lineCap='square';
-  function cactus(cx2,cy2,h){
-    const tw=h*0.11;
-    const cG=ctx.createLinearGradient(cx2-tw,cy2-h,cx2+tw,cy2);
-    cG.addColorStop(0,'#4a9830'); cG.addColorStop(0.55,'#347820'); cG.addColorStop(1,'#205c10');
-    ctx.fillStyle=cG; ctx.strokeStyle='rgba(15,45,8,0.30)'; ctx.lineWidth=0.7;
-    ctx.fillRect(cx2-tw*0.5,cy2-h,tw,h); ctx.strokeRect(cx2-tw*0.5,cy2-h,tw,h);
-    // Left arm
-    ctx.fillRect(cx2-tw*2.1,cy2-h*0.72,tw*1.6,tw*0.88); ctx.strokeRect(cx2-tw*2.1,cy2-h*0.72,tw*1.6,tw*0.88);
-    ctx.fillRect(cx2-tw*2.1,cy2-h*0.90,tw,h*0.20); ctx.strokeRect(cx2-tw*2.1,cy2-h*0.90,tw,h*0.20);
-    // Right arm
-    ctx.fillRect(cx2+tw*0.5,cy2-h*0.60,tw*1.6,tw*0.88); ctx.strokeRect(cx2+tw*0.5,cy2-h*0.60,tw*1.6,tw*0.88);
-    ctx.fillRect(cx2+tw*1.6,cy2-h*0.78,tw,h*0.20); ctx.strokeRect(cx2+tw*1.6,cy2-h*0.78,tw,h*0.20);
-    // Spine highlights
-    ctx.fillStyle='rgba(255,255,200,0.50)';
-    [[0,0],[0,-0.32],[0,-0.64],[0.58,-0.30],[-0.52,-0.52]].forEach(([dx,dy])=>{
-      ctx.beginPath(); ctx.arc(cx2+dx*tw,cy2+dy*h,0.9,0,Math.PI*2); ctx.fill();
+  // CACTI — organic rounded saguaro shapes using bezier paths
+  function cactus(cx2,cy2,h,flip){
+    const r=h*0.058; // trunk half-width
+    const sign=flip?-1:1;
+
+    // Helper: draw a rounded column (trunk or arm) with ridged shading
+    function column(x,yTop,yBot,cr,litLeft){
+      const cG=ctx.createLinearGradient(x-cr,0,x+cr,0);
+      cG.addColorStop(0, litLeft?'#3e8c22':'#1e5210');
+      cG.addColorStop(0.40,'#4a9a28');
+      cG.addColorStop(0.72,'#306814');
+      cG.addColorStop(1, litLeft?'#1e5210':'#3e8c22');
+      ctx.fillStyle=cG;
+      ctx.beginPath();
+      ctx.moveTo(x-cr, yBot);
+      ctx.lineTo(x-cr, yTop+cr);
+      ctx.quadraticCurveTo(x-cr,yTop, x,yTop);
+      ctx.quadraticCurveTo(x+cr,yTop, x+cr,yTop+cr);
+      ctx.lineTo(x+cr, yBot);
+      ctx.quadraticCurveTo(x+cr,yBot+cr*0.6, x,yBot+cr*0.8);
+      ctx.quadraticCurveTo(x-cr,yBot+cr*0.6, x-cr,yBot);
+      ctx.closePath(); ctx.fill();
+      // Vertical ridges
+      ctx.strokeStyle='rgba(10,38,5,0.18)'; ctx.lineWidth=0.7; ctx.lineCap='round';
+      [-cr*0.55, 0, cr*0.55].forEach(dx=>{
+        ctx.beginPath(); ctx.moveTo(x+dx,yBot-cr*0.3); ctx.lineTo(x+dx,yTop+cr*1.2); ctx.stroke();
+      });
+    }
+
+    // Trunk
+    column(cx2, cy2-h, cy2, r, true);
+
+    // Left arm: juts out then curves up
+    const lax=cx2-r*3.4, layJoin=cy2-h*0.64, layTip=cy2-h*0.88;
+    const lArmR=r*0.76;
+    {
+      // Horizontal elbow
+      const cG2=ctx.createLinearGradient(cx2-r,layJoin-lArmR,lax,layJoin+lArmR);
+      cG2.addColorStop(0,'#4a9a28'); cG2.addColorStop(1,'#306814');
+      ctx.fillStyle=cG2;
+      ctx.beginPath();
+      ctx.moveTo(cx2-r, layJoin-lArmR);
+      ctx.bezierCurveTo(lax+lArmR, layJoin-lArmR,  lax-lArmR*0.2, layJoin-lArmR*1.1,  lax-lArmR*0.2, layJoin);
+      ctx.bezierCurveTo(lax-lArmR*0.2, layJoin+lArmR*0.8,  lax+lArmR, layJoin+lArmR,  cx2-r, layJoin+lArmR);
+      ctx.closePath(); ctx.fill();
+      // Vertical segment curving up
+      column(lax, layTip, layJoin, lArmR, false);
+    }
+
+    // Right arm (lower, shorter)
+    const rax=cx2+r*2.8, rayJoin=cy2-h*0.50, rayTip=cy2-h*0.70;
+    const rArmR=r*0.68;
+    {
+      const cG3=ctx.createLinearGradient(cx2+r,rayJoin-rArmR,rax,rayJoin+rArmR);
+      cG3.addColorStop(0,'#4a9a28'); cG3.addColorStop(1,'#3a7c1a');
+      ctx.fillStyle=cG3;
+      ctx.beginPath();
+      ctx.moveTo(cx2+r, rayJoin-rArmR);
+      ctx.bezierCurveTo(rax-rArmR, rayJoin-rArmR,  rax+rArmR*0.2, rayJoin-rArmR*1.1,  rax+rArmR*0.2, rayJoin);
+      ctx.bezierCurveTo(rax+rArmR*0.2, rayJoin+rArmR*0.8,  rax-rArmR, rayJoin+rArmR,  cx2+r, rayJoin+rArmR);
+      ctx.closePath(); ctx.fill();
+      column(rax, rayTip, rayJoin, rArmR, true);
+    }
+
+    // Spine clusters — pairs of tiny pale lines radiating outward
+    ctx.strokeStyle='rgba(235,230,180,0.55)'; ctx.lineWidth=0.6; ctx.lineCap='round';
+    [[cx2,cy2-h*0.20],[cx2,cy2-h*0.45],[cx2,cy2-h*0.70],[cx2,cy2-h*0.90],
+     [lax,layTip+h*0.06],[lax,layTip+h*0.14],[rax,rayTip+h*0.05],[rax,rayTip+h*0.12]].forEach(([sx2,sy2])=>{
+      for(let sp=0;sp<6;sp++){
+        const ang=sp*Math.PI/3+0.3;
+        ctx.beginPath(); ctx.moveTo(sx2,sy2); ctx.lineTo(sx2+Math.cos(ang)*r*0.9,sy2+Math.sin(ang)*r*0.9); ctx.stroke();
+      }
     });
   }
-  cactus(W*0.026,H*0.48,H*0.13);
-  cactus(W*0.022,H*0.72,H*0.10);
-  cactus(W*0.974,H*0.44,H*0.12);
-  cactus(W*0.978,H*0.68,H*0.09);
+  cactus(W*0.026,H*0.48,H*0.13,false);
+  cactus(W*0.022,H*0.72,H*0.10,false);
+  cactus(W*0.974,H*0.44,H*0.12,true);
+  cactus(W*0.978,H*0.68,H*0.09,true);
 
   // LEFT — Oasis pool + pair of palms, upper-left outside oval
   // Oval left at fy≈0.37: W*0.146 — pool right edge W*0.136 ✓
