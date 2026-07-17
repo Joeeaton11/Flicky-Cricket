@@ -20673,94 +20673,125 @@ function drawOasisScene() {
   // ── SKY ──
   ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
   const sky=ctx.createLinearGradient(0,0,0,H*0.23);
-  sky.addColorStop(0,'#1560a8'); sky.addColorStop(0.28,'#2878c0');
-  sky.addColorStop(0.62,'#88b8dc'); sky.addColorStop(0.84,'#c8d8e8'); sky.addColorStop(1,'#ddd0a0');
+  sky.addColorStop(0,'#083880'); sky.addColorStop(0.22,'#1460b8');
+  sky.addColorStop(0.55,'#4898d8'); sky.addColorStop(0.80,'#90c8e8'); sky.addColorStop(1,'#e8d090');
   ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.23);
 
-  // Dust haze low in sky
-  const dustG=ctx.createLinearGradient(0,H*0.15,0,H*0.23);
-  dustG.addColorStop(0,'rgba(200,168,80,0)'); dustG.addColorStop(1,'rgba(190,148,55,0.30)');
-  ctx.fillStyle=dustG; ctx.fillRect(0,H*0.15,W,H*0.08);
+  // Wispy clouds
+  [[W*0.14,H*0.038,W*0.090,0.18],[W*0.52,H*0.058,W*0.070,0.14],[W*0.80,H*0.030,W*0.085,0.16]].forEach(([cx,cy,cw,a])=>{
+    const cG=ctx.createRadialGradient(cx,cy,0,cx,cy,cw);
+    cG.addColorStop(0,`rgba(255,255,255,${a})`); cG.addColorStop(0.5,`rgba(240,248,255,${a*0.5})`); cG.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=cG; ctx.beginPath(); ctx.ellipse(cx,cy,cw,cw*0.32,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx-cw*0.28,cy+cw*0.04,cw*0.55,cw*0.22,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx+cw*0.30,cy+cw*0.06,cw*0.50,cw*0.20,0,0,Math.PI*2); ctx.fill();
+  });
 
-  // Sun — high and searing
-  const sx=W*0.68, sy=H*0.048;
-  const sunG=ctx.createRadialGradient(sx,sy,0,sx,sy,W*0.10);
-  sunG.addColorStop(0,'rgba(255,255,255,1)'); sunG.addColorStop(0.10,'rgba(255,250,210,0.88)');
-  sunG.addColorStop(0.30,'rgba(255,220,120,0.30)'); sunG.addColorStop(1,'rgba(255,180,40,0)');
-  ctx.fillStyle=sunG; ctx.beginPath(); ctx.arc(sx,sy,W*0.10,0,Math.PI*2); ctx.fill();
-  ctx.save(); ctx.shadowColor='rgba(255,255,240,1)'; ctx.shadowBlur=24;
-  ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(sx,sy,W*0.020,0,Math.PI*2); ctx.fill();
+  // Sun — high, searing white with rotating rays
+  const sx=W*0.72, sy=H*0.044;
+  ctx.save();
+  for(let r=0;r<12;r++){
+    const ang=r*Math.PI/6+t*0.05;
+    const rG=ctx.createLinearGradient(sx,sy,sx+Math.cos(ang)*W*0.20,sy+Math.sin(ang)*W*0.20);
+    rG.addColorStop(0,'rgba(255,248,180,0.18)'); rG.addColorStop(1,'rgba(255,248,180,0)');
+    ctx.strokeStyle=rG; ctx.lineWidth=W*0.014; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(sx+Math.cos(ang)*W*0.026,sy+Math.sin(ang)*W*0.026);
+    ctx.lineTo(sx+Math.cos(ang)*W*0.20,sy+Math.sin(ang)*W*0.20); ctx.stroke();
+  }
+  ctx.restore();
+  const sunG=ctx.createRadialGradient(sx,sy,0,sx,sy,W*0.13);
+  sunG.addColorStop(0,'rgba(255,255,255,1)'); sunG.addColorStop(0.12,'rgba(255,252,220,0.90)');
+  sunG.addColorStop(0.35,'rgba(255,230,140,0.35)'); sunG.addColorStop(1,'rgba(255,200,60,0)');
+  ctx.fillStyle=sunG; ctx.beginPath(); ctx.arc(sx,sy,W*0.13,0,Math.PI*2); ctx.fill();
+  ctx.save(); ctx.shadowColor='rgba(255,255,240,1)'; ctx.shadowBlur=30;
+  ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(sx,sy,W*0.022,0,Math.PI*2); ctx.fill();
   ctx.restore();
 
-  // HORIZON — dune ridge with embedded palm silhouettes
-  // Painter's algorithm: trunks first → dune covers roots → fronds on top
+  // Dust haze at horizon
+  const dustG=ctx.createLinearGradient(0,H*0.16,0,H*0.23);
+  dustG.addColorStop(0,'rgba(220,180,80,0)'); dustG.addColorStop(1,'rgba(210,160,60,0.32)');
+  ctx.fillStyle=dustG; ctx.fillRect(0,H*0.16,W,H*0.07);
+
+  // HORIZON — painter's algorithm: trunks first, dune buries roots, filled fronds on top
   const hz=H*0.23;
 
-  // Palm positions: [x, dune_crest_y, trunk_height, lean_fraction]
+  // Palm silhouette helper — filled shapes, not stroked lines
+  function horizonPalm(px,py,ph,lean){
+    const dark='rgba(10,5,1,0.90)';
+    const tipx=px+lean*W*0.036, tipy=py-ph;
+    const tw=W*0.009;
+    // Filled tapered trunk
+    ctx.fillStyle=dark; ctx.beginPath();
+    ctx.moveTo(px-tw,py);
+    ctx.quadraticCurveTo(px+lean*W*0.018-tw*0.5,py-ph*0.5,tipx-tw*0.25,tipy);
+    ctx.lineTo(tipx+tw*0.25,tipy);
+    ctx.quadraticCurveTo(px+lean*W*0.018+tw*0.5,py-ph*0.5,px+tw,py);
+    ctx.closePath(); ctx.fill();
+    // Filled fronds — each one a bezier leaf shape
+    for(let f=0;f<8;f++){
+      const ang=-Math.PI*0.50+f*(Math.PI/4.2)-Math.PI*0.30;
+      const fl=ph*0.58;
+      const ex=tipx+Math.cos(ang)*fl, ey=tipy+Math.sin(ang)*fl*0.68;
+      const pa=ang-Math.PI*0.5;
+      const fw=Math.max(W*0.016-f*W*0.0016, W*0.004);
+      ctx.fillStyle=dark; ctx.beginPath();
+      ctx.moveTo(tipx,tipy);
+      ctx.bezierCurveTo(tipx+Math.cos(pa)*fw+Math.cos(ang)*fl*0.38,tipy+Math.sin(pa)*fw+Math.sin(ang)*fl*0.38*0.68,
+                        ex+Math.cos(pa)*fw*0.18,ey+Math.sin(pa)*fw*0.18, ex,ey);
+      ctx.bezierCurveTo(ex-Math.cos(pa)*fw*0.18,ey-Math.sin(pa)*fw*0.18,
+                        tipx-Math.cos(pa)*fw+Math.cos(ang)*fl*0.38,tipy-Math.sin(pa)*fw+Math.sin(ang)*fl*0.38*0.68,
+                        tipx,tipy);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // Grove positions: [x, dune_crest_y, height, lean]
   const groveP=[
-    [W*0.25, hz-H*0.044, H*0.102, -0.08],
-    [W*0.38, hz-H*0.054, H*0.116, +0.07],
-    [W*0.52, hz-H*0.050, H*0.096, -0.06],
-    [W*0.66, hz-H*0.047, H*0.106, +0.08],
+    [W*0.24, hz-H*0.044, H*0.108, -0.09],
+    [W*0.37, hz-H*0.055, H*0.122, +0.08],
+    [W*0.51, hz-H*0.050, H*0.100, -0.07],
+    [W*0.65, hz-H*0.048, H*0.114, +0.09],
   ];
 
-  // Step 1 — draw trunks, starting from BELOW the future dune crest so roots are buried
+  // Step 1: trunks buried below future dune crest
   groveP.forEach(([px,py,ph,lean])=>{
-    ctx.strokeStyle='rgba(18,10,2,0.80)'; ctx.lineWidth=W*0.013; ctx.lineCap='round';
-    ctx.beginPath();
-    ctx.moveTo(px, py+H*0.028);          // start well below crest — inside the dune
-    ctx.quadraticCurveTo(px+lean*W*0.05, py-ph*0.50, px+lean*W*0.040, py-ph);
-    ctx.stroke();
+    const dark='rgba(10,5,1,0.90)'; const tw=W*0.009;
+    const tipx=px+lean*W*0.036, tipy=py-ph;
+    ctx.fillStyle=dark; ctx.beginPath();
+    ctx.moveTo(px-tw,py+H*0.030);
+    ctx.quadraticCurveTo(px+lean*W*0.018-tw*0.5,py-ph*0.5,tipx-tw*0.25,tipy);
+    ctx.lineTo(tipx+tw*0.25,tipy);
+    ctx.quadraticCurveTo(px+lean*W*0.018+tw*0.5,py-ph*0.5,px+tw,py+H*0.030);
+    ctx.closePath(); ctx.fill();
   });
 
-  // Step 2 — dune fill painted over trunk roots using the exact same bezier endpoints
-  // as the palm crest positions, so the surface IS those points
+  // Step 2: dune fill covers trunk roots (endpoints ARE the palm crest positions)
   function dunePath(){
-    ctx.moveTo(0, hz-H*0.004);
-    ctx.quadraticCurveTo(W*0.12, hz+H*0.006, groveP[0][0], groveP[0][1]);
-    ctx.quadraticCurveTo(W*0.315, hz-H*0.018, groveP[1][0], groveP[1][1]);
-    ctx.quadraticCurveTo(W*0.455, hz-H*0.014, groveP[2][0], groveP[2][1]);
-    ctx.quadraticCurveTo(W*0.59, hz-H*0.012, groveP[3][0], groveP[3][1]);
-    ctx.quadraticCurveTo(W*0.83, hz-H*0.002, W, hz-H*0.010);
+    ctx.moveTo(0,hz-H*0.004);
+    ctx.quadraticCurveTo(W*0.11,hz+H*0.008,groveP[0][0],groveP[0][1]);
+    ctx.quadraticCurveTo(W*0.31,hz-H*0.020,groveP[1][0],groveP[1][1]);
+    ctx.quadraticCurveTo(W*0.44,hz-H*0.016,groveP[2][0],groveP[2][1]);
+    ctx.quadraticCurveTo(W*0.58,hz-H*0.014,groveP[3][0],groveP[3][1]);
+    ctx.quadraticCurveTo(W*0.82,hz-H*0.003,W,hz-H*0.012);
   }
-  const duneG=ctx.createLinearGradient(0,hz-H*0.060,0,hz+H*0.012);
-  duneG.addColorStop(0,'#dda832'); duneG.addColorStop(0.45,'#c8922a'); duneG.addColorStop(1,'#b07820');
+  const duneG=ctx.createLinearGradient(0,hz-H*0.062,0,hz+H*0.014);
+  duneG.addColorStop(0,'#e0b038'); duneG.addColorStop(0.40,'#cc9428'); duneG.addColorStop(1,'#b07a1e');
   ctx.fillStyle=duneG;
-  ctx.beginPath(); dunePath();
-  ctx.lineTo(W,hz+H*0.012); ctx.lineTo(0,hz+H*0.012); ctx.closePath(); ctx.fill();
-
-  // Crest rim light
-  ctx.strokeStyle='rgba(248,218,115,0.45)'; ctx.lineWidth=1.5; ctx.lineCap='round';
+  ctx.beginPath(); dunePath(); ctx.lineTo(W,hz+H*0.014); ctx.lineTo(0,hz+H*0.014); ctx.closePath(); ctx.fill();
+  // Crest highlight
+  ctx.strokeStyle='rgba(252,224,120,0.50)'; ctx.lineWidth=1.6; ctx.lineCap='round';
   ctx.beginPath(); dunePath(); ctx.stroke();
 
-  // Step 3 — fronds above the dune surface (drawn last so fully visible)
-  groveP.forEach(([px,py,ph,lean])=>{
-    const tipx=px+lean*W*0.040, tipy=py-ph;
-    for(let f=0;f<7;f++){
-      const ang=-Math.PI*0.5+f*(Math.PI/3.4)-Math.PI*0.40;
-      const fl=ph*0.50;
-      ctx.lineWidth=Math.max(W*0.010-f*0.5,0.8);
-      ctx.strokeStyle=`rgba(16,32,5,${0.72-f*0.02})`;
-      ctx.beginPath(); ctx.moveTo(tipx,tipy);
-      ctx.quadraticCurveTo(tipx+Math.cos(ang)*fl*0.44,tipy+Math.sin(ang)*fl*0.42+H*0.010,
-                           tipx+Math.cos(ang)*fl, tipy+Math.sin(ang)*fl*0.60);
-      ctx.stroke();
-    }
-  });
+  // Step 3: filled frond crowns above dune
+  groveP.forEach(([px,py,ph,lean])=>horizonPalm(px,py,ph,lean));
 
-  // Heat shimmer at horizon
+  // Heat shimmer
   for(let i=0;i<3;i++){
     const my=hz-H*(0.002+i*0.004);
-    const mg=ctx.createLinearGradient(0,my-H*0.003,0,my+H*0.003);
-    mg.addColorStop(0,'rgba(255,248,210,0)');
-    mg.addColorStop(0.5,`rgba(255,248,210,${0.14-i*0.04})`);
-    mg.addColorStop(1,'rgba(255,248,210,0)');
-    ctx.fillStyle=mg;
-    ctx.beginPath(); ctx.moveTo(0,my);
-    for(let x2=0;x2<=W;x2+=W*0.04){
-      ctx.lineTo(x2,my+Math.sin(t*0.9+i*1.3+x2*0.015)*H*0.003);
-    }
-    ctx.lineTo(W,my+H*0.004); ctx.lineTo(0,my+H*0.004); ctx.closePath(); ctx.fill();
+    const mg=ctx.createLinearGradient(0,my-H*0.003,0,my+H*0.004);
+    mg.addColorStop(0,'rgba(255,248,210,0)'); mg.addColorStop(0.5,`rgba(255,248,210,${0.14-i*0.04})`); mg.addColorStop(1,'rgba(255,248,210,0)');
+    ctx.fillStyle=mg; ctx.beginPath(); ctx.moveTo(0,my);
+    for(let x2=0;x2<=W;x2+=W*0.04) ctx.lineTo(x2,my+Math.sin(t*0.9+i*1.3+x2*0.015)*H*0.003);
+    ctx.lineTo(W,my+H*0.005); ctx.lineTo(0,my+H*0.005); ctx.closePath(); ctx.fill();
   }
 
   ctx.restore();
@@ -20896,10 +20927,10 @@ function drawOasisScene() {
       ctx.quadraticCurveTo(fx-dir*W*0.004,fy+W*0.028, fx+dir*W*0.002,fy+W*0.024); ctx.stroke();
     });
 
-    // 3 palms around pool
-    palm(lx-W*0.028, ly-H*0.064,  W*0.022, H*0.132);
-    palm(lx+W*0.062, ly-H*0.050, -W*0.018, H*0.114);
-    palm(lx-W*0.008, ly+H*0.056,  W*0.012, H*0.096);
+    // 3 palms around pool — kept low so tips stay well below sky (H*0.23)
+    palm(W*0.016, H*0.370,  W*0.018, H*0.092);   // left of pool, tip≈H*0.278
+    palm(W*0.096, H*0.398, -W*0.016, H*0.086);   // right of pool top, tip≈H*0.312
+    palm(W*0.028, H*0.480,  W*0.016, H*0.090);   // below pool, tip≈H*0.390
   }
 
   // ── RIGHT — Bedouin tent (improved) ──
