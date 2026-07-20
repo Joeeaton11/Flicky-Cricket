@@ -21146,98 +21146,92 @@ function drawOasisScene() {
   palm(W*0.972, H*0.845,  W*0.014, H*0.080);   // bottom short
   palm(W*0.984, H*0.938, -W*0.016, H*0.068);   // bottom corner
 
-  // Scrub bushes — mid section sides
-  [[W*0.026,H*0.540],[W*0.020,H*0.720],[W*0.974,H*0.520],[W*0.980,H*0.720]].forEach(([bx,by])=>{
-    const r=W*0.022;
-    [[0,0,'#2e7010'],[r*0.7,-r*0.3,'#3a8818'],[-r*0.6,-r*0.2,'#246008'],[r*0.3,-r*0.5,'#4a9a20']].forEach(([dx,dy,col])=>{
-      ctx.fillStyle=col; ctx.beginPath(); ctx.arc(bx+dx,by+dy,r*0.54,0,Math.PI*2); ctx.fill();
-    });
-  });
+  // ── Scattered oval-perimeter vegetation — seeded hash, no Math.random() ──
+  // h(n) gives stable pseudo-random 0..1 from integer seed
+  function h(n){ return Math.abs(Math.sin(n*127.1+n*n*0.003+311.7)*43758.5453%1); }
 
-  // ── Bottom vegetation — oasis outskirts ──
-
-  // Grass tuft helper
-  function grassTuft(gx,gy,sz){
-    const cols=['#3a9018','#2e7810','#4aaa20','#22600c'];
-    for(let b=0;b<7;b++){
-      const ang=-Math.PI*0.75+b*Math.PI*0.25;
-      const len=sz*(0.6+Math.sin(b*1.8)*0.4);
-      ctx.strokeStyle=cols[b%4]; ctx.lineWidth=W*0.005; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(gx,gy);
-      ctx.quadraticCurveTo(gx+Math.cos(ang)*len*0.45+Math.sin(b)*sz*0.25, gy-len*0.55,
-                            gx+Math.cos(ang)*len, gy-len); ctx.stroke();
+  // Helpers
+  function oaBush(bx,by,sz,seed){
+    const cols=['#246008','#2e7010','#3a8818','#4a9a20','#1a4e06','#56aa28'];
+    const n=3+Math.floor(h(seed)*4);
+    for(let i=0;i<n;i++){
+      const dx=(h(seed+i*7)-0.5)*sz*1.4, dy=(h(seed+i*11)-0.8)*sz*0.8;
+      const r=sz*(0.38+h(seed+i*3)*0.36);
+      ctx.fillStyle=cols[Math.floor(h(seed+i*13)*cols.length)];
+      ctx.beginPath(); ctx.arc(bx+dx,by+dy,r,0,Math.PI*2); ctx.fill();
     }
   }
-
-  // Rock helper — sandstone lumps
-  function rock(rx,ry,rw,rh,angle){
-    const rg=ctx.createLinearGradient(rx,ry-rh,rx,ry+rh*0.3);
-    rg.addColorStop(0,'#c8a870'); rg.addColorStop(0.6,'#b09050'); rg.addColorStop(1,'#8a6c38');
+  function oaGrass(gx,gy,sz,seed){
+    const cols=['#3a9018','#2e7810','#4aaa20','#22600c','#52b824'];
+    const blades=4+Math.floor(h(seed)*5);
+    for(let b=0;b<blades;b++){
+      const ang=-Math.PI*(0.9-h(seed+b*3)*0.8);
+      const len=sz*(0.5+h(seed+b*7)*0.7);
+      const ox=(h(seed+b*11)-0.5)*sz*0.5;
+      ctx.strokeStyle=cols[b%cols.length]; ctx.lineWidth=W*0.004+h(seed+b)*W*0.003; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(gx+ox,gy);
+      ctx.quadraticCurveTo(gx+ox+Math.cos(ang)*len*0.4+(h(seed+b*17)-0.5)*sz*0.4,
+                            gy-len*0.5, gx+ox+Math.cos(ang)*len, gy-len); ctx.stroke();
+    }
+  }
+  function oaRock(rx,ry,sz,seed){
+    const rg=ctx.createLinearGradient(rx,ry-sz,rx,ry+sz*0.4);
+    rg.addColorStop(0,'#caa870'); rg.addColorStop(0.55,'#b09050'); rg.addColorStop(1,'#8a6c38');
     ctx.fillStyle=rg;
+    const angle=(h(seed)*1.2-0.6);
+    const rw=sz*(0.9+h(seed+1)*0.5), rh=sz*(0.4+h(seed+2)*0.3);
     ctx.beginPath(); ctx.ellipse(rx,ry,rw,rh,angle,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='rgba(80,54,18,0.20)'; ctx.lineWidth=0.8;
+    ctx.strokeStyle='rgba(80,54,18,0.18)'; ctx.lineWidth=0.7;
     ctx.beginPath(); ctx.ellipse(rx,ry,rw,rh,angle,0,Math.PI*2); ctx.stroke();
   }
-
-  // Flowering desert plant helper
-  function desertFlower(fx,fy,sz){
-    // Spiky green base
-    ctx.fillStyle='#1e6808';
-    for(let s=0;s<5;s++){
-      const a=-Math.PI*0.5+s*Math.PI*0.5;
+  function oaFlower(fx,fy,sz,seed){
+    const bloomCols=['#e84818','#d02090','#e8a010','#c03020'];
+    ctx.fillStyle='#1a5c06';
+    for(let s=0;s<4+Math.floor(h(seed)*3);s++){
+      const a=s*(Math.PI*2/(4+Math.floor(h(seed)*3)))+(h(seed+1)*0.8);
       ctx.beginPath(); ctx.moveTo(fx,fy);
-      ctx.bezierCurveTo(fx+Math.cos(a-0.4)*sz*0.5,fy+Math.sin(a-0.4)*sz*0.5,
-                        fx+Math.cos(a+0.4)*sz*0.5,fy+Math.sin(a+0.4)*sz*0.5,
+      ctx.bezierCurveTo(fx+Math.cos(a-0.5)*sz*0.55,fy+Math.sin(a-0.5)*sz*0.55,
+                        fx+Math.cos(a+0.5)*sz*0.55,fy+Math.sin(a+0.5)*sz*0.55,
                         fx+Math.cos(a)*sz,fy+Math.sin(a)*sz);
       ctx.closePath(); ctx.fill();
     }
-    // Bloom
-    ctx.fillStyle='#e84818';
-    ctx.beginPath(); ctx.arc(fx,fy-sz*0.3,sz*0.28,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#f8c020';
-    ctx.beginPath(); ctx.arc(fx,fy-sz*0.3,sz*0.12,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=bloomCols[Math.floor(h(seed+3)*bloomCols.length)];
+    ctx.beginPath(); ctx.arc(fx,fy-sz*0.25,sz*0.30,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#f8d020';
+    ctx.beginPath(); ctx.arc(fx,fy-sz*0.25,sz*0.13,0,Math.PI*2); ctx.fill();
   }
 
-  // Bottom-left corner cluster — dense, bleeds off screen
-  grassTuft(W*0.008, H*0.870, H*0.034);
-  grassTuft(W*0.028, H*0.888, H*0.028);
-  grassTuft(W*0.006, H*0.920, H*0.030);
-  grassTuft(W*0.036, H*0.930, H*0.026);
-  grassTuft(W*0.014, H*0.960, H*0.032);
-  grassTuft(W*0.040, H*0.968, H*0.024);
-  rock(W*0.044, H*0.892, W*0.018, H*0.010, -0.2);
-  rock(W*0.024, H*0.910, W*0.014, H*0.008,  0.1);
-  desertFlower(W*0.050, H*0.880, H*0.022);
-  desertFlower(W*0.018, H*0.945, H*0.018);
-
-  // Bottom-right corner cluster
-  grassTuft(W*0.992, H*0.872, H*0.034);
-  grassTuft(W*0.972, H*0.890, H*0.028);
-  grassTuft(W*0.994, H*0.924, H*0.030);
-  grassTuft(W*0.964, H*0.934, H*0.026);
-  grassTuft(W*0.986, H*0.962, H*0.032);
-  grassTuft(W*0.960, H*0.970, H*0.024);
-  rock(W*0.956, H*0.896, W*0.018, H*0.010,  0.2);
-  rock(W*0.976, H*0.914, W*0.014, H*0.008, -0.1);
-  desertFlower(W*0.950, H*0.882, H*0.022);
-  desertFlower(W*0.982, H*0.948, H*0.018);
-
-  // Bottom centre strip — scattered rocks and tufts between the stumps
-  // (all below H*0.97 so fully outside oval bottom)
-  [[W*0.12,H*0.976],[W*0.26,H*0.982],[W*0.42,H*0.978],[W*0.58,H*0.980],[W*0.74,H*0.975],[W*0.88,H*0.982]].forEach(([gx,gy])=>{
-    grassTuft(gx,gy,H*0.020);
-  });
-  [[W*0.18,H*0.968],[W*0.35,H*0.972],[W*0.52,H*0.966],[W*0.68,H*0.970],[W*0.82,H*0.968]].forEach(([rx,ry])=>{
-    rock(rx,ry,W*0.016,H*0.007,-0.1+Math.sin(rx)*0.3);
-  });
-
-  // Lower side scrub — fills gap between pool area and bottom palms
-  [[W*0.018,H*0.820],[W*0.034,H*0.800],[W*0.982,H*0.815],[W*0.966,H*0.800]].forEach(([bx,by])=>{
-    const r=W*0.018;
-    [[0,0,'#286010'],[r*0.6,-r*0.3,'#349018'],[-r*0.5,-r*0.2,'#1e5008']].forEach(([dx,dy,col])=>{
-      ctx.fillStyle=col; ctx.beginPath(); ctx.arc(bx+dx,by+dy,r*0.50,0,Math.PI*2); ctx.fill();
-    });
-  });
+  // Scatter 80 items around and just outside the oval boundary
+  // Oval: cx=W*0.5, cy=H*0.60, rx=W*0.46, ry=H*0.37
+  const OCX=W*0.5, OCY=H*0.60, ORX=W*0.46, ORY=H*0.37;
+  for(let i=0;i<80;i++){
+    // Non-uniform angular steps — clustered in places
+    const ang = h(i*3.7)*Math.PI*2;
+    // Vary outward offset — some tight to oval, some further out
+    const outR = W*(0.012+h(i*5.1)*0.042);
+    const px = OCX + Math.cos(ang)*(ORX+outR);
+    const py = OCY + Math.sin(ang)*(ORY+outR*(ORY/ORX));
+    // Skip items that land in sky or off-screen
+    if(py < H*0.26 || px < -W*0.02 || px > W*1.02) continue;
+    const sz = H*(0.012+h(i*7.3)*0.026);
+    const type = h(i*11.9); // 0-0.4 bush, 0.4-0.65 grass, 0.65-0.82 rock, 0.82-1 flower
+    if(type<0.40)       oaBush(px,py,sz*1.8,i*100);
+    else if(type<0.65)  oaGrass(px,py,sz*1.4,i*100);
+    else if(type<0.82)  oaRock(px,py,sz*0.9,i*100);
+    else                oaFlower(px,py,sz*1.1,i*100);
+  }
+  // Second denser pass with smaller items — fills gaps
+  for(let i=0;i<60;i++){
+    const ang = h(i*6.1+0.8)*Math.PI*2;
+    const outR = W*(0.004+h(i*8.3)*0.024);
+    const px = OCX + Math.cos(ang)*(ORX+outR);
+    const py = OCY + Math.sin(ang)*(ORY+outR*(ORY/ORX));
+    if(py < H*0.26 || px < -W*0.03 || px > W*1.03) continue;
+    const sz = H*(0.008+h(i*9.7)*0.016);
+    const type = h(i*13.1);
+    if(type<0.5) oaBush(px,py,sz*1.4,i*200+50);
+    else         oaGrass(px,py,sz*1.1,i*200+50);
+  }
 }
 
 function drawBazaarScene() {
