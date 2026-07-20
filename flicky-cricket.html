@@ -21275,6 +21275,9 @@ function drawBazaarScene() {
   // League 9c — The Desert: Bazaar
   const H=canvas.height, W=canvas.width;
   const t=performance.now()/1000;
+  function bh(n){ return Math.abs(Math.sin(n*127.1+n*n*0.003+311.7)*43758.5453%1); }
+  function ovalLeft(fy){ const dy=(fy/H-0.60)/0.37; if(Math.abs(dy)>1)return 0; return W*(0.5-0.46*Math.sqrt(1-dy*dy)); }
+  function ovalRight(fy){ const dy=(fy/H-0.60)/0.37; if(Math.abs(dy)>1)return W; return W*(0.5+0.46*Math.sqrt(1-dy*dy)); }
 
   // ── SKY ──
   ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
@@ -21296,11 +21299,8 @@ function drawBazaarScene() {
   // Full-width cityscape silhouette
   const CS='#100610';
   function bldg(x,y,w){ ctx.fillStyle=CS; ctx.fillRect(W*x,H*y,W*w,H*(0.23-y)); }
-  // Left cluster
   [[-0.01,0.192,0.07],[0.04,0.170,0.05],[0.08,0.210,0.04],[0.11,0.160,0.04],[0.14,0.188,0.04],[0.17,0.152,0.05]].forEach(a=>bldg(...a));
-  // Centre-left gap fill
   [[0.30,0.192,0.05],[0.33,0.162,0.04],[0.36,0.200,0.04],[0.39,0.144,0.04]].forEach(a=>bldg(...a));
-  // Right cluster
   [[0.60,0.178,0.05],[0.64,0.200,0.04],[0.67,0.152,0.05],[0.71,0.188,0.05],
    [0.75,0.172,0.05],[0.79,0.210,0.05],[0.83,0.162,0.06],[0.88,0.192,0.07],[0.93,0.210,0.08]].forEach(a=>bldg(...a));
 
@@ -21338,6 +21338,25 @@ function drawBazaarScene() {
     ctx.bezierCurveTo(bx+ws,by+ws*0.10, bx+ws*0.5,by-ws*0.18, bx,by); ctx.fill();
   });
 
+  // ── Prayer flag bunting across sky ──
+  const pfCols=['#e82020','#f0c020','#1858d0','#20a040','#ffffff','#d020a0'];
+  [[H*0.055, H*0.070, H*0.016],[H*0.115, H*0.128, H*0.013]].forEach(([ly1,ly2,fh])=>{
+    // rope
+    ctx.strokeStyle='rgba(40,16,0,0.50)'; ctx.lineWidth=W*0.002; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(0,ly1); ctx.quadraticCurveTo(W*0.5,ly2+H*0.010,W,ly1+H*0.004); ctx.stroke();
+    // flags
+    const nf=18;
+    for(let i=0;i<nf;i++){
+      const pct=(i+0.5)/nf;
+      const rx=W*pct;
+      const ry=ly1+(ly2-ly1)*pct + 4*(H*0.010)*pct*(1-pct);
+      ctx.fillStyle=pfCols[i%pfCols.length];
+      ctx.beginPath(); ctx.moveTo(rx-W*0.022,ry); ctx.lineTo(rx+W*0.022,ry); ctx.lineTo(rx,ry+fh); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=0.5;
+      ctx.beginPath(); ctx.moveTo(rx-W*0.022,ry); ctx.lineTo(rx+W*0.022,ry); ctx.lineTo(rx,ry+fh); ctx.closePath(); ctx.stroke();
+    }
+  });
+
   ctx.restore(); // end sky clip
 
   // Ground — warm terracotta
@@ -21359,20 +21378,136 @@ function drawBazaarScene() {
 
   drawGroundRings('#b06828','#985818','rgba(192,112,48,0.88)');
 
-  // ── Lantern strings — 3 ropes, clipped to stay outside the oval play area ──
-  // Oval: cx=W*0.5, cy=H*0.60, rx=W*0.46, ry=H*0.37
-  function ovalLeft(fy){ const dy=(fy/H-0.60)/0.37; if(Math.abs(dy)>1)return 0; return W*(0.5-0.46*Math.sqrt(1-dy*dy)); }
-  function ovalRight(fy){ const dy=(fy/H-0.60)/0.37; if(Math.abs(dy)>1)return W; return W*(0.5+0.46*Math.sqrt(1-dy*dy)); }
+  // ── Spectator crowd silhouettes around top oval rim ──
+  const crowdCols=['#3a1810','#1a2840','#38180a','#2a1030','#182830','#401808'];
+  const crowdN=44;
+  for(let row=0;row<2;row++){
+    for(let i=0;i<crowdN;i++){
+      const ang=Math.PI*(1.05+0.90*(i/crowdN));
+      const orx=W*0.46*(1+row*0.055), ory=H*0.37*(1+row*0.045);
+      const ox=W*0.5+orx*Math.cos(ang), oy=H*0.60+ory*Math.sin(ang);
+      if(oy>H*0.39||oy<H*0.228) continue;
+      const nx=Math.cos(ang), ny=Math.sin(ang);
+      const px=ox+nx*W*0.005, py=oy+ny*H*0.004;
+      const sz=W*(0.007+bh(i*7+row*31)*0.004);
+      ctx.globalAlpha=0.60+bh(i*5)*0.30;
+      ctx.fillStyle=crowdCols[(i+row*3)%crowdCols.length];
+      ctx.beginPath(); ctx.arc(px,py,sz,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(px,py+sz*1.6,sz*1.3,sz*0.7,0,0,Math.PI); ctx.fill();
+    }
+  }
+  ctx.globalAlpha=1;
 
+  // ── Market archway gate posts at oval entrance ──
+  // Gate at oval top, around H*0.258 where oval is about W*0.35–0.65
+  {
+    const gY=H*0.258;
+    const gL=W*0.368, gR=W*0.632;
+    const gW=W*0.022, gH=H*0.100;
+    function gatePost(gx){
+      // shadow
+      ctx.fillStyle='rgba(0,0,0,0.18)';
+      ctx.fillRect(gx-gW/2+W*0.004,gY+H*0.004,gW,gH);
+      // main pillar gradient
+      const pg=ctx.createLinearGradient(gx-gW/2,0,gx+gW/2,0);
+      pg.addColorStop(0,'#c8a050'); pg.addColorStop(0.38,'#e8cc80'); pg.addColorStop(0.72,'#c09040'); pg.addColorStop(1,'#8a6020');
+      ctx.fillStyle=pg; ctx.fillRect(gx-gW/2,gY,gW,gH);
+      // decorative bands
+      [0.22,0.48,0.74].forEach(frac=>{
+        ctx.fillStyle='#d4b060';
+        ctx.fillRect(gx-gW/2-W*0.003,gY+gH*frac,gW+W*0.006,H*0.007);
+      });
+      // capital block
+      ctx.fillStyle='#dcc070';
+      ctx.fillRect(gx-gW*0.75,gY-H*0.010,gW*1.5,H*0.012);
+      // pointed finial
+      ctx.fillStyle='#e8d080';
+      ctx.beginPath(); ctx.moveTo(gx-gW*0.6,gY-H*0.010); ctx.lineTo(gx,gY-H*0.032); ctx.lineTo(gx+gW*0.6,gY-H*0.010); ctx.closePath(); ctx.fill();
+      // gold crescent on tip
+      ctx.fillStyle='#f0c020';
+      ctx.beginPath(); ctx.arc(gx,gY-H*0.034,W*0.008,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#c07030';
+      ctx.beginPath(); ctx.arc(gx+W*0.005,gY-H*0.036,W*0.006,0,Math.PI*2); ctx.fill();
+    }
+    gatePost(gL); gatePost(gR);
+    // Arch span between posts (decorative rope/banner)
+    ctx.strokeStyle='rgba(60,24,4,0.60)'; ctx.lineWidth=W*0.004; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(gL,gY-H*0.008); ctx.quadraticCurveTo(W*0.5,gY-H*0.052,gR,gY-H*0.008); ctx.stroke();
+    // Pennant on arch rope
+    const archN=6;
+    for(let a=0;a<archN;a++){
+      const pct=(a+0.5)/archN;
+      const ax2=gL+(gR-gL)*pct;
+      const ay2=gY-H*0.008 - H*0.044*4*pct*(1-pct) + H*0.005;
+      ctx.fillStyle=pfCols[a%pfCols.length];
+      ctx.beginPath(); ctx.moveTo(ax2-W*0.014,ay2); ctx.lineTo(ax2+W*0.014,ay2); ctx.lineTo(ax2,ay2+H*0.018); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // ── Potted urns and lantern stands along oval boundary ──
+  {
+    function drawUrn(ux,uy,uc,h2){
+      const uh=H*h2;
+      // shadow
+      ctx.fillStyle='rgba(0,0,0,0.12)';
+      ctx.beginPath(); ctx.ellipse(ux+W*0.003,uy+uh+H*0.003,W*0.016,H*0.005,0,0,Math.PI*2); ctx.fill();
+      // body
+      ctx.fillStyle=uc;
+      ctx.beginPath(); ctx.moveTo(ux-W*0.012,uy+uh); ctx.bezierCurveTo(ux-W*0.016,uy+uh*0.6,ux-W*0.018,uy+uh*0.3,ux-W*0.010,uy); ctx.lineTo(ux+W*0.010,uy); ctx.bezierCurveTo(ux+W*0.018,uy+uh*0.3,ux+W*0.016,uy+uh*0.6,ux+W*0.012,uy+uh); ctx.closePath(); ctx.fill();
+      // neck
+      ctx.fillStyle='rgba(255,255,255,0.12)';
+      ctx.fillRect(ux-W*0.007,uy,W*0.014,H*0.010);
+      // rim highlight
+      ctx.fillStyle='rgba(255,220,120,0.35)';
+      ctx.beginPath(); ctx.ellipse(ux,uy+H*0.004,W*0.010,H*0.004,0,0,Math.PI*2); ctx.fill();
+      // decorative band
+      ctx.strokeStyle='rgba(220,160,50,0.55)'; ctx.lineWidth=W*0.003;
+      ctx.beginPath(); ctx.ellipse(ux,uy+uh*0.4,W*0.013,H*0.006,0,0,Math.PI*2); ctx.stroke();
+    }
+    function drawLanternStand(lx,ly){
+      // pole
+      ctx.strokeStyle='#5a3010'; ctx.lineWidth=W*0.005; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(lx,ly+H*0.080); ctx.lineTo(lx,ly); ctx.stroke();
+      // cross arm
+      ctx.beginPath(); ctx.moveTo(lx-W*0.022,ly+H*0.010); ctx.lineTo(lx+W*0.022,ly+H*0.010); ctx.stroke();
+      // two hanging lanterns
+      [lx-W*0.018,lx+W*0.018].forEach((hx,hi)=>{
+        const lc=['#e82020','#e09010','#1850c0','#22b040'][hi*2];
+        ctx.strokeStyle='rgba(55,24,4,0.55)'; ctx.lineWidth=W*0.002;
+        ctx.beginPath(); ctx.moveTo(hx,ly+H*0.010); ctx.lineTo(hx,ly+H*0.024); ctx.stroke();
+        ctx.fillStyle=lc;
+        ctx.beginPath(); ctx.ellipse(hx,ly+H*0.034,W*0.009,H*0.014,0,0,Math.PI*2); ctx.fill();
+        ctx.save(); ctx.shadowColor=lc; ctx.shadowBlur=12;
+        ctx.fillStyle='rgba(255,248,180,0.60)'; ctx.beginPath(); ctx.arc(hx,ly+H*0.034,W*0.003,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+      });
+    }
+    // Urns at L/R oval boundary, top quarter
+    const urnPositions=[
+      [W*0.238,H*0.290,'#8a4010',0.054],[W*0.762,H*0.290,'#6a3418',0.054],
+      [W*0.178,H*0.330,'#9a5020',0.046],[W*0.822,H*0.330,'#7a3c14',0.046],
+      [W*0.130,H*0.380,'#804018',0.040],[W*0.870,H*0.380,'#8a4820',0.040],
+    ];
+    urnPositions.forEach(([ux,uy,uc,h2])=>{
+      // only place outside oval
+      if(ux < W*0.5 && ux < ovalLeft(uy)+W*0.024) return;
+      if(ux > W*0.5 && ux > ovalRight(uy)-W*0.024) return;
+      drawUrn(ux,uy,uc,h2);
+    });
+    // Lantern stands at oval sides
+    [[W*0.060,H*0.300],[W*0.940,H*0.300],[W*0.040,H*0.410],[W*0.960,H*0.410]].forEach(([lx,ly])=>{
+      drawLanternStand(lx,ly);
+    });
+  }
+
+  // ── Lantern strings — 3 ropes, clipped to stay outside the oval play area ──
   function lanternString(y1, y2, sag, cols){
     const n=cols.length;
     for(let i=0;i<n;i++){
       const tx=(i+0.5)/n;
       const lx=-W*0.01+(W*1.02)*tx;
       const ly=y1+(y2-y1)*tx + 4*sag*tx*(1-tx);
-      // Skip lanterns that sit inside the oval
       if(lx > ovalLeft(ly)-W*0.02 && lx < ovalRight(ly)+W*0.02) continue;
-      // Rope segment (just the pendant wire — full rope would cross oval)
       ctx.strokeStyle='rgba(55,24,4,0.42)'; ctx.lineWidth=W*0.002; ctx.lineCap='round';
       ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx,ly+H*0.008); ctx.stroke();
       const lc=cols[i];
@@ -21385,7 +21520,6 @@ function drawBazaarScene() {
       ctx.fillStyle='rgba(255,248,200,0.55)'; ctx.beginPath(); ctx.arc(lx,ly+H*0.020,W*0.004,0,Math.PI*2); ctx.fill();
       ctx.restore();
     }
-    // Rope lines — only the left and right edge segments
     const midY=(y1+y2)*0.5+sag;
     const olL=ovalLeft(midY), olR=ovalRight(midY);
     ctx.strokeStyle='rgba(55,24,4,0.55)'; ctx.lineWidth=W*0.003; ctx.lineCap='round';
@@ -21409,75 +21543,38 @@ function drawBazaarScene() {
     ctx.beginPath(); ctx.ellipse(fx+W*0.002,fy-H*0.007,W*0.009,W*0.006,-0.3,0,Math.PI*2); ctx.fill();
   }
 
-  // ── LEFT STALLS ──
-  const stallsL=[
-    {ax:W*0.040,ay:H*0.300,col:'#d02020'},
-    {ax:W*0.040,ay:H*0.450,col:'#1840a0'},
-    {ax:W*0.040,ay:H*0.600,col:'#c07808'},
-  ];
-  stallsL.forEach(({ax,ay,col},ai)=>{
-    const aw=W*0.148, ah=H*0.086;
+  // ── Stall helper ──
+  function drawStall(ax,ay,aw,col,goods,rugSide){
+    const ah=H*0.086;
     ctx.fillStyle='#4a2408'; ctx.fillRect(ax,ay,aw,ah);
     ctx.strokeStyle='rgba(28,10,0,0.22)'; ctx.lineWidth=0.7;
     for(let r=1;r<5;r++){ ctx.beginPath(); ctx.moveTo(ax,ay+r*ah/5); ctx.lineTo(ax+aw,ay+r*ah/5); ctx.stroke(); }
     // Awning
     ctx.fillStyle=col;
-    ctx.beginPath(); ctx.moveTo(ax-W*0.008,ay); ctx.lineTo(ax+aw+W*0.008,ay);
-    ctx.lineTo(ax+aw+W*0.002,ay+H*0.032); ctx.lineTo(ax-W*0.002,ay+H*0.032); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.18)';
-    for(let s=0;s<5;s++) ctx.fillRect(ax+s*aw/5,ay,aw/10,H*0.032);
+    ctx.beginPath(); ctx.moveTo(ax-W*0.006,ay); ctx.lineTo(ax+aw+W*0.006,ay);
+    ctx.lineTo(ax+aw+W*0.002,ay+H*0.030); ctx.lineTo(ax-W*0.002,ay+H*0.030); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.16)';
+    for(let s=0;s<4;s++) ctx.fillRect(ax+s*aw/4,ay,aw/8,H*0.030);
     // Tassels
     ctx.lineCap='round';
-    for(let s=0;s<7;s++){
-      const tx2=ax+s*(aw/6), tc=['#f0c030','#e82020','#2060c0'][s%3];
+    const tN=Math.floor(aw/(W*0.025))+1;
+    for(let s=0;s<tN;s++){
+      const tx2=ax+s*(aw/(tN-1)), tc=['#f0c030','#e82020','#2060c0'][s%3];
       ctx.strokeStyle=tc; ctx.lineWidth=W*0.004;
-      ctx.beginPath(); ctx.moveTo(tx2,ay+H*0.032); ctx.lineTo(tx2+W*0.003,ay+H*0.048); ctx.stroke();
-      ctx.fillStyle=tc; ctx.beginPath(); ctx.arc(tx2+W*0.003,ay+H*0.049,W*0.004,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(tx2,ay+H*0.030); ctx.lineTo(tx2+W*0.002,ay+H*0.045); ctx.stroke();
+      ctx.fillStyle=tc; ctx.beginPath(); ctx.arc(tx2+W*0.002,ay+H*0.046,W*0.004,0,Math.PI*2); ctx.fill();
     }
-    // Spice mounds
+    // Goods
     const spice=['#d04010','#f0c010','#c82060','#e08020','#805018'];
-    for(let g=0;g<4;g++){
-      ctx.fillStyle=spice[(ai*2+g)%5];
-      ctx.beginPath(); ctx.arc(ax+W*0.018+g*W*0.034,ay+ah-H*0.008,W*0.016,Math.PI,0); ctx.fill();
-    }
-    // Hanging rug panel on left wall
-    if(ai<2){
-      const rc=[['#c02020','#e8c030','#1840a0'],['#20a040','#e82020','#f0c030']][ai];
-      ctx.fillStyle=rc[0]; ctx.fillRect(ax,ay+H*0.004,W*0.013,H*0.068);
-      [rc[1],rc[2],rc[1]].forEach((c,k)=>{ ctx.fillStyle=c; ctx.fillRect(ax,ay+H*(0.012+k*0.018),W*0.013,H*0.012); });
-    }
-  });
-  // Left-side figures
-  fig(W*0.194, H*0.358, '#3a2860','#c89030');
-  fig(W*0.194, H*0.508, '#802010','#f0e0a0');
-  fig(W*0.166, H*0.660, '#2a5040','#e8c060');
-
-  // ── RIGHT STALLS ──
-  const stallsR=[
-    {ax:W*0.812,ay:H*0.300,col:'#308040'},
-    {ax:W*0.812,ay:H*0.450,col:'#a02080'},
-    {ax:W*0.812,ay:H*0.600,col:'#d05010'},
-  ];
-  stallsR.forEach(({ax,ay,col},ai)=>{
-    const aw=W*0.148, ah=H*0.086;
-    ctx.fillStyle='#4a2408'; ctx.fillRect(ax,ay,aw,ah);
-    ctx.strokeStyle='rgba(28,10,0,0.22)'; ctx.lineWidth=0.7;
-    for(let r=1;r<5;r++){ ctx.beginPath(); ctx.moveTo(ax,ay+r*ah/5); ctx.lineTo(ax+aw,ay+r*ah/5); ctx.stroke(); }
-    ctx.fillStyle=col;
-    ctx.beginPath(); ctx.moveTo(ax-W*0.008,ay); ctx.lineTo(ax+aw+W*0.008,ay);
-    ctx.lineTo(ax+aw+W*0.002,ay+H*0.032); ctx.lineTo(ax-W*0.002,ay+H*0.032); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.18)';
-    for(let s=0;s<5;s++) ctx.fillRect(ax+s*aw/5,ay,aw/10,H*0.032);
-    ctx.lineCap='round';
-    for(let s=0;s<7;s++){
-      const tx2=ax+s*(aw/6), tc=['#2060c0','#f0c030','#e82020'][s%3];
-      ctx.strokeStyle=tc; ctx.lineWidth=W*0.004;
-      ctx.beginPath(); ctx.moveTo(tx2,ay+H*0.032); ctx.lineTo(tx2+W*0.003,ay+H*0.048); ctx.stroke();
-      ctx.fillStyle=tc; ctx.beginPath(); ctx.arc(tx2+W*0.003,ay+H*0.049,W*0.004,0,Math.PI*2); ctx.fill();
-    }
-    // Pottery jars on first stall, spices on others
-    if(ai===0){
-      [[W*0.016,'#8a4010'],[W*0.050,'#6a3418'],[W*0.084,'#9a5020'],[W*0.116,'#7a3c14']].forEach(([ox,c])=>{
+    if(goods==='spice'){
+      const ng=Math.min(4,Math.floor(aw/(W*0.034)));
+      for(let g=0;g<ng;g++){
+        ctx.fillStyle=spice[g%5];
+        ctx.beginPath(); ctx.arc(ax+W*0.018+g*W*0.034,ay+ah-H*0.008,W*0.015,Math.PI,0); ctx.fill();
+      }
+    } else if(goods==='pots'){
+      [[W*0.014,'#8a4010'],[W*0.042,'#6a3418'],[W*0.070,'#9a5020']].slice(0,Math.floor(aw/(W*0.034))).forEach(([ox,c])=>{
+        if(ax+ox+W*0.013>ax+aw) return;
         ctx.fillStyle=c;
         ctx.beginPath(); ctx.arc(ax+ox,ay+ah-H*0.018,W*0.012,Math.PI,0); ctx.fill();
         ctx.fillRect(ax+ox-W*0.012,ay+ah-H*0.018,W*0.024,H*0.018);
@@ -21485,46 +21582,82 @@ function drawBazaarScene() {
         ctx.strokeStyle='rgba(220,160,60,0.38)'; ctx.lineWidth=0.8;
         ctx.beginPath(); ctx.ellipse(ax+ox,ay+ah-H*0.026,W*0.012,H*0.005,0,0,Math.PI*2); ctx.stroke();
       });
-    } else {
-      const spice=['#a02060','#d06010','#e0b010','#20a040','#805018'];
-      for(let g=0;g<4;g++){
-        ctx.fillStyle=spice[(ai+g)%5];
-        ctx.beginPath(); ctx.arc(ax+W*0.018+g*W*0.034,ay+ah-H*0.008,W*0.016,Math.PI,0); ctx.fill();
-      }
     }
-    // Hanging rug panel on right edge
-    if(ai<2){
-      const rc=[['#1840a0','#f0c030','#c02020'],['#c020a0','#e09010','#2060c0']][ai];
-      const rx=ax+aw-W*0.013;
-      ctx.fillStyle=rc[0]; ctx.fillRect(rx,ay+H*0.004,W*0.013,H*0.068);
-      [rc[1],rc[2],rc[1]].forEach((c,k)=>{ ctx.fillStyle=c; ctx.fillRect(rx,ay+H*(0.012+k*0.018),W*0.013,H*0.012); });
+    // Rug panel
+    if(rugSide){
+      const rc=[['#c02020','#e8c030','#1840a0'],['#1840a0','#f0c030','#c02020']][rugSide==='l'?0:1];
+      const rx=rugSide==='l' ? ax : ax+aw-W*0.012;
+      ctx.fillStyle=rc[0]; ctx.fillRect(rx,ay+H*0.004,W*0.012,H*0.068);
+      [rc[1],rc[2],rc[1]].forEach((c,k)=>{ ctx.fillStyle=c; ctx.fillRect(rx,ay+H*(0.012+k*0.018),W*0.012,H*0.012); });
     }
-  });
-  // Right-side figures
-  fig(W*0.760, H*0.358, '#604010','#d09030');
-  fig(W*0.788, H*0.508, '#1a3868','#e0b040');
-  fig(W*0.760, H*0.660, '#6a1820','#f0d080');
+  }
+
+  // ── LEFT STALLS — top area only, outside oval ──
+  // At y=H*0.268, stall bottom y=H*0.354 → ovalLeft≈W*0.164 → safe width ≤ W*0.120
+  drawStall(W*0.004, H*0.268, W*0.118, '#d02020', 'spice', 'r');
+  fig(W*0.134, H*0.310, '#3a2860','#c89030');
+
+  // ── RIGHT STALLS — top area only, outside oval ──
+  // ovalRight at H*0.354 ≈ W*0.836 → safe start ≥ W*0.878 with W*0.118 width → ends at W*0.996
+  drawStall(W*0.878, H*0.268, W*0.118, '#308040', 'pots', 'l');
+  fig(W*0.864, H*0.310, '#604010','#d09030');
+
+  // ── Market carts — wheeled handcarts in outer ground corners ──
+  {
+    function drawCart(cx2,cy2,facingRight){
+      const cw=W*0.078, ch=H*0.040, wr=W*0.014;
+      const bx=facingRight?cx2:cx2-cw;
+      // Cart body
+      const cg=ctx.createLinearGradient(bx,cy2,bx,cy2+ch);
+      cg.addColorStop(0,'#a06828'); cg.addColorStop(1,'#7a4c18');
+      ctx.fillStyle=cg; ctx.fillRect(bx,cy2,cw,ch);
+      // Planks
+      ctx.strokeStyle='rgba(50,24,0,0.30)'; ctx.lineWidth=W*0.003;
+      [0.28,0.56].forEach(f=>{ ctx.beginPath(); ctx.moveTo(bx,cy2+ch*f); ctx.lineTo(bx+cw,cy2+ch*f); ctx.stroke(); });
+      // Goods pile on top
+      ctx.fillStyle='#c84010';
+      ctx.beginPath(); ctx.ellipse(bx+cw*0.5,cy2,cw*0.45,ch*0.35,0,0,Math.PI,true); ctx.fill();
+      ['#f0c010','#20a040','#d04010'].forEach((gc,gi)=>{
+        ctx.fillStyle=gc;
+        ctx.beginPath(); ctx.arc(bx+cw*(0.22+gi*0.28),cy2-ch*0.08,W*0.012,0,Math.PI*2); ctx.fill();
+      });
+      // Wheels
+      [bx+cw*0.18, bx+cw*0.82].forEach(wx2=>{
+        ctx.fillStyle='#5a3010';
+        ctx.beginPath(); ctx.arc(wx2,cy2+ch,wr,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#8a5828'; ctx.lineWidth=W*0.003;
+        for(let sp=0;sp<6;sp++){
+          const sa=sp*Math.PI/3;
+          ctx.beginPath(); ctx.moveTo(wx2,cy2+ch); ctx.lineTo(wx2+Math.cos(sa)*wr*0.8,cy2+ch+Math.sin(sa)*wr*0.8); ctx.stroke();
+        }
+        ctx.fillStyle='#3a2008'; ctx.beginPath(); ctx.arc(wx2,cy2+ch,wr*0.22,0,Math.PI*2); ctx.fill();
+      });
+      // Handle pole
+      ctx.strokeStyle='#7a5020'; ctx.lineWidth=W*0.006; ctx.lineCap='round';
+      const hx=facingRight?bx-W*0.020:bx+cw+W*0.020;
+      ctx.beginPath(); ctx.moveTo(facingRight?bx:bx+cw,cy2+ch*0.5); ctx.lineTo(hx,cy2+ch*0.5); ctx.stroke();
+    }
+    // Top-left corner cart
+    drawCart(W*0.016, H*0.430, true);
+    // Top-right corner cart
+    drawCart(W*0.906, H*0.430, false);
+  }
 
   // ── Central ornamental fountain ──
   {
     const fx=W*0.500, fy=H*0.500;
-    // Outer rim shadow
     ctx.fillStyle='rgba(0,0,0,0.14)'; ctx.beginPath(); ctx.ellipse(fx,fy+H*0.028,W*0.058,H*0.009,0,0,Math.PI*2); ctx.fill();
-    // Stone rim
     const rimG=ctx.createRadialGradient(fx-W*0.010,fy-H*0.008,0,fx,fy,W*0.058);
     rimG.addColorStop(0,'#d0a868'); rimG.addColorStop(0.60,'#a07840'); rimG.addColorStop(1,'#7a5828');
     ctx.fillStyle=rimG; ctx.beginPath(); ctx.ellipse(fx,fy,W*0.058,H*0.025,0,0,Math.PI*2); ctx.fill();
-    // Water
     const wG=ctx.createRadialGradient(fx,fy,0,fx,fy,W*0.040);
     wG.addColorStop(0,'#90daf8'); wG.addColorStop(0.55,'#3898c8'); wG.addColorStop(1,'#1c5c90');
     ctx.fillStyle=wG; ctx.beginPath(); ctx.ellipse(fx,fy,W*0.040,H*0.017,0,0,Math.PI*2); ctx.fill();
-    // Ripples
     [0,0.6,1.2].forEach(ph=>{
       const prog=((t*0.5+ph)%1.8)/1.8;
       ctx.strokeStyle=`rgba(180,240,255,${0.30*(1-prog)})`; ctx.lineWidth=0.8;
       ctx.beginPath(); ctx.ellipse(fx,fy,W*(0.006+prog*0.032),H*(0.003+prog*0.012),0,0,Math.PI*2); ctx.stroke();
     });
-    // Animated spouts — two arcs of water
     ctx.strokeStyle=`rgba(120,210,255,${0.55+Math.sin(t*2.5)*0.15})`; ctx.lineWidth=W*0.005; ctx.lineCap='round';
     ctx.beginPath(); ctx.moveTo(fx,fy-H*0.017); ctx.bezierCurveTo(fx+W*0.010,fy-H*0.040, fx+W*0.024,fy-H*0.030, fx+W*0.016,fy-H*0.010); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(fx,fy-H*0.017); ctx.bezierCurveTo(fx-W*0.010,fy-H*0.040, fx-W*0.024,fy-H*0.030, fx-W*0.016,fy-H*0.010); ctx.stroke();
@@ -21532,14 +21665,14 @@ function drawBazaarScene() {
 
   // ── Incense wisps ──
   ctx.lineCap='round';
-  [[W*0.090,H*0.296],[W*0.090,H*0.446],[W*0.840,H*0.296],[W*0.840,H*0.446]].forEach(([wx,wy],i)=>{
+  [[W*0.065,H*0.265],[W*0.110,H*0.300],[W*0.890,H*0.265],[W*0.935,H*0.300]].forEach(([wx,wy],i)=>{
     for(let w=0;w<3;w++){
       const ph=t*0.65+i*0.9+w*2.0;
       ctx.strokeStyle=`rgba(218,208,188,${0.16+Math.sin(ph)*0.06})`; ctx.lineWidth=W*0.004;
-      ctx.beginPath(); ctx.moveTo(wx+w*W*0.011,wy);
-      ctx.bezierCurveTo(wx+w*W*0.011+Math.sin(ph)*W*0.018,wy-H*0.026,
-                        wx+w*W*0.011+Math.sin(ph+1.1)*W*0.026,wy-H*0.058,
-                        wx+w*W*0.011+Math.sin(ph+2.2)*W*0.016,wy-H*0.086); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(wx+w*W*0.010,wy);
+      ctx.bezierCurveTo(wx+w*W*0.010+Math.sin(ph)*W*0.018,wy-H*0.024,
+                        wx+w*W*0.010+Math.sin(ph+1.1)*W*0.024,wy-H*0.054,
+                        wx+w*W*0.010+Math.sin(ph+2.2)*W*0.015,wy-H*0.082); ctx.stroke();
     }
   });
 
