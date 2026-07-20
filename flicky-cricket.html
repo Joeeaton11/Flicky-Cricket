@@ -21378,25 +21378,56 @@ function drawBazaarScene() {
 
   drawGroundRings('#b06828','#985818','rgba(192,112,48,0.88)');
 
-  // ── Spectator crowd silhouettes around top oval rim ──
-  const crowdCols=['#3a1810','#1a2840','#38180a','#2a1030','#182830','#401808'];
-  const crowdN=44;
-  for(let row=0;row<2;row++){
-    for(let i=0;i<crowdN;i++){
-      const ang=Math.PI*(1.05+0.90*(i/crowdN));
-      const orx=W*0.46*(1+row*0.055), ory=H*0.37*(1+row*0.045);
-      const ox=W*0.5+orx*Math.cos(ang), oy=H*0.60+ory*Math.sin(ang);
-      if(oy>H*0.39||oy<H*0.228) continue;
-      const nx=Math.cos(ang), ny=Math.sin(ang);
-      const px=ox+nx*W*0.005, py=oy+ny*H*0.004;
-      const sz=W*(0.007+bh(i*7+row*31)*0.004);
-      ctx.globalAlpha=0.60+bh(i*5)*0.30;
-      ctx.fillStyle=crowdCols[(i+row*3)%crowdCols.length];
-      ctx.beginPath(); ctx.arc(px,py,sz,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(px,py+sz*1.6,sz*1.3,sz*0.7,0,0,Math.PI); ctx.fill();
+  // ── Oval boundary rope ──
+  ctx.save();
+  ctx.strokeStyle='rgba(240,210,80,0.55)'; ctx.lineWidth=W*0.005; ctx.setLineDash([W*0.018,W*0.012]);
+  ctx.beginPath(); ctx.ellipse(W*0.5,H*0.60,W*0.46+W*0.012,H*0.37+H*0.008,0,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // ── Banner/standard poles flanking the oval ──
+  {
+    const bannerCols=['#e82020','#f0c020','#1858d0','#20a040','#d020a0','#f07010'];
+    function drawBannerPole(bx,by,col,flipFlag){
+      const ph=H*0.130;
+      // pole shadow
+      ctx.fillStyle='rgba(0,0,0,0.14)';
+      ctx.fillRect(bx+W*0.003,by,W*0.006,ph);
+      // pole
+      const pg=ctx.createLinearGradient(bx,0,bx+W*0.009,0);
+      pg.addColorStop(0,'#c8a050'); pg.addColorStop(0.5,'#e0c070'); pg.addColorStop(1,'#9a7030');
+      ctx.fillStyle=pg; ctx.fillRect(bx,by,W*0.009,ph);
+      // spear tip
+      ctx.fillStyle='#e8c030';
+      ctx.beginPath(); ctx.moveTo(bx+W*0.0045,by-H*0.018); ctx.lineTo(bx,by); ctx.lineTo(bx+W*0.009,by); ctx.closePath(); ctx.fill();
+      // flag/banner hanging from pole top
+      const fw=W*0.048, fh=H*0.060;
+      const fx=flipFlag ? bx-fw : bx+W*0.009;
+      ctx.fillStyle=col;
+      ctx.beginPath(); ctx.moveTo(flipFlag?bx:bx+W*0.009,by+H*0.004);
+      ctx.lineTo(fx+(flipFlag?0:fw),by+H*0.004);
+      ctx.lineTo(fx+(flipFlag?0:fw),by+H*0.004+fh);
+      ctx.lineTo(flipFlag?bx:bx+W*0.009,by+H*0.004+fh); ctx.closePath(); ctx.fill();
+      // banner stripe
+      ctx.fillStyle='rgba(255,255,255,0.22)';
+      ctx.fillRect(fx+(flipFlag?0:fw*0.25),by+H*0.004,fw*0.22,fh);
+      // crescent/star motif
+      ctx.fillStyle='rgba(255,255,200,0.60)';
+      const mx=fx+(flipFlag?fw*0.55:fw*0.45), my=by+H*0.004+fh*0.45;
+      ctx.beginPath(); ctx.arc(mx,my,W*0.008,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=col;
+      ctx.beginPath(); ctx.arc(mx+W*0.004,my-H*0.002,W*0.006,0,Math.PI*2); ctx.fill();
     }
+    // Left side poles — at various y positions down the left flank
+    const leftPoles=[
+      [W*0.020,H*0.278,0],[W*0.018,H*0.415,2],[W*0.016,H*0.555,4],[W*0.016,H*0.695,0],
+    ];
+    const rightPoles=[
+      [W*0.971,H*0.278,1,true],[W*0.973,H*0.415,3,true],[W*0.975,H*0.555,5,true],[W*0.975,H*0.695,1,true],
+    ];
+    leftPoles.forEach(([bx,by,ci])=>drawBannerPole(bx,by,bannerCols[ci],false));
+    rightPoles.forEach(([bx,by,ci])=>drawBannerPole(bx,by,bannerCols[ci],true));
   }
-  ctx.globalAlpha=1;
 
   // ── Market archway gate posts at oval entrance ──
   // Gate at oval top, around H*0.258 where oval is about W*0.35–0.65
@@ -21593,14 +21624,24 @@ function drawBazaarScene() {
   }
 
   // ── LEFT STALLS — top area only, outside oval ──
-  // At y=H*0.268, stall bottom y=H*0.354 → ovalLeft≈W*0.164 → safe width ≤ W*0.120
   drawStall(W*0.004, H*0.268, W*0.118, '#d02020', 'spice', 'r');
   fig(W*0.134, H*0.310, '#3a2860','#c89030');
+  // Second left stall — narrower, below
+  drawStall(W*0.004, H*0.360, W*0.076, '#1840a0', 'pots', null);
+  fig(W*0.090, H*0.402, '#802010','#f0e0a0');
+  // Seated figures lower down
+  fig(W*0.032, H*0.510, '#2a5040','#e8c060');
+  fig(W*0.028, H*0.640, '#602010','#d0a840');
 
   // ── RIGHT STALLS — top area only, outside oval ──
-  // ovalRight at H*0.354 ≈ W*0.836 → safe start ≥ W*0.878 with W*0.118 width → ends at W*0.996
   drawStall(W*0.878, H*0.268, W*0.118, '#308040', 'pots', 'l');
   fig(W*0.864, H*0.310, '#604010','#d09030');
+  // Second right stall — narrower, below
+  drawStall(W*0.920, H*0.360, W*0.076, '#a02080', 'spice', null);
+  fig(W*0.912, H*0.402, '#1a3868','#e0b040');
+  // Seated figures lower down
+  fig(W*0.968, H*0.510, '#6a1820','#f0d080');
+  fig(W*0.972, H*0.640, '#1a3040','#d8b050');
 
   // ── Market carts — wheeled handcarts in outer ground corners ──
   {
