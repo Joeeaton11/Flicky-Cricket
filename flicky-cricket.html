@@ -12835,6 +12835,7 @@ function drawJungleScene() {
 }
 
 function drawWestwildScene() {
+  const t=performance.now()/1000;
   // ── BACKDROP: clipped to top strip H*0.23 ──
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
@@ -12849,6 +12850,24 @@ function drawWestwildScene() {
   hazeG.addColorStop(0,'rgba(240,200,80,0)'); hazeG.addColorStop(1,'rgba(240,200,80,0.35)');
   ctx.fillStyle=hazeG; ctx.fillRect(0,H*0.175,W,H*0.055);
 
+  // Dusty high-desert clouds — thin, stretched, warm-tinted
+  ctx.globalAlpha=0.30;
+  [[W*0.12,H*0.038,W*0.090,H*0.013],[W*0.44,H*0.052,W*0.110,H*0.011],[W*0.68,H*0.030,W*0.080,H*0.010]].forEach(([cx,cy,cr,cr2])=>{
+    const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,cr);
+    cg.addColorStop(0,'rgba(255,248,230,0.85)'); cg.addColorStop(1,'rgba(255,220,140,0)');
+    ctx.fillStyle=cg;
+    ctx.save(); ctx.scale(1,cr2/cr); ctx.beginPath(); ctx.arc(cx,cy*cr/cr2,cr,0,Math.PI*2); ctx.fill(); ctx.restore();
+    ctx.fillStyle='rgba(255,248,230,0.35)';
+    ctx.beginPath(); ctx.ellipse(cx-cr*0.35,cy+cr2*0.9,cr*0.52,cr2*0.65,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx+cr*0.38,cy+cr2*0.7,cr*0.42,cr2*0.55,0,0,Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha=1;
+  // Circling hawks — black specks in upper-mid sky
+  ctx.fillStyle='#1a0c02';
+  [[W*0.30,H*0.060],[W*0.34,H*0.075],[W*0.52,H*0.045]].forEach(([hkx,hky])=>{
+    const wing=W*0.011, flap=Math.sin(t*2.2+hkx)*H*0.003;
+    ctx.beginPath(); ctx.moveTo(hkx,hky+flap); ctx.lineTo(hkx-wing,hky+H*0.005+flap); ctx.lineTo(hkx,hky+H*0.003); ctx.lineTo(hkx+wing,hky+H*0.005+flap); ctx.closePath(); ctx.fill();
+  });
   // Blazing sun — top-right, stark white disc with heat haze corona
   const sunX=W*0.82, sunY=H*0.065, sunR=W*0.048;
   const sunG=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR*3.5);
@@ -12889,6 +12908,11 @@ function drawWestwildScene() {
     });
   }
 
+  // Distant haze layer — very faint silhouette range behind mesas
+  ctx.globalAlpha=0.22;
+  drawMesa(-W*0.05,W*0.18,H*0.140,H*0.23,'#c88060','#8a4828','#d89070');
+  drawMesa(W*0.62,W*0.88,H*0.155,H*0.23,'#b87050','#784020','#c88060');
+  ctx.globalAlpha=1;
   // Large left mesa — anchored to left edge
   drawMesa(W*0.02, W*0.25, H*0.072, H*0.23, '#c05828', '#7a2c08', '#dc7038');
   // Smaller right-centre mesa
@@ -12962,6 +12986,70 @@ function drawWestwildScene() {
   drawGroundRings('#c8944a','#a87638','rgba(148,98,48,0.92)');
   drawSceneScoreboard();
 
+  // ── WATER TOWER — left margin upper ──
+  // tank top H*0.255, tank bottom H*0.355; legs to H*0.445
+  // right edge capped at W*0.082 — ovalLeft@H*0.36≈58px ✓, @H*0.44≈33px vs W*0.060 ✓
+  {
+    const wtx=W*0.042, wtTankTop=H*0.255, wtTankBot=H*0.355, wtLegsBot=H*0.445;
+    const tw=W*0.074, lw=W*0.007; // tank width, leg line width
+    propShadow(wtx,wtLegsBot+H*0.008,W*0.038,H*0.008);
+    // Legs & cross brace
+    ctx.strokeStyle='#6a4418'; ctx.lineWidth=lw; ctx.lineCap='butt';
+    const ll=wtx-W*0.022, lr=wtx+W*0.022;
+    ctx.beginPath(); ctx.moveTo(ll,wtTankBot); ctx.lineTo(ll,wtLegsBot); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lr,wtTankBot); ctx.lineTo(lr,wtLegsBot); ctx.stroke();
+    ctx.lineWidth=lw*0.7;
+    ctx.beginPath(); ctx.moveTo(ll,wtTankBot+H*0.028); ctx.lineTo(lr,wtLegsBot); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lr,wtTankBot+H*0.028); ctx.lineTo(ll,wtLegsBot); ctx.stroke();
+    // Catwalk platform ring at tank base
+    ctx.strokeStyle='#4a2c10'; ctx.lineWidth=lw*1.2;
+    ctx.beginPath(); ctx.moveTo(wtx-tw/2-W*0.006,wtTankBot); ctx.lineTo(wtx+tw/2+W*0.006,wtTankBot); ctx.stroke();
+    // Tank body with wood-plank gradient
+    const wtG=ctx.createLinearGradient(wtx-tw/2,0,wtx+tw/2,0);
+    wtG.addColorStop(0,'#4a2e0e'); wtG.addColorStop(0.3,'#7a5228'); wtG.addColorStop(0.8,'#9a6c38'); wtG.addColorStop(1,'#6a4820');
+    ctx.fillStyle=wtG; ctx.beginPath(); ctx.roundRect(wtx-tw/2,wtTankTop,tw,wtTankBot-wtTankTop,3); ctx.fill();
+    // Barrel hoops
+    ctx.strokeStyle='#2a1808'; ctx.lineWidth=lw;
+    [0.15,0.38,0.62,0.84].forEach(f=>{
+      const hy=wtTankTop+(wtTankBot-wtTankTop)*f;
+      ctx.beginPath(); ctx.moveTo(wtx-tw/2,hy); ctx.lineTo(wtx+tw/2,hy); ctx.stroke();
+    });
+    // Plank vertical lines
+    ctx.strokeStyle='rgba(40,18,4,0.3)'; ctx.lineWidth=0.8;
+    for(let px=wtx-tw/2+W*0.010;px<wtx+tw/2;px+=W*0.010){
+      ctx.beginPath(); ctx.moveTo(px,wtTankTop); ctx.lineTo(px,wtTankBot); ctx.stroke();
+    }
+    // Roof (pyramid top)
+    ctx.fillStyle='#3a2008';
+    ctx.beginPath(); ctx.moveTo(wtx-tw/2,wtTankTop); ctx.lineTo(wtx+tw/2,wtTankTop); ctx.lineTo(wtx,wtTankTop-H*0.032); ctx.closePath(); ctx.fill();
+    // Spout pipe
+    ctx.strokeStyle='#2a1408'; ctx.lineWidth=lw*0.9;
+    ctx.beginPath(); ctx.moveTo(wtx+tw/2-W*0.003,wtTankTop+(wtTankBot-wtTankTop)*0.72); ctx.lineTo(wtx+tw/2+W*0.018,wtTankTop+(wtTankBot-wtTankTop)*0.72); ctx.stroke();
+  }
+
+  // ── EXTRA CACTI — right margin, different heights ──
+  // verified outside oval at their respective y values
+  function drawCactus(cx,baseY,hh){
+    const tw=W*0.013, aw=W*0.008;
+    propShadow(cx,baseY+H*0.008,W*0.016,H*0.006);
+    ctx.fillStyle='#2a5010';
+    ctx.beginPath(); ctx.roundRect(cx-tw/2,baseY-hh,tw,hh,3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(cx-tw/2-aw*2.2,baseY-hh*0.65,aw,hh*0.30,3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(cx-tw/2-aw*2.2,baseY-hh*0.65-aw,tw+aw*1.8,aw,3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(cx+tw/2+aw*1.2,baseY-hh*0.52,aw,hh*0.25,3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(cx+tw/2,baseY-hh*0.52-aw,tw+aw*1.4,aw,3); ctx.fill();
+    ctx.strokeStyle='rgba(10,30,5,0.45)'; ctx.lineWidth=0.7;
+    [0.25,0.48,0.70,0.88].forEach(f=>{
+      ctx.beginPath(); ctx.moveTo(cx-tw/2,baseY-hh*f); ctx.lineTo(cx-tw/2-W*0.008,baseY-hh*f-H*0.003); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+tw/2,baseY-hh*f); ctx.lineTo(cx+tw/2+W*0.008,baseY-hh*f-H*0.003); ctx.stroke();
+    });
+  }
+  // right margin cacti — ovalRight@H*0.40≈W*0.888=346px, right of W*0.960=374px ✓
+  drawCactus(W*0.963, H*0.420, H*0.080);
+  drawCactus(W*0.972, H*0.580, H*0.065);
+  // left margin cactus mid-height — ovalLeft@H*0.48≈W*0.065=25.4px; center W*0.014, right W*0.024 ✓
+  drawCactus(W*0.014, H*0.480, H*0.055);
+
   // ── LEFT MARGIN: weathered wooden fence ──
   // Posts and rails running down left edge, outside oval
   ctx.strokeStyle='#7a5020'; ctx.lineCap='square';
@@ -12987,25 +13075,38 @@ function drawWestwildScene() {
   });
 
   // ── RIGHT MARGIN: canyon sandstone cliff wall ──
-  // Layered canyon wall face W*0.972 to W
-  const cwx=W*0.972;
-  // Main rock face
+  const cwx=W*0.966;
+  // Irregular cliff profile (jagged top ledges)
+  ctx.fillStyle='#b86030';
+  ctx.beginPath();
+  ctx.moveTo(cwx,H*0.23);
+  ctx.lineTo(cwx-W*0.008,H*0.27); ctx.lineTo(cwx+W*0.006,H*0.31); ctx.lineTo(cwx-W*0.004,H*0.38);
+  ctx.lineTo(cwx,H*0.43); ctx.lineTo(cwx,H);
+  ctx.lineTo(W,H); ctx.lineTo(W,H*0.23);
+  ctx.closePath(); ctx.fill();
+  // Rock face gradient
   const cwG=ctx.createLinearGradient(cwx,0,W,0);
-  cwG.addColorStop(0,'#a85828'); cwG.addColorStop(1,'#c87040');
+  cwG.addColorStop(0,'#8a4020'); cwG.addColorStop(0.4,'#b86030'); cwG.addColorStop(1,'#d07848');
   ctx.fillStyle=cwG; ctx.fillRect(cwx,H*0.23,W-cwx,H*0.77);
   // Strata bands
-  ctx.strokeStyle='rgba(80,30,8,0.45)'; ctx.lineWidth=2;
-  [H*0.31,H*0.38,H*0.455,H*0.53,H*0.61,H*0.685,H*0.76,H*0.835].forEach(ry=>{
-    ctx.beginPath(); ctx.moveTo(cwx,ry); ctx.lineTo(W,ry); ctx.stroke();
+  ctx.strokeStyle='rgba(80,30,8,0.50)'; ctx.lineWidth=2.2;
+  [H*0.29,H*0.355,H*0.425,H*0.505,H*0.580,H*0.660,H*0.740,H*0.820,H*0.900].forEach(sy=>{
+    ctx.beginPath(); ctx.moveTo(cwx,sy); ctx.lineTo(W,sy); ctx.stroke();
   });
   // Dark fissures/cracks
-  ctx.strokeStyle='rgba(40,12,4,0.55)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(cwx+W*0.006,H*0.28); ctx.lineTo(cwx+W*0.010,H*0.52); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cwx+W*0.014,H*0.40); ctx.lineTo(cwx+W*0.018,H*0.65); ctx.stroke();
+  ctx.strokeStyle='rgba(40,12,4,0.60)'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(cwx+W*0.005,H*0.30); ctx.lineTo(cwx+W*0.009,H*0.55); ctx.lineTo(cwx+W*0.012,H*0.72); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cwx+W*0.018,H*0.38); ctx.lineTo(cwx+W*0.014,H*0.60); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cwx+W*0.008,H*0.62); ctx.lineTo(cwx+W*0.020,H*0.85); ctx.stroke();
+  // Pebble/rock texture dots
+  ctx.fillStyle='rgba(60,20,4,0.25)';
+  [[cwx+W*0.010,H*0.35],[cwx+W*0.018,H*0.48],[cwx+W*0.006,H*0.56],[cwx+W*0.022,H*0.69],[cwx+W*0.010,H*0.78]].forEach(([px,py])=>{
+    ctx.beginPath(); ctx.ellipse(px,py,W*0.006,H*0.004,0.3,0,Math.PI*2); ctx.fill();
+  });
   // Shadow on left edge of cliff
-  const cwSh=ctx.createLinearGradient(cwx,0,cwx+W*0.012,0);
-  cwSh.addColorStop(0,'rgba(30,8,2,0.55)'); cwSh.addColorStop(1,'rgba(30,8,2,0)');
-  ctx.fillStyle=cwSh; ctx.fillRect(cwx,H*0.23,W*0.012,H*0.77);
+  const cwSh=ctx.createLinearGradient(cwx,0,cwx+W*0.018,0);
+  cwSh.addColorStop(0,'rgba(30,8,2,0.65)'); cwSh.addColorStop(1,'rgba(30,8,2,0)');
+  ctx.fillStyle=cwSh; ctx.fillRect(cwx,H*0.23,W*0.018,H*0.77);
 
   // ── CORNER PROPS ──
 
@@ -13064,6 +13165,25 @@ function drawWestwildScene() {
   ctx.fillRect(lx+W*0.084,ly-H*0.038,W*0.006,H*0.040);
   ctx.strokeStyle='#7a5430'; ctx.lineWidth=3;
   ctx.beginPath(); ctx.moveTo(lx-W*0.090,ly-H*0.028); ctx.lineTo(lx+W*0.090,ly-H*0.028); ctx.stroke();
+  // Stacked barrels — beside left wall of saloon
+  {
+    const bx=lx-W*0.075, by=ly;
+    function drawBarrel(bbx,bby,br,bh){
+      const bg=ctx.createLinearGradient(bbx-br,0,bbx+br,0);
+      bg.addColorStop(0,'#4a2e10'); bg.addColorStop(0.35,'#7a5228'); bg.addColorStop(0.75,'#9a6c3a'); bg.addColorStop(1,'#5a3c18');
+      ctx.fillStyle=bg; ctx.beginPath(); ctx.ellipse(bbx,bby-bh/2,br,bh/2,0,0,Math.PI*2); ctx.fill();
+      // hoops
+      ctx.strokeStyle='#2a1408'; ctx.lineWidth=1.8;
+      ctx.beginPath(); ctx.ellipse(bbx,bby-bh*0.15,br,br*0.22,0,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(bbx,bby-bh*0.85,br,br*0.22,0,0,Math.PI*2); ctx.stroke();
+      // top lid
+      ctx.fillStyle='#5a3c18'; ctx.beginPath(); ctx.ellipse(bbx,bby-bh,br,br*0.28,0,0,Math.PI*2); ctx.fill();
+    }
+    propShadow(bx,by+H*0.006,W*0.050,H*0.008);
+    drawBarrel(bx-W*0.018,by,W*0.016,H*0.038);
+    drawBarrel(bx+W*0.002,by,W*0.016,H*0.038);
+    drawBarrel(bx-W*0.008,by-H*0.038,W*0.016,H*0.038); // top barrel
+  }
 
   // ── COVERED WAGON — bottom-right ──
   const rx=W*0.870, ry=H*0.910;
@@ -13092,6 +13212,28 @@ function drawWestwildScene() {
   ctx.fillStyle='#4a2c10';
   ctx.beginPath(); ctx.arc(rx-W*0.052,ry+H*0.038,H*0.004,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.arc(rx+W*0.052,ry+H*0.038,H*0.004,0,Math.PI*2); ctx.fill();
+  // Cargo crates stacked beside wagon
+  {
+    const crx=rx+W*0.100, cry=ry+H*0.062;
+    propShadow(crx,cry+H*0.006,W*0.060,H*0.007);
+    // bottom crate
+    ctx.fillStyle='#7a5a2a'; ctx.fillRect(crx-W*0.028,cry-H*0.035,W*0.056,H*0.035);
+    ctx.strokeStyle='#5a3c14'; ctx.lineWidth=1.2; ctx.strokeRect(crx-W*0.028,cry-H*0.035,W*0.056,H*0.035);
+    // crate slats
+    ctx.strokeStyle='rgba(60,35,8,0.4)'; ctx.lineWidth=0.9;
+    ctx.beginPath(); ctx.moveTo(crx,cry-H*0.035); ctx.lineTo(crx,cry); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(crx-W*0.028,cry-H*0.018); ctx.lineTo(crx+W*0.028,cry-H*0.018); ctx.stroke();
+    // top crate (smaller)
+    ctx.fillStyle='#8a6a30'; ctx.fillRect(crx-W*0.022,cry-H*0.060,W*0.044,H*0.026);
+    ctx.strokeStyle='#5a3c14'; ctx.lineWidth=1.2; ctx.strokeRect(crx-W*0.022,cry-H*0.060,W*0.044,H*0.026);
+    ctx.strokeStyle='rgba(60,35,8,0.4)'; ctx.lineWidth=0.9;
+    ctx.beginPath(); ctx.moveTo(crx,cry-H*0.060); ctx.lineTo(crx,cry-H*0.034); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(crx-W*0.022,cry-H*0.047); ctx.lineTo(crx+W*0.022,cry-H*0.047); ctx.stroke();
+    // rope coil on ground beside crates
+    ctx.strokeStyle='#c8a050'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.ellipse(crx+W*0.038,cry-H*0.008,W*0.014,H*0.008,0,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(crx+W*0.038,cry-H*0.008,W*0.008,H*0.005,0,0,Math.PI*2); ctx.stroke();
+  }
 
   // ── HORSE tied at saloon hitching post ──
   const hx=W*0.028, hy=H*0.874;
@@ -13239,16 +13381,34 @@ function drawWestwildScene() {
     ctx.beginPath(); ctx.arc(snx+dx,sny+dy,W*0.002,0,Math.PI*2); ctx.fill();
   });
 
-  // ── TUMBLEWEED — right margin upper ──
-  const tbx=W*0.958, tby=H*0.440, tbr=W*0.022;
-  propShadow(tbx,tby+tbr*0.35,tbr*1.5,tbr*0.28);
-  ctx.strokeStyle='#8a6018'; ctx.lineWidth=1.8; ctx.globalAlpha=0.88;
-  for(let i=0;i<10;i++){
-    const a=i*Math.PI/5;
-    ctx.beginPath(); ctx.arc(tbx,tby,tbr,a,a+Math.PI*0.75); ctx.stroke();
-    ctx.beginPath(); ctx.arc(tbx,tby,tbr*0.60,a+0.35,a+Math.PI*0.65); ctx.stroke();
+  // ── TUMBLEWEEDS — animated rolling ──
+  function drawTumbleweed(tbx,tby,tbr,rot){
+    propShadow(tbx,tby+tbr*0.38,tbr*1.4,tbr*0.26);
+    ctx.save(); ctx.translate(tbx,tby); ctx.rotate(rot);
+    ctx.strokeStyle='#8a6018'; ctx.lineWidth=1.8; ctx.globalAlpha=0.85;
+    for(let i=0;i<10;i++){
+      const a=i*Math.PI/5;
+      ctx.beginPath(); ctx.arc(0,0,tbr,a,a+Math.PI*0.75); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0,0,tbr*0.58,a+0.38,a+Math.PI*0.62); ctx.stroke();
+    }
+    ctx.globalAlpha=1; ctx.restore();
   }
-  ctx.globalAlpha=1;
+  // Tumbleweed 1 — rolling right side (right margin, bounces between walls) — stays outside oval
+  {
+    const speed1=22, tbr1=W*0.021;
+    const cycle1=(t*speed1)%(W*0.10+tbr1*2);
+    const tbx1=W*0.956+cycle1*0; // stays on right margin
+    const tby1=H*0.440;
+    drawTumbleweed(tbx1,tby1,tbr1,t*2.8);
+  }
+  // Tumbleweed 2 — rolling along bottom, left to right, stays in lower left margin (ovalLeft@H*0.88≈W*0.185=72px → x<72)
+  {
+    const speed2=28, tbr2=W*0.018;
+    const rawX=((t*speed2)%(W*0.16+tbr2*2)) - tbr2;
+    const tbx2=W*0.004+rawX;
+    const tby2=H*0.885;
+    drawTumbleweed(tbx2,tby2,tbr2,-t*3.2);
+  }
 
   // ── SHERIFF STAR — on saloon door frame ──
   const stx=lx+W*0.030, sty=ly-H*0.078;
