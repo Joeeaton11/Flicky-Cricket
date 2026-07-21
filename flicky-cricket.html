@@ -22736,94 +22736,336 @@ function drawGhostTownScene() {
 
 function drawCanyonScene() {
   // League 10c — The Wild West: Canyon
-  // Dramatic red canyon walls close in, Colorado River glinting below, eagle soaring, golden afternoon light raking the strata
   const H=canvas.height, W=canvas.width;
+  const t=performance.now()/1000;
+  const CX=W/2, CY=H*FIELD_CY, RX=W*FIELD_RX, RY=H*FIELD_RY;
 
+  // ── Strata layer helper — draws a horizontal band with subtle texture ──
+  function strataLayer(x0,y0,x1,y1,col,alpha){
+    ctx.fillStyle=col; ctx.globalAlpha=alpha;
+    ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y0); ctx.lineTo(x1,y1); ctx.lineTo(x0,y1); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+
+  // ── BACKDROP ──
   ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
-  // Sky — deep blue overhead narrowed by canyon walls
+
+  // Sky — deep cobalt blue, narrow strip between canyon rims
   const sky=ctx.createLinearGradient(0,0,0,H*0.23);
-  sky.addColorStop(0,'#1040a0'); sky.addColorStop(0.5,'#2868c8'); sky.addColorStop(1,'#5090d8');
+  sky.addColorStop(0,'#0e2e88'); sky.addColorStop(0.50,'#1e58c8'); sky.addColorStop(0.85,'#3878d8'); sky.addColorStop(1,'#5898e0');
   ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.23);
 
-  // Canyon walls — massive red-orange sandstone
-  // Left wall
-  const lwG=ctx.createLinearGradient(0,0,W*0.30,0);
-  lwG.addColorStop(0,'#801808'); lwG.addColorStop(0.4,'#c04020'); lwG.addColorStop(0.7,'#e06030'); lwG.addColorStop(1,'rgba(224,96,48,0)');
-  ctx.fillStyle=lwG;
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(W*0.30,0); ctx.lineTo(W*0.22,H*0.23); ctx.lineTo(0,H*0.23); ctx.closePath(); ctx.fill();
-  // Strata lines on left wall
-  ctx.strokeStyle='rgba(120,40,10,0.50)'; ctx.lineWidth=H*0.007;
-  for(let s=0;s<6;s++){
-    const sy=H*(0.040+s*0.030);
-    ctx.beginPath(); ctx.moveTo(0,sy); ctx.lineTo(W*0.28,sy+H*0.010); ctx.stroke();
-  }
-  // Right wall
-  const rwG=ctx.createLinearGradient(W,0,W*0.68,0);
-  rwG.addColorStop(0,'#801808'); rwG.addColorStop(0.4,'#c04020'); rwG.addColorStop(0.7,'#e06030'); rwG.addColorStop(1,'rgba(224,96,48,0)');
-  ctx.fillStyle=rwG;
-  ctx.beginPath(); ctx.moveTo(W,0); ctx.lineTo(W*0.70,0); ctx.lineTo(W*0.78,H*0.23); ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
-  // Strata lines right
-  ctx.strokeStyle='rgba(120,40,10,0.50)'; ctx.lineWidth=H*0.007;
-  for(let s=0;s<6;s++){
-    const sy=H*(0.035+s*0.030);
-    ctx.beginPath(); ctx.moveTo(W,sy); ctx.lineTo(W*0.72,sy+H*0.008); ctx.stroke();
-  }
+  // Sun — low afternoon angle, top-right, warm golden
+  const sunX=W*0.84, sunY=H*0.048, sunR=W*0.036;
+  const sunG=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR*3.5);
+  sunG.addColorStop(0,'rgba(255,250,200,1)'); sunG.addColorStop(0.30,'rgba(255,210,80,0.55)');
+  sunG.addColorStop(0.70,'rgba(255,170,40,0.20)'); sunG.addColorStop(1,'rgba(255,170,40,0)');
+  ctx.fillStyle=sunG; ctx.beginPath(); ctx.arc(sunX,sunY,sunR*3.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fffce0'; ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI*2); ctx.fill();
 
-  // Eagle soaring — silhouette
-  ctx.fillStyle='#0a1a2a';
-  const ex=W*0.50, ey=H*0.060;
-  ctx.beginPath(); ctx.moveTo(ex-W*0.032,ey+H*0.006); ctx.quadraticCurveTo(ex-W*0.014,ey-H*0.006,ex,ey-H*0.002); ctx.quadraticCurveTo(ex+W*0.014,ey-H*0.006,ex+W*0.032,ey+H*0.006); ctx.stroke();
-  // Head
-  ctx.beginPath(); ctx.arc(ex,ey-H*0.010,W*0.007,0,Math.PI*2); ctx.fill();
-  // Tail fan
-  ctx.beginPath(); ctx.moveTo(ex-W*0.006,ey+H*0.002); ctx.lineTo(ex-W*0.018,ey+H*0.022); ctx.lineTo(ex+W*0.018,ey+H*0.022); ctx.lineTo(ex+W*0.006,ey+H*0.002); ctx.closePath(); ctx.fill();
+  // Canyon rim silhouettes — jagged top edges narrowing the sky slot
+  // Left rim
+  ctx.fillStyle='#6a1e08';
+  ctx.beginPath();
+  ctx.moveTo(0,0); ctx.lineTo(0,H*0.23);
+  ctx.lineTo(W*0.30,H*0.23);
+  // jagged rim profile
+  [W*0.28,H*0.08],[W*0.22,H*0.12],[W*0.18,H*0.06],[W*0.12,H*0.10],[W*0.08,H*0.05],[W*0.04,H*0.09],[0,H*0.06]
+    .forEach(([rx,ry])=>ctx.lineTo(rx,ry));
+  ctx.closePath(); ctx.fill();
+  // Right rim
+  ctx.beginPath();
+  ctx.moveTo(W,0); ctx.lineTo(W,H*0.23);
+  ctx.lineTo(W*0.70,H*0.23);
+  [W*0.72,H*0.08],[W*0.78,H*0.11],[W*0.82,H*0.05],[W*0.86,H*0.10],[W*0.90,H*0.06],[W*0.94,H*0.09],[W,H*0.05]
+    .forEach(([rx,ry])=>ctx.lineTo(rx,ry));
+  ctx.closePath(); ctx.fill();
 
-  ctx.restore();
+  // Canyon wall faces — warm red-orange sandstone, full strata
+  // Left wall face (lit by afternoon sun from right — shadow side)
+  const lwFace=ctx.createLinearGradient(0,0,W*0.32,0);
+  lwFace.addColorStop(0,'#5a1404'); lwFace.addColorStop(0.35,'#962810'); lwFace.addColorStop(0.75,'#c84820'); lwFace.addColorStop(1,'rgba(180,68,28,0)');
+  ctx.fillStyle=lwFace;
+  ctx.beginPath(); ctx.moveTo(0,H*0.23); ctx.lineTo(W*0.32,H*0.23); ctx.lineTo(W*0.20,0); ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
+  // strata bands left
+  const strataColsL=['#b04020','#d8682a','#c05018','#e8803a','#c04820','#a03010','#d0601e'];
+  strataColsL.forEach((sc,i)=>{
+    const sy=i*(H*0.23/strataColsL.length), ey=sy+H*0.23/strataColsL.length;
+    const lf=i/strataColsL.length;
+    strataLayer(0,sy, W*(0.20+lf*0.12),ey, sc, 0.55);
+    // crack line between strata
+    ctx.strokeStyle='rgba(40,10,2,0.40)'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(0,ey); ctx.lineTo(W*(0.20+lf*0.12),ey+H*0.004); ctx.stroke();
+  });
 
-  // Ground — sandy canyon floor, red-tinged
-  const grd=ctx.createLinearGradient(0,H*0.23,0,H);
-  grd.addColorStop(0,'#c07040'); grd.addColorStop(0.4,'#a05830'); grd.addColorStop(1,'#884018');
-  ctx.fillStyle=grd; ctx.fillRect(0,H*0.23,W,H*0.77);
-  drawGroundRings('#b86830','#a05820','rgba(184,104,48,0.80)');
+  // Right wall face (sun-lit — brighter, warm orange)
+  const rwFace=ctx.createLinearGradient(W,0,W*0.68,0);
+  rwFace.addColorStop(0,'#e87030'); rwFace.addColorStop(0.35,'#d05820'); rwFace.addColorStop(0.75,'#b03c10'); rwFace.addColorStop(1,'rgba(160,52,16,0)');
+  ctx.fillStyle=rwFace;
+  ctx.beginPath(); ctx.moveTo(W,H*0.23); ctx.lineTo(W*0.68,H*0.23); ctx.lineTo(W*0.80,0); ctx.lineTo(W,0); ctx.closePath(); ctx.fill();
+  // strata bands right (slightly brighter)
+  const strataColsR=['#e07838','#f09040','#d86020','#e88830','#cc5818','#f09838','#d87028'];
+  strataColsR.forEach((sc,i)=>{
+    const sy=i*(H*0.23/strataColsR.length), ey=sy+H*0.23/strataColsR.length;
+    const lf=i/strataColsR.length;
+    strataLayer(W*(0.80-lf*0.12),sy, W,ey, sc, 0.60);
+    ctx.strokeStyle='rgba(100,40,5,0.35)'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(W*(0.80-lf*0.12),ey); ctx.lineTo(W,ey+H*0.003); ctx.stroke();
+  });
 
-  // River at base of canyon — winding turquoise strip
+  // Golden light shaft slanting from top-right across canyon centre
+  const lsG=ctx.createLinearGradient(W*0.80,0,W*0.30,H*0.23);
+  lsG.addColorStop(0,'rgba(255,200,60,0.12)'); lsG.addColorStop(0.5,'rgba(255,180,40,0.06)'); lsG.addColorStop(1,'rgba(255,180,40,0)');
+  ctx.fillStyle=lsG; ctx.fillRect(W*0.28,0,W*0.60,H*0.23);
+
+  // Eagle — soaring high in the narrow sky slot, animated
   {
-    const rY=H*0.85;
-    ctx.fillStyle='rgba(30,100,160,0.55)';
-    ctx.beginPath(); ctx.moveTo(0,rY); ctx.quadraticCurveTo(W*0.3,rY-H*0.020,W*0.5,rY+H*0.015); ctx.quadraticCurveTo(W*0.7,rY+H*0.040,W,rY+H*0.010); ctx.lineTo(W,rY+H*0.028); ctx.quadraticCurveTo(W*0.7,rY+H*0.055,W*0.5,rY+H*0.030); ctx.quadraticCurveTo(W*0.3,rY-H*0.005,0,rY+H*0.018); ctx.closePath(); ctx.fill();
-    // Glint
-    ctx.strokeStyle='rgba(150,220,255,0.35)'; ctx.lineWidth=W*0.004;
-    ctx.beginPath(); ctx.moveTo(0,rY+H*0.005); ctx.quadraticCurveTo(W*0.3,rY-H*0.014,W*0.5,rY+H*0.020); ctx.quadraticCurveTo(W*0.7,rY+H*0.045,W,rY+H*0.016); ctx.stroke();
+    const eph=(t*0.25)%(Math.PI*2);
+    const ex=W*0.50+Math.cos(eph)*W*0.12, ey=H*0.060+Math.sin(eph*0.5)*H*0.010;
+    const wing=W*0.028, dip=Math.sin(t*1.4)*H*0.005;
+    ctx.fillStyle='#080c18';
+    ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(ex-wing,ey+dip); ctx.lineTo(ex-wing*0.55,ey-H*0.002); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(ex+wing,ey+dip); ctx.lineTo(ex+wing*0.55,ey-H*0.002); ctx.closePath(); ctx.fill();
+    // white tail/head hint
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(ex-W*0.005,ey-H*0.006,W*0.004,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(ex,ey+H*0.004,W*0.010,H*0.004,0,0,Math.PI*2); ctx.fill();
   }
 
-  // LEFT — canyon wall close-up with cave alcove
+  // Distant canyon backdrop — faint mesa silhouettes in the deep V
+  ctx.globalAlpha=0.28;
+  ctx.fillStyle='#8a3010';
+  ctx.beginPath(); ctx.moveTo(W*0.30,H*0.23); ctx.lineTo(W*0.38,H*0.10); ctx.lineTo(W*0.48,H*0.16); ctx.lineTo(W*0.56,H*0.08); ctx.lineTo(W*0.68,H*0.23); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1;
+
+  ctx.restore(); // end backdrop clip
+
+  drawGroundRings('#b86028','#9c4e18','rgba(180,96,40,0.85)');
+  drawSceneScoreboard();
+
+  // ── OUTER CANYON WALLS — full-height sandstone faces flanking the oval ──
+  // These are the dominant visual — massive cliff walls drawn OVER the ground
+  function drawCanyonWall(side){
+    // side: 'left' or 'right'
+    const isL = side==='left';
+    const CX2=W/2, CY2=H*FIELD_CY, RX2=W*FIELD_RX, RY2=H*FIELD_RY;
+
+    ctx.save();
+    // Clip to outside-oval on this side only
+    ctx.beginPath();
+    if(isL) ctx.rect(0,H*0.23,W*0.38,H-H*0.23);
+    else ctx.rect(W*0.62,H*0.23,W*0.38,H-H*0.23);
+    ctx.ellipse(CX2,CY2,RX2,RY2,0,0,Math.PI*2);
+    ctx.clip('evenodd');
+
+    // Wall base colour
+    const wx0=isL?0:W*0.62, wx1=isL?W*0.38:W;
+    const wallG=ctx.createLinearGradient(isL?wx0:wx1,0,isL?wx1:wx0,0);
+    if(isL){
+      wallG.addColorStop(0,'#4a1006'); wallG.addColorStop(0.5,'#8a2810'); wallG.addColorStop(1,'rgba(140,48,20,0)');
+    } else {
+      wallG.addColorStop(0,'rgba(200,80,30,0)'); wallG.addColorStop(0.5,'#c05020'); wallG.addColorStop(1,'#e07030');
+    }
+    ctx.fillStyle=wallG; ctx.fillRect(wx0,H*0.23,wx1-wx0,H-H*0.23);
+
+    // Strata bands — horizontal geological layers
+    const bands=[
+      {col:'#c04818',h:H*0.055},{col:'#d86028',h:H*0.040},{col:'#e8a060',h:H*0.020},
+      {col:'#c85020',h:H*0.048},{col:'#a03010',h:H*0.060},{col:'#d87030',h:H*0.035},
+      {col:'#b84018',h:H*0.070},{col:'#e08838',h:H*0.025},{col:'#983010',h:H*0.080},
+      {col:'#cc6028',h:H*0.055},{col:'#a84020',h:H*0.090},{col:'#884018',h:H*0.120},
+    ];
+    let bandY=H*0.23;
+    bands.forEach(({col,h})=>{
+      const slant=isL ? -W*0.018 : W*0.018; // strata tilt
+      ctx.fillStyle=col; ctx.globalAlpha=0.72;
+      ctx.beginPath(); ctx.moveTo(wx0,bandY); ctx.lineTo(wx1,bandY+slant*0.5);
+        ctx.lineTo(wx1,bandY+h+slant*0.5); ctx.lineTo(wx0,bandY+h); ctx.closePath(); ctx.fill();
+      // crack line
+      ctx.globalAlpha=1; ctx.strokeStyle='rgba(30,8,2,0.38)'; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(wx0,bandY+h); ctx.lineTo(wx1,bandY+h+slant*0.5); ctx.stroke();
+      bandY+=h;
+    });
+    ctx.globalAlpha=1;
+
+    // Vertical crack fissures
+    ctx.strokeStyle='rgba(25,6,2,0.35)'; ctx.lineWidth=1.8; ctx.lineCap='round';
+    const fissures=isL?[[W*0.042,H*0.28,H*0.55],[W*0.078,H*0.35,H*0.40],[W*0.110,H*0.42,H*0.30]]
+                      :[[W*0.882,H*0.30,H*0.50],[W*0.920,H*0.38,H*0.38],[W*0.958,H*0.44,H*0.35]];
+    fissures.forEach(([fx,fy,flen])=>{
+      ctx.beginPath(); ctx.moveTo(fx,fy);
+      ctx.lineTo(fx+(isL?W*0.008:-W*0.008),fy+flen*0.4);
+      ctx.lineTo(fx+(isL?-W*0.004:W*0.004),fy+flen*0.7);
+      ctx.lineTo(fx+(isL?W*0.006:-W*0.006),fy+flen); ctx.stroke();
+    });
+
+    // Scattered surface rocks at base of wall
+    ctx.globalAlpha=0.80;
+    const rocks=isL?[[W*0.030,H*0.82],[W*0.060,H*0.76],[W*0.090,H*0.88],[W*0.045,H*0.92]]
+                   :[[W*0.945,H*0.80],[W*0.970,H*0.88],[W*0.920,H*0.74],[W*0.960,H*0.94]];
+    rocks.forEach(([rx,ry])=>{
+      const rg=ctx.createRadialGradient(rx-W*0.006,ry-H*0.006,0,rx,ry,W*0.022);
+      rg.addColorStop(0,'#c06030'); rg.addColorStop(1,'#7a2c10');
+      ctx.fillStyle=rg;
+      ctx.beginPath(); ctx.ellipse(rx,ry,W*0.022,H*0.014,isL?0.3:-0.3,0,Math.PI*2); ctx.fill();
+    });
+    ctx.globalAlpha=1;
+
+    ctx.restore();
+  }
+  drawCanyonWall('left');
+  drawCanyonWall('right');
+
+  // ── CAVE ALCOVE — left wall, mid-height ──
   {
-    ctx.fillStyle='#a03820';
-    ctx.beginPath(); ctx.moveTo(0,H*0.24); ctx.lineTo(W*0.12,H*0.24); ctx.lineTo(W*0.08,H*0.55); ctx.lineTo(0,H*0.60); ctx.closePath(); ctx.fill();
-    // Cave shadow
-    ctx.fillStyle='rgba(0,0,0,0.45)';
-    ctx.beginPath(); ctx.arc(W*0.040,H*0.38,W*0.028,0,Math.PI*2); ctx.fill();
-    // Petroglyphs (stick figures)
-    ctx.strokeStyle='rgba(50,20,5,0.60)'; ctx.lineWidth=W*0.004;
-    [[W*0.020,H*0.45],[W*0.048,H*0.43],[W*0.072,H*0.46]].forEach(([px,py])=>{
-      ctx.beginPath(); ctx.arc(px,py-H*0.020,W*0.006,0,Math.PI*2); ctx.stroke(); // head
-      ctx.beginPath(); ctx.moveTo(px,py-H*0.014); ctx.lineTo(px,py+H*0.018); ctx.stroke(); // body
-      ctx.beginPath(); ctx.moveTo(px-W*0.010,py); ctx.lineTo(px+W*0.010,py); ctx.stroke(); // arms
+    const cvx=W*0.052, cvy=H*0.480, cvR=W*0.034;
+    propShadow(cvx,cvy+cvR,cvR*1.2,H*0.008);
+    // cave mouth shadow
+    const cvG=ctx.createRadialGradient(cvx,cvy,0,cvx,cvy,cvR);
+    cvG.addColorStop(0,'rgba(0,0,0,0.88)'); cvG.addColorStop(0.7,'rgba(0,0,0,0.55)'); cvG.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=cvG; ctx.beginPath(); ctx.ellipse(cvx,cvy,cvR,cvR*0.70,0,0,Math.PI*2); ctx.fill();
+    // overhang lip
+    ctx.fillStyle='#882010';
+    ctx.beginPath(); ctx.moveTo(cvx-cvR,cvy-cvR*0.35); ctx.quadraticCurveTo(cvx,cvy-cvR*0.85,cvx+cvR,cvy-cvR*0.35); ctx.closePath(); ctx.fill();
+    // petroglyphs on wall beside cave
+    ctx.strokeStyle='rgba(220,160,80,0.65)'; ctx.lineWidth=W*0.004; ctx.lineCap='round';
+    // sun symbol
+    const pgx=cvx+W*0.050, pgy=cvy-H*0.020;
+    ctx.beginPath(); ctx.arc(pgx,pgy,W*0.008,0,Math.PI*2); ctx.stroke();
+    for(let r=0;r<8;r++){
+      const ra=r*Math.PI/4;
+      ctx.beginPath(); ctx.moveTo(pgx+Math.cos(ra)*W*0.010,pgy+Math.sin(ra)*W*0.010);
+      ctx.lineTo(pgx+Math.cos(ra)*W*0.016,pgy+Math.sin(ra)*W*0.016); ctx.stroke();
+    }
+    // deer figure
+    const dx=cvx+W*0.068, dy=cvy+H*0.012;
+    ctx.beginPath(); ctx.moveTo(dx,dy); ctx.lineTo(dx,dy-H*0.018); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(dx-W*0.008,dy-H*0.010); ctx.lineTo(dx+W*0.008,dy-H*0.010); ctx.stroke();
+    ctx.beginPath(); ctx.arc(dx,dy-H*0.022,W*0.005,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(dx,dy); ctx.lineTo(dx-W*0.006,dy+H*0.014); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(dx,dy); ctx.lineTo(dx+W*0.006,dy+H*0.014); ctx.stroke();
+  }
+
+  // ── ROCKY SPIRE — right side, natural sandstone tower ──
+  {
+    const spx=W*0.930, spBase=H*0.820, spH=H*0.380;
+    propShadow(spx,spBase+H*0.010,W*0.048,H*0.014);
+    // spire body — tapers toward top
+    const spG=ctx.createLinearGradient(spx-W*0.038,0,spx+W*0.020,0);
+    spG.addColorStop(0,'#7a2008'); spG.addColorStop(0.45,'#c84e20'); spG.addColorStop(0.80,'#e07030'); spG.addColorStop(1,'#b85020');
+    ctx.fillStyle=spG;
+    ctx.beginPath();
+    ctx.moveTo(spx-W*0.040,spBase);
+    ctx.lineTo(spx-W*0.030,spBase-spH*0.35);
+    ctx.lineTo(spx-W*0.018,spBase-spH*0.65);
+    ctx.lineTo(spx-W*0.008,spBase-spH*0.85);
+    ctx.lineTo(spx+W*0.004,spBase-spH);         // tip
+    ctx.lineTo(spx+W*0.014,spBase-spH*0.82);
+    ctx.lineTo(spx+W*0.022,spBase-spH*0.60);
+    ctx.lineTo(spx+W*0.026,spBase-spH*0.35);
+    ctx.lineTo(spx+W*0.032,spBase);
+    ctx.closePath(); ctx.fill();
+    // shadow face (right side darker)
+    ctx.fillStyle='rgba(40,8,2,0.40)';
+    ctx.beginPath();
+    ctx.moveTo(spx+W*0.004,spBase-spH); ctx.lineTo(spx+W*0.014,spBase-spH*0.82);
+    ctx.lineTo(spx+W*0.026,spBase-spH*0.35); ctx.lineTo(spx+W*0.032,spBase);
+    ctx.lineTo(spx+W*0.004,spBase); ctx.closePath(); ctx.fill();
+    // strata lines on spire
+    ctx.strokeStyle='rgba(50,12,4,0.45)'; ctx.lineWidth=1.4;
+    [0.22,0.40,0.58,0.74,0.88].forEach(f=>{
+      const sy2=spBase-spH*f, sw=W*(0.040+0.020)*(1-f*0.6);
+      ctx.beginPath(); ctx.moveTo(spx-sw*0.6,sy2); ctx.lineTo(spx+sw*0.4,sy2+H*0.004); ctx.stroke();
     });
   }
 
-  // RIGHT — rocky spire / butte
+  // ── RIVER — snaking through the lower outer ground ──
   {
-    ctx.fillStyle='#b04028';
-    ctx.beginPath(); ctx.moveTo(W*0.90,H*0.60); ctx.lineTo(W*0.85,H*0.35); ctx.lineTo(W*0.88,H*0.28); ctx.lineTo(W*0.92,H*0.32); ctx.lineTo(W*0.96,H*0.28); ctx.lineTo(W*1.0,H*0.35); ctx.lineTo(W*1.0,H*0.60); ctx.closePath(); ctx.fill();
-    // Shadow face
-    ctx.fillStyle='rgba(50,10,0,0.35)'; ctx.beginPath(); ctx.moveTo(W*0.92,H*0.32); ctx.lineTo(W*0.96,H*0.28); ctx.lineTo(W*1.0,H*0.35); ctx.lineTo(W*1.0,H*0.60); ctx.lineTo(W*0.96,H*0.60); ctx.closePath(); ctx.fill();
-    // Strata on spire
-    ctx.strokeStyle='rgba(120,40,10,0.40)'; ctx.lineWidth=H*0.006;
-    for(let s=0;s<4;s++) ctx.beginPath(),ctx.moveTo(W*0.86,H*(0.34+s*0.055)),ctx.lineTo(W*1.0,H*(0.34+s*0.055)),ctx.stroke();
+    const rvY=H*0.900;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0,H*0.23,W,H-H*0.23); ctx.ellipse(CX,CY,RX,RY,0,0,Math.PI*2); ctx.clip('evenodd');
+    // River body
+    const rvG=ctx.createLinearGradient(0,rvY-H*0.020,0,rvY+H*0.030);
+    rvG.addColorStop(0,'#1860b0'); rvG.addColorStop(0.5,'#2478c8'); rvG.addColorStop(1,'#1050a0');
+    ctx.fillStyle=rvG;
+    ctx.beginPath();
+    ctx.moveTo(0,rvY-H*0.010);
+    ctx.bezierCurveTo(W*0.15,rvY-H*0.028, W*0.35,rvY+H*0.008, W*0.50,rvY-H*0.005);
+    ctx.bezierCurveTo(W*0.65,rvY-H*0.018, W*0.85,rvY+H*0.012, W,rvY-H*0.008);
+    ctx.lineTo(W,rvY+H*0.022);
+    ctx.bezierCurveTo(W*0.85,rvY+H*0.034, W*0.65,rvY+H*0.010, W*0.50,rvY+H*0.018);
+    ctx.bezierCurveTo(W*0.35,rvY+H*0.026, W*0.15,rvY-H*0.005, 0,rvY+H*0.014);
+    ctx.closePath(); ctx.fill();
+    // River glints — animated ripples
+    ctx.strokeStyle='rgba(140,210,255,0.40)'; ctx.lineWidth=W*0.004; ctx.lineCap='round';
+    for(let ri=0;ri<5;ri++){
+      const rx=W*(0.08+ri*0.20), roff=Math.sin(t*1.5+ri*1.2)*H*0.004;
+      ctx.beginPath(); ctx.moveTo(rx,rvY+roff); ctx.lineTo(rx+W*0.060,rvY+roff+H*0.004); ctx.stroke();
+    }
+    // Near bank — sandy shore line
+    ctx.strokeStyle='rgba(200,160,80,0.55)'; ctx.lineWidth=W*0.008;
+    ctx.beginPath();
+    ctx.moveTo(0,rvY-H*0.012);
+    ctx.bezierCurveTo(W*0.25,rvY-H*0.030, W*0.50,rvY-H*0.008, W*0.75,rvY-H*0.022);
+    ctx.bezierCurveTo(W*0.88,rvY-H*0.030, W,rvY-H*0.012, W,rvY-H*0.012); ctx.stroke();
+    ctx.restore();
   }
 
-  drawSceneScoreboard();
+  // ── SANDSTONE BOULDERS — scattered on outer ground ──
+  [[W*0.048,H*0.340],[W*0.022,H*0.620],[W*0.952,H*0.340],[W*0.975,H*0.620]].forEach(([bx,by],i)=>{
+    const isL=i<2;
+    propShadow(bx+(isL?W*0.010:-W*0.010),by+H*0.008,W*0.036,H*0.010);
+    const bg=ctx.createLinearGradient(bx-(isL?W*0.030:0),0,bx+(isL?0:W*0.030),0);
+    bg.addColorStop(0,isL?'#7a2808':'#d06828'); bg.addColorStop(1,isL?'#c05020':'#8a3010');
+    ctx.fillStyle=bg;
+    ctx.beginPath(); ctx.ellipse(bx,by-H*0.022,W*0.030,H*0.028,isL?0.2:-0.2,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(40,10,2,0.28)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(bx-(isL?W*0.020:W*0.008),by-H*0.025); ctx.lineTo(bx+(isL?W*0.008:W*0.020),by-H*0.032); ctx.stroke();
+    // smaller satellite rock
+    ctx.fillStyle=isL?'#a03818':'#b84c20';
+    ctx.beginPath(); ctx.ellipse(bx+(isL?W*0.028:-W*0.028),by-H*0.008,W*0.016,H*0.014,0,0,Math.PI*2); ctx.fill();
+  });
+
+  // ── DESERT SCRUB — sparse plants on canyon floor ──
+  [[W*0.035,H*0.740],[W*0.060,H*0.840],[W*0.940,H*0.760],[W*0.965,H*0.850]].forEach(([px,py],i)=>{
+    const isL=i<2;
+    ctx.fillStyle='#4a6820'; ctx.strokeStyle='#3a5018'; ctx.lineWidth=W*0.008; ctx.lineCap='round';
+    // prickly pear pad silhouettes
+    ctx.beginPath(); ctx.ellipse(px,py-H*0.012,W*0.012,H*0.018,isL?-0.3:0.3,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(px+(isL?W*0.012:-W*0.012),py-H*0.020,W*0.010,H*0.015,isL?0.4:-0.4,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(px+(isL?-W*0.008:W*0.008),py-H*0.024,W*0.009,H*0.013,isL?0.6:-0.6,0,Math.PI*2); ctx.fill();
+    propShadow(px,py+H*0.004,W*0.024,H*0.006);
+  });
+
+  // ── ROPE BRIDGE — spanning across lower portion (silhouette) ──
+  {
+    const bridgeY=H*0.640, sag=H*0.028;
+    // main ropes
+    ctx.strokeStyle='#6a4820'; ctx.lineWidth=W*0.006; ctx.lineCap='butt';
+    ctx.beginPath(); ctx.moveTo(0,bridgeY); ctx.quadraticCurveTo(W/2,bridgeY+sag,W,bridgeY+H*0.010); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,bridgeY+H*0.018); ctx.quadraticCurveTo(W/2,bridgeY+sag+H*0.018,W,bridgeY+H*0.028); ctx.stroke();
+    // planks
+    ctx.strokeStyle='#8a6030'; ctx.lineWidth=W*0.014;
+    for(let bi=0;bi<=16;bi++){
+      const bf=bi/16;
+      const bx=W*bf;
+      const by2=bridgeY+sag*4*(bf-0.5)*(bf-0.5)+H*0.010*bf;
+      ctx.beginPath(); ctx.moveTo(bx,by2); ctx.lineTo(bx,by2+H*0.018); ctx.stroke();
+    }
+    // handrail ropes
+    ctx.strokeStyle='rgba(100,68,28,0.70)'; ctx.lineWidth=W*0.003;
+    ctx.beginPath(); ctx.moveTo(0,bridgeY-H*0.008); ctx.quadraticCurveTo(W/2,bridgeY+sag-H*0.008,W,bridgeY+H*0.002); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,bridgeY+H*0.026); ctx.quadraticCurveTo(W/2,bridgeY+sag+H*0.026,W,bridgeY+H*0.036); ctx.stroke();
+    // vertical stanchion ropes
+    ctx.strokeStyle='rgba(80,50,18,0.55)'; ctx.lineWidth=W*0.003;
+    for(let bi=1;bi<16;bi++){
+      const bf=bi/16;
+      const bx=W*bf;
+      const topY=bridgeY-H*0.008+sag*4*(bf-0.5)*(bf-0.5)*1.0;
+      const botY=bridgeY+H*0.026+sag*4*(bf-0.5)*(bf-0.5)*1.0;
+      ctx.beginPath(); ctx.moveTo(bx,topY); ctx.lineTo(bx,topY+H*0.034); ctx.stroke();
+    }
+  }
 }
 
 function drawLagoonScene() {
