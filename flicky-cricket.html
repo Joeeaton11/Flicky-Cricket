@@ -22735,259 +22735,276 @@ function drawGhostTownScene() {
 }
 
 function drawCanyonScene() {
-  // League 10c — The Wild West: Canyon
+  // Wild West — Canyon
   const H=canvas.height, W=canvas.width;
   const t=performance.now()/1000;
   const CX=W/2, CY=H*FIELD_CY, RX=W*FIELD_RX, RY=H*FIELD_RY;
 
-  // ── BACKDROP ──
-  ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
+  // ── BACKDROP ──────────────────────────────────────────────────────
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Sky — warm afternoon blue
+  // Sky: deep blue at top → warm hazy blue at horizon
   const sky=ctx.createLinearGradient(0,0,0,H*0.23);
-  sky.addColorStop(0,'#1840a8'); sky.addColorStop(0.55,'#3870d0'); sky.addColorStop(1,'#6098e0');
+  sky.addColorStop(0,'#163ea0');
+  sky.addColorStop(0.45,'#3d72cc');
+  sky.addColorStop(1,'#8ab4e8');
   ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.23);
 
-  // Sun — top-right, afternoon
-  const sunX=W*0.82, sunY=H*0.052, sunR=W*0.038;
-  const sunG=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR*3.2);
-  sunG.addColorStop(0,'rgba(255,252,200,1)'); sunG.addColorStop(0.28,'rgba(255,215,80,0.55)');
-  sunG.addColorStop(0.65,'rgba(255,180,50,0.18)'); sunG.addColorStop(1,'rgba(255,170,40,0)');
-  ctx.fillStyle=sunG; ctx.beginPath(); ctx.arc(sunX,sunY,sunR*3.2,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#fffce0'; ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI*2); ctx.fill();
+  // Warm horizon haze
+  const haze=ctx.createLinearGradient(0,H*0.155,0,H*0.23);
+  haze.addColorStop(0,'rgba(215,148,60,0)');
+  haze.addColorStop(1,'rgba(215,148,60,0.38)');
+  ctx.fillStyle=haze; ctx.fillRect(0,H*0.155,W,H*0.075);
 
-  // ── LEFT CANYON WALL — fills left third of backdrop, strata visible ──
-  // Base wall shape: tall wedge from left edge to about 38% across
-  const lwG=ctx.createLinearGradient(0,0,W*0.40,0);
-  lwG.addColorStop(0,'#5c1206'); lwG.addColorStop(0.55,'#a83014'); lwG.addColorStop(0.85,'#d05820'); lwG.addColorStop(1,'rgba(195,70,24,0)');
+  // ── DISTANT BUTTE — flat-topped mesa in the centre gap ──
+  // Far layer (palest, most distant)
+  ctx.fillStyle='rgba(185,110,60,0.22)';
+  ctx.beginPath();
+  ctx.moveTo(W*0.36,H*0.23); ctx.lineTo(W*0.36,H*0.118);
+  ctx.lineTo(W*0.40,H*0.090); ctx.lineTo(W*0.48,H*0.078);
+  ctx.lineTo(W*0.56,H*0.090); ctx.lineTo(W*0.62,H*0.118);
+  ctx.lineTo(W*0.62,H*0.23);
+  ctx.closePath(); ctx.fill();
+  // Near layer (clearer, closer)
+  ctx.fillStyle='rgba(155,65,28,0.36)';
+  ctx.beginPath();
+  ctx.moveTo(W*0.38,H*0.23); ctx.lineTo(W*0.38,H*0.148);
+  ctx.lineTo(W*0.42,H*0.132); ctx.lineTo(W*0.50,H*0.122);
+  ctx.lineTo(W*0.58,H*0.132); ctx.lineTo(W*0.62,H*0.148);
+  ctx.lineTo(W*0.62,H*0.23);
+  ctx.closePath(); ctx.fill();
+
+  // ── LEFT CANYON WALL ──
+  // Base wall shape: tapers from x=W*0.40 at top to x=W*0.26 at bottom
+  const lwG=ctx.createLinearGradient(0,0,W*0.42,0);
+  lwG.addColorStop(0,'#6a1808'); lwG.addColorStop(0.50,'#c03818');
+  lwG.addColorStop(0.82,'#d86228'); lwG.addColorStop(1,'rgba(200,80,30,0)');
   ctx.fillStyle=lwG;
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(W*0.40,0); ctx.lineTo(W*0.28,H*0.23); ctx.lineTo(0,H*0.23); ctx.closePath(); ctx.fill();
-  // Strata bands — left
-  const lStrata=[['#b84020',0.62],['#d86828',0.58],['#e8a058',0.50],['#c05018',0.64],['#a03010',0.60],['#d07028',0.54],['#984010',0.66]];
-  lStrata.forEach(([col,al],i)=>{
-    const bh=H*0.23/lStrata.length;
-    const sy=i*bh, ey=sy+bh;
-    const rx=(i/lStrata.length)*W*0.08; // strata insets slightly left to right
+  ctx.beginPath();
+  ctx.moveTo(0,0); ctx.lineTo(W*0.40,0);
+  ctx.lineTo(W*0.26,H*0.23); ctx.lineTo(0,H*0.23);
+  ctx.closePath(); ctx.fill();
+
+  // Left strata bands — visible horizontal layers
+  const lStrata=[
+    ['#b83c1a',0.72,0.00,0.030],
+    ['#f09040',0.55,0.030,0.028],
+    ['#c84820',0.68,0.058,0.032],
+    ['#e8c080',0.45,0.090,0.022], // pale sandy band
+    ['#b03410',0.70,0.112,0.034],
+    ['#d86030',0.60,0.146,0.030],
+    ['#a02c0c',0.75,0.176,0.054],
+  ];
+  lStrata.forEach(([col,al,sy,sh])=>{
+    const y0=H*sy, y1=H*(sy+sh);
+    const rx0=W*(0.40-sy*0.56), rx1=W*(0.26+(0.40-0.26)*(1-(sy+sh)/0.23));
     ctx.fillStyle=col; ctx.globalAlpha=al;
-    ctx.beginPath(); ctx.moveTo(0,sy); ctx.lineTo(W*(0.28+rx/W),sy); ctx.lineTo(W*(0.26+rx/W),ey); ctx.lineTo(0,ey); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0,y0); ctx.lineTo(rx0,y0);
+    ctx.lineTo(rx1,y1); ctx.lineTo(0,y1);
+    ctx.closePath(); ctx.fill();
   });
   ctx.globalAlpha=1;
-  // Jagged rim silhouette — left, upper half covering sky
-  ctx.fillStyle='#4a0e04';
-  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,H*0.155);
-  ctx.lineTo(W*0.045,H*0.092); ctx.lineTo(W*0.078,H*0.130); ctx.lineTo(W*0.110,H*0.075);
-  ctx.lineTo(W*0.145,H*0.108); ctx.lineTo(W*0.175,H*0.060); ctx.lineTo(W*0.205,H*0.095);
-  ctx.lineTo(W*0.235,H*0.048); ctx.lineTo(W*0.258,H*0.000); ctx.closePath(); ctx.fill();
-  // Vertical crack fissures on left wall
-  ctx.strokeStyle='rgba(30,6,2,0.45)'; ctx.lineWidth=1.6; ctx.lineCap='round';
-  [[W*0.055,H*0.14,H*0.09],[W*0.095,H*0.10,H*0.13],[W*0.140,H*0.17,H*0.06]].forEach(([fx,fy,fl])=>{
-    ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(fx+W*0.006,fy+fl*0.45); ctx.lineTo(fx-W*0.004,fy+fl*0.78); ctx.lineTo(fx+W*0.003,fy+fl); ctx.stroke();
+
+  // Left jagged rim — dark silhouette over sky
+  ctx.fillStyle='#3a0a04';
+  ctx.beginPath();
+  ctx.moveTo(0,0); ctx.lineTo(0,H*0.160);
+  ctx.lineTo(W*0.038,H*0.108); ctx.lineTo(W*0.068,H*0.148);
+  ctx.lineTo(W*0.098,H*0.086); ctx.lineTo(W*0.128,H*0.122);
+  ctx.lineTo(W*0.162,H*0.056); ctx.lineTo(W*0.194,H*0.094);
+  ctx.lineTo(W*0.228,H*0.038); ctx.lineTo(W*0.260,H*0.078);
+  ctx.lineTo(W*0.290,H*0.000);
+  ctx.closePath(); ctx.fill();
+
+  // Left wall vertical fissures
+  ctx.strokeStyle='rgba(20,4,2,0.35)'; ctx.lineWidth=1.5; ctx.lineCap='round';
+  [[W*0.050,H*0.16,H*0.07],[W*0.110,H*0.12,H*0.09],[W*0.175,H*0.10,H*0.11]].forEach(([fx,fy,fl])=>{
+    ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(fx+W*0.005,fy+fl*0.4); ctx.lineTo(fx-W*0.004,fy+fl*0.75); ctx.lineTo(fx+W*0.003,fy+fl); ctx.stroke();
   });
 
-  // ── RIGHT CANYON WALL — mirror, sun-lit side ──
-  const rwG=ctx.createLinearGradient(W,0,W*0.60,0);
-  rwG.addColorStop(0,'#e87838'); rwG.addColorStop(0.45,'#d06028'); rwG.addColorStop(0.80,'#b03c12'); rwG.addColorStop(1,'rgba(155,45,12,0)');
+  // ── RIGHT CANYON WALL ──
+  const rwG=ctx.createLinearGradient(W,0,W*0.58,0);
+  rwG.addColorStop(0,'#d86830'); rwG.addColorStop(0.45,'#e07030');
+  rwG.addColorStop(0.80,'#b04018'); rwG.addColorStop(1,'rgba(160,50,18,0)');
   ctx.fillStyle=rwG;
-  ctx.beginPath(); ctx.moveTo(W,0); ctx.lineTo(W*0.60,0); ctx.lineTo(W*0.72,H*0.23); ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
-  // Strata bands — right (brighter, sun-lit)
-  const rStrata=[['#e07838',0.60],['#f09848',0.55],['#d86020',0.62],['#f09040',0.52],['#cc5818',0.64],['#e88838',0.56],['#d07030',0.60]];
-  rStrata.forEach(([col,al],i)=>{
-    const bh=H*0.23/rStrata.length;
-    const sy=i*bh, ey=sy+bh;
-    const lx=W-W*(0.28+(i/rStrata.length)*0.08);
+  ctx.beginPath();
+  ctx.moveTo(W,0); ctx.lineTo(W*0.60,0);
+  ctx.lineTo(W*0.74,H*0.23); ctx.lineTo(W,H*0.23);
+  ctx.closePath(); ctx.fill();
+
+  const rStrata=[
+    ['#e06030',0.68,0.00,0.030],
+    ['#f8a060',0.50,0.030,0.028],
+    ['#d84c20',0.65,0.058,0.032],
+    ['#f0d090',0.42,0.090,0.022],
+    ['#c84820',0.68,0.112,0.034],
+    ['#e88040',0.58,0.146,0.030],
+    ['#b83818',0.72,0.176,0.054],
+  ];
+  rStrata.forEach(([col,al,sy,sh])=>{
+    const y0=H*sy, y1=H*(sy+sh);
+    const lx0=W*(0.60+sy*0.56), lx1=W*(0.74-(0.74-0.60)*(1-(sy+sh)/0.23));
     ctx.fillStyle=col; ctx.globalAlpha=al;
-    ctx.beginPath(); ctx.moveTo(W,sy); ctx.lineTo(lx,sy); ctx.lineTo(lx+W*0.02,ey); ctx.lineTo(W,ey); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(W,y0); ctx.lineTo(lx0,y0);
+    ctx.lineTo(lx1,y1); ctx.lineTo(W,y1);
+    ctx.closePath(); ctx.fill();
   });
   ctx.globalAlpha=1;
-  // Jagged rim — right
-  ctx.fillStyle='#3e0c02';
-  ctx.beginPath(); ctx.moveTo(W,0); ctx.lineTo(W,H*0.155);
-  ctx.lineTo(W*0.955,H*0.090); ctx.lineTo(W*0.922,H*0.128); ctx.lineTo(W*0.888,H*0.072);
-  ctx.lineTo(W*0.852,H*0.112); ctx.lineTo(W*0.820,H*0.058); ctx.lineTo(W*0.790,H*0.096);
-  ctx.lineTo(W*0.762,H*0.042); ctx.lineTo(W*0.740,H*0.000); ctx.closePath(); ctx.fill();
-  // Cracks — right
-  ctx.strokeStyle='rgba(80,20,4,0.42)'; ctx.lineWidth=1.6; ctx.lineCap='round';
-  [[W*0.940,H*0.14,H*0.09],[W*0.900,H*0.10,H*0.12],[W*0.860,H*0.16,H*0.07]].forEach(([fx,fy,fl])=>{
-    ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(fx-W*0.006,fy+fl*0.45); ctx.lineTo(fx+W*0.004,fy+fl*0.78); ctx.lineTo(fx-W*0.003,fy+fl); ctx.stroke();
+
+  // Right jagged rim
+  ctx.fillStyle='#3e0c04';
+  ctx.beginPath();
+  ctx.moveTo(W,0); ctx.lineTo(W,H*0.160);
+  ctx.lineTo(W*0.962,H*0.104); ctx.lineTo(W*0.932,H*0.144);
+  ctx.lineTo(W*0.902,H*0.082); ctx.lineTo(W*0.872,H*0.118);
+  ctx.lineTo(W*0.838,H*0.052); ctx.lineTo(W*0.806,H*0.090);
+  ctx.lineTo(W*0.772,H*0.034); ctx.lineTo(W*0.740,H*0.074);
+  ctx.lineTo(W*0.710,H*0.000);
+  ctx.closePath(); ctx.fill();
+
+  // Right wall fissures
+  ctx.strokeStyle='rgba(60,16,4,0.32)'; ctx.lineWidth=1.5; ctx.lineCap='round';
+  [[W*0.950,H*0.15,H*0.08],[W*0.890,H*0.11,H*0.10],[W*0.825,H*0.09,H*0.12]].forEach(([fx,fy,fl])=>{
+    ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(fx-W*0.005,fy+fl*0.4); ctx.lineTo(fx+W*0.004,fy+fl*0.75); ctx.lineTo(fx-W*0.003,fy+fl); ctx.stroke();
   });
 
-  // ── DISTANT MESA — faint layers in sky gap ──
-  ctx.globalAlpha=0.18; ctx.fillStyle='#c87040';
-  ctx.beginPath(); ctx.moveTo(W*0.28,H*0.23); ctx.lineTo(W*0.34,H*0.095); ctx.lineTo(W*0.40,H*0.115); ctx.lineTo(W*0.48,H*0.075); ctx.lineTo(W*0.56,H*0.110); ctx.lineTo(W*0.62,H*0.085); ctx.lineTo(W*0.72,H*0.23); ctx.closePath(); ctx.fill();
-  ctx.globalAlpha=0.26; ctx.fillStyle='#8a2c10';
-  ctx.beginPath(); ctx.moveTo(W*0.28,H*0.23); ctx.lineTo(W*0.34,H*0.130); ctx.lineTo(W*0.42,H*0.145); ctx.lineTo(W*0.50,H*0.108); ctx.lineTo(W*0.60,H*0.138); ctx.lineTo(W*0.72,H*0.23); ctx.closePath(); ctx.fill();
-  ctx.globalAlpha=1;
+  // Sun — below scoreboard zone, top-right
+  const sunX=W*0.80, sunY=H*0.118, sunR=W*0.034;
+  const sunG=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR*3.2);
+  sunG.addColorStop(0,'rgba(255,250,190,1)');
+  sunG.addColorStop(0.30,'rgba(255,220,80,0.55)');
+  sunG.addColorStop(0.68,'rgba(255,185,45,0.18)');
+  sunG.addColorStop(1,'rgba(255,180,40,0)');
+  ctx.fillStyle=sunG; ctx.beginPath(); ctx.arc(sunX,sunY,sunR*3.2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fffcdc'; ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI*2); ctx.fill();
 
-  // ── ROCK ARCH — floating stone rainbow, no legs, sits against open sky ──
-  {
-    // Arch spans centre of sky gap; just the curved band, no pillars
-    const aMx=W*0.50, aTopY=H*0.055, aBand=H*0.026;
-    const aLx=W*0.330, aRx=W*0.670; // end-points where arch meets the backdrop bottom edge
-    const archG=ctx.createLinearGradient(aLx,0,aRx,0);
-    archG.addColorStop(0,'#7c2206'); archG.addColorStop(0.25,'#c84c18');
-    archG.addColorStop(0.50,'#e8742e'); archG.addColorStop(0.75,'#c84c18');
-    archG.addColorStop(1,'#7c2206');
-    ctx.fillStyle=archG;
-    // Outer face — top of the arch band
-    ctx.beginPath();
-    ctx.moveTo(aLx, H*0.23);
-    ctx.bezierCurveTo(aLx+W*0.010, H*0.14, aMx-W*0.055, aTopY, aMx, aTopY);
-    ctx.bezierCurveTo(aMx+W*0.055, aTopY, aRx-W*0.010, H*0.14, aRx, H*0.23);
-    // Inner face — underside of the arch band (inset)
-    ctx.lineTo(aRx-W*0.028, H*0.23);
-    ctx.bezierCurveTo(aRx-W*0.028, H*0.155, aMx+W*0.040, aTopY+aBand, aMx, aTopY+aBand);
-    ctx.bezierCurveTo(aMx-W*0.040, aTopY+aBand, aLx+W*0.028, H*0.155, aLx+W*0.028, H*0.23);
-    ctx.closePath(); ctx.fill();
-    // Sunlit top highlight
-    ctx.fillStyle='rgba(255,200,100,0.18)';
-    ctx.beginPath();
-    ctx.moveTo(aLx+W*0.014, H*0.23);
-    ctx.bezierCurveTo(aLx+W*0.020, H*0.16, aMx-W*0.045, aTopY+H*0.004, aMx, aTopY+H*0.004);
-    ctx.bezierCurveTo(aMx+W*0.045, aTopY+H*0.004, aRx-W*0.020, H*0.16, aRx-W*0.014, H*0.23);
-    ctx.lineTo(aRx-W*0.024, H*0.23);
-    ctx.bezierCurveTo(aRx-W*0.024, H*0.158, aMx+W*0.038, aTopY+aBand*0.6, aMx, aTopY+aBand*0.6);
-    ctx.bezierCurveTo(aMx-W*0.038, aTopY+aBand*0.6, aLx+W*0.024, H*0.158, aLx+W*0.024, H*0.23);
-    ctx.closePath(); ctx.fill();
-    // Underside (soffit) shadow — only the inner curve
-    ctx.fillStyle='rgba(12,2,1,0.30)';
-    ctx.beginPath();
-    ctx.moveTo(aLx+W*0.028, H*0.23);
-    ctx.bezierCurveTo(aLx+W*0.028, H*0.155, aMx-W*0.040, aTopY+aBand, aMx, aTopY+aBand);
-    ctx.bezierCurveTo(aMx+W*0.040, aTopY+aBand, aRx-W*0.028, H*0.155, aRx-W*0.028, H*0.23);
-    ctx.lineTo(aRx-W*0.042, H*0.23);
-    ctx.bezierCurveTo(aRx-W*0.042, H*0.162, aMx+W*0.030, aTopY+aBand*1.5, aMx, aTopY+aBand*1.5);
-    ctx.bezierCurveTo(aMx-W*0.030, aTopY+aBand*1.5, aLx+W*0.042, H*0.162, aLx+W*0.042, H*0.23);
-    ctx.closePath(); ctx.fill();
-    // Strata bands
-    ctx.strokeStyle='rgba(30,6,2,0.28)'; ctx.lineWidth=1.2; ctx.lineCap='round';
-    [0.30, 0.65].forEach(f=>{
-      const cr=aTopY+aBand*f;
-      ctx.beginPath();
-      ctx.moveTo(aLx+W*0.014+W*0.012*f, H*0.23-(H*0.23-cr)*0.28);
-      ctx.bezierCurveTo(aLx+W*0.022, cr+H*0.010, aMx-W*0.048, cr, aMx, cr);
-      ctx.bezierCurveTo(aMx+W*0.048, cr, aRx-W*0.022, cr+H*0.010, aRx-W*0.014-W*0.012*f, H*0.23-(H*0.23-cr)*0.28);
-      ctx.stroke();
-    });
-  }
-
-  // Golden light shaft
-  const lsG=ctx.createLinearGradient(W*0.82,0,W*0.35,H*0.23);
-  lsG.addColorStop(0,'rgba(255,210,60,0.13)'); lsG.addColorStop(0.55,'rgba(255,185,40,0.05)'); lsG.addColorStop(1,'rgba(255,185,40,0)');
+  // Light shaft across centre gap
+  const lsG=ctx.createLinearGradient(sunX,sunY,W*0.32,H*0.23);
+  lsG.addColorStop(0,'rgba(255,215,70,0.10)');
+  lsG.addColorStop(1,'rgba(255,195,50,0)');
   ctx.fillStyle=lsG; ctx.fillRect(W*0.28,0,W*0.55,H*0.23);
 
-  // ── VULTURES — large hunched silhouettes on rim peaks ──
+  // ── VULTURES — large hunched silhouettes on jagged peaks ──
   function drawVulture(vx,vy,flip){
     ctx.save(); ctx.translate(vx,vy); if(flip) ctx.scale(-1,1);
-    ctx.fillStyle='#0c0704';
-    ctx.beginPath(); ctx.ellipse(0,0,W*0.038,H*0.024,0.20,0,Math.PI*2); ctx.fill(); // body
-    ctx.beginPath(); ctx.ellipse(W*0.030,-H*0.020,W*0.012,H*0.016,0.30,0,Math.PI*2); ctx.fill(); // neck
-    ctx.beginPath(); ctx.arc(W*0.040,-H*0.040,W*0.016,0,Math.PI*2); ctx.fill(); // bald head
-    ctx.strokeStyle='#0c0704'; ctx.lineWidth=W*0.010; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(W*0.054,-H*0.040); ctx.quadraticCurveTo(W*0.072,-H*0.038,W*0.069,-H*0.022); ctx.stroke(); // hooked beak
-    ctx.fillStyle='#080402';
-    ctx.beginPath(); ctx.moveTo(-W*0.034,0); ctx.lineTo(-W*0.066,H*0.030); ctx.lineTo(-W*0.006,H*0.016); ctx.closePath(); ctx.fill(); // left wing
-    ctx.beginPath(); ctx.moveTo(W*0.016,0); ctx.lineTo(W*0.050,H*0.030); ctx.lineTo(W*0.026,H*0.016); ctx.closePath(); ctx.fill(); // right wing
-    ctx.beginPath(); ctx.moveTo(-W*0.020,H*0.018); ctx.lineTo(-W*0.044,H*0.040); ctx.lineTo(W*0.008,H*0.030); ctx.closePath(); ctx.fill(); // tail fan
+    ctx.fillStyle='#0c0806';
+    // Hunched body
+    ctx.beginPath(); ctx.ellipse(0,0,W*0.034,H*0.022,0.22,0,Math.PI*2); ctx.fill();
+    // Neck
+    ctx.beginPath(); ctx.ellipse(W*0.026,-H*0.016,W*0.010,H*0.014,0.28,0,Math.PI*2); ctx.fill();
+    // Bald head
+    ctx.beginPath(); ctx.arc(W*0.036,-H*0.034,W*0.014,0,Math.PI*2); ctx.fill();
+    // Hooked beak
+    ctx.strokeStyle='#0c0806'; ctx.lineWidth=W*0.008; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(W*0.048,-H*0.034); ctx.quadraticCurveTo(W*0.064,-H*0.032,W*0.062,-H*0.019); ctx.stroke();
+    // Drooped wings
+    ctx.fillStyle='#080504';
+    ctx.beginPath(); ctx.moveTo(-W*0.028,-H*0.004); ctx.lineTo(-W*0.058,H*0.022); ctx.lineTo(-W*0.006,H*0.012); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(W*0.014,-H*0.002); ctx.lineTo(W*0.044,H*0.022); ctx.lineTo(W*0.022,H*0.012); ctx.closePath(); ctx.fill();
+    // Tail
+    ctx.beginPath(); ctx.moveTo(-W*0.018,H*0.014); ctx.lineTo(-W*0.038,H*0.033); ctx.lineTo(W*0.006,H*0.024); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
-  drawVulture(W*0.068, H*0.108, false);  // left rim low peak
-  drawVulture(W*0.210, H*0.054, true);   // left rim high peak — well separated
-  drawVulture(W*0.895, H*0.078, true);   // right rim
+  // Left rim peaks — two birds at clearly separated high points
+  drawVulture(W*0.162, H*0.054, false);  // tallest left peak
+  drawVulture(W*0.228, H*0.036, true);   // next peak rightward
+  // Right rim
+  drawVulture(W*0.838, H*0.050, true);   // tallest right peak
 
-  // Eagle — soaring in sky gap
+  // Soaring eagle in sky gap
   {
-    const eph=(t*0.22)%(Math.PI*2);
-    const ex=W*0.52+Math.cos(eph)*W*0.10, ey=H*0.055+Math.sin(eph*0.5)*H*0.012;
-    const wing=W*0.026, dip=Math.sin(t*1.5)*H*0.006;
-    ctx.fillStyle='#06090f';
-    ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(ex-wing,ey+dip); ctx.lineTo(ex-wing*0.52,ey-H*0.003); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(ex+wing,ey+dip); ctx.lineTo(ex+wing*0.52,ey-H*0.003); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.55)';
-    ctx.beginPath(); ctx.arc(ex-W*0.004,ey-H*0.007,W*0.004,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(ex,ey+H*0.004,W*0.009,H*0.003,0,0,Math.PI*2); ctx.fill();
+    const eph=(t*0.20)%(Math.PI*2);
+    const ex=W*0.52+Math.cos(eph)*W*0.07, ey=H*0.058+Math.sin(eph*0.5)*H*0.010;
+    const wing=W*0.022, dip=Math.sin(t*1.4)*H*0.005;
+    ctx.fillStyle='#050810';
+    ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(ex-wing,ey+dip); ctx.lineTo(ex-wing*0.5,ey-H*0.003); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(ex+wing,ey+dip); ctx.lineTo(ex+wing*0.5,ey-H*0.003); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.50)';
+    ctx.beginPath(); ctx.arc(ex-W*0.004,ey-H*0.006,W*0.004,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(ex,ey+H*0.004,W*0.008,H*0.003,0,0,Math.PI*2); ctx.fill();
   }
 
-  // ── WALL DUST — haze hugging the base of each cliff ──
-  // Left base dust
-  const ldG=ctx.createLinearGradient(0,H*0.18,W*0.26,H*0.23);
-  ldG.addColorStop(0,'rgba(210,160,80,0.22)'); ldG.addColorStop(0.55,'rgba(200,140,60,0.10)'); ldG.addColorStop(1,'rgba(200,140,60,0)');
-  ctx.fillStyle=ldG; ctx.fillRect(0,H*0.18,W*0.26,H*0.05);
-  // Right base dust
-  const rdG=ctx.createLinearGradient(W,H*0.18,W*0.74,H*0.23);
-  rdG.addColorStop(0,'rgba(230,180,90,0.20)'); rdG.addColorStop(0.55,'rgba(210,150,70,0.09)'); rdG.addColorStop(1,'rgba(210,150,70,0)');
-  ctx.fillStyle=rdG; ctx.fillRect(W*0.74,H*0.18,W*0.26,H*0.05);
+  // Dust haze at wall bases
+  const ldH=ctx.createLinearGradient(0,H*0.168,W*0.28,H*0.23);
+  ldH.addColorStop(0,'rgba(200,138,55,0.28)'); ldH.addColorStop(1,'rgba(200,138,55,0)');
+  ctx.fillStyle=ldH; ctx.fillRect(0,H*0.168,W*0.30,H*0.062);
+  const rdH=ctx.createLinearGradient(W,H*0.168,W*0.72,H*0.23);
+  rdH.addColorStop(0,'rgba(218,158,70,0.24)'); rdH.addColorStop(1,'rgba(218,158,70,0)');
+  ctx.fillStyle=rdH; ctx.fillRect(W*0.70,H*0.168,W*0.30,H*0.062);
 
-  ctx.restore(); // end backdrop clip
+  ctx.restore(); // end backdrop
 
   drawGroundRings('#b86028','#9c4e18','rgba(180,96,40,0.85)');
   drawSceneScoreboard();
 
-  // ── OUTER GROUND PROPS — sandstone boulders + scrub (evenodd clipped) ──
+  // ── OUTER GROUND ──────────────────────────────────────────────────
   ctx.save();
   ctx.beginPath(); ctx.rect(0,H*0.23,W,H-H*0.23); ctx.ellipse(CX,CY,RX,RY,0,0,Math.PI*2); ctx.clip('evenodd');
 
-  // ── DRY RIVERBED — pale sandy winding streak across bottom ──
-  ctx.strokeStyle='rgba(220,190,120,0.60)'; ctx.lineWidth=W*0.028; ctx.lineCap='round';
-  ctx.beginPath();
-  ctx.moveTo(0,H*0.915);
-  ctx.bezierCurveTo(W*0.18,H*0.900, W*0.36,H*0.928, W*0.52,H*0.910);
-  ctx.bezierCurveTo(W*0.68,H*0.892, W*0.84,H*0.920, W,H*0.908);
-  ctx.stroke();
-  // Riverbed inner highlight — bone-dry pale silt
-  ctx.strokeStyle='rgba(238,215,155,0.45)'; ctx.lineWidth=W*0.012;
+  // Dry riverbed
+  ctx.strokeStyle='rgba(218,188,118,0.65)'; ctx.lineWidth=W*0.030; ctx.lineCap='round';
   ctx.beginPath();
   ctx.moveTo(0,H*0.914);
-  ctx.bezierCurveTo(W*0.18,H*0.899, W*0.36,H*0.927, W*0.52,H*0.909);
-  ctx.bezierCurveTo(W*0.68,H*0.891, W*0.84,H*0.919, W,H*0.907);
+  ctx.bezierCurveTo(W*0.22,H*0.898,W*0.40,H*0.928,W*0.55,H*0.910);
+  ctx.bezierCurveTo(W*0.70,H*0.892,W*0.86,H*0.920,W,H*0.906);
   ctx.stroke();
-  // Dry cracked mud marks — short random hatches along bed
-  ctx.strokeStyle='rgba(160,120,60,0.35)'; ctx.lineWidth=1.2;
-  [[W*0.06,H*0.912],[W*0.20,H*0.904],[W*0.40,H*0.920],[W*0.60,H*0.906],[W*0.80,H*0.916],[W*0.92,H*0.910]].forEach(([cx,cy])=>{
-    ctx.beginPath(); ctx.moveTo(cx-W*0.012,cy); ctx.lineTo(cx+W*0.012,cy); ctx.stroke();
+  ctx.strokeStyle='rgba(240,218,158,0.50)'; ctx.lineWidth=W*0.013;
+  ctx.beginPath();
+  ctx.moveTo(0,H*0.913);
+  ctx.bezierCurveTo(W*0.22,H*0.897,W*0.40,H*0.927,W*0.55,H*0.909);
+  ctx.bezierCurveTo(W*0.70,H*0.891,W*0.86,H*0.919,W,H*0.905);
+  ctx.stroke();
+  // Dry crack marks
+  ctx.strokeStyle='rgba(148,108,52,0.36)'; ctx.lineWidth=1.2; ctx.lineCap='butt';
+  [[W*0.08,H*0.910],[W*0.24,H*0.902],[W*0.44,H*0.920],[W*0.64,H*0.904],[W*0.82,H*0.915]].forEach(([cx,cy])=>{
+    ctx.beginPath(); ctx.moveTo(cx-W*0.013,cy); ctx.lineTo(cx+W*0.013,cy); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(cx,cy-H*0.006); ctx.lineTo(cx,cy+H*0.006); ctx.stroke();
   });
 
-  // ── HEAT SHIMMER — animated vertical wavy bands rising from floor ──
-  const shimTime=t*2.2;
-  for(let s=0;s<6;s++){
-    const sx=W*(0.04+s*0.17);
-    const sAmplX=Math.sin(shimTime+s*1.1)*W*0.004;
-    const shimG=ctx.createLinearGradient(sx,H*0.75,sx,H*0.55);
-    shimG.addColorStop(0,'rgba(220,160,60,0.10)'); shimG.addColorStop(0.5,'rgba(220,160,60,0.05)'); shimG.addColorStop(1,'rgba(220,160,60,0)');
-    ctx.fillStyle=shimG;
+  // Heat shimmer — animated rising bands
+  for(let s=0;s<5;s++){
+    const sx=W*(0.05+s*0.21), sOff=Math.sin(t*2.3+s*1.4)*W*0.004;
+    const shG=ctx.createLinearGradient(sx,H*0.76,sx,H*0.54);
+    shG.addColorStop(0,'rgba(210,145,50,0.11)'); shG.addColorStop(0.5,'rgba(210,145,50,0.05)'); shG.addColorStop(1,'rgba(210,145,50,0)');
+    ctx.fillStyle=shG;
     ctx.beginPath();
-    ctx.moveTo(sx+sAmplX,H*0.75);
-    ctx.bezierCurveTo(sx+sAmplX+W*0.006,H*0.70, sx+sAmplX-W*0.006,H*0.64, sx+sAmplX*0.5,H*0.55);
-    ctx.lineTo(sx+W*0.018+sAmplX*0.5,H*0.55);
-    ctx.bezierCurveTo(sx+W*0.018+sAmplX-W*0.006,H*0.64, sx+W*0.018+sAmplX+W*0.006,H*0.70, sx+W*0.018+sAmplX,H*0.75);
+    ctx.moveTo(sx+sOff,H*0.76);
+    ctx.bezierCurveTo(sx+sOff+W*0.006,H*0.695,sx+sOff-W*0.006,H*0.625,sx+sOff*0.3,H*0.54);
+    ctx.lineTo(sx+W*0.018+sOff*0.3,H*0.54);
+    ctx.bezierCurveTo(sx+W*0.018+sOff-W*0.006,H*0.625,sx+W*0.018+sOff+W*0.006,H*0.695,sx+W*0.018+sOff,H*0.76);
     ctx.closePath(); ctx.fill();
   }
 
-  // Sandstone boulders at 4 outer corners
+  // Sandstone boulders at four outer corners
   [
-    [W*0.038,H*0.360,true],[W*0.018,H*0.650,true],
-    [W*0.962,H*0.360,false],[W*0.980,H*0.650,false]
+    [W*0.036,H*0.368,true],[W*0.018,H*0.665,true],
+    [W*0.964,H*0.368,false],[W*0.982,H*0.665,false]
   ].forEach(([bx,by,isL])=>{
-    propShadow(bx+(isL?W*0.012:-W*0.012),by+H*0.010,W*0.034,H*0.010);
-    const bg=ctx.createLinearGradient(bx-(isL?W*0.028:0),0,bx+(isL?0:W*0.028),0);
-    bg.addColorStop(0,isL?'#7a2808':'#d87030'); bg.addColorStop(1,isL?'#c85020':'#8a3010');
+    propShadow(bx+(isL?W*0.014:-W*0.014),by+H*0.012,W*0.030,H*0.010);
+    const bg=ctx.createLinearGradient(bx-(isL?W*0.024:0),0,bx+(isL?0:W*0.024),0);
+    bg.addColorStop(0,isL?'#7a2c0a':'#d07030'); bg.addColorStop(1,isL?'#c85024':'#8a3014');
     ctx.fillStyle=bg;
-    ctx.beginPath(); ctx.ellipse(bx,by-H*0.020,W*0.028,H*0.026,isL?0.2:-0.2,0,Math.PI*2); ctx.fill();
-    // satellite rock
-    ctx.fillStyle=isL?'#a03818':'#b84c20';
-    ctx.beginPath(); ctx.ellipse(bx+(isL?W*0.026:-W*0.026),by-H*0.006,W*0.015,H*0.013,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(bx,by-H*0.022,W*0.026,H*0.024,isL?0.2:-0.2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=isL?'#a03c1a':'#bc4e22';
+    ctx.beginPath(); ctx.ellipse(bx+(isL?W*0.022:-W*0.022),by-H*0.008,W*0.013,H*0.012,0,0,Math.PI*2); ctx.fill();
   });
 
-  // Prickly pear scrub — 4 patches
+  // Saguaro cacti — tall, visible silhouettes
   [
-    [W*0.030,H*0.760,true],[W*0.055,H*0.870,true],
-    [W*0.938,H*0.780,false],[W*0.962,H*0.880,false]
+    [W*0.030,H*0.780,true],[W*0.055,H*0.880,true],
+    [W*0.945,H*0.795,false],[W*0.968,H*0.888,false]
   ].forEach(([px,py,isL])=>{
-    propShadow(px,py+H*0.004,W*0.022,H*0.005);
-    ctx.fillStyle='#4a6820';
-    ctx.beginPath(); ctx.ellipse(px,py-H*0.013,W*0.011,H*0.016,isL?-0.3:0.3,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(px+(isL?W*0.011:-W*0.011),py-H*0.019,W*0.009,H*0.014,isL?0.4:-0.4,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(px+(isL?-W*0.008:W*0.008),py-H*0.023,W*0.008,H*0.012,isL?0.6:-0.6,0,Math.PI*2); ctx.fill();
+    propShadow(px,py+H*0.008,W*0.010,H*0.004);
+    ctx.fillStyle='#3a5a18';
+    // Main trunk
+    ctx.beginPath(); ctx.roundRect(px-W*0.008,py-H*0.055,W*0.016,H*0.055,W*0.006); ctx.fill();
+    // Arms
+    const armX=isL?W*0.014:-W*0.014;
+    ctx.beginPath(); ctx.roundRect(px+armX*0.5,py-H*0.038,W*0.010,H*0.025,W*0.004); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(px+armX,py-H*0.048,W*0.010,H*0.022,W*0.004); ctx.fill();
   });
 
   ctx.restore();
