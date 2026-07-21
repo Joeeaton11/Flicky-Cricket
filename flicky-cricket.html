@@ -13439,10 +13439,10 @@ function drawWestwildScene() {
   }
 
   // ── STREET LAMPS — drawn after buildings so they appear in front ──
-  // Left lamp: between saloon and bank, arm points left
+  // Left lamp: between saloon and bank, arm points left toward saloon
   drawGasLamp(W*0.158, H*0.262, -1);
-  // Right lamp: between bank and sheriff, arm points right
-  drawGasLamp(W*0.842, H*0.262, 1);
+  // Right lamp: clear of sheriff fascia, arm points right (away from buildings)
+  drawGasLamp(W*0.820, H*0.262, -1);
 
   // ── COVERED WAGON — bottom-right ──
   const rx=W*0.870, ry=H*0.910;
@@ -13593,7 +13593,7 @@ function drawWestwildScene() {
     ctx.restore();
   }
 
-  // ── TUMBLEWEEDS — animated rolling ──
+  // ── TUMBLEWEEDS helper (defined here so upper-side calls work) ──
   function drawTumbleweed(tbx,tby,tbr,rot){
     propShadow(tbx,tby+tbr*0.38,tbr*1.4,tbr*0.26);
     ctx.save(); ctx.translate(tbx,tby); ctx.rotate(rot);
@@ -13605,6 +13605,60 @@ function drawWestwildScene() {
     }
     ctx.globalAlpha=1; ctx.restore();
   }
+
+  // ── TOP-CORNER BOULDERS — sandstone rocks outside oval near buildings ──
+  function drawBoulderGroup(bx, by, flip){
+    const f = flip ? -1 : 1;
+    propShadow(bx+f*W*0.010, by+H*0.006, W*0.052, H*0.008);
+    // back rock (darker, smaller)
+    ctx.fillStyle='#a06838';
+    ctx.beginPath(); ctx.ellipse(bx+f*W*0.022, by-H*0.022, W*0.022, H*0.022, -0.2*f, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.18)';
+    ctx.beginPath(); ctx.ellipse(bx+f*W*0.022, by-H*0.022, W*0.022, H*0.022, -0.2*f, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle='#b07840';
+    ctx.beginPath(); ctx.ellipse(bx+f*W*0.022, by-H*0.022, W*0.022, H*0.022, -0.2*f, 0, Math.PI*2); ctx.fill();
+    // strata line
+    ctx.strokeStyle='rgba(70,38,10,0.40)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(bx+f*W*0.004,by-H*0.018); ctx.lineTo(bx+f*W*0.038,by-H*0.026); ctx.stroke();
+    // front rock (lighter, larger)
+    const rg=ctx.createLinearGradient(bx-W*0.030,0,bx+W*0.010,0);
+    rg.addColorStop(0,'#8a5828'); rg.addColorStop(0.5,'#c08848'); rg.addColorStop(1,'#9a6838');
+    ctx.fillStyle=rg;
+    ctx.beginPath(); ctx.ellipse(bx, by-H*0.018, W*0.028, H*0.026, 0.15*f, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(60,30,8,0.30)'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(bx-W*0.018,by-H*0.022); ctx.lineTo(bx+W*0.010,by-H*0.028); ctx.stroke();
+    // tiny pebbles at base
+    ctx.fillStyle='#9a7040';
+    [[bx-W*0.022,by],[bx+f*W*0.030,by-H*0.004],[bx-W*0.008,by+H*0.002]].forEach(([px,py])=>{
+      ctx.beginPath(); ctx.ellipse(px,py,W*0.006,H*0.004,0.3,0,Math.PI*2); ctx.fill();
+    });
+  }
+  // Top-left corner boulders (outside oval, below the boardwalk)
+  drawBoulderGroup(W*0.048, H*0.338, false);
+  // Top-right corner boulders
+  drawBoulderGroup(W*0.952, H*0.338, true);
+
+  // ── UPPER-SIDE TUMBLEWEEDS — rolling through the top side strips ──
+  {
+    // Left side — rolling rightward then wrapping
+    const tbr3=W*0.015;
+    const cycle3=(t*14)%(W*0.120+tbr3*2);
+    const tbx3=tbr3+cycle3;
+    const tby3=H*0.360;
+    if(tbx3<W*0.155) drawTumbleweed(tbx3,tby3,tbr3,-t*2.4);
+    else drawTumbleweed(W*0.008,tby3,tbr3,-t*2.4);
+  }
+  {
+    // Right side — rolling leftward then wrapping
+    const tbr4=W*0.013;
+    const cycle4=(t*16)%(W*0.110+tbr4*2);
+    const tbx4=W*0.992-cycle4;
+    const tby4=H*0.350;
+    if(tbx4>W*0.845) drawTumbleweed(tbx4,tby4,tbr4,t*2.8);
+    else drawTumbleweed(W*0.990,tby4,tbr4,t*2.8);
+  }
+
+  // ── TUMBLEWEEDS — lower animated rolling ──
   // Tumbleweed 1 — drifting slowly right-to-left across the lower-right outer ground band
   // stays between ovalRight@H*0.82≈W*0.870 and screen right edge
   {
