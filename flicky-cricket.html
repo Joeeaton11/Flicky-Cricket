@@ -22740,394 +22740,426 @@ function drawCanyonScene() {
   const t=performance.now()/1000;
   const CX=W/2, CY=H*FIELD_CY, RX=W*FIELD_RX, RY=H*FIELD_RY;
 
-  // ── BACKDROP: clipped to top strip H*0.23 ──
+  // ── BACKDROP clipped to H*0.23 ──
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // ── SKY: late afternoon gold — deep azure top fading to warm amber at horizon ──
+  // SKY — deep cobalt overhead, warm amber-gold near horizon (late afternoon)
   const sky=ctx.createLinearGradient(0,0,0,H*0.23);
-  sky.addColorStop(0,'#1a4a8c'); sky.addColorStop(0.35,'#3a7ab8');
-  sky.addColorStop(0.70,'#c87818'); sky.addColorStop(1,'#e89830');
+  sky.addColorStop(0,'#1248a0'); sky.addColorStop(0.28,'#2a6ac0');
+  sky.addColorStop(0.60,'#a86010'); sky.addColorStop(0.82,'#d48020'); sky.addColorStop(1,'#e8a030');
   ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.23);
 
-  // Dust haze low on horizon
-  const haze=ctx.createLinearGradient(0,H*0.165,0,H*0.23);
-  haze.addColorStop(0,'rgba(210,155,60,0)'); haze.addColorStop(1,'rgba(210,155,60,0.30)');
-  ctx.fillStyle=haze; ctx.fillRect(0,H*0.165,W,H*0.065);
+  // Dust haze — amber glow near horizon
+  const hazeG=ctx.createLinearGradient(0,H*0.150,0,H*0.23);
+  hazeG.addColorStop(0,'rgba(220,140,40,0)'); hazeG.addColorStop(1,'rgba(220,140,40,0.38)');
+  ctx.fillStyle=hazeG; ctx.fillRect(0,H*0.150,W,H*0.080);
 
-  // Low sun top-right — warm orange disc with golden corona
-  const sunX=W*0.80, sunY=H*0.055, sunR=W*0.044;
-  const sunG=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR*4.0);
-  sunG.addColorStop(0,'rgba(255,245,200,1)'); sunG.addColorStop(0.22,'rgba(255,200,80,0.75)');
-  sunG.addColorStop(0.55,'rgba(220,140,30,0.30)'); sunG.addColorStop(1,'rgba(220,100,10,0)');
-  ctx.fillStyle=sunG; ctx.beginPath(); ctx.arc(sunX,sunY,sunR*4.0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#fff8d8'; ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI*2); ctx.fill();
+  // SUN — setting, low on right, fat orange disc with rays
+  const sunX=W*0.812, sunY=H*0.068, sunR=W*0.050;
+  // Radiant shaft rays first (behind everything)
+  ctx.save();
+  ctx.translate(sunX,sunY);
+  for(let ri=0;ri<12;ri++){
+    const ra=ri*Math.PI/6+t*0.04;
+    const rayG=ctx.createLinearGradient(0,0,Math.cos(ra)*W*0.32,Math.sin(ra)*W*0.32);
+    rayG.addColorStop(0,`rgba(255,190,50,${0.12+0.06*Math.sin(t*0.5+ri)})`);
+    rayG.addColorStop(1,'rgba(255,160,20,0)');
+    ctx.fillStyle=rayG;
+    ctx.beginPath(); ctx.moveTo(0,0);
+    ctx.arc(0,0,W*0.32,ra-0.06,ra+0.06);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  // Glow corona
+  const sunGlow=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR*4.5);
+  sunGlow.addColorStop(0,'rgba(255,235,160,1)'); sunGlow.addColorStop(0.18,'rgba(255,175,50,0.80)');
+  sunGlow.addColorStop(0.45,'rgba(220,110,20,0.30)'); sunGlow.addColorStop(1,'rgba(200,80,10,0)');
+  ctx.fillStyle=sunGlow; ctx.beginPath(); ctx.arc(sunX,sunY,sunR*4.5,0,Math.PI*2); ctx.fill();
+  // Disc
+  ctx.save(); ctx.shadowColor='rgba(255,200,80,0.9)'; ctx.shadowBlur=22;
+  ctx.fillStyle='#ffdd70'; ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI*2); ctx.fill();
+  ctx.restore();
 
-  // Thin high clouds catching golden light
-  ctx.globalAlpha=0.32;
-  [[W*0.10,H*0.028,W*0.095,H*0.010],[W*0.38,H*0.018,W*0.115,H*0.009],[W*0.58,H*0.032,W*0.075,H*0.010]].forEach(([cx,cy,cr,cr2])=>{
+  // Thin clouds lit amber-orange by setting sun
+  ctx.globalAlpha=0.38;
+  [[W*0.08,H*0.022,W*0.105,H*0.011],[W*0.30,H*0.014,W*0.090,H*0.008],[W*0.52,H*0.028,W*0.075,H*0.009]].forEach(([cx,cy,cr,cr2])=>{
     const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,cr);
-    cg.addColorStop(0,'rgba(255,230,160,0.90)'); cg.addColorStop(1,'rgba(255,180,60,0)');
+    cg.addColorStop(0,'rgba(255,200,90,0.95)'); cg.addColorStop(1,'rgba(220,130,30,0)');
     ctx.fillStyle=cg;
     ctx.save(); ctx.scale(1,cr2/cr); ctx.beginPath(); ctx.arc(cx,cy*(cr/cr2),cr,0,Math.PI*2); ctx.fill(); ctx.restore();
   });
   ctx.globalAlpha=1;
 
-  // ── HILLSIDE backdrop — rocky terrain the mine is cut into ──
-  // Left ridge — bulk of the hillside, rugged ochre/brown rock face
-  ctx.fillStyle='#6a3c14';
-  ctx.beginPath();
-  ctx.moveTo(0,H*0.23);
-  ctx.lineTo(0,H*0.050);
-  ctx.lineTo(W*0.018,H*0.042);
-  ctx.lineTo(W*0.030,H*0.050);
-  ctx.lineTo(W*0.042,H*0.035);
-  ctx.lineTo(W*0.058,H*0.048);
-  ctx.lineTo(W*0.075,H*0.028);
-  ctx.lineTo(W*0.095,H*0.038);
-  ctx.lineTo(W*0.118,H*0.022);
-  ctx.lineTo(W*0.148,H*0.030);
-  ctx.lineTo(W*0.172,H*0.012);
-  ctx.lineTo(W*0.195,H*0.020);
-  ctx.lineTo(W*0.215,H*0.008);
-  ctx.lineTo(W*0.238,H*0.018);
-  ctx.lineTo(W*0.258,H*0.005);
-  ctx.lineTo(W*0.282,H*0.015);
-  ctx.lineTo(W*0.308,H*0.010);
-  ctx.lineTo(W*0.330,H*0.018);
-  ctx.lineTo(W*0.350,H*0.070);
-  ctx.lineTo(W*0.375,H*0.088);
-  ctx.lineTo(W*0.418,H*0.098);
-  ctx.lineTo(W*0.455,H*0.112);
-  ctx.lineTo(W*0.488,H*0.118);
-  ctx.lineTo(W*0.512,H*0.23);
+  // ── ROCKY HILLSIDE — bulk terrain the mine is cut into ──
+  // Build in 4 depth layers: far ridge, mid-hill, main hill, dark foreground edge
+
+  // Far ridge — distant rocky skyline, muted blue-purple haze
+  ctx.fillStyle='#6a4a7a';
+  ctx.globalAlpha=0.32;
+  ctx.beginPath(); ctx.moveTo(0,H*0.23);
+  ctx.lineTo(0,H*0.065);
+  ctx.bezierCurveTo(W*0.04,H*0.050, W*0.08,H*0.058, W*0.14,H*0.038);
+  ctx.bezierCurveTo(W*0.18,H*0.024, W*0.22,H*0.030, W*0.26,H*0.015);
+  ctx.bezierCurveTo(W*0.30,H*0.002, W*0.34,H*0.008, W*0.38,H*0.018);
+  ctx.bezierCurveTo(W*0.42,H*0.028, W*0.46,H*0.040, W*0.52,H*0.060);
+  ctx.bezierCurveTo(W*0.58,H*0.078, W*0.64,H*0.090, W*0.72,H*0.085);
+  ctx.bezierCurveTo(W*0.80,H*0.080, W*0.86,H*0.095, W*0.92,H*0.075);
+  ctx.bezierCurveTo(W*0.96,H*0.060, W*1.00,H*0.068, W,H*0.075);
+  ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1;
+
+  // Mid hill — warm burnt-sienna rock mass, left side
+  ctx.fillStyle='#7a3e12';
+  ctx.beginPath(); ctx.moveTo(0,H*0.23);
+  ctx.lineTo(0,H*0.040);
+  ctx.bezierCurveTo(W*0.025,H*0.028, W*0.048,H*0.034, W*0.072,H*0.018);
+  ctx.bezierCurveTo(W*0.095,H*0.005, W*0.118,H*0.010, W*0.145,H*0.000);
+  ctx.bezierCurveTo(W*0.170,-H*0.008, W*0.195,H*0.004, W*0.228,H*0.010);
+  ctx.bezierCurveTo(W*0.262,H*0.016, W*0.295,H*0.028, W*0.330,H*0.045);
+  ctx.bezierCurveTo(W*0.362,H*0.060, W*0.395,H*0.082, W*0.428,H*0.092);
+  ctx.bezierCurveTo(W*0.460,H*0.100, W*0.492,H*0.108, W*0.520,H*0.23);
   ctx.closePath(); ctx.fill();
 
-  // Mid-tone rock face highlight — lighter band catching afternoon sun
-  ctx.fillStyle='#9a5a22';
-  ctx.beginPath();
-  ctx.moveTo(0,H*0.110);
-  ctx.lineTo(W*0.022,H*0.095);
-  ctx.lineTo(W*0.050,H*0.105);
-  ctx.lineTo(W*0.075,H*0.082);
-  ctx.lineTo(W*0.110,H*0.094);
-  ctx.lineTo(W*0.148,H*0.072);
-  ctx.lineTo(W*0.185,H*0.084);
-  ctx.lineTo(W*0.225,H*0.065);
-  ctx.lineTo(W*0.262,H*0.080);
-  ctx.lineTo(W*0.295,H*0.068);
-  ctx.lineTo(W*0.325,H*0.095);
-  ctx.lineTo(W*0.348,H*0.120);
-  ctx.lineTo(W*0.380,H*0.130);
-  ctx.lineTo(W*0.420,H*0.145);
-  ctx.lineTo(W*0.460,H*0.155);
-  ctx.lineTo(W*0.490,H*0.165);
-  ctx.lineTo(W*0.510,H*0.23);
-  ctx.lineTo(0,H*0.23);
-  ctx.closePath(); ctx.fill();
+  // Main hill face — warm golden-ochre sunlit rock, full left panel
+  ctx.fillStyle='#b86420';
+  ctx.beginPath(); ctx.moveTo(0,H*0.23);
+  ctx.lineTo(0,H*0.100);
+  ctx.bezierCurveTo(W*0.022,H*0.088, W*0.045,H*0.096, W*0.068,H*0.080);
+  ctx.bezierCurveTo(W*0.090,H*0.065, W*0.112,H*0.072, W*0.140,H*0.062);
+  ctx.bezierCurveTo(W*0.168,H*0.052, W*0.195,H*0.060, W*0.222,H*0.068);
+  ctx.bezierCurveTo(W*0.250,H*0.075, W*0.278,H*0.088, W*0.308,H*0.096);
+  ctx.bezierCurveTo(W*0.335,H*0.103, W*0.362,H*0.118, W*0.390,H*0.138);
+  ctx.bezierCurveTo(W*0.418,H*0.156, W*0.448,H*0.172, W*0.478,H*0.188);
+  ctx.bezierCurveTo(W*0.500,H*0.200, W*0.516,H*0.215, W*0.525,H*0.23);
+  ctx.lineTo(0,H*0.23); ctx.closePath(); ctx.fill();
 
-  // Sunlit ochre rock band — warm afternoon light on left rock face
-  ctx.fillStyle='#c8783a';
-  ctx.beginPath();
-  ctx.moveTo(0,H*0.168);
-  ctx.lineTo(W*0.038,H*0.152);
-  ctx.lineTo(W*0.075,H*0.162);
-  ctx.lineTo(W*0.115,H*0.145);
-  ctx.lineTo(W*0.155,H*0.158);
-  ctx.lineTo(W*0.195,H*0.148);
-  ctx.lineTo(W*0.238,H*0.160);
-  ctx.lineTo(W*0.275,H*0.152);
-  ctx.lineTo(W*0.315,H*0.170);
-  ctx.lineTo(W*0.345,H*0.188);
-  ctx.lineTo(W*0.390,H*0.200);
-  ctx.lineTo(W*0.440,H*0.210);
-  ctx.lineTo(W*0.480,H*0.215);
-  ctx.lineTo(W*0.508,H*0.23);
-  ctx.lineTo(0,H*0.23);
-  ctx.closePath(); ctx.fill();
+  // Sunlit highlight band — afternoon light raking across rock face
+  ctx.fillStyle='#d88030';
+  ctx.beginPath(); ctx.moveTo(0,H*0.160);
+  ctx.bezierCurveTo(W*0.030,H*0.148, W*0.060,H*0.155, W*0.092,H*0.142);
+  ctx.bezierCurveTo(W*0.122,H*0.130, W*0.155,H*0.138, W*0.188,H*0.130);
+  ctx.bezierCurveTo(W*0.220,H*0.122, W*0.255,H*0.132, W*0.290,H*0.142);
+  ctx.bezierCurveTo(W*0.322,H*0.150, W*0.355,H*0.165, W*0.388,H*0.182);
+  ctx.bezierCurveTo(W*0.418,H*0.198, W*0.448,H*0.212, W*0.476,H*0.222);
+  ctx.lineTo(W*0.525,H*0.23); ctx.lineTo(0,H*0.23); ctx.closePath(); ctx.fill();
 
-  // Rock face texture strata lines
-  ctx.strokeStyle='rgba(50,22,4,0.28)'; ctx.lineWidth=1.2;
-  [[0,H*0.130,W*0.510,H*0.145],[0,H*0.152,W*0.430,H*0.168],[0,H*0.175,W*0.350,H*0.188],[W*0.05,H*0.092,W*0.320,H*0.100]].forEach(([x1,y1,x2,y2])=>{
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  // Pale dust-ochre lower face near ground
+  ctx.fillStyle='#e09848';
+  ctx.beginPath(); ctx.moveTo(0,H*0.205);
+  ctx.bezierCurveTo(W*0.040,H*0.196, W*0.085,H*0.202, W*0.130,H*0.195);
+  ctx.bezierCurveTo(W*0.172,H*0.188, W*0.218,H*0.196, W*0.262,H*0.205);
+  ctx.bezierCurveTo(W*0.305,H*0.212, W*0.350,H*0.220, W*0.400,H*0.226);
+  ctx.lineTo(W*0.525,H*0.23); ctx.lineTo(0,H*0.23); ctx.closePath(); ctx.fill();
+
+  // Rock strata lines — almost horizontal, slight geological dip right
+  ctx.strokeStyle='rgba(55,20,4,0.22)'; ctx.lineWidth=1.1; ctx.lineCap='round';
+  [[0,H*0.125,W*0.50,H*0.140],[0,H*0.148,W*0.44,H*0.162],[0,H*0.170,W*0.38,H*0.182],[0,H*0.192,W*0.32,H*0.200],[W*0.04,H*0.090,W*0.30,H*0.100]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.bezierCurveTo(x1+W*0.15,y1+(y2-y1)*0.3, x2-W*0.15,y2-(y2-y1)*0.3, x2,y2); ctx.stroke();
+  });
+  // Rock shadow crevices
+  ctx.strokeStyle='rgba(30,8,0,0.18)'; ctx.lineWidth=1.8;
+  [[W*0.055,H*0.108,W*0.090,H*0.125],[W*0.130,H*0.098,W*0.160,H*0.118],[W*0.200,H*0.112,W*0.235,H*0.128],[W*0.015,H*0.148,W*0.040,H*0.168]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.bezierCurveTo(x1+W*0.008,y1+H*0.010,x2-W*0.008,y2-H*0.008,x2,y2); ctx.stroke();
   });
 
-  // Right ridge — smaller, right side of frame, mine entrance digs into left hill
-  ctx.fillStyle='#7a4a1a';
-  ctx.beginPath();
-  ctx.moveTo(W,H*0.23);
-  ctx.lineTo(W,H*0.065);
-  ctx.lineTo(W*0.982,H*0.055);
-  ctx.lineTo(W*0.965,H*0.068);
-  ctx.lineTo(W*0.948,H*0.048);
-  ctx.lineTo(W*0.928,H*0.062);
-  ctx.lineTo(W*0.910,H*0.042);
-  ctx.lineTo(W*0.885,H*0.055);
-  ctx.lineTo(W*0.862,H*0.035);
-  ctx.lineTo(W*0.840,H*0.048);
-  ctx.lineTo(W*0.815,H*0.058);
-  ctx.lineTo(W*0.788,H*0.072);
-  ctx.lineTo(W*0.760,H*0.085);
-  ctx.lineTo(W*0.735,H*0.098);
-  ctx.lineTo(W*0.715,H*0.115);
-  ctx.lineTo(W*0.695,H*0.140);
-  ctx.lineTo(W*0.678,H*0.23);
+  // RIGHT ridge — smaller right-side hill behind far edge
+  ctx.fillStyle='#8a4818';
+  ctx.globalAlpha=0.88;
+  ctx.beginPath(); ctx.moveTo(W,H*0.23);
+  ctx.lineTo(W,H*0.055);
+  ctx.bezierCurveTo(W*0.975,H*0.042, W*0.950,H*0.050, W*0.925,H*0.032);
+  ctx.bezierCurveTo(W*0.900,H*0.015, W*0.872,H*0.022, W*0.845,H*0.035);
+  ctx.bezierCurveTo(W*0.818,H*0.048, W*0.790,H*0.060, W*0.762,H*0.078);
+  ctx.bezierCurveTo(W*0.738,H*0.093, W*0.716,H*0.112, W*0.695,H*0.138);
+  ctx.bezierCurveTo(W*0.678,H*0.158, W*0.668,H*0.180, W*0.660,H*0.23);
+  ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1;
+
+  // Right hill sunlit face
+  ctx.fillStyle='#c07030';
+  ctx.beginPath(); ctx.moveTo(W,H*0.23);
+  ctx.lineTo(W,H*0.125);
+  ctx.bezierCurveTo(W*0.970,H*0.115, W*0.940,H*0.122, W*0.908,H*0.110);
+  ctx.bezierCurveTo(W*0.876,H*0.098, W*0.845,H*0.112, W*0.812,H*0.128);
+  ctx.bezierCurveTo(W*0.782,H*0.142, W*0.752,H*0.162, W*0.722,H*0.185);
+  ctx.bezierCurveTo(W*0.700,H*0.200, W*0.682,H*0.215, W*0.672,H*0.23);
   ctx.closePath(); ctx.fill();
 
-  // Right hill warm face
-  ctx.fillStyle='#a06028';
+  // ── MINE ENTRANCE — the hero element ──
+  // Portal opening from W*0.530–W*0.690, arch top at H*0.088, base at H*0.23
+  const mL=W*0.530, mR=W*0.690, mCX=(mL+mR)/2;
+  const archTop=H*0.088, archH=H*0.035; // arch crown height
+
+  // Deep mine interior — multilayer shadow
+  const interiorG=ctx.createRadialGradient(mCX,H*0.190,W*0.008,mCX,H*0.170,W*0.085);
+  interiorG.addColorStop(0,'rgba(255,185,50,0.18)'); // lantern glow deep inside
+  interiorG.addColorStop(0.3,'#0e0604');
+  interiorG.addColorStop(1,'#060302');
+  ctx.fillStyle=interiorG;
   ctx.beginPath();
-  ctx.moveTo(W,H*0.150);
-  ctx.lineTo(W*0.975,H*0.138);
-  ctx.lineTo(W*0.948,H*0.152);
-  ctx.lineTo(W*0.918,H*0.140);
-  ctx.lineTo(W*0.888,H*0.158);
-  ctx.lineTo(W*0.858,H*0.148);
-  ctx.lineTo(W*0.825,H*0.165);
-  ctx.lineTo(W*0.800,H*0.180);
-  ctx.lineTo(W*0.775,H*0.195);
-  ctx.lineTo(W*0.752,H*0.208);
-  ctx.lineTo(W*0.730,H*0.23);
-  ctx.lineTo(W,H*0.23);
+  ctx.moveTo(mL,H*0.23);
+  ctx.lineTo(mL,archTop+archH);
+  ctx.bezierCurveTo(mL,archTop, mCX-W*0.020,archTop-archH*0.6, mCX,archTop-archH*0.8);
+  ctx.bezierCurveTo(mCX+W*0.020,archTop-archH*0.6, mR,archTop, mR,archTop+archH);
+  ctx.lineTo(mR,H*0.23);
   ctx.closePath(); ctx.fill();
 
-  // ── MINE ENTRANCE — central feature: timber frame arch into hillside ──
-  // Entrance opening sits at x=W*0.52 to W*0.70, bottom at H*0.23 (ground level)
-  const mineL=W*0.528, mineR=W*0.688, mineTop=H*0.100, mineMid=H*0.23;
+  // Ambient lantern glow from deep within mine
+  const lgX=mCX, lgY=H*0.175;
+  const lg=ctx.createRadialGradient(lgX,lgY,0,lgX,lgY,W*0.072);
+  lg.addColorStop(0,`rgba(255,185,55,${0.22+0.08*Math.sin(t*2.2)})`);
+  lg.addColorStop(0.4,'rgba(180,110,15,0.08)');
+  lg.addColorStop(1,'rgba(140,70,5,0)');
+  ctx.fillStyle=lg; ctx.beginPath(); ctx.ellipse(lgX,lgY,W*0.072,H*0.042,0,0,Math.PI*2); ctx.fill();
 
-  // Dark interior of mine — deep shadow gradient receding into blackness
-  const mineInterior=ctx.createLinearGradient(mineL,mineTop,mineR,mineMid);
-  mineInterior.addColorStop(0,'#0a0502'); mineInterior.addColorStop(0.4,'#120804'); mineInterior.addColorStop(1,'#0e0604');
-  ctx.fillStyle=mineInterior;
+  // Rail tracks emerging from mine across ground
+  const rY1=H*0.208, rY2=H*0.222, rSpacing=W*0.028;
+  ctx.strokeStyle='#4a2a0a'; ctx.lineWidth=3.2; ctx.lineCap='butt';
+  // Left rail
+  ctx.beginPath(); ctx.moveTo(mCX-rSpacing/2,rY1); ctx.lineTo(mL-W*0.010,rY1-H*0.004); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mCX-rSpacing/2,rY2); ctx.lineTo(mL-W*0.010,rY2-H*0.002); ctx.stroke();
+  // Right rail (exits mine right side)
+  ctx.beginPath(); ctx.moveTo(mCX+rSpacing/2,rY1); ctx.lineTo(W*0.88,rY1-H*0.008); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mCX+rSpacing/2,rY2); ctx.lineTo(W*0.88,rY2-H*0.005); ctx.stroke();
+  // Rail highlights
+  ctx.strokeStyle='rgba(160,100,35,0.40)'; ctx.lineWidth=0.9;
+  ctx.beginPath(); ctx.moveTo(mCX+rSpacing/2,rY1); ctx.lineTo(W*0.88,rY1-H*0.008); ctx.stroke();
+  // Sleeper ties
+  ctx.strokeStyle='#6a3c14'; ctx.lineWidth=2.5;
+  for(let rx=mCX+rSpacing/2+W*0.010; rx<W*0.86; rx+=W*0.022){
+    const prog=(rx-mCX)/(W*0.88-mCX);
+    const ty1=rY1-prog*H*0.008-H*0.005, ty2=rY2-prog*H*0.005+H*0.002;
+    ctx.beginPath(); ctx.moveTo(rx-rSpacing/2-W*0.006,ty1); ctx.lineTo(rx+rSpacing/2+W*0.006,ty2); ctx.stroke();
+  }
+
+  // ── TIMBER PORTAL FRAME ──
+  const bW=W*0.014; // beam width
+  const frameCol='#2e1608', frameHi='#4a2410', frameShadow='#1a0a04';
+
+  // Outer casing planks (rough boards nailed over rock face)
+  ctx.fillStyle='#3a1c08';
+  ctx.beginPath(); ctx.roundRect(mL-bW*2.2, archTop-H*0.008, bW*1.8, H*0.23-archTop+H*0.008+H*0.002,2); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(mR+bW*0.5, archTop-H*0.008, bW*1.8, H*0.23-archTop+H*0.008+H*0.002,2); ctx.fill();
+  // Plank grain on casing
+  ctx.strokeStyle='rgba(15,5,0,0.30)'; ctx.lineWidth=0.7;
+  [H*0.115,H*0.140,H*0.165,H*0.190,H*0.212].forEach(gy=>{
+    ctx.beginPath(); ctx.moveTo(mL-bW*2.2,gy); ctx.lineTo(mL-bW*0.4,gy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mR+bW*0.5,gy); ctx.lineTo(mR+bW*2.3,gy); ctx.stroke();
+  });
+
+  // Left upright timber
+  ctx.fillStyle=frameCol;
+  ctx.beginPath(); ctx.roundRect(mL-bW, archTop+archH*0.8, bW, H*0.23-archTop-archH*0.8,1); ctx.fill();
+  ctx.fillStyle=frameHi; ctx.fillRect(mL-bW, archTop+archH*0.8, bW*0.22, H*0.23-archTop-archH*0.8); // sunlit edge
+  // Right upright timber
+  ctx.fillStyle=frameCol;
+  ctx.beginPath(); ctx.roundRect(mR, archTop+archH*0.8, bW, H*0.23-archTop-archH*0.8,1); ctx.fill();
+  ctx.fillStyle=frameShadow; ctx.fillRect(mR+bW*0.78, archTop+archH*0.8, bW*0.22, H*0.23-archTop-archH*0.8);
+
+  // Arch header beam — curved soffit
+  ctx.fillStyle=frameCol;
   ctx.beginPath();
-  ctx.moveTo(mineL,mineMid);
-  ctx.lineTo(mineL,mineTop+H*0.018);
-  ctx.quadraticCurveTo(mineL,mineTop, (mineL+mineR)/2, mineTop);
-  ctx.quadraticCurveTo(mineR,mineTop, mineR,mineTop+H*0.018);
-  ctx.lineTo(mineR,mineMid);
+  ctx.moveTo(mL-bW-W*0.005, archTop+archH*0.95);
+  ctx.bezierCurveTo(mL-bW-W*0.005,archTop+archH*0.25, mCX-W*0.015,archTop-archH*0.65, mCX,archTop-archH*0.75);
+  ctx.bezierCurveTo(mCX+W*0.015,archTop-archH*0.65, mR+bW+W*0.005,archTop+archH*0.25, mR+bW+W*0.005,archTop+archH*0.95);
+  ctx.bezierCurveTo(mR+bW+W*0.005,archTop+archH*1.08, mR+W*0.002,archTop+archH*1.12, mR,archTop+archH*1.0);
+  ctx.bezierCurveTo(mR,archTop+archH*0.45, mCX+W*0.010,archTop-archH*0.52, mCX,archTop-archH*0.62);
+  ctx.bezierCurveTo(mCX-W*0.010,archTop-archH*0.52, mL,archTop+archH*0.45, mL,archTop+archH*1.0);
+  ctx.bezierCurveTo(mL-W*0.002,archTop+archH*1.12, mL-bW-W*0.005,archTop+archH*1.08, mL-bW-W*0.005,archTop+archH*0.95);
   ctx.closePath(); ctx.fill();
 
-  // Faint lantern glow deep in mine
-  const glowX=(mineL+mineR)/2, glowY=H*0.178;
-  const mineGlow=ctx.createRadialGradient(glowX,glowY,0,glowX,glowY,W*0.065);
-  mineGlow.addColorStop(0,'rgba(255,185,50,0.28)'); mineGlow.addColorStop(0.5,'rgba(200,120,20,0.10)'); mineGlow.addColorStop(1,'rgba(150,80,10,0)');
-  ctx.fillStyle=mineGlow; ctx.beginPath(); ctx.ellipse(glowX,glowY,W*0.065,H*0.040,0,0,Math.PI*2); ctx.fill();
+  // Cross brace at mid-height
+  const braceY=H*0.158;
+  ctx.fillStyle=frameCol;
+  ctx.beginPath(); ctx.roundRect(mL,braceY,mR-mL,bW*0.70,1); ctx.fill();
+  ctx.fillStyle=frameHi; ctx.fillRect(mL,braceY,mR-mL,bW*0.14); // top lit edge
 
-  // Timber frame — main portal timbers
-  const bw=W*0.016; // beam width
-  ctx.fillStyle='#3c1e08';
-  // Left upright
-  ctx.beginPath(); ctx.roundRect(mineL-bw,mineTop+H*0.012,bw,mineMid-mineTop-H*0.012,2); ctx.fill();
-  // Right upright
-  ctx.beginPath(); ctx.roundRect(mineR,mineTop+H*0.012,bw,mineMid-mineTop-H*0.012,2); ctx.fill();
-  // Arch header beam (flat on top, slightly curved underside)
-  ctx.beginPath();
-  ctx.moveTo(mineL-bw-W*0.004, mineTop+H*0.020);
-  ctx.lineTo(mineL-bw-W*0.004, mineTop+H*0.006);
-  ctx.quadraticCurveTo((mineL+mineR)/2, mineTop-H*0.008, mineR+bw+W*0.004, mineTop+H*0.006);
-  ctx.lineTo(mineR+bw+W*0.004, mineTop+H*0.020);
-  ctx.quadraticCurveTo((mineL+mineR)/2, mineTop+H*0.004, mineL-bw-W*0.004, mineTop+H*0.020);
-  ctx.closePath(); ctx.fill();
+  // Diagonal knee braces — typical mine timbering
+  ctx.strokeStyle=frameCol; ctx.lineWidth=bW*0.80; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(mL,archTop+archH+H*0.012); ctx.lineTo(mL+W*0.024,archTop+archH+H*0.040); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mR,archTop+archH+H*0.012); ctx.lineTo(mR-W*0.024,archTop+archH+H*0.040); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mL,braceY); ctx.lineTo(mL+W*0.022,braceY+H*0.030); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mR,braceY); ctx.lineTo(mR-W*0.022,braceY+H*0.030); ctx.stroke();
 
   // Timber grain detail on uprights
-  ctx.strokeStyle='rgba(20,8,2,0.45)'; ctx.lineWidth=0.8;
-  [H*0.135,H*0.158,H*0.178,H*0.200,H*0.218].forEach(gy=>{
-    ctx.beginPath(); ctx.moveTo(mineL-bw,gy); ctx.lineTo(mineL,gy); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(mineR,gy); ctx.lineTo(mineR+bw,gy); ctx.stroke();
+  ctx.strokeStyle='rgba(10,3,0,0.28)'; ctx.lineWidth=0.8;
+  [H*0.132,H*0.148,H*0.168,H*0.185,H*0.200,H*0.214].forEach(gy=>{
+    ctx.beginPath(); ctx.moveTo(mL-bW,gy); ctx.lineTo(mL,gy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mR,gy); ctx.lineTo(mR+bW,gy); ctx.stroke();
   });
 
-  // Timber highlight (sunlit right edge)
-  ctx.fillStyle='#5a2e10';
-  ctx.fillRect(mineR, mineTop+H*0.012, bw*0.28, mineMid-mineTop-H*0.012);
-
-  // Horizontal cross-brace at H*0.150
-  const braceY=H*0.155;
-  ctx.fillStyle='#3c1e08';
-  ctx.fillRect(mineL,braceY,mineR-mineL,bw*0.75);
-  // Knee braces at corners (diagonal timber supports)
-  ctx.strokeStyle='#3c1e08'; ctx.lineWidth=bw*0.75; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(mineL,mineTop+H*0.038); ctx.lineTo(mineL+W*0.025,mineTop+H*0.065); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(mineR,mineTop+H*0.038); ctx.lineTo(mineR-W*0.025,mineTop+H*0.065); ctx.stroke();
-
-  // Outer timber casing — rough planks around portal face
-  ctx.fillStyle='#4a2510';
-  // Left plank board
-  ctx.beginPath(); ctx.roundRect(mineL-bw*2.5,mineTop-H*0.002,bw*1.2,mineMid-mineTop+H*0.002,1); ctx.fill();
-  // Right plank board
-  ctx.beginPath(); ctx.roundRect(mineR+bw*1.4,mineTop-H*0.002,bw*1.2,mineMid-mineTop+H*0.002,1); ctx.fill();
-
-  // SIGN above mine entrance: "GOLD MINE"
-  const signW=W*0.138, signH=H*0.022, signX=(mineL+mineR)/2-signW/2, signY=mineTop-H*0.038;
-  ctx.fillStyle='#3a1c06'; ctx.beginPath(); ctx.roundRect(signX-W*0.004,signY-H*0.004,signW+W*0.008,signH+H*0.008,3); ctx.fill();
-  ctx.fillStyle='#c8820a'; ctx.beginPath(); ctx.roundRect(signX,signY,signW,signH,2); ctx.fill();
-  // Sign nail dots
-  ctx.fillStyle='#8a5210'; [[signX+W*0.004,signY+H*0.005],[signX+signW-W*0.005,signY+H*0.005],[signX+W*0.004,signY+signH-H*0.006],[signX+signW-W*0.005,signY+signH-H*0.006]].forEach(([nx,ny])=>{
+  // ── SIGN board above entrance ──
+  const sgW=W*0.145, sgH=H*0.024, sgX=mCX-sgW/2, sgY=archTop-archH*0.62-sgH-H*0.018;
+  // Shadow backing
+  ctx.fillStyle='rgba(10,4,0,0.55)';
+  ctx.beginPath(); ctx.roundRect(sgX-W*0.004+W*0.003,sgY-H*0.003+H*0.004,sgW+W*0.008,sgH+H*0.008,3); ctx.fill();
+  // Board
+  const boardG=ctx.createLinearGradient(sgX,sgY,sgX,sgY+sgH);
+  boardG.addColorStop(0,'#9a5c08'); boardG.addColorStop(0.5,'#b87010'); boardG.addColorStop(1,'#8a5006');
+  ctx.fillStyle=boardG; ctx.beginPath(); ctx.roundRect(sgX,sgY,sgW,sgH,2); ctx.fill();
+  // Gold band border
+  ctx.strokeStyle='#c89828'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.roundRect(sgX+W*0.003,sgY+H*0.003,sgW-W*0.006,sgH-H*0.006,2); ctx.stroke();
+  // Text
+  ctx.fillStyle='#ffe870'; ctx.font=`bold ${H*0.013}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=3;
+  ctx.fillText('GOLD MINE', mCX, sgY+sgH*0.50);
+  ctx.shadowBlur=0;
+  // Corner nail heads
+  ctx.fillStyle='#7a4408';
+  [[sgX+W*0.005,sgY+H*0.005],[sgX+sgW-W*0.005,sgY+H*0.005],[sgX+W*0.005,sgY+sgH-H*0.006],[sgX+sgW-W*0.005,sgY+sgH-H*0.006]].forEach(([nx,ny])=>{
     ctx.beginPath(); ctx.arc(nx,ny,W*0.003,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(180,120,40,0.55)'; ctx.beginPath(); ctx.arc(nx-W*0.0008,ny-H*0.001,W*0.0015,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#7a4408';
   });
-  ctx.fillStyle='#ffd060'; ctx.font=`bold ${H*0.014}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('GOLD MINE', (mineL+mineR)/2, signY+signH*0.50);
-  // Sign chain hanging points
-  ctx.strokeStyle='#5a3010'; ctx.lineWidth=1.2;
-  ctx.beginPath(); ctx.moveTo(signX+signW*0.15,signY); ctx.lineTo(signX+signW*0.15,signY-H*0.010); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(signX+signW*0.85,signY); ctx.lineTo(signX+signW*0.85,signY-H*0.010); ctx.stroke();
+  // Hanging chains
+  ctx.strokeStyle='#6a4010'; ctx.lineWidth=1.2;
+  ctx.setLineDash([H*0.004,H*0.003]);
+  ctx.beginPath(); ctx.moveTo(sgX+sgW*0.18,sgY); ctx.lineTo(sgX+sgW*0.18,sgY-H*0.016); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sgX+sgW*0.82,sgY); ctx.lineTo(sgX+sgW*0.82,sgY-H*0.016); ctx.stroke();
+  ctx.setLineDash([]);
 
-  // ── ORE CART TRACK — wooden rails leading out of mine across ground ──
-  // Rails from mine out to the right (W*0.55 → W*1.0, at ground level H*0.23)
-  const railY1=H*0.220, railY2=H*0.228; // two rails top view
-  ctx.strokeStyle='#4a2808'; ctx.lineWidth=3.5; ctx.lineCap='butt';
-  ctx.beginPath(); ctx.moveTo(mineL+W*0.005,railY1); ctx.lineTo(W*0.88,railY1-H*0.010); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(mineL+W*0.005,railY2); ctx.lineTo(W*0.88,railY2-H*0.010); ctx.stroke();
-  ctx.strokeStyle='rgba(160,90,30,0.45)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(mineL+W*0.005,railY1); ctx.lineTo(W*0.88,railY1-H*0.010); ctx.stroke();
-  // Sleepers/ties
-  ctx.strokeStyle='#6a3e14'; ctx.lineWidth=2.8;
-  for(let rx=mineL+W*0.004;rx<W*0.86;rx+=W*0.024){
-    const pct=(rx-mineL)/(W*0.86-mineL);
-    ctx.beginPath(); ctx.moveTo(rx,railY1-pct*H*0.010-H*0.006); ctx.lineTo(rx,railY2-pct*H*0.010+H*0.002); ctx.stroke();
-  }
-
-  // ── ORE CART — sitting on the tracks, laden with gold ore ──
-  const cartX=W*0.580; // cart left edge
-  const cartY=H*0.197; // top of cart
-  const cartW=W*0.068, cartH=H*0.028;
-  const cartWheelY=H*0.222;
-
-  // Cart body
-  ctx.fillStyle='#2a1408';
-  ctx.beginPath();
-  ctx.moveTo(cartX,cartY+cartH);
-  ctx.lineTo(cartX+W*0.006,cartY);
-  ctx.lineTo(cartX+cartW-W*0.006,cartY);
-  ctx.lineTo(cartX+cartW,cartY+cartH);
-  ctx.closePath(); ctx.fill();
-  // Cart body highlight
-  ctx.fillStyle='#3c2010';
-  ctx.fillRect(cartX+cartW-W*0.008,cartY,W*0.008,cartH);
-  // Cart lip/rim
-  ctx.strokeStyle='#4a2810'; ctx.lineWidth=2.5;
-  ctx.beginPath(); ctx.moveTo(cartX-W*0.004,cartY); ctx.lineTo(cartX+cartW+W*0.004,cartY); ctx.stroke();
-  // Wooden plank lines on cart side
-  ctx.strokeStyle='rgba(20,8,2,0.40)'; ctx.lineWidth=0.8;
-  [cartY+cartH*0.35,cartY+cartH*0.65].forEach(gy=>{
-    ctx.beginPath(); ctx.moveTo(cartX,gy); ctx.lineTo(cartX+cartW,gy); ctx.stroke();
-  });
-  // Gold ore heap in cart
-  ctx.fillStyle='#b87810';
-  ctx.beginPath(); ctx.ellipse(cartX+cartW*0.50,cartY,cartW*0.44,H*0.014,0,Math.PI,0); ctx.fill();
-  ctx.fillStyle='#d4a020';
-  ctx.beginPath(); ctx.ellipse(cartX+cartW*0.42,cartY-H*0.004,cartW*0.28,H*0.010,0.1,Math.PI,0); ctx.fill();
-  ctx.fillStyle='#e8c040';
-  ctx.beginPath(); ctx.ellipse(cartX+cartW*0.56,cartY-H*0.008,cartW*0.20,H*0.008,-0.1,Math.PI,0); ctx.fill();
-  // Sparkle glints on ore
-  const glintT=(t*2.5)%1;
-  ctx.fillStyle=`rgba(255,245,180,${0.7+0.3*Math.sin(t*3.0)})`;
-  ctx.beginPath(); ctx.arc(cartX+cartW*0.42,cartY-H*0.008,W*0.004,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle=`rgba(255,235,120,${0.5+0.4*Math.sin(t*2.2+1)})`;
-  ctx.beginPath(); ctx.arc(cartX+cartW*0.62,cartY-H*0.012,W*0.003,0,Math.PI*2); ctx.fill();
-
-  // Cart wheels
-  const cwR=H*0.012;
-  [cartX+cartW*0.22, cartX+cartW*0.78].forEach(wx=>{
-    ctx.fillStyle='#1e0e04';
-    ctx.beginPath(); ctx.arc(wx,cartWheelY,cwR,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='rgba(70,40,10,0.7)'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.arc(wx,cartWheelY,cwR,0,Math.PI*2); ctx.stroke();
-    ctx.strokeStyle='rgba(50,25,6,0.55)'; ctx.lineWidth=0.8;
-    for(let s=0;s<6;s++){
-      const sa=s*Math.PI/3;
-      ctx.beginPath(); ctx.moveTo(wx,cartWheelY); ctx.lineTo(wx+Math.cos(sa)*cwR*0.85,cartWheelY+Math.sin(sa)*cwR*0.85); ctx.stroke();
-    }
-    ctx.fillStyle='#3a1c08'; ctx.beginPath(); ctx.arc(wx,cartWheelY,cwR*0.18,0,Math.PI*2); ctx.fill();
-  });
-
-  // ── WINCH / HOIST TOWER — tall timber frame above the mine mouth ──
-  const winchX=(mineL+mineR)/2;
-  const winchBase=H*0.098;   // bottom of tower structure (just above mine arch)
-  const winchTop=H*0.010;    // top of tower
-  const winchHW=W*0.025;     // half-width
-
-  // A-frame legs
-  ctx.strokeStyle='#3c1e08'; ctx.lineWidth=W*0.012; ctx.lineCap='round';
-  // Left leg
-  ctx.beginPath(); ctx.moveTo(winchX-W*0.014,winchBase); ctx.lineTo(winchX-winchHW*0.5,winchTop+H*0.012); ctx.stroke();
-  // Right leg
-  ctx.beginPath(); ctx.moveTo(winchX+W*0.014,winchBase); ctx.lineTo(winchX+winchHW*0.5,winchTop+H*0.012); ctx.stroke();
-
+  // ── HOIST / WINCH TOWER ──
+  // A-frame sits just above the mine arch, centred on mCX
+  const winTop=H*0.006, winBase=archTop-archH*0.60;
+  ctx.strokeStyle='#2c1408'; ctx.lineCap='round';
+  // Main A-frame legs
+  ctx.lineWidth=W*0.012;
+  ctx.beginPath(); ctx.moveTo(mCX-W*0.012,winBase); ctx.lineTo(mCX-W*0.004,winTop+H*0.016); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mCX+W*0.012,winBase); ctx.lineTo(mCX+W*0.004,winTop+H*0.016); ctx.stroke();
   // Cross braces
   ctx.lineWidth=W*0.007;
-  ctx.beginPath(); ctx.moveTo(winchX-W*0.020,winchTop+H*0.048); ctx.lineTo(winchX+W*0.020,winchTop+H*0.065); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(winchX+W*0.020,winchTop+H*0.048); ctx.lineTo(winchX-W*0.020,winchTop+H*0.065); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(winchX-W*0.014,winchTop+H*0.022); ctx.lineTo(winchX+W*0.014,winchTop+H*0.035); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(winchX+W*0.014,winchTop+H*0.022); ctx.lineTo(winchX-W*0.014,winchTop+H*0.035); ctx.stroke();
-
-  // Crown pulley wheel at top
-  ctx.strokeStyle='#3c1e08'; ctx.lineWidth=W*0.010;
-  ctx.beginPath(); ctx.arc(winchX,winchTop+H*0.010,W*0.016,0,Math.PI*2); ctx.stroke();
-  ctx.strokeStyle='rgba(25,10,2,0.55)'; ctx.lineWidth=W*0.005;
-  for(let s=0;s<6;s++){
-    const sa=s*Math.PI/3+t*0.5;
-    ctx.beginPath(); ctx.moveTo(winchX,winchTop+H*0.010); ctx.lineTo(winchX+Math.cos(sa)*W*0.014,winchTop+H*0.010+Math.sin(sa)*W*0.014); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mCX-W*0.018,winTop+H*0.045); ctx.lineTo(mCX+W*0.018,winTop+H*0.062); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mCX+W*0.018,winTop+H*0.045); ctx.lineTo(mCX-W*0.018,winTop+H*0.062); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mCX-W*0.012,winTop+H*0.020); ctx.lineTo(mCX+W*0.012,winTop+H*0.032); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mCX+W*0.012,winTop+H*0.020); ctx.lineTo(mCX-W*0.012,winTop+H*0.032); ctx.stroke();
+  // Pulley crown wheel
+  ctx.lineWidth=W*0.010;
+  ctx.strokeStyle='#2c1408';
+  ctx.beginPath(); ctx.arc(mCX,winTop+H*0.012,W*0.016,0,Math.PI*2); ctx.stroke();
+  ctx.strokeStyle='rgba(20,8,0,0.45)'; ctx.lineWidth=W*0.005;
+  for(let s=0;s<8;s++){
+    const sa=s*Math.PI/4+t*0.55;
+    ctx.beginPath(); ctx.moveTo(mCX,winTop+H*0.012); ctx.lineTo(mCX+Math.cos(sa)*W*0.013,winTop+H*0.012+Math.sin(sa)*W*0.013); ctx.stroke();
   }
-  ctx.fillStyle='#1e0c04'; ctx.beginPath(); ctx.arc(winchX,winchTop+H*0.010,W*0.004,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#1a0a04'; ctx.beginPath(); ctx.arc(mCX,winTop+H*0.012,W*0.004,0,Math.PI*2); ctx.fill();
+  // Animated hoist rope/cable with gentle sway
+  const ropeSway=Math.sin(t*0.6)*W*0.004;
+  ctx.strokeStyle='rgba(35,15,3,0.75)'; ctx.lineWidth=1.6; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(mCX+ropeSway,winTop+H*0.028);
+  ctx.bezierCurveTo(mCX+ropeSway*1.5,H*0.130, mCX+W*0.014+ropeSway,H*0.155, mCX+W*0.015,H*0.168);
+  ctx.stroke();
 
-  // Rope/cable from pulley down into mine (animated droop)
-  const cableDroop=H*0.005+Math.sin(t*0.8)*H*0.002;
-  ctx.strokeStyle='rgba(40,20,5,0.70)'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.moveTo(winchX,winchTop+H*0.026);
-  ctx.quadraticCurveTo(winchX+W*0.010,H*0.142+cableDroop,winchX+W*0.012,H*0.165); ctx.stroke();
+  // ── ORE CART on right track, laden with gold ──
+  const cartCX=W*0.600, cartY=H*0.195;
+  const cartW=W*0.070, cartH=H*0.028;
+  const cWheelY=H*0.218, cWR=H*0.011;
 
-  // ── DUSTY MINE ROAD — pale rutted dirt track from mine toward right ──
-  const roadGrad=ctx.createLinearGradient(mineR,H*0.23,W,H*0.23);
-  roadGrad.addColorStop(0,'rgba(200,155,80,0.60)'); roadGrad.addColorStop(1,'rgba(180,135,60,0)');
-  ctx.fillStyle=roadGrad;
+  // Cart shadow on ground
+  ctx.fillStyle='rgba(30,12,0,0.22)';
+  ctx.beginPath(); ctx.ellipse(cartCX,cWheelY+H*0.004,cartW*0.52,H*0.006,0,0,Math.PI*2); ctx.fill();
+
+  // Cart body (tapered — wider at top)
+  const cartBodyG=ctx.createLinearGradient(cartCX-cartW/2,0,cartCX+cartW/2,0);
+  cartBodyG.addColorStop(0,'#1e0c04'); cartBodyG.addColorStop(0.15,'#2e1408'); cartBodyG.addColorStop(0.85,'#261006'); cartBodyG.addColorStop(1,'#180a02');
+  ctx.fillStyle=cartBodyG;
   ctx.beginPath();
-  ctx.moveTo(mineR,H*0.23);
-  ctx.lineTo(mineR+W*0.005,H*0.215);
-  ctx.lineTo(W*0.90,H*0.205);
-  ctx.lineTo(W,H*0.215);
-  ctx.lineTo(W,H*0.23);
+  ctx.moveTo(cartCX-cartW*0.52, cartY+cartH); // bottom-left
+  ctx.lineTo(cartCX-cartW*0.50, cartY);        // top-left
+  ctx.lineTo(cartCX+cartW*0.50, cartY);        // top-right
+  ctx.lineTo(cartCX+cartW*0.52, cartY+cartH);  // bottom-right
   ctx.closePath(); ctx.fill();
+  // Top rim
+  ctx.strokeStyle='#4a2808'; ctx.lineWidth=2.8;
+  ctx.beginPath(); ctx.moveTo(cartCX-cartW*0.52,cartY); ctx.lineTo(cartCX+cartW*0.52,cartY); ctx.stroke();
+  // Plank lines
+  ctx.strokeStyle='rgba(12,4,0,0.35)'; ctx.lineWidth=0.9;
+  [cartY+cartH*0.32, cartY+cartH*0.64].forEach(gy=>{
+    ctx.beginPath(); ctx.moveTo(cartCX-cartW*0.50,gy); ctx.lineTo(cartCX+cartW*0.50,gy); ctx.stroke();
+  });
+  // Sunlit right face
+  ctx.fillStyle='rgba(80,40,8,0.50)';
+  ctx.beginPath();
+  ctx.moveTo(cartCX+cartW*0.50,cartY); ctx.lineTo(cartCX+cartW*0.52,cartY+cartH);
+  ctx.lineTo(cartCX+cartW*0.44,cartY+cartH); ctx.lineTo(cartCX+cartW*0.42,cartY); ctx.closePath(); ctx.fill();
 
-  // ── SPOIL HEAP — pile of excavated rock/earth outside mine mouth (left side) ──
-  ctx.fillStyle='#8a5420';
-  ctx.beginPath(); ctx.ellipse(mineL-W*0.025,H*0.220,W*0.040,H*0.016,0,Math.PI,0); ctx.fill();
-  ctx.fillStyle='#a86828';
-  ctx.beginPath(); ctx.ellipse(mineL-W*0.022,H*0.218,W*0.028,H*0.010,0,Math.PI,0); ctx.fill();
-  ctx.fillStyle='rgba(200,160,80,0.50)';
-  ctx.beginPath(); ctx.ellipse(mineL-W*0.022,H*0.218,W*0.026,H*0.004,0,Math.PI,0); ctx.fill();
-
-  // Gold ore nuggets in spoil heap
-  ctx.fillStyle='#b87c18'; ctx.beginPath(); ctx.ellipse(mineL-W*0.044,H*0.214,W*0.006,H*0.004,0.3,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#d09a28'; ctx.beginPath(); ctx.ellipse(mineL-W*0.028,H*0.212,W*0.004,H*0.003,-0.2,0,Math.PI*2); ctx.fill();
-
-  // ── VULTURES — circling lazily above the mine ──
-  [[W*0.28,H*0.038,0,1],[W*0.55,H*0.022,2.1,-1],[W*0.38,H*0.055,4.0,1]].forEach(([vbx,vby,vph,dir])=>{
-    const vt=(t*0.38+vph)%(Math.PI*2);
-    const vx=vbx+Math.cos(vt*dir)*W*0.028, vy=vby+Math.sin(vt*0.5)*H*0.006;
-    const wing=W*0.014, droop=H*0.004+Math.sin(t*1.6+vph)*H*0.003;
-    ctx.fillStyle='#140a02';
-    ctx.beginPath(); ctx.moveTo(vx,vy); ctx.lineTo(vx-wing,vy+droop); ctx.lineTo(vx-wing*0.4,vy+H*0.002); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(vx,vy); ctx.lineTo(vx+wing,vy+droop); ctx.lineTo(vx+wing*0.4,vy+H*0.002); ctx.closePath(); ctx.fill();
-    ctx.fillStyle='#2a1206'; ctx.beginPath(); ctx.arc(vx,vy-H*0.003,W*0.003,0,Math.PI*2); ctx.fill();
+  // Gold ore heap — layered for depth and sparkle
+  ctx.fillStyle='#8a5a0a';
+  ctx.beginPath(); ctx.ellipse(cartCX,cartY,cartW*0.46,H*0.016,0,Math.PI,0); ctx.fill();
+  ctx.fillStyle='#b07818';
+  ctx.beginPath(); ctx.ellipse(cartCX-cartW*0.06,cartY-H*0.006,cartW*0.35,H*0.013,-0.08,Math.PI,0); ctx.fill();
+  ctx.fillStyle='#cc9820';
+  ctx.beginPath(); ctx.ellipse(cartCX+cartW*0.08,cartY-H*0.010,cartW*0.25,H*0.010,0.10,Math.PI,0); ctx.fill();
+  ctx.fillStyle='#e0b830';
+  ctx.beginPath(); ctx.ellipse(cartCX-cartW*0.04,cartY-H*0.014,cartW*0.16,H*0.008,-0.05,Math.PI,0); ctx.fill();
+  // Animated gold glints
+  const glints=[[cartCX-cartW*0.18,cartY-H*0.010,1.8],[cartCX+cartW*0.10,cartY-H*0.016,2.5],[cartCX-cartW*0.02,cartY-H*0.018,3.2]];
+  glints.forEach(([gx,gy,ph])=>{
+    const ga=0.60+0.38*Math.sin(t*2.8+ph);
+    ctx.fillStyle=`rgba(255,245,180,${ga.toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(gx,gy,W*0.004,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=`rgba(255,235,120,${(ga*0.5).toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(gx,gy,W*0.007,0,Math.PI*2); ctx.fill();
   });
 
-  // Dust particles rising from mine mouth
-  for(let di=0;di<5;di++){
-    const dphase=(t*0.35+di*0.22)%1;
-    const dx=mineL+W*0.08+dphase*W*0.04;
-    const dy=mineTop+H*0.020-dphase*H*0.028;
-    const dr=H*(0.003+dphase*0.008);
-    const da=0.35*(1-dphase*dphase);
-    ctx.fillStyle=`rgba(185,135,65,${da.toFixed(2)})`;
+  // Cart wheels with spokes
+  [cartCX-cartW*0.30, cartCX+cartW*0.30].forEach(wx=>{
+    ctx.fillStyle='#180a02';
+    ctx.beginPath(); ctx.arc(wx,cWheelY,cWR,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(65,35,8,0.72)'; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.arc(wx,cWheelY,cWR,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='rgba(40,20,4,0.55)'; ctx.lineWidth=0.9;
+    for(let s=0;s<8;s++){
+      const sa=s*Math.PI/4;
+      ctx.beginPath(); ctx.moveTo(wx+Math.cos(sa)*cWR*0.18,cWheelY+Math.sin(sa)*cWR*0.18); ctx.lineTo(wx+Math.cos(sa)*cWR*0.88,cWheelY+Math.sin(sa)*cWR*0.88); ctx.stroke();
+    }
+    ctx.fillStyle='#2e1006'; ctx.beginPath(); ctx.arc(wx,cWheelY,cWR*0.18,0,Math.PI*2); ctx.fill();
+  });
+  // Cart axle rod
+  ctx.strokeStyle='#2a1006'; ctx.lineWidth=1.8;
+  ctx.beginPath(); ctx.moveTo(cartCX-cartW*0.30,cWheelY); ctx.lineTo(cartCX+cartW*0.30,cWheelY); ctx.stroke();
+
+  // ── SPOIL HEAP — left of entrance ──
+  ctx.fillStyle='#7a4a18';
+  ctx.beginPath(); ctx.ellipse(mL-W*0.028,H*0.222,W*0.042,H*0.016,0.1,Math.PI,0); ctx.fill();
+  ctx.fillStyle='#9a6228';
+  ctx.beginPath(); ctx.ellipse(mL-W*0.026,H*0.220,W*0.030,H*0.010,0,Math.PI,0); ctx.fill();
+  ctx.fillStyle='rgba(210,170,80,0.48)';
+  ctx.beginPath(); ctx.ellipse(mL-W*0.026,H*0.218,W*0.028,H*0.004,0,Math.PI,0); ctx.fill();
+  // Ore nuggets in spoil
+  [[mL-W*0.046,H*0.215,'#c07814'],[mL-W*0.030,H*0.212,'#d89a22'],[mL-W*0.014,H*0.216,'#b06810']].forEach(([nx,ny,nc])=>{
+    ctx.fillStyle=nc; ctx.beginPath(); ctx.ellipse(nx,ny,W*0.005,H*0.003,Math.random()*0.5,0,Math.PI*2); ctx.fill();
+  });
+
+  // ── DUST MOTES rising from mine entrance ──
+  for(let di=0;di<6;di++){
+    const dph=(t*0.40+di*0.18)%1;
+    const dx=mL+W*0.04+dph*W*0.14+Math.sin(t+di)*W*0.012;
+    const dy=H*0.190-dph*H*0.045;
+    const dr=H*(0.003+dph*0.009);
+    const da=0.30*(1-dph*dph);
+    ctx.fillStyle=`rgba(200,145,65,${da.toFixed(2)})`;
     ctx.beginPath(); ctx.arc(dx,dy,dr,0,Math.PI*2); ctx.fill();
   }
 
+  // ── VULTURES circling ──
+  [[W*0.22,H*0.035,0,1],[W*0.48,H*0.020,2.2,-1],[W*0.34,H*0.052,4.1,1]].forEach(([vbx,vby,vph,dir])=>{
+    const vt=(t*0.38+vph)%(Math.PI*2);
+    const vx=vbx+Math.cos(vt*dir)*W*0.030, vy=vby+Math.sin(vt*0.5)*H*0.007;
+    const wng=W*0.014, drp=H*0.004+Math.sin(t*1.5+vph)*H*0.003;
+    ctx.fillStyle='#100803';
+    ctx.beginPath(); ctx.moveTo(vx,vy); ctx.lineTo(vx-wng,vy+drp); ctx.lineTo(vx-wng*0.35,vy+H*0.002); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(vx,vy); ctx.lineTo(vx+wng,vy+drp); ctx.lineTo(vx+wng*0.35,vy+H*0.002); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#281205'; ctx.beginPath(); ctx.arc(vx,vy-H*0.003,W*0.003,0,Math.PI*2); ctx.fill();
+  });
+
   ctx.restore(); // end backdrop clip
 
-  drawGroundRings('#a06828','#885418','rgba(160,104,40,0.90)');
+  drawGroundRings('#9a5e1e','#7a4412','rgba(154,94,30,0.90)');
   drawSceneScoreboard();
 
-  // ── OUTER GROUND — rocky mine-site earth outside the oval ──
+  // ── OUTER GROUND — rocky mine-site dirt ──
   {
     ctx.save();
     ctx.beginPath();
@@ -23135,155 +23167,163 @@ function drawCanyonScene() {
     ctx.ellipse(CX,CY,RX,RY,0,0,Math.PI*2);
     ctx.clip('evenodd');
 
-    // Rocky mine-earth base
-    const groundG=ctx.createLinearGradient(0,H*0.23,0,H);
-    groundG.addColorStop(0,'#9a6020'); groundG.addColorStop(0.35,'#8a5018'); groundG.addColorStop(1,'#7a4812');
-    ctx.fillStyle=groundG; ctx.fillRect(0,H*0.23,W,H);
+    // Rocky earth base with subtle gradient
+    const gnd=ctx.createLinearGradient(0,H*0.23,0,H);
+    gnd.addColorStop(0,'#9a6020'); gnd.addColorStop(0.30,'#8a5018'); gnd.addColorStop(1,'#784210');
+    ctx.fillStyle=gnd; ctx.fillRect(0,H*0.23,W,H);
 
-    // Gravel texture patches
-    ctx.fillStyle='rgba(140,95,35,0.55)';
-    [[W*0.03,H*0.26,W*0.05,H*0.015],[W*0.90,H*0.28,W*0.06,H*0.012],[W*0.06,H*0.78,W*0.04,H*0.014],[W*0.92,H*0.80,W*0.05,H*0.013]].forEach(([gx,gy,gw,gh])=>{
+    // Cart track ruts continuing into outer ground from mine — faint parallel grooves
+    ctx.strokeStyle='rgba(50,25,6,0.20)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(mCX-rSpacing/2-W*0.002,H*0.23); ctx.lineTo(W*0.04,H*0.310); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mCX+rSpacing/2+W*0.002,H*0.23); ctx.lineTo(W*0.96,H*0.312); ctx.stroke();
+
+    // Gravel patches — scattered across ground
+    [[W*0.040,H*0.272,W*0.040,H*0.012],[W*0.920,H*0.265,W*0.045,H*0.013],[W*0.060,H*0.815,W*0.038,H*0.012],[W*0.938,H*0.820,W*0.038,H*0.011]].forEach(([gx,gy,gw,gh])=>{
+      ctx.fillStyle='rgba(135,90,30,0.40)';
       ctx.beginPath(); ctx.ellipse(gx,gy,gw,gh,0,0,Math.PI*2); ctx.fill();
     });
 
-    // LEFT SIDE PROPS
-    // Prop 1: Timber barrel cluster — top left, y~H*0.290, x~W*0.065
-    {
-      const bx=W*0.065, by=H*0.292;
-      function drawBarrel(cx,cy,bh,bw){
-        ctx.fillStyle='#4a2808';
-        ctx.beginPath(); ctx.roundRect(cx-bw/2,cy-bh,bw,bh,bw*0.22); ctx.fill();
-        ctx.fillStyle='#3a2008';
-        ctx.strokeStyle='#1a0a04'; ctx.lineWidth=1.8;
-        [0.25,0.52,0.78].forEach(f=>{
-          ctx.beginPath(); ctx.moveTo(cx-bw/2,cy-bh+bh*f); ctx.lineTo(cx+bw/2,cy-bh+bh*f); ctx.stroke();
-        });
-        // Metal band highlight
-        ctx.strokeStyle='rgba(100,65,20,0.60)'; ctx.lineWidth=2.5;
-        [0.20,0.80].forEach(f=>{
-          ctx.beginPath(); ctx.moveTo(cx-bw/2,cy-bh+bh*f); ctx.lineTo(cx+bw/2,cy-bh+bh*f); ctx.stroke();
-        });
-        // barrel lid highlight
-        ctx.fillStyle='rgba(90,50,14,0.55)';
-        ctx.beginPath(); ctx.ellipse(cx,cy-bh,bw*0.45,bh*0.06,0,0,Math.PI*2); ctx.fill();
-      }
-      drawBarrel(bx,by,H*0.048,W*0.032);
-      drawBarrel(bx+W*0.034,by,H*0.048,W*0.032);
-      drawBarrel(bx+W*0.017,by-H*0.044,H*0.048,W*0.032);
-    }
-
-    // Prop 2: Pickaxe leaning against left side — y~H*0.355, x~W*0.055
-    {
-      const px=W*0.052, py=H*0.372;
-      const hAngle=-0.25; // lean angle
-      // handle
-      ctx.strokeStyle='#5a3010'; ctx.lineWidth=W*0.009; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(px+Math.sin(hAngle)*H*0.080,py-H*0.080); ctx.lineTo(px,py); ctx.stroke();
-      // pick head
-      ctx.save(); ctx.translate(px+Math.sin(hAngle)*H*0.080,py-H*0.080); ctx.rotate(hAngle-0.3);
-      ctx.fillStyle='#5a5a5a';
-      ctx.beginPath(); ctx.moveTo(-W*0.018,0); ctx.lineTo(-W*0.006,-H*0.006); ctx.lineTo(W*0.018,0); ctx.lineTo(W*0.016,H*0.004); ctx.lineTo(-W*0.006,H*0.008); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='rgba(140,140,140,0.55)';
-      ctx.beginPath(); ctx.moveTo(-W*0.018,0); ctx.lineTo(-W*0.006,-H*0.006); ctx.lineTo(W*0.004,-H*0.006); ctx.lineTo(-W*0.006,0); ctx.closePath(); ctx.fill();
-      ctx.restore();
-    }
-
-    // Prop 3: Timber support beam offcut leaning — y~H*0.310
-    {
-      const lx=W*0.045, ly=H*0.312;
-      ctx.strokeStyle='#4a2a0a'; ctx.lineWidth=W*0.014; ctx.lineCap='square';
-      ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx+W*0.032,ly-H*0.052); ctx.stroke();
-      ctx.strokeStyle='#3a2008'; ctx.lineWidth=W*0.008;
-      ctx.beginPath(); ctx.moveTo(lx+W*0.003,ly); ctx.lineTo(lx+W*0.030,ly-H*0.045); ctx.stroke();
-    }
-
-    // Prop 4: Lantern on post — left, y~H*0.296, x~W*0.080
-    {
-      const lnx=W*0.082, lny=H*0.314;
-      // post
-      ctx.fillStyle='#3a1e06'; ctx.fillRect(lnx-W*0.005,lny-H*0.085,W*0.010,H*0.085);
-      // lantern body
-      const lh=H*0.022, lw=W*0.016;
-      ctx.fillStyle='#2a1404';
-      ctx.beginPath(); ctx.roundRect(lnx-lw/2,lny-H*0.085-lh,lw,lh,2); ctx.fill();
-      // lantern glass glow
-      const lanternAlpha=0.70+0.25*Math.sin(t*2.0);
-      ctx.fillStyle=`rgba(255,190,50,${lanternAlpha.toFixed(2)})`;
-      ctx.beginPath(); ctx.roundRect(lnx-lw*0.35,lny-H*0.085-lh+H*0.003,lw*0.70,lh-H*0.006,1); ctx.fill();
-      // lantern roof cap
-      ctx.fillStyle='#1e0e04';
-      ctx.beginPath(); ctx.moveTo(lnx-lw/2-W*0.002,lny-H*0.085-lh); ctx.lineTo(lnx,lny-H*0.085-lh-H*0.010); ctx.lineTo(lnx+lw/2+W*0.002,lny-H*0.085-lh); ctx.closePath(); ctx.fill();
-      // glow halo on ground
-      ctx.fillStyle=`rgba(255,175,40,${(lanternAlpha*0.18).toFixed(2)})`;
-      ctx.beginPath(); ctx.ellipse(lnx,lny,W*0.025,H*0.008,0,0,Math.PI*2); ctx.fill();
-    }
-
-    // RIGHT SIDE PROPS
-    // Prop 5: Barrel and crate cluster — top right, y~H*0.290, x~W*0.935
-    {
-      const bx=W*0.928, by=H*0.292;
-      // wooden crate
-      ctx.fillStyle='#5a3010';
-      ctx.beginPath(); ctx.roundRect(bx-W*0.028,by-H*0.038,W*0.055,H*0.038,2); ctx.fill();
-      ctx.strokeStyle='#2a1006'; ctx.lineWidth=1.5;
-      ctx.strokeRect(bx-W*0.028,by-H*0.038,W*0.055,H*0.038);
-      ctx.beginPath(); ctx.moveTo(bx,by-H*0.038); ctx.lineTo(bx,by); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(bx-W*0.028,by-H*0.019); ctx.lineTo(bx+W*0.027,by-H*0.019); ctx.stroke();
-      // diagonal brace marks on crate
-      ctx.strokeStyle='rgba(30,12,3,0.40)'; ctx.lineWidth=1.2;
-      ctx.beginPath(); ctx.moveTo(bx-W*0.026,by-H*0.036); ctx.lineTo(bx+W*0.025,by-H*0.002); ctx.stroke();
-      // barrel beside crate
-      ctx.fillStyle='#4a2808';
-      ctx.beginPath(); ctx.roundRect(bx+W*0.034,by-H*0.042,W*0.030,H*0.042,W*0.008); ctx.fill();
-      ctx.strokeStyle='rgba(100,65,20,0.65)'; ctx.lineWidth=2.5;
-      [0.22,0.78].forEach(f=>{
-        ctx.beginPath(); ctx.moveTo(bx+W*0.034,by-H*0.042+H*0.042*f); ctx.lineTo(bx+W*0.064,by-H*0.042+H*0.042*f); ctx.stroke();
+    // Helper: rounded sandstone boulder cluster
+    function boulders(bx,by,sz){
+      [[0,0,sz*1.05,sz*0.65],[sz*1.22,-sz*0.10,sz*0.80,sz*0.52],[-sz*0.85,-sz*0.05,sz*0.60,sz*0.42],[sz*0.40,sz*0.25,sz*0.46,sz*0.32]].forEach(([dx,dy,rw,rh],bi)=>{
+        const bG=ctx.createRadialGradient(bx+dx-rw*0.22,by+dy-rh*0.30,0,bx+dx,by+dy,rw);
+        bG.addColorStop(0,['#d0aa5a','#c4a050','#bc9848','#b08c40'][bi]);
+        bG.addColorStop(0.65,'#906a28'); bG.addColorStop(1,'#6a4812');
+        ctx.fillStyle=bG;
+        ctx.beginPath(); ctx.ellipse(bx+dx,by+dy,rw,rh,bi*0.28,0,Math.PI*2); ctx.fill();
       });
+      // crack
+      ctx.strokeStyle='rgba(60,30,4,0.22)'; ctx.lineWidth=0.8;
+      ctx.beginPath(); ctx.moveTo(bx-sz*0.18,by-sz*0.15); ctx.bezierCurveTo(bx+sz*0.10,by-sz*0.05,bx+sz*0.25,by+sz*0.04,bx+sz*0.38,by+sz*0.10); ctx.stroke();
     }
 
-    // Prop 6: Pickaxe + shovel leaning right — y~H*0.352, x~W*0.940
+    // Helper: timber barrel
+    function barrel(cx,cy,bh,bw){
+      const bG=ctx.createLinearGradient(cx-bw/2,0,cx+bw/2,0);
+      bG.addColorStop(0,'#2a1206'); bG.addColorStop(0.28,'#4a2410'); bG.addColorStop(0.72,'#3a1c08'); bG.addColorStop(1,'#1e0c04');
+      ctx.fillStyle=bG;
+      ctx.beginPath(); ctx.roundRect(cx-bw/2,cy-bh,bw,bh,bw*0.22); ctx.fill();
+      ctx.strokeStyle='rgba(180,110,35,0.55)'; ctx.lineWidth=2.2;
+      [0.22,0.78].forEach(f=>{
+        ctx.beginPath(); ctx.moveTo(cx-bw/2+1,cy-bh+bh*f); ctx.lineTo(cx+bw/2-1,cy-bh+bh*f); ctx.stroke();
+      });
+      ctx.strokeStyle='rgba(10,3,0,0.30)'; ctx.lineWidth=0.8;
+      [0.35,0.55].forEach(f=>{
+        ctx.beginPath(); ctx.moveTo(cx-bw/2+2,cy-bh+bh*f); ctx.lineTo(cx+bw/2-2,cy-bh+bh*f); ctx.stroke();
+      });
+      ctx.fillStyle='rgba(80,45,10,0.45)';
+      ctx.beginPath(); ctx.ellipse(cx,cy-bh,bw*0.44,bh*0.07,0,0,Math.PI*2); ctx.fill();
+    }
+
+    // Helper: lantern on post
+    function lanternPost(lx,ly){
+      ctx.fillStyle='#2e1606'; ctx.fillRect(lx-W*0.004,ly-H*0.088,W*0.008,H*0.088);
+      const lh=H*0.024, lw=W*0.017;
+      // base
+      ctx.fillStyle='#1e0e04'; ctx.beginPath(); ctx.roundRect(lx-lw/2,ly-H*0.088-lh,lw,lh,2); ctx.fill();
+      // glass panes glow
+      const la=0.72+0.22*Math.sin(t*2.0+lx);
+      ctx.fillStyle=`rgba(255,195,55,${la.toFixed(2)})`;
+      ctx.beginPath(); ctx.roundRect(lx-lw*0.36,ly-H*0.088-lh+H*0.003,lw*0.72,lh-H*0.006,1); ctx.fill();
+      // pane divider
+      ctx.strokeStyle='rgba(10,4,0,0.40)'; ctx.lineWidth=0.8;
+      ctx.beginPath(); ctx.moveTo(lx,ly-H*0.088-lh+H*0.002); ctx.lineTo(lx,ly-H*0.088-H*0.002); ctx.stroke();
+      // roof cap
+      ctx.fillStyle='#180a02';
+      ctx.beginPath(); ctx.moveTo(lx-lw/2-W*0.002,ly-H*0.088-lh); ctx.lineTo(lx,ly-H*0.088-lh-H*0.012); ctx.lineTo(lx+lw/2+W*0.002,ly-H*0.088-lh); ctx.closePath(); ctx.fill();
+      // ground glow
+      const lgA=(la*0.16).toFixed(2);
+      ctx.fillStyle=`rgba(255,175,40,${lgA})`;
+      ctx.beginPath(); ctx.ellipse(lx,ly,W*0.026,H*0.008,0,0,Math.PI*2); ctx.fill();
+    }
+
+    // LEFT SIDE props
+    // Barrel cluster — y~H*0.290, x~W*0.062 (oval edge at y=0.29 is ~W*0.26 → well clear)
+    barrel(W*0.055,H*0.295,H*0.050,W*0.034);
+    barrel(W*0.090,H*0.295,H*0.050,W*0.034);
+    barrel(W*0.072,H*0.248,H*0.050,W*0.034); // stacked on top
+    // Small crate between barrels and wall
+    ctx.fillStyle='#4a2a0c';
+    ctx.beginPath(); ctx.roundRect(W*0.028,H*0.265,W*0.020,H*0.022,1); ctx.fill();
+    ctx.strokeStyle='#1e0c04'; ctx.lineWidth=1.2; ctx.strokeRect(W*0.028,H*0.265,W*0.020,H*0.022);
+    ctx.strokeStyle='rgba(25,10,0,0.35)'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.moveTo(W*0.028,H*0.276); ctx.lineTo(W*0.048,H*0.276); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W*0.038,H*0.265); ctx.lineTo(W*0.038,H*0.287); ctx.stroke();
+
+    // Lantern post left — x~W*0.080, y~H*0.310
+    lanternPost(W*0.082,H*0.316);
+
+    // Pickaxe — leaning against rock, y~H*0.360
     {
-      const tx=W*0.944;
-      // shovel
-      ctx.strokeStyle='#4a2608'; ctx.lineWidth=W*0.008; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(tx,H*0.365); ctx.lineTo(tx-W*0.015,H*0.295); ctx.stroke();
-      ctx.fillStyle='#5a5a5a';
-      ctx.beginPath(); ctx.ellipse(tx-W*0.018,H*0.285,W*0.010,H*0.010,-0.3,0,Math.PI*2); ctx.fill();
-      // pickaxe handle
-      ctx.strokeStyle='#5a3010'; ctx.lineWidth=W*0.009;
-      ctx.beginPath(); ctx.moveTo(tx+W*0.022,H*0.360); ctx.lineTo(tx+W*0.008,H*0.286); ctx.stroke();
-      // pick head
-      ctx.save(); ctx.translate(tx+W*0.008,H*0.286); ctx.rotate(0.3);
-      ctx.fillStyle='#5a5a5a';
-      ctx.beginPath(); ctx.moveTo(-W*0.016,0); ctx.lineTo(-W*0.005,-H*0.006); ctx.lineTo(W*0.016,0); ctx.lineTo(W*0.014,H*0.004); ctx.lineTo(-W*0.004,H*0.007); ctx.closePath(); ctx.fill();
+      const px=W*0.048, py=H*0.374, ang=-0.22;
+      ctx.strokeStyle='#5c3212'; ctx.lineWidth=W*0.009; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(px+Math.sin(ang)*H*0.085,py-H*0.085); ctx.lineTo(px,py); ctx.stroke();
+      ctx.save(); ctx.translate(px+Math.sin(ang)*H*0.085,py-H*0.085); ctx.rotate(ang-0.28);
+      const pkG=ctx.createLinearGradient(-W*0.018,0,W*0.018,0);
+      pkG.addColorStop(0,'#686868'); pkG.addColorStop(0.4,'#909090'); pkG.addColorStop(1,'#545454');
+      ctx.fillStyle=pkG;
+      ctx.beginPath(); ctx.moveTo(-W*0.020,0); ctx.bezierCurveTo(-W*0.012,-H*0.008,-W*0.004,-H*0.008,W*0.020,0); ctx.bezierCurveTo(W*0.018,H*0.006,W*0.014,H*0.008,-W*0.004,H*0.010); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='rgba(160,160,160,0.45)'; ctx.beginPath(); ctx.moveTo(-W*0.018,0); ctx.bezierCurveTo(-W*0.010,-H*0.007,W*0.002,-H*0.007,W*0.010,-H*0.003); ctx.lineTo(-W*0.004,0); ctx.closePath(); ctx.fill();
       ctx.restore();
     }
 
-    // Prop 7: Lantern post right side mirror — y~H*0.296, x~W*0.918
+    // Shovel leaning — x~W*0.030, y~H*0.345
     {
-      const lnx=W*0.918, lny=H*0.314;
-      ctx.fillStyle='#3a1e06'; ctx.fillRect(lnx-W*0.005,lny-H*0.085,W*0.010,H*0.085);
-      const lh=H*0.022, lw=W*0.016;
-      ctx.fillStyle='#2a1404';
-      ctx.beginPath(); ctx.roundRect(lnx-lw/2,lny-H*0.085-lh,lw,lh,2); ctx.fill();
-      const lanternAlpha2=0.68+0.28*Math.sin(t*1.8+1.2);
-      ctx.fillStyle=`rgba(255,190,50,${lanternAlpha2.toFixed(2)})`;
-      ctx.beginPath(); ctx.roundRect(lnx-lw*0.35,lny-H*0.085-lh+H*0.003,lw*0.70,lh-H*0.006,1); ctx.fill();
-      ctx.fillStyle='#1e0e04';
-      ctx.beginPath(); ctx.moveTo(lnx-lw/2-W*0.002,lny-H*0.085-lh); ctx.lineTo(lnx,lny-H*0.085-lh-H*0.010); ctx.lineTo(lnx+lw/2+W*0.002,lny-H*0.085-lh); ctx.closePath(); ctx.fill();
-      ctx.fillStyle=`rgba(255,175,40,${(lanternAlpha2*0.18).toFixed(2)})`;
-      ctx.beginPath(); ctx.ellipse(lnx,lny,W*0.025,H*0.008,0,0,Math.PI*2); ctx.fill();
+      const sx=W*0.030, sy=H*0.348;
+      ctx.strokeStyle='#5a3010'; ctx.lineWidth=W*0.008; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx-W*0.010,sy-H*0.080); ctx.stroke();
+      const shG=ctx.createRadialGradient(sx-W*0.016,sy-H*0.088,0,sx-W*0.016,sy-H*0.088,W*0.014);
+      shG.addColorStop(0,'#909090'); shG.addColorStop(1,'#484848');
+      ctx.fillStyle=shG;
+      ctx.beginPath(); ctx.ellipse(sx-W*0.012,sy-H*0.088,W*0.012,H*0.012,-0.25,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(50,50,50,0.35)'; ctx.beginPath(); ctx.ellipse(sx-W*0.016,sy-H*0.092,W*0.006,H*0.006,0.2,0,Math.PI*2); ctx.fill();
     }
 
-    // Scattered rocks — bottom edges outside oval
-    [[W*0.045,H*0.840,W*0.022,H*0.012,0.2],[W*0.028,H*0.862,W*0.015,H*0.009,-0.3],[W*0.958,H*0.838,W*0.020,H*0.011,0.15],[W*0.975,H*0.858,W*0.013,H*0.008,0.4],[W*0.060,H*0.820,W*0.010,H*0.007,0.1]].forEach(([rx,ry,rw,rh,ra])=>{
-      ctx.save(); ctx.translate(rx,ry); ctx.rotate(ra);
-      ctx.fillStyle='#6a4018';
-      ctx.beginPath(); ctx.ellipse(0,0,rw,rh,0,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(140,90,35,0.50)';
-      ctx.beginPath(); ctx.ellipse(-rw*0.15,-rh*0.20,rw*0.55,rh*0.45,0,0,Math.PI*2); ctx.fill();
+    // Boulders bottom-left (outside oval)
+    boulders(W*0.042,H*0.850,W*0.028);
+    boulders(W*0.025,H*0.875,W*0.018);
+
+    // RIGHT SIDE props
+    // Barrel + wooden crate cluster — x~W*0.935, y~H*0.290
+    barrel(W*0.940,H*0.295,H*0.050,W*0.034);
+    barrel(W*0.975,H*0.295,H*0.050,W*0.034);
+    // Dynamite crate (DYNAMITE label)
+    ctx.fillStyle='#3c2008';
+    ctx.beginPath(); ctx.roundRect(W*0.908,H*0.262,W*0.030,H*0.025,1); ctx.fill();
+    ctx.strokeStyle='#1a0c04'; ctx.lineWidth=1.2; ctx.strokeRect(W*0.908,H*0.262,W*0.030,H*0.025);
+    ctx.strokeStyle='rgba(20,8,0,0.32)'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.moveTo(W*0.908,H*0.274); ctx.lineTo(W*0.938,H*0.274); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W*0.923,H*0.262); ctx.lineTo(W*0.923,H*0.287); ctx.stroke();
+    ctx.fillStyle='rgba(220,40,20,0.85)'; ctx.font=`bold ${H*0.008}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('DYNAMITE',W*0.923,H*0.269);
+    ctx.fillText('⚡',W*0.923,H*0.280);
+    ctx.textAlign='left';
+
+    // Lantern post right — x~W*0.918
+    lanternPost(W*0.918,H*0.316);
+
+    // Pickaxe + shovel right — mirrored
+    {
+      const px=W*0.952, py=H*0.370, ang=0.22;
+      ctx.strokeStyle='#5c3212'; ctx.lineWidth=W*0.009; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(px+Math.sin(ang)*H*0.080,py-H*0.080); ctx.lineTo(px,py); ctx.stroke();
+      ctx.save(); ctx.translate(px+Math.sin(ang)*H*0.080,py-H*0.080); ctx.rotate(ang+0.28);
+      const pkG=ctx.createLinearGradient(-W*0.018,0,W*0.018,0);
+      pkG.addColorStop(0,'#686868'); pkG.addColorStop(0.4,'#909090'); pkG.addColorStop(1,'#545454');
+      ctx.fillStyle=pkG;
+      ctx.beginPath(); ctx.moveTo(W*0.020,0); ctx.bezierCurveTo(W*0.012,-H*0.008,W*0.004,-H*0.008,-W*0.020,0); ctx.bezierCurveTo(-W*0.018,H*0.006,-W*0.014,H*0.008,W*0.004,H*0.010); ctx.closePath(); ctx.fill();
       ctx.restore();
-    });
+      // shovel right
+      const sx=W*0.972, sy=H*0.348;
+      ctx.strokeStyle='#5a3010'; ctx.lineWidth=W*0.008;
+      ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx+W*0.010,sy-H*0.078); ctx.stroke();
+      ctx.fillStyle='#787878';
+      ctx.beginPath(); ctx.ellipse(sx+W*0.014,sy-H*0.086,W*0.012,H*0.012,0.25,0,Math.PI*2); ctx.fill();
+    }
+
+    // Boulders bottom-right
+    boulders(W*0.955,H*0.848,W*0.026);
+    boulders(W*0.978,H*0.874,W*0.016);
 
     ctx.restore();
   }
