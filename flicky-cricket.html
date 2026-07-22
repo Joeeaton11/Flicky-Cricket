@@ -22740,272 +22740,292 @@ function drawCanyonScene() {
   const t=performance.now()/1000;
   const CX=W/2, CY=H*FIELD_CY, RX=W*FIELD_RX, RY=H*FIELD_RY;
 
-  // Helper: x extent of oval at a given y
-  function ovalX(y){ const dy=y-CY; return RX*Math.sqrt(Math.max(0,1-(dy/RY)**2)); }
-
   // ── BACKDROP ──────────────────────────────────────────────────────
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Sky in the canyon gap — deep rich blue
+  // Sky
   const sky=ctx.createLinearGradient(0,0,0,H*0.23);
-  sky.addColorStop(0,'#08185c');
-  sky.addColorStop(0.4,'#1a3a9c');
-  sky.addColorStop(0.78,'#3060b8');
-  sky.addColorStop(1,'#6080c0');
+  sky.addColorStop(0,'#07165a'); sky.addColorStop(0.4,'#183898');
+  sky.addColorStop(0.78,'#2e58b0'); sky.addColorStop(1,'#5878b8');
   ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.23);
 
-  // Horizon haze
-  const hazeH=ctx.createLinearGradient(0,H*0.18,0,H*0.23);
-  hazeH.addColorStop(0,'rgba(195,145,85,0)');
-  hazeH.addColorStop(1,'rgba(210,155,80,0.32)');
-  ctx.fillStyle=hazeH; ctx.fillRect(0,H*0.18,W,H*0.05);
+  // Warm horizon haze
+  const hazeG=ctx.createLinearGradient(0,H*0.16,0,H*0.23);
+  hazeG.addColorStop(0,'rgba(188,138,75,0)'); hazeG.addColorStop(1,'rgba(205,148,72,0.35)');
+  ctx.fillStyle=hazeG; ctx.fillRect(0,H*0.16,W,H*0.07);
 
-  // Sun — right side, below scoreboard
+  // Sun
   const sunX=W*0.78, sunY=H*0.132;
-  const sg=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,W*0.20);
-  sg.addColorStop(0,'rgba(255,235,150,0.55)');
-  sg.addColorStop(0.38,'rgba(255,195,80,0.22)');
-  sg.addColorStop(1,'rgba(255,160,40,0)');
+  const sg=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,W*0.22);
+  sg.addColorStop(0,'rgba(255,235,148,0.52)'); sg.addColorStop(0.4,'rgba(255,192,78,0.20)'); sg.addColorStop(1,'rgba(255,155,38,0)');
   ctx.fillStyle=sg; ctx.fillRect(0,0,W,H*0.23);
   const sd=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,W*0.040);
   sd.addColorStop(0,'#fffef0'); sd.addColorStop(0.6,'#ffe880'); sd.addColorStop(1,'rgba(255,210,70,0)');
   ctx.fillStyle=sd; ctx.beginPath(); ctx.arc(sunX,sunY,W*0.040,0,Math.PI*2); ctx.fill();
 
-  // ── CANYON WALLS ─── dominate the backdrop ────────────────────────
-  // Wall geometry: wide at top (close to camera), narrow toward centre gap
-  // Left wall: 0→W*0.47 at top edge, 0→W*0.26 at bottom of backdrop
-  // Right wall: W*0.53→W at top, W*0.74→W at bottom
-  // This creates the converging perspective of canyon walls towering above
-
-  // -- LEFT WALL --
+  // ── LEFT CANYON WALL — organic curved inner edge ──────────────────
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(0,0); ctx.lineTo(W*0.47,0);
-  ctx.lineTo(W*0.26,H*0.23); ctx.lineTo(0,H*0.23);
-  ctx.closePath(); ctx.clip();
+  // Curved inner edge — bulges and recedes like real rock face
+  ctx.bezierCurveTo(W*0.44,H*0.05, W*0.36,H*0.10, W*0.32,H*0.145);
+  ctx.bezierCurveTo(W*0.29,H*0.175, W*0.27,H*0.205, W*0.24,H*0.23);
+  ctx.lineTo(0,H*0.23); ctx.closePath(); ctx.clip();
 
-  // Base fill — shadowed face (sun from right)
+  // Base fill — shadowed (sun from right)
   const lG=ctx.createLinearGradient(0,0,W*0.47,0);
-  lG.addColorStop(0,'#4a0c02'); lG.addColorStop(0.5,'#7e1c06'); lG.addColorStop(1,'#b02e14');
+  lG.addColorStop(0,'#3c0900'); lG.addColorStop(0.55,'#741808'); lG.addColorStop(1,'#a82c12');
   ctx.fillStyle=lG; ctx.fillRect(0,0,W*0.50,H*0.23);
 
-  // Vertical light falloff
+  // Vertical tone
   const lV=ctx.createLinearGradient(0,0,0,H*0.23);
-  lV.addColorStop(0,'rgba(0,0,0,0.28)'); lV.addColorStop(0.5,'rgba(0,0,0,0.06)'); lV.addColorStop(1,'rgba(60,15,0,0.22)');
+  lV.addColorStop(0,'rgba(0,0,0,0.32)'); lV.addColorStop(0.45,'rgba(0,0,0,0.05)'); lV.addColorStop(1,'rgba(55,12,0,0.25)');
   ctx.fillStyle=lV; ctx.fillRect(0,0,W*0.50,H*0.23);
 
-  // 11 strata bands — varied thickness, distinct hues
+  // Strata bands — drawn as CURVED horizontal fills, not straight rects
   const lS=[
-    {y:0.000,h:0.018,c:'#6a0e02',a:0.90},{y:0.018,h:0.014,c:'#c03010',a:0.78},
-    {y:0.032,h:0.012,c:'#d86828',a:0.68},{y:0.044,h:0.009,c:'#e8b850',a:0.62},
-    {y:0.053,h:0.016,c:'#981e08',a:0.85},{y:0.069,h:0.020,c:'#bc3c18',a:0.74},
-    {y:0.089,h:0.010,c:'#d88038',a:0.55},{y:0.099,h:0.018,c:'#801608',a:0.88},
-    {y:0.117,h:0.022,c:'#aa2c10',a:0.80},{y:0.139,h:0.013,c:'#d07030',a:0.60},
-    {y:0.152,h:0.078,c:'#5c0e02',a:0.92},
+    {y:0.000,h:0.018,c:'#620c02',a:0.90},{y:0.018,h:0.013,c:'#b82c0e',a:0.80},
+    {y:0.031,h:0.011,c:'#d06025',a:0.68},{y:0.042,h:0.008,c:'#e8b448',a:0.64},
+    {y:0.050,h:0.015,c:'#8e1c06',a:0.86},{y:0.065,h:0.019,c:'#b43818',a:0.76},
+    {y:0.084,h:0.009,c:'#d07c35',a:0.56},{y:0.093,h:0.017,c:'#7a1406',a:0.90},
+    {y:0.110,h:0.021,c:'#a02808',a:0.82},{y:0.131,h:0.012,c:'#cc6828',a:0.62},
+    {y:0.143,h:0.087,c:'#580c02',a:0.94},
   ];
   lS.forEach(s=>{
     const r=parseInt(s.c.slice(1,3),16),g=parseInt(s.c.slice(3,5),16),b=parseInt(s.c.slice(5,7),16);
+    // Draw strata as a wavy band (bezier path, not rect)
+    const y1=H*s.y, y2=H*(s.y+s.h);
+    const wobble=H*s.h*0.25; // slight warp to top edge of each band
     ctx.fillStyle=`rgba(${r},${g},${b},${s.a})`;
-    ctx.fillRect(0,H*s.y,W*0.50,H*s.h);
-    // Overhang shadow line at base of band
-    ctx.fillStyle='rgba(0,0,0,0.22)';
-    ctx.fillRect(0,H*(s.y+s.h)-H*0.0025,W*0.50,H*0.0025);
-    // Slight highlight at top of band
-    ctx.fillStyle='rgba(255,195,130,0.07)';
-    ctx.fillRect(0,H*s.y,W*0.50,H*0.0015);
+    ctx.beginPath();
+    ctx.moveTo(0,y1); ctx.bezierCurveTo(W*0.15,y1-wobble, W*0.32,y1+wobble*0.5, W*0.50,y1+wobble*0.3);
+    ctx.lineTo(W*0.50,y2); ctx.bezierCurveTo(W*0.32,y2+wobble*0.2, W*0.15,y2-wobble*0.3, 0,y2);
+    ctx.closePath(); ctx.fill();
+    // Shadow under each band
+    ctx.fillStyle='rgba(0,0,0,0.20)';
+    ctx.beginPath();
+    ctx.moveTo(0,y2-H*0.003); ctx.bezierCurveTo(W*0.18,y2-H*0.003-wobble*0.1, W*0.35,y2-H*0.003+wobble*0.1, W*0.50,y2-H*0.003);
+    ctx.lineTo(W*0.50,y2); ctx.bezierCurveTo(W*0.35,y2+wobble*0.1, W*0.18,y2-wobble*0.1, 0,y2);
+    ctx.closePath(); ctx.fill();
   });
 
-  // Desert varnish streaks
-  ctx.strokeStyle='rgba(20,4,0,0.30)'; ctx.lineWidth=W*0.004; ctx.lineCap='round';
-  [[W*0.06,H*0.01,W*0.05,H*0.23],[W*0.16,0,W*0.155,H*0.23],[W*0.27,H*0.02,W*0.255,H*0.22],
-   [W*0.36,0,W*0.350,H*0.21],[W*0.42,H*0.03,W*0.410,H*0.20]].forEach(([x1,y1,x2,y2])=>{
+  // Desert varnish — organic curved streaks
+  ctx.lineCap='round';
+  [[W*0.07,0,W*0.055,H*0.23,W*0.004,0.30],[W*0.17,0,W*0.160,H*0.23,W*0.0035,0.25],
+   [W*0.28,H*0.01,W*0.265,H*0.22,W*0.003,0.22],[W*0.37,0,W*0.355,H*0.21,W*0.0025,0.18],
+   [W*0.43,H*0.04,W*0.415,H*0.20,W*0.002,0.16]].forEach(([x1,y1,x2,y2,lw,al])=>{
+    ctx.strokeStyle=`rgba(18,4,0,${al})`; ctx.lineWidth=lw;
     ctx.beginPath(); ctx.moveTo(x1,y1);
-    ctx.bezierCurveTo(x1+W*0.010,H*0.07,x2-W*0.008,H*0.15,x2,y2); ctx.stroke();
-  });
-  ctx.strokeStyle='rgba(15,3,0,0.15)'; ctx.lineWidth=W*0.002;
-  [[W*0.11,H*0.03,W*0.105,H*0.22],[W*0.22,0,W*0.215,H*0.21],[W*0.32,H*0.01,W*0.315,H*0.22]].forEach(([x1,y1,x2,y2])=>{
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.bezierCurveTo(x1+W*0.015,H*0.06, x2-W*0.010,H*0.15, x2+W*0.005*Math.sin(x1),y2);
+    ctx.stroke();
   });
 
-  // Rock face texture
-  ctx.fillStyle='rgba(30,6,0,0.14)';
-  for(let i=0;i<28;i++){
-    const rx=W*(0.01+Math.abs(Math.sin(i*7.3))*0.43);
-    const ry=H*(0.06+Math.abs(Math.sin(i*3.7))*0.16);
-    const rw=W*(0.008+Math.abs(Math.sin(i*11.1))*0.022);
-    const rh=H*(0.005+Math.abs(Math.sin(i*5.9))*0.014);
-    ctx.fillRect(rx,ry,rw,rh);
+  // Rock face chips — irregular polygons not rects
+  ctx.fillStyle='rgba(25,5,0,0.16)';
+  for(let i=0;i<32;i++){
+    const rx=W*(0.02+Math.abs(Math.sin(i*7.3))*0.41);
+    const ry=H*(0.05+Math.abs(Math.sin(i*3.7))*0.17);
+    const rs=W*(0.006+Math.abs(Math.sin(i*11.1))*0.018);
+    ctx.beginPath();
+    ctx.moveTo(rx+rs*Math.cos(0), ry+rs*0.5*Math.sin(0));
+    for(let a=1;a<5;a++){
+      const ang=a*(Math.PI*2/5)+i*0.3;
+      ctx.lineTo(rx+rs*Math.cos(ang)*(0.7+0.3*Math.abs(Math.sin(i*a))), ry+rs*0.5*Math.sin(ang));
+    }
+    ctx.closePath(); ctx.fill();
   }
 
-  // Jagged dark rim silhouette — ~20 peaks
-  ctx.fillStyle='#0e0502';
+  // Jagged dark rim silhouette — spiky organic peaks
+  ctx.fillStyle='#0c0402';
   ctx.beginPath(); ctx.moveTo(0,0);
-  [
-    [0,H*0.060],[W*0.020,H*0.025],[W*0.046,H*0.046],[W*0.070,H*0.010],
-    [W*0.096,H*0.034],[W*0.118,H*0.000],[W*0.140,H*0.022],[W*0.162,H*0.004],
-    [W*0.184,H*0.030],[W*0.205,-H*0.004],[W*0.226,H*0.016],[W*0.248,H*0.002],
-    [W*0.270,H*0.028],[W*0.292,H*0.008],[W*0.315,H*0.036],[W*0.338,H*0.014],
-    [W*0.360,H*0.040],[W*0.385,H*0.018],[W*0.410,H*0.044],[W*0.435,H*0.056],[W*0.470,H*0.065],[W*0.470,0],
-  ].forEach(([x,y])=>ctx.lineTo(x,y));
+  // Each peak: up spike then down, all connected with tiny curves
+  const lPks=[
+    [0,H*0.058],[W*0.022,H*0.026],[W*0.038,H*0.048],[W*0.058,H*0.008],
+    [W*0.076,H*0.035],[W*0.096,H*-0.002],[W*0.114,H*0.020],[W*0.132,H*0.006],
+    [W*0.152,H*0.032],[W*0.170,H*-0.004],[W*0.190,H*0.018],[W*0.210,H*0.003],
+    [W*0.230,H*0.028],[W*0.250,H*0.010],[W*0.270,H*0.038],[W*0.292,H*0.014],
+    [W*0.314,H*0.042],[W*0.338,H*0.020],[W*0.362,H*0.048],[W*0.388,H*0.024],
+    [W*0.412,H*0.052],[W*0.440,H*0.060],[W*0.470,H*0.065],[W*0.470,0],
+  ];
+  lPks.forEach(([x,y],i)=>{
+    if(i===0){ ctx.lineTo(x,y); } else {
+      const prev=lPks[i-1];
+      ctx.quadraticCurveTo((prev[0]+x)/2+W*0.004*Math.sin(i*2.1), (prev[1]+y)/2, x,y);
+    }
+  });
   ctx.closePath(); ctx.fill();
 
   ctx.restore(); // end left wall
 
-  // -- RIGHT WALL --
+  // ── RIGHT CANYON WALL — sun-facing, curved inner edge ─────────────
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(W,0); ctx.lineTo(W*0.53,0);
-  ctx.lineTo(W*0.74,H*0.23); ctx.lineTo(W,H*0.23);
-  ctx.closePath(); ctx.clip();
+  // Curved inner edge
+  ctx.bezierCurveTo(W*0.58,H*0.04, W*0.66,H*0.10, W*0.70,H*0.145);
+  ctx.bezierCurveTo(W*0.73,H*0.178, W*0.75,H*0.208, W*0.77,H*0.23);
+  ctx.lineTo(W,H*0.23); ctx.closePath(); ctx.clip();
 
-  // Sun-facing right wall — brighter, warmer
   const rG=ctx.createLinearGradient(W*0.53,0,W,0);
-  rG.addColorStop(0,'#c84018'); rG.addColorStop(0.4,'#e06020'); rG.addColorStop(0.7,'#c84018'); rG.addColorStop(1,'#7a1a08');
+  rG.addColorStop(0,'#c23c15'); rG.addColorStop(0.4,'#d85c1e'); rG.addColorStop(0.7,'#c03812'); rG.addColorStop(1,'#741508');
   ctx.fillStyle=rG; ctx.fillRect(W*0.50,0,W*0.50,H*0.23);
 
-  // Warm sunlight overlay
+  // Sunlit warm wash
   const rL=ctx.createLinearGradient(W*0.53,0,W,0);
-  rL.addColorStop(0,'rgba(255,185,85,0.32)'); rL.addColorStop(0.55,'rgba(255,160,60,0.12)'); rL.addColorStop(1,'rgba(200,100,20,0.04)');
+  rL.addColorStop(0,'rgba(255,185,82,0.34)'); rL.addColorStop(0.55,'rgba(255,155,55,0.12)'); rL.addColorStop(1,'rgba(195,95,18,0.04)');
   ctx.fillStyle=rL; ctx.fillRect(W*0.50,0,W*0.50,H*0.23);
 
   const rS=[
-    {y:0.000,h:0.018,c:'#8c1808',a:0.90},{y:0.018,h:0.014,c:'#d84818',a:0.80},
-    {y:0.032,h:0.012,c:'#f07840',a:0.70},{y:0.044,h:0.009,c:'#fcd080',a:0.65},
-    {y:0.053,h:0.016,c:'#ba2e14',a:0.86},{y:0.069,h:0.020,c:'#dc5028',a:0.76},
-    {y:0.089,h:0.010,c:'#f09858',a:0.58},{y:0.099,h:0.018,c:'#a01e0a',a:0.90},
-    {y:0.117,h:0.022,c:'#ca3c1a',a:0.82},{y:0.139,h:0.013,c:'#e88040',a:0.64},
-    {y:0.152,h:0.078,c:'#7a1208',a:0.94},
+    {y:0.000,h:0.018,c:'#881605',a:0.90},{y:0.018,h:0.013,c:'#d04415',a:0.82},
+    {y:0.031,h:0.011,c:'#ee7438',a:0.70},{y:0.042,h:0.008,c:'#f8cc78',a:0.66},
+    {y:0.050,h:0.015,c:'#b42c12',a:0.88},{y:0.065,h:0.019,c:'#d64c24',a:0.78},
+    {y:0.084,h:0.009,c:'#ec9450',a:0.58},{y:0.093,h:0.017,c:'#9a1c08',a:0.92},
+    {y:0.110,h:0.021,c:'#c23616',a:0.84},{y:0.131,h:0.012,c:'#e07838',a:0.66},
+    {y:0.143,h:0.087,c:'#741008',a:0.96},
   ];
   rS.forEach(s=>{
     const r=parseInt(s.c.slice(1,3),16),g=parseInt(s.c.slice(3,5),16),b=parseInt(s.c.slice(5,7),16);
+    const y1=H*s.y, y2=H*(s.y+s.h), wobble=H*s.h*0.22;
     ctx.fillStyle=`rgba(${r},${g},${b},${s.a})`;
-    ctx.fillRect(W*0.50,H*s.y,W*0.50,H*s.h);
-    ctx.fillStyle='rgba(0,0,0,0.18)';
-    ctx.fillRect(W*0.50,H*(s.y+s.h)-H*0.0025,W*0.50,H*0.0025);
-    ctx.fillStyle='rgba(255,225,160,0.10)';
-    ctx.fillRect(W*0.50,H*s.y,W*0.50,H*0.0015);
+    ctx.beginPath();
+    ctx.moveTo(W*0.50,y1); ctx.bezierCurveTo(W*0.65,y1+wobble*0.4, W*0.82,y1-wobble, W,y1);
+    ctx.lineTo(W,y2); ctx.bezierCurveTo(W*0.82,y2-wobble*0.2, W*0.65,y2+wobble*0.4, W*0.50,y2);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.16)';
+    ctx.beginPath();
+    ctx.moveTo(W*0.50,y2-H*0.003); ctx.lineTo(W,y2-H*0.003); ctx.lineTo(W,y2); ctx.lineTo(W*0.50,y2); ctx.closePath(); ctx.fill();
   });
 
-  ctx.strokeStyle='rgba(20,4,0,0.22)'; ctx.lineWidth=W*0.003; ctx.lineCap='round';
-  [[W*0.96,H*0.01,W*0.955,H*0.22],[W*0.86,0,W*0.855,H*0.22],[W*0.76,H*0.02,W*0.755,H*0.21],
-   [W*0.66,0,W*0.655,H*0.21],[W*0.58,H*0.03,W*0.575,H*0.20]].forEach(([x1,y1,x2,y2])=>{
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.bezierCurveTo(x1-W*0.010,H*0.08,x2+W*0.008,H*0.16,x2,y2); ctx.stroke();
+  [[W*0.94,H*0.01,W*0.930,H*0.22,W*0.0038,0.22],[W*0.84,0,W*0.832,H*0.22,W*0.003,0.20],
+   [W*0.74,H*0.02,W*0.732,H*0.21,W*0.0028,0.18],[W*0.64,0,W*0.633,H*0.21,W*0.0022,0.15],
+   [W*0.57,H*0.04,W*0.564,H*0.20,W*0.002,0.14]].forEach(([x1,y1,x2,y2,lw,al])=>{
+    ctx.strokeStyle=`rgba(18,4,0,${al})`; ctx.lineWidth=lw; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(x1,y1);
+    ctx.bezierCurveTo(x1-W*0.012,H*0.07, x2+W*0.008,H*0.16, x2,y2); ctx.stroke();
   });
 
-  ctx.fillStyle='rgba(40,10,0,0.12)';
-  for(let i=0;i<26;i++){
-    const rx=W*(0.54+Math.abs(Math.sin(i*6.1))*0.44);
-    const ry=H*(0.06+Math.abs(Math.sin(i*4.3))*0.16);
-    const rw=W*(0.008+Math.abs(Math.sin(i*9.7))*0.022);
-    const rh=H*(0.005+Math.abs(Math.sin(i*6.5))*0.014);
-    ctx.fillRect(rx,ry,rw,rh);
+  ctx.fillStyle='rgba(38,8,0,0.13)';
+  for(let i=0;i<28;i++){
+    const rx=W*(0.52+Math.abs(Math.sin(i*6.1))*0.46);
+    const ry=H*(0.05+Math.abs(Math.sin(i*4.3))*0.17);
+    const rs=W*(0.006+Math.abs(Math.sin(i*9.7))*0.020);
+    ctx.beginPath();
+    for(let a=0;a<5;a++){
+      const ang=a*(Math.PI*2/5)+i*0.4;
+      a===0?ctx.moveTo(rx+rs*Math.cos(ang),ry+rs*0.5*Math.sin(ang)):ctx.lineTo(rx+rs*Math.cos(ang),ry+rs*0.5*Math.sin(ang));
+    }
+    ctx.closePath(); ctx.fill();
   }
 
   // Right jagged rim
-  ctx.fillStyle='#0e0502';
+  ctx.fillStyle='#0c0402';
   ctx.beginPath(); ctx.moveTo(W,0);
-  [
-    [W,H*0.060],[W*0.980,H*0.018],[W*0.956,H*0.042],[W*0.930,H*0.006],
-    [W*0.906,H*0.032],[W*0.880,H*0.000],[W*0.856,H*0.022],[W*0.830,H*0.004],
-    [W*0.806,H*0.030],[W*0.778,-H*0.004],[W*0.754,H*0.018],[W*0.728,H*0.002],
-    [W*0.704,H*0.026],[W*0.678,H*0.006],[W*0.654,H*0.034],[W*0.628,H*0.012],
-    [W*0.604,H*0.038],[W*0.578,H*0.016],[W*0.554,H*0.044],[W*0.530,H*0.060],[W*0.530,0],
-  ].forEach(([x,y])=>ctx.lineTo(x,y));
+  const rPks=[
+    [W,H*0.058],[W*0.978,H*0.020],[W*0.960,H*0.044],[W*0.940,H*0.004],
+    [W*0.922,H*0.032],[W*0.900,H*-0.004],[W*0.882,H*0.018],[W*0.862,H*0.002],
+    [W*0.840,H*0.030],[W*0.818,H*-0.004],[W*0.798,H*0.016],[W*0.776,H*0.002],
+    [W*0.754,H*0.028],[W*0.732,H*0.008],[W*0.710,H*0.036],[W*0.686,H*0.012],
+    [W*0.662,H*0.040],[W*0.638,H*0.016],[W*0.614,H*0.044],[W*0.590,H*0.018],
+    [W*0.566,H*0.048],[W*0.548,H*0.058],[W*0.530,H*0.065],[W*0.530,0],
+  ];
+  rPks.forEach(([x,y],i)=>{
+    if(i===0){ ctx.lineTo(x,y); } else {
+      const prev=rPks[i-1];
+      ctx.quadraticCurveTo((prev[0]+x)/2-W*0.003*Math.sin(i*2.1),(prev[1]+y)/2,x,y);
+    }
+  });
   ctx.closePath(); ctx.fill();
 
   ctx.restore(); // end right wall
 
-  // ── DISTANT MESAS in the gap ──────────────────────────────────────
+  // ── DISTANT MESAS ─────────────────────────────────────────────────
   // Far
-  ctx.fillStyle='rgba(168,110,65,0.28)';
+  ctx.fillStyle='rgba(162,105,60,0.30)';
   ctx.beginPath();
-  ctx.moveTo(W*0.42,H*0.095); ctx.lineTo(W*0.42,H*0.058);
-  ctx.lineTo(W*0.46,H*0.052); ctx.lineTo(W*0.50,H*0.050);
-  ctx.lineTo(W*0.54,H*0.052); ctx.lineTo(W*0.58,H*0.058);
-  ctx.lineTo(W*0.58,H*0.095); ctx.closePath(); ctx.fill();
-  // Strata on far mesa
-  ctx.fillStyle='rgba(80,30,8,0.18)'; ctx.fillRect(W*0.42,H*0.068,W*0.16,H*0.007);
-  ctx.fillStyle='rgba(200,145,75,0.14)'; ctx.fillRect(W*0.42,H*0.058,W*0.16,H*0.004);
+  ctx.moveTo(W*0.44,H*0.092); ctx.bezierCurveTo(W*0.44,H*0.058,W*0.47,H*0.048,W*0.50,H*0.046);
+  ctx.bezierCurveTo(W*0.53,H*0.048,W*0.56,H*0.058,W*0.56,H*0.092); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(70,25,6,0.20)'; ctx.fillRect(W*0.44,H*0.066,W*0.12,H*0.006);
 
   // Mid
-  ctx.fillStyle='rgba(135,60,22,0.46)';
+  ctx.fillStyle='rgba(125,55,18,0.48)';
   ctx.beginPath();
-  ctx.moveTo(W*0.38,H*0.145); ctx.lineTo(W*0.38,H*0.090);
-  ctx.lineTo(W*0.43,H*0.082); ctx.lineTo(W*0.50,H*0.078);
-  ctx.lineTo(W*0.57,H*0.082); ctx.lineTo(W*0.62,H*0.090);
-  ctx.lineTo(W*0.62,H*0.145); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='rgba(60,18,4,0.32)'; ctx.fillRect(W*0.38,H*0.106,W*0.24,H*0.011);
-  ctx.fillStyle='rgba(215,150,70,0.22)'; ctx.fillRect(W*0.38,H*0.090,W*0.24,H*0.007);
+  ctx.moveTo(W*0.40,H*0.148); ctx.bezierCurveTo(W*0.40,H*0.088,W*0.45,H*0.076,W*0.50,H*0.074);
+  ctx.bezierCurveTo(W*0.55,H*0.076,W*0.60,H*0.088,W*0.60,H*0.148); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(50,14,2,0.30)'; ctx.fillRect(W*0.40,H*0.104,W*0.20,H*0.010);
+  ctx.fillStyle='rgba(205,142,65,0.22)'; ctx.fillRect(W*0.40,H*0.085,W*0.20,H*0.006);
 
   // Near
-  ctx.fillStyle='rgba(108,40,12,0.62)';
+  ctx.fillStyle='rgba(102,38,10,0.64)';
   ctx.beginPath();
-  ctx.moveTo(W*0.34,H*0.23); ctx.lineTo(W*0.34,H*0.122);
-  ctx.lineTo(W*0.40,H*0.112); ctx.lineTo(W*0.50,H*0.108);
-  ctx.lineTo(W*0.60,H*0.112); ctx.lineTo(W*0.66,H*0.122);
-  ctx.lineTo(W*0.66,H*0.23); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='rgba(40,10,0,0.40)'; ctx.fillRect(W*0.34,H*0.145,W*0.32,H*0.013);
-  ctx.fillStyle='rgba(200,135,55,0.28)'; ctx.fillRect(W*0.34,H*0.120,W*0.32,H*0.008);
+  ctx.moveTo(W*0.36,H*0.23); ctx.bezierCurveTo(W*0.36,H*0.120,W*0.43,H*0.108,W*0.50,H*0.106);
+  ctx.bezierCurveTo(W*0.57,H*0.108,W*0.64,H*0.120,W*0.64,H*0.23); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(35,8,0,0.40)'; ctx.fillRect(W*0.36,H*0.142,W*0.28,H*0.012);
+  ctx.fillStyle='rgba(195,128,50,0.28)'; ctx.fillRect(W*0.36,H*0.118,W*0.28,H*0.007);
 
   // ── VULTURES ──────────────────────────────────────────────────────
   function drawVulture(vx,vy,flip,soaring){
     ctx.save(); ctx.translate(vx,vy); if(flip) ctx.scale(-1,1);
     if(soaring){
       ctx.fillStyle='#0c0806';
-      ctx.beginPath(); ctx.ellipse(0,0,W*0.026,H*0.010,0,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(W*0.022,-H*0.007,W*0.010,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0,0,W*0.024,H*0.009,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(W*0.020,-H*0.006,W*0.009,0,Math.PI*2); ctx.fill();
       ctx.strokeStyle='#7a3810'; ctx.lineWidth=W*0.005; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(W*0.030,-H*0.010); ctx.lineTo(W*0.044,-H*0.007); ctx.stroke();
-      ctx.fillStyle='#08060 4';
-      ctx.beginPath(); ctx.moveTo(-W*0.012,0); ctx.lineTo(-W*0.080,H*0.008); ctx.lineTo(-W*0.100,H*0.020);
-      ctx.lineTo(-W*0.090,H*0.028); ctx.lineTo(-W*0.055,H*0.014); ctx.lineTo(-W*0.022,H*0.008); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(W*0.010,0); ctx.lineTo(W*0.078,H*0.008); ctx.lineTo(W*0.098,H*0.020);
-      ctx.lineTo(W*0.088,H*0.028); ctx.lineTo(W*0.053,H*0.014); ctx.lineTo(W*0.020,H*0.008); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(-W*0.012,H*0.005); ctx.lineTo(-W*0.016,H*0.025); ctx.lineTo(W*0.006,H*0.018); ctx.lineTo(W*0.014,H*0.025); ctx.lineTo(W*0.008,H*0.005); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(W*0.028,-H*0.009); ctx.lineTo(W*0.042,-H*0.006); ctx.stroke();
+      ctx.fillStyle='#090504';
+      ctx.beginPath();
+      ctx.moveTo(-W*0.010,0); ctx.bezierCurveTo(-W*0.042,H*0.004,-W*0.080,H*0.016,-W*0.100,H*0.028);
+      ctx.lineTo(-W*0.092,H*0.036); ctx.bezierCurveTo(-W*0.070,H*0.022,-W*0.032,H*0.012,-W*0.018,H*0.010);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(W*0.008,0); ctx.bezierCurveTo(W*0.040,H*0.004,W*0.078,H*0.016,W*0.098,H*0.028);
+      ctx.lineTo(W*0.090,H*0.036); ctx.bezierCurveTo(W*0.068,H*0.022,W*0.030,H*0.012,W*0.016,H*0.010);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-W*0.010,H*0.006); ctx.lineTo(-W*0.014,H*0.026); ctx.lineTo(W*0.004,H*0.020); ctx.lineTo(W*0.012,H*0.026); ctx.lineTo(W*0.006,H*0.006); ctx.closePath(); ctx.fill();
     } else {
       ctx.fillStyle='#0d0806';
-      ctx.beginPath(); ctx.ellipse(0,H*0.005,W*0.028,H*0.018,0.12,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(W*0.018,-H*0.010,W*0.009,H*0.014,0.28,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#7a2406';
-      ctx.beginPath(); ctx.arc(W*0.028,-H*0.026,W*0.013,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#c89818';
-      ctx.beginPath(); ctx.moveTo(W*0.038,-H*0.026);
-      ctx.quadraticCurveTo(W*0.062,-H*0.026,W*0.060,-H*0.015);
-      ctx.quadraticCurveTo(W*0.058,-H*0.008,W*0.050,-H*0.016); ctx.lineTo(W*0.036,-H*0.023); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#180c04'; ctx.beginPath(); ctx.arc(W*0.058,-H*0.017,W*0.005,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#cc2c06'; ctx.beginPath(); ctx.arc(W*0.034,-H*0.032,W*0.005,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(255,200,180,0.55)'; ctx.beginPath(); ctx.arc(W*0.032,-H*0.034,W*0.002,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#08050 3';
-      ctx.beginPath(); ctx.moveTo(-W*0.020,H*0.001); ctx.lineTo(-W*0.048,H*0.028); ctx.lineTo(-W*0.038,H*0.034); ctx.lineTo(-W*0.004,H*0.016); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(W*0.008,-H*0.001); ctx.lineTo(W*0.038,H*0.028); ctx.lineTo(W*0.030,H*0.034); ctx.lineTo(W*0.004,H*0.016); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(-W*0.015,H*0.018); ctx.lineTo(-W*0.028,H*0.040); ctx.lineTo(W*0.006,H*0.030); ctx.lineTo(W*0.016,H*0.040); ctx.lineTo(W*0.008,H*0.018); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle='#281408'; ctx.lineWidth=W*0.005; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(-W*0.004,H*0.022); ctx.lineTo(-W*0.008,H*0.035); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W*0.006,H*0.022); ctx.lineTo(W*0.010,H*0.035); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0,H*0.005,W*0.026,H*0.016,0.10,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(W*0.016,-H*0.009,W*0.009,H*0.012,0.25,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#782205';
+      ctx.beginPath(); ctx.arc(W*0.026,-H*0.024,W*0.013,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#c09415';
+      ctx.beginPath(); ctx.moveTo(W*0.036,-H*0.024);
+      ctx.bezierCurveTo(W*0.050,-H*0.026,W*0.062,-H*0.022,W*0.060,-H*0.013);
+      ctx.bezierCurveTo(W*0.058,-H*0.006,W*0.048,-H*0.012,W*0.034,-H*0.020); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#160c04'; ctx.beginPath(); ctx.arc(W*0.057,-H*0.015,W*0.005,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#cc2a05'; ctx.beginPath(); ctx.arc(W*0.030,-H*0.030,W*0.005,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,195,175,0.55)'; ctx.beginPath(); ctx.arc(W*0.028,-H*0.032,W*0.002,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#090503';
+      ctx.beginPath(); ctx.moveTo(-W*0.018,H*0.001);
+      ctx.bezierCurveTo(-W*0.028,H*0.012,-W*0.040,H*0.025,-W*0.038,H*0.032);
+      ctx.lineTo(-W*0.004,H*0.015); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(W*0.006,-H*0.001);
+      ctx.bezierCurveTo(W*0.018,H*0.012,W*0.032,H*0.025,W*0.030,H*0.032);
+      ctx.lineTo(W*0.004,H*0.015); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-W*0.013,H*0.016); ctx.lineTo(-W*0.024,H*0.038); ctx.lineTo(W*0.004,H*0.028); ctx.lineTo(W*0.014,H*0.038); ctx.lineTo(W*0.008,H*0.016); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='#261306'; ctx.lineWidth=W*0.005; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(-W*0.004,H*0.020); ctx.lineTo(-W*0.006,H*0.034); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(W*0.004,H*0.020); ctx.lineTo(W*0.008,H*0.034); ctx.stroke();
     }
     ctx.restore();
   }
 
-  // Left rim peaks
-  drawVulture(W*0.118, H*0.002, false, false);
-  drawVulture(W*0.205,-H*0.002, true,  false);
-  // Right rim peaks
-  drawVulture(W*0.880, H*0.002, false, false);
-  // Soaring in gap
-  drawVulture(W*0.50,  H*0.068, false, true);
+  drawVulture(W*0.096, H*0.002, false, false);
+  drawVulture(W*0.170,-H*0.002, true,  false);
+  drawVulture(W*0.900, H*0.002, false, false);
+  drawVulture(W*0.500, H*0.066, false, true);
 
   // Dust haze at wall bases
-  const lHz=ctx.createLinearGradient(0,H*0.17,W*0.28,H*0.23);
-  lHz.addColorStop(0,'rgba(195,125,65,0)'); lHz.addColorStop(1,'rgba(215,145,72,0.42)');
-  ctx.fillStyle=lHz; ctx.fillRect(0,H*0.17,W*0.28,H*0.06);
-  const rHz=ctx.createLinearGradient(W*0.72,H*0.17,W,H*0.23);
-  rHz.addColorStop(0,'rgba(215,145,72,0.42)'); rHz.addColorStop(1,'rgba(195,125,65,0)');
-  ctx.fillStyle=rHz; ctx.fillRect(W*0.72,H*0.17,W*0.28,H*0.06);
+  const lHz=ctx.createLinearGradient(0,H*0.16,W*0.26,H*0.23);
+  lHz.addColorStop(0,'rgba(192,122,62,0)'); lHz.addColorStop(1,'rgba(212,142,68,0.44)');
+  ctx.fillStyle=lHz; ctx.fillRect(0,H*0.16,W*0.26,H*0.07);
+  const rHz=ctx.createLinearGradient(W*0.74,H*0.16,W,H*0.23);
+  rHz.addColorStop(0,'rgba(212,142,68,0.44)'); rHz.addColorStop(1,'rgba(192,122,62,0)');
+  ctx.fillStyle=rHz; ctx.fillRect(W*0.74,H*0.16,W*0.26,H*0.07);
 
   ctx.restore(); // end backdrop clip
 
-  // ── OUTER GROUND ─── evenodd clip outside the oval ────────────────
+  // ── OUTER GROUND — evenodd clip outside oval ───────────────────────
   ctx.save();
   ctx.beginPath();
   ctx.rect(0,H*0.23,W,H-H*0.23);
@@ -23014,146 +23034,159 @@ function drawCanyonScene() {
 
   // Desert floor
   const flr=ctx.createLinearGradient(0,H*0.23,0,H);
-  flr.addColorStop(0,'#cc7e38'); flr.addColorStop(0.4,'#b06028'); flr.addColorStop(0.75,'#944c1a'); flr.addColorStop(1,'#7a3812');
+  flr.addColorStop(0,'#c87835'); flr.addColorStop(0.4,'#aa5c22'); flr.addColorStop(0.75,'#8e4818'); flr.addColorStop(1,'#763410');
   ctx.fillStyle=flr; ctx.fillRect(0,H*0.23,W,H-H*0.23);
 
-  // Sand stipple texture
-  ctx.fillStyle='rgba(255,215,145,0.11)';
-  for(let i=0;i<140;i++){
-    const gx=W*Math.abs(Math.sin(i*13.7));
-    const gy=H*(0.24+Math.abs(Math.sin(i*7.3))*0.74);
-    ctx.beginPath(); ctx.arc(gx,gy,W*(0.003+Math.abs(Math.sin(i*19.1))*0.007),0,Math.PI*2); ctx.fill();
-  }
-  ctx.fillStyle='rgba(70,20,0,0.09)';
-  for(let i=0;i<90;i++){
-    const gx=W*Math.abs(Math.sin(i*11.3));
-    const gy=H*(0.25+Math.abs(Math.sin(i*8.7))*0.73);
-    ctx.beginPath(); ctx.arc(gx,gy,W*(0.002+Math.abs(Math.sin(i*17.3))*0.005),0,Math.PI*2); ctx.fill();
+  // Sand stipple
+  ctx.fillStyle='rgba(252,210,142,0.10)';
+  for(let i=0;i<150;i++){
+    ctx.beginPath(); ctx.arc(W*Math.abs(Math.sin(i*13.7)),H*(0.24+Math.abs(Math.sin(i*7.3))*0.74),W*(0.003+Math.abs(Math.sin(i*19.1))*0.007),0,Math.PI*2); ctx.fill();
   }
 
-  // Dry riverbed (bottom strip — always outside oval)
-  ctx.strokeStyle='rgba(188,138,78,0.65)'; ctx.lineWidth=W*0.068; ctx.lineCap='round'; ctx.lineJoin='round';
+  // Dry riverbed (safely in bottom strip, always outside oval at y>H*0.86)
+  ctx.strokeStyle='rgba(185,132,72,0.66)'; ctx.lineWidth=W*0.070; ctx.lineCap='round'; ctx.lineJoin='round';
   ctx.beginPath();
-  ctx.moveTo(0,H*0.885); ctx.bezierCurveTo(W*0.18,H*0.870,W*0.35,H*0.930,W*0.50,H*0.908);
-  ctx.bezierCurveTo(W*0.65,H*0.886,W*0.82,H*0.862,W,H*0.880); ctx.stroke();
-  ctx.strokeStyle='rgba(148,100,52,0.45)'; ctx.lineWidth=W*0.028;
+  ctx.moveTo(0,H*0.890); ctx.bezierCurveTo(W*0.20,H*0.874,W*0.36,H*0.934,W*0.50,H*0.912);
+  ctx.bezierCurveTo(W*0.64,H*0.890,W*0.80,H*0.864,W,H*0.882); ctx.stroke();
+  ctx.strokeStyle='rgba(142,95,48,0.46)'; ctx.lineWidth=W*0.028;
   ctx.beginPath();
-  ctx.moveTo(0,H*0.887); ctx.bezierCurveTo(W*0.18,H*0.872,W*0.35,H*0.932,W*0.50,H*0.910);
-  ctx.bezierCurveTo(W*0.65,H*0.888,W*0.82,H*0.864,W,H*0.882); ctx.stroke();
-  // Cracked earth
-  ctx.strokeStyle='rgba(90,45,12,0.38)'; ctx.lineWidth=W*0.0015; ctx.lineCap='round';
-  for(let i=0;i<16;i++){
-    const cx2=W*(0.04+i*0.06);
-    const cy2=H*(0.882+Math.sin(i*2.3)*0.016);
-    ctx.beginPath(); ctx.moveTo(cx2,cy2); ctx.lineTo(cx2+W*0.016,cy2+H*0.010); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx2+W*0.006,cy2+H*0.004); ctx.lineTo(cx2+W*0.020,cy2-H*0.007); ctx.stroke();
+  ctx.moveTo(0,H*0.892); ctx.bezierCurveTo(W*0.20,H*0.876,W*0.36,H*0.936,W*0.50,H*0.914);
+  ctx.bezierCurveTo(W*0.64,H*0.892,W*0.80,H*0.866,W,H*0.884); ctx.stroke();
+  ctx.strokeStyle='rgba(85,40,10,0.40)'; ctx.lineWidth=W*0.0015; ctx.lineCap='round';
+  for(let i=0;i<18;i++){
+    const bx=W*(0.03+i*0.055), by=H*(0.886+Math.sin(i*2.3)*0.014);
+    ctx.beginPath(); ctx.moveTo(bx,by);
+    ctx.bezierCurveTo(bx+W*0.008,by+H*0.006,bx+W*0.018,by+H*0.010,bx+W*0.018,by+H*0.010); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx+W*0.006,by+H*0.004);
+    ctx.lineTo(bx+W*0.022,by-H*0.006); ctx.stroke();
   }
 
-  // ── ROCK CLUSTERS — positioned safely in corners ──────────────────
-  // At y=H*0.30: oval left edge ≈ W*0.23, right ≈ W*0.77  → rocks at x<0.18 and x>0.82
-  // At y=H*0.82: oval left edge ≈ W*0.11, right ≈ W*0.89  → rocks at x<0.07 and x>0.93
+  // ── ROCKS — placed in TOP corners (H*0.26-0.33, oval barely reaches)
+  // At y=H*0.28: oval left edge = W*0.27 → safe at x<W*0.20
+  // At y=H*0.30: oval left edge = W*0.23 → safe at x<W*0.17
   function drawRock(rx,ry,sz,lit){
     // Shadow
-    ctx.fillStyle='rgba(35,8,0,0.25)';
-    ctx.beginPath(); ctx.ellipse(rx+(lit?sz*0.7:-sz*0.7),ry+sz*0.3,sz*1.8,sz*0.38,0,0,Math.PI*2); ctx.fill();
-    // Main boulder
-    ctx.fillStyle='#7c2a06'; ctx.beginPath(); ctx.ellipse(rx,ry,sz*1.5,sz*0.82,0.16,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#9e3810'; ctx.beginPath(); ctx.ellipse(rx+sz*0.65,ry-sz*0.22,sz*0.92,sz*0.60,0.08,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#922c0c'; ctx.beginPath(); ctx.ellipse(rx-sz*0.52,ry-sz*0.16,sz*0.76,sz*0.50,-0.10,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#be4418'; ctx.beginPath(); ctx.ellipse(rx+sz*0.18,ry+sz*0.10,sz*0.44,sz*0.28,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(30,6,0,0.28)';
+    ctx.beginPath(); ctx.ellipse(rx+(lit?sz*0.8:-sz*0.8),ry+sz*0.35,sz*1.9,sz*0.36,0,0,Math.PI*2); ctx.fill();
+    // Main body — organic blob, not ellipse
+    ctx.fillStyle='#7a2806';
+    ctx.beginPath();
+    ctx.moveTo(rx,ry-sz); ctx.bezierCurveTo(rx+sz*1.2,ry-sz*0.8,rx+sz*1.6,ry+sz*0.1,rx+sz*1.0,ry+sz*0.8);
+    ctx.bezierCurveTo(rx+sz*0.2,ry+sz*1.0,rx-sz*0.8,ry+sz*0.7,rx-sz*1.2,ry);
+    ctx.bezierCurveTo(rx-sz*1.4,ry-sz*0.6,rx-sz*0.5,ry-sz*1.1,rx,ry-sz); ctx.closePath(); ctx.fill();
+    // Mid boulder
+    ctx.fillStyle='#9e3410';
+    ctx.beginPath();
+    ctx.moveTo(rx+sz*0.5,ry-sz*0.6); ctx.bezierCurveTo(rx+sz*1.4,ry-sz*0.4,rx+sz*1.5,ry+sz*0.4,rx+sz*0.8,ry+sz*0.6);
+    ctx.bezierCurveTo(rx+sz*0.2,ry+sz*0.7,rx-sz*0.1,ry+sz*0.2,rx+sz*0.2,ry-sz*0.5); ctx.closePath(); ctx.fill();
+    // Small front stone
+    ctx.fillStyle='#ba4015';
+    ctx.beginPath();
+    ctx.moveTo(rx+sz*0.1,ry+sz*0.3); ctx.bezierCurveTo(rx+sz*0.7,ry+sz*0.1,rx+sz*0.8,ry+sz*0.8,rx+sz*0.3,ry+sz*0.9);
+    ctx.bezierCurveTo(rx-sz*0.1,ry+sz*1.0,rx-sz*0.2,ry+sz*0.5,rx+sz*0.1,ry+sz*0.3); ctx.closePath(); ctx.fill();
     // Strata line
-    ctx.strokeStyle='rgba(40,10,0,0.32)'; ctx.lineWidth=sz*0.07; ctx.lineCap='butt';
-    ctx.beginPath(); ctx.moveTo(rx-sz*0.95,ry-sz*0.04); ctx.lineTo(rx+sz*0.95,ry-sz*0.04); ctx.stroke();
-    // Lit face highlight
-    ctx.fillStyle=`rgba(255,205,130,${lit?0.25:0.06})`;
-    ctx.beginPath(); ctx.ellipse(rx+(lit?sz*0.5:-sz*0.4),ry-sz*0.32,sz*0.30,sz*0.15,-0.2,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(35,8,0,0.35)'; ctx.lineWidth=sz*0.08; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(rx-sz*0.9,ry); ctx.bezierCurveTo(rx-sz*0.3,ry-sz*0.1,rx+sz*0.4,ry+sz*0.1,rx+sz*0.9,ry); ctx.stroke();
+    // Highlight
+    ctx.fillStyle=`rgba(255,200,125,${lit?0.28:0.08})`;
+    ctx.beginPath(); ctx.ellipse(rx+(lit?sz*0.4:-sz*0.3),ry-sz*0.5,sz*0.28,sz*0.14,lit?-0.3:0.3,0,Math.PI*2); ctx.fill();
   }
 
-  // Top corners — safe since oval barely reaches here (x < W*0.18 or x > W*0.82 at y~H*0.30)
-  drawRock(W*0.060, H*0.310, W*0.048, true);
-  drawRock(W*0.940, H*0.310, W*0.046, false);
-  // Small accent stones nearby
-  ctx.fillStyle='#8c2c0a';
-  [[W*0.030,H*0.360,W*0.022,H*0.010],[W*0.112,H*0.345,W*0.016,H*0.008],
-   [W*0.960,H*0.355,W*0.020,H*0.010],[W*0.890,H*0.342,W*0.016,H*0.008]].forEach(([x,y,rw,rh])=>{
-    ctx.beginPath(); ctx.ellipse(x,y,rw,rh,0.15,0,Math.PI*2); ctx.fill();
+  // TOP-LEFT corner: y~H*0.28, x < W*0.18 ✓
+  drawRock(W*0.070, H*0.295, W*0.046, true);
+  // Small accent stones scattered nearby
+  ctx.fillStyle='#8a2a08';
+  [[W*0.028,H*0.330],[W*0.105,H*0.340],[W*0.148,H*0.310],[W*0.026,H*0.275]].forEach(([x,y])=>{
+    ctx.beginPath();
+    ctx.moveTo(x,y-W*0.012); ctx.bezierCurveTo(x+W*0.016,y-W*0.008,x+W*0.018,y+W*0.005,x+W*0.008,y+W*0.012);
+    ctx.bezierCurveTo(x-W*0.008,y+W*0.014,x-W*0.014,y+W*0.004,x-W*0.010,y-W*0.008); ctx.closePath(); ctx.fill();
   });
 
-  // Bottom corners — safe at y~H*0.83, x < W*0.08 or x > W*0.92
-  drawRock(W*0.042, H*0.830, W*0.040, true);
-  drawRock(W*0.958, H*0.830, W*0.038, false);
+  // TOP-RIGHT corner
+  drawRock(W*0.932, H*0.295, W*0.044, false);
+  [[W*0.972,H*0.330],[W*0.896,H*0.340],[W*0.852,H*0.310],[W*0.976,H*0.275]].forEach(([x,y])=>{
+    ctx.fillStyle='#8a2a08'; ctx.beginPath();
+    ctx.moveTo(x,y-W*0.012); ctx.bezierCurveTo(x+W*0.016,y-W*0.008,x+W*0.018,y+W*0.005,x+W*0.008,y+W*0.012);
+    ctx.bezierCurveTo(x-W*0.008,y+W*0.014,x-W*0.014,y+W*0.004,x-W*0.010,y-W*0.008); ctx.closePath(); ctx.fill();
+  });
 
-  // ── SAGUARO CACTI — top corner zones ──────────────────────────────
-  // Safe top-left zone: x < W*0.15, y ~ H*0.28-0.40
-  // Safe top-right zone: x > W*0.85, y ~ H*0.28-0.40
+  // BOTTOM corners (safe at y~H*0.84: oval edge W*0.15)
+  drawRock(W*0.052, H*0.836, W*0.042, true);
+  drawRock(W*0.950, H*0.836, W*0.040, false);
+
+  // ── SAGUARO CACTI — TOP corners where oval doesn't reach ──────────
+  // Safe zone: at y~H*0.32-0.40, x < W*0.16 left, x > W*0.84 right
   function drawCactus(cx,cy,th,flip){
-    ctx.save(); if(flip){ctx.translate(cx*2,0); ctx.scale(-1,1);}
-    const tw=W*0.017;
-    // Shadow on ground
-    ctx.fillStyle='rgba(35,10,0,0.22)';
-    ctx.beginPath(); ctx.ellipse(cx+tw*1.5,cy+H*0.008,tw*2.4,H*0.010,0,0,Math.PI*2); ctx.fill();
-    // Trunk
-    ctx.fillStyle='#1c4a0e';
+    ctx.save();
+    if(flip){ ctx.translate(cx*2,0); ctx.scale(-1,1); }
+    const tw=W*0.016;
+    // Ground shadow
+    ctx.fillStyle='rgba(30,8,0,0.24)';
+    ctx.beginPath(); ctx.ellipse(cx+tw*1.8,cy+H*0.006,tw*2.2,H*0.009,0,0,Math.PI*2); ctx.fill();
+    // Trunk — organic curved path, not rectangle
+    ctx.fillStyle='#1a4a0c';
     ctx.beginPath();
-    ctx.moveTo(cx-tw,cy); ctx.lineTo(cx-tw,cy-th);
-    ctx.quadraticCurveTo(cx-tw,cy-th-tw,cx,cy-th-tw);
-    ctx.quadraticCurveTo(cx+tw,cy-th-tw,cx+tw,cy-th);
-    ctx.lineTo(cx+tw,cy); ctx.closePath(); ctx.fill();
-    // Sun-facing highlight strip
-    ctx.fillStyle='rgba(80,150,35,0.30)';
-    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+tw*0.7,cy-th*0.55); ctx.lineTo(cx+tw*0.5,cy-th); ctx.lineTo(cx,cy-th); ctx.closePath(); ctx.fill();
-    // Left arm
-    const ah=th*0.36, aw=th*0.22, arm_y=cy-th*0.56;
-    ctx.fillStyle='#1c4a0e';
+    ctx.moveTo(cx-tw*0.9,cy);
+    ctx.bezierCurveTo(cx-tw*1.0,cy-th*0.35, cx-tw*0.8,cy-th*0.65, cx-tw*0.9,cy-th);
+    ctx.bezierCurveTo(cx-tw*0.9,cy-th-tw*0.8, cx+tw*0.9,cy-th-tw*0.8, cx+tw*0.9,cy-th);
+    ctx.bezierCurveTo(cx+tw*1.0,cy-th*0.65, cx+tw*0.8,cy-th*0.35, cx+tw*0.9,cy);
+    ctx.closePath(); ctx.fill();
+    // Sun-face highlight
+    ctx.fillStyle='rgba(74,142,30,0.32)';
     ctx.beginPath();
-    ctx.moveTo(cx-tw,arm_y); ctx.lineTo(cx-tw-aw,arm_y+th*0.04);
-    ctx.quadraticCurveTo(cx-tw-aw-tw*0.6,arm_y+th*0.04-tw,cx-tw-aw-tw*0.6,arm_y-ah);
-    ctx.quadraticCurveTo(cx-tw-aw-tw*0.6,arm_y-ah-tw*0.7,cx-tw-aw-tw*0.6+tw*1.4,arm_y-ah-tw*0.7);
-    ctx.quadraticCurveTo(cx-tw-aw+tw*0.8,arm_y-ah-tw*0.7,cx-tw-aw+tw*0.8,arm_y-ah);
-    ctx.lineTo(cx-tw-aw+tw*0.8,arm_y+tw*0.4); ctx.lineTo(cx-tw+tw*0.2,arm_y+tw*0.2);
-    ctx.lineTo(cx-tw,arm_y-tw*0.2); ctx.closePath(); ctx.fill();
-    // Right arm (lower)
-    const arm_y2=cy-th*0.40;
+    ctx.moveTo(cx,cy); ctx.bezierCurveTo(cx+tw*0.6,cy-th*0.4,cx+tw*0.7,cy-th*0.7,cx+tw*0.5,cy-th);
+    ctx.lineTo(cx,cy-th); ctx.closePath(); ctx.fill();
+    // Left arm — organic bezier, branching upward
+    const ay=cy-th*0.54, aLen=th*0.32;
+    ctx.fillStyle='#1a4a0c';
     ctx.beginPath();
-    ctx.moveTo(cx+tw,arm_y2); ctx.lineTo(cx+tw+aw*0.8,arm_y2+th*0.03);
-    ctx.quadraticCurveTo(cx+tw+aw*0.8+tw*0.6,arm_y2+th*0.03-tw,cx+tw+aw*0.8+tw*0.6,arm_y2-ah*0.80);
-    ctx.quadraticCurveTo(cx+tw+aw*0.8+tw*0.6,arm_y2-ah*0.80-tw*0.6,cx+tw+aw*0.8+tw*0.6-tw*1.3,arm_y2-ah*0.80-tw*0.6);
-    ctx.quadraticCurveTo(cx+tw+aw*0.8-tw*0.8,arm_y2-ah*0.80-tw*0.6,cx+tw+aw*0.8-tw*0.8,arm_y2-ah*0.80);
-    ctx.lineTo(cx+tw+aw*0.8-tw*0.8,arm_y2+tw*0.3); ctx.lineTo(cx+tw-tw*0.2,arm_y2+tw*0.2);
-    ctx.lineTo(cx+tw,arm_y2-tw*0.2); ctx.closePath(); ctx.fill();
+    ctx.moveTo(cx-tw*0.9,ay+th*0.05);
+    ctx.bezierCurveTo(cx-tw*2.2,ay+th*0.04, cx-tw*2.8,ay-th*0.04, cx-tw*2.8,ay-aLen);
+    ctx.bezierCurveTo(cx-tw*2.8,ay-aLen-tw*0.8, cx-tw*1.2,ay-aLen-tw*0.8, cx-tw*1.2,ay-aLen);
+    ctx.bezierCurveTo(cx-tw*1.2,ay-th*0.06, cx-tw*0.9,ay-th*0.02, cx-tw*0.9,ay+th*0.05);
+    ctx.closePath(); ctx.fill();
+    // Right arm (lower, shorter)
+    const ay2=cy-th*0.38, aLen2=th*0.25;
+    ctx.beginPath();
+    ctx.moveTo(cx+tw*0.9,ay2+th*0.04);
+    ctx.bezierCurveTo(cx+tw*2.0,ay2+th*0.03, cx+tw*2.6,ay2-th*0.03, cx+tw*2.6,ay2-aLen2);
+    ctx.bezierCurveTo(cx+tw*2.6,ay2-aLen2-tw*0.7, cx+tw*1.2,ay2-aLen2-tw*0.7, cx+tw*1.2,ay2-aLen2);
+    ctx.bezierCurveTo(cx+tw*1.2,ay2-th*0.05, cx+tw*0.9,ay2-th*0.02, cx+tw*0.9,ay2+th*0.04);
+    ctx.closePath(); ctx.fill();
     // Spines
-    ctx.strokeStyle='rgba(210,190,130,0.72)'; ctx.lineWidth=W*0.0012; ctx.lineCap='round';
-    [cy-th*0.18,cy-th*0.36,cy-th*0.55,cy-th*0.74,cy-th*0.92].forEach(sy=>{
+    ctx.strokeStyle='rgba(205,185,125,0.75)'; ctx.lineWidth=W*0.0012; ctx.lineCap='round';
+    [cy-th*0.16,cy-th*0.34,cy-th*0.52,cy-th*0.70,cy-th*0.88].forEach(sy=>{
       for(let a=0;a<10;a++){
         const ang=a*(Math.PI*2/10);
         ctx.beginPath();
-        ctx.moveTo(cx+Math.cos(ang)*tw*0.9,sy+Math.sin(ang)*tw*0.42);
-        ctx.lineTo(cx+Math.cos(ang)*tw*1.55,sy+Math.sin(ang)*tw*0.72); ctx.stroke();
+        ctx.moveTo(cx+Math.cos(ang)*tw*0.88,sy+Math.sin(ang)*tw*0.40);
+        ctx.lineTo(cx+Math.cos(ang)*tw*1.50,sy+Math.sin(ang)*tw*0.68); ctx.stroke();
       }
     });
     ctx.restore();
   }
 
-  // Top-left corner: x < W*0.20 at y~H*0.29
-  drawCactus(W*0.058, H*0.395, H*0.145, false);
-  drawCactus(W*0.120, H*0.435, H*0.100, false);
-  // Top-right corner (flipped)
-  drawCactus(W*0.942, H*0.390, H*0.145, true);
-  drawCactus(W*0.882, H*0.432, H*0.100, true);
-  // Short ones in bottom corners
-  drawCactus(W*0.048, H*0.765, H*0.060, false);
-  drawCactus(W*0.952, H*0.762, H*0.060, true);
+  // LEFT: x=W*0.058, y=H*0.36 — at H*0.36, oval left=W*0.148. Cactus centre+arm max reach≈W*0.058+W*0.048=W*0.106 < W*0.148 ✓
+  drawCactus(W*0.055, H*0.365, H*0.118, false);
+  // Second taller one (slightly further left and higher)
+  drawCactus(W*0.092, H*0.420, H*0.082, false);
+  // RIGHT side (flipped)
+  drawCactus(W*0.945, H*0.365, H*0.118, true);
+  drawCactus(W*0.908, H*0.420, H*0.082, true);
+  // Short ones further down — at H*0.79, oval edge = W*0.118 → safe x<W*0.05
+  drawCactus(W*0.030, H*0.768, H*0.055, false);
+  drawCactus(W*0.970, H*0.768, H*0.055, true);
 
   // Heat shimmer
   for(let i=0;i<4;i++){
-    const shY=H*(0.70+i*0.042);
-    const phase=t*1.9+i*2.8;
-    const al=(0.045+0.022*Math.sin(t*1.0+i))*0.85;
-    ctx.strokeStyle=`rgba(255,195,90,${al})`;
-    ctx.lineWidth=H*0.005; ctx.lineCap='round';
+    const shY=H*(0.68+i*0.044);
+    const phase=t*2.0+i*3.0;
+    const al=0.038+0.018*Math.sin(t*1.1+i);
+    ctx.strokeStyle=`rgba(255,195,88,${al})`;
+    ctx.lineWidth=H*0.0045; ctx.lineCap='round';
     ctx.beginPath();
-    for(let x=0;x<=W;x+=6){
-      const y=shY+Math.sin(x*0.024+phase)*H*0.0045;
+    for(let x=0;x<=W;x+=5){
+      const y=shY+Math.sin(x*0.026+phase)*H*0.004+Math.sin(x*0.014+phase*0.7)*H*0.002;
       x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
     }
     ctx.stroke();
