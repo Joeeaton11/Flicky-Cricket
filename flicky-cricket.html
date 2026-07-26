@@ -25078,103 +25078,323 @@ function drawLagoonScene() {
 
 function drawShipwreckScene() {
   // League 11c — The Reef: Shipwreck
-  // Murky depths, barnacle-encrusted wreck of an old galleon, shoals of fish swirling, treasure chest glinting, bioluminescent algae glow
-  const H=canvas.height, W=canvas.width;
+  const H=canvas.height, W=canvas.width, t=Date.now()/1000;
 
+  // ══ BACKDROP ══
   ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
-  // Sky — deep aquamarine underwater, darkening up
+
+  // Deep water gradient — near-black at surface, murky teal at bottom
   const sky=ctx.createLinearGradient(0,0,0,H*0.23);
-  sky.addColorStop(0,'#020818'); sky.addColorStop(0.5,'#041828'); sky.addColorStop(1,'#083040');
+  sky.addColorStop(0,'#010610'); sky.addColorStop(0.45,'#02101e'); sky.addColorStop(1,'#052838');
   ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.23);
 
-  // Light rays from surface — shimmering caustics
-  for(let r=0;r<6;r++){
-    const rG=ctx.createLinearGradient(W*(0.20+r*0.12),0,W*(0.18+r*0.12),H*0.23);
-    rG.addColorStop(0,'rgba(40,180,200,0.18)'); rG.addColorStop(1,'rgba(0,80,120,0)');
+  // Shimmering light rays from far above surface (animated)
+  ctx.save(); ctx.globalAlpha=0.075;
+  for(let r=0;r<8;r++){
+    const rx=W*(0.08+r*0.115), rw=W*(0.022+((r*7)%4)*0.006);
+    const sw=Math.sin(t*0.55+r*0.92)*W*0.012;
+    const rG=ctx.createLinearGradient(rx,0,rx,H*0.23);
+    rG.addColorStop(0,'rgba(80,210,230,0)'); rG.addColorStop(0.35,'rgba(60,190,215,1)'); rG.addColorStop(1,'rgba(30,130,170,0)');
     ctx.fillStyle=rG;
-    ctx.beginPath(); ctx.moveTo(W*(0.16+r*0.12),0); ctx.lineTo(W*(0.22+r*0.12),0); ctx.lineTo(W*(0.30+r*0.12),H*0.23); ctx.lineTo(W*(0.08+r*0.12),H*0.23); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(rx-rw+sw,0); ctx.lineTo(rx+rw+sw,0);
+    ctx.lineTo(rx+rw*2.2+sw*1.6,H*0.23); ctx.lineTo(rx-rw*1.2+sw*1.6,H*0.23); ctx.closePath(); ctx.fill();
   }
-
-  // Ship hull — broken galleon, half-buried, looming in backdrop
-  ctx.fillStyle='#2a1808';
-  // Main hull
-  ctx.beginPath(); ctx.moveTo(W*0.10,H*0.23); ctx.lineTo(W*0.08,H*0.10); ctx.lineTo(W*0.30,H*0.05); ctx.lineTo(W*0.65,H*0.07); ctx.lineTo(W*0.80,H*0.12); ctx.lineTo(W*0.82,H*0.23); ctx.closePath(); ctx.fill();
-  // Cabin / poop deck above
-  ctx.fillStyle='#1e1008';
-  ctx.fillRect(W*0.55,H*0.03,W*0.22,H*0.09);
-  ctx.fillStyle='#2a1808';
-  // Broken mast
-  ctx.strokeStyle='#3a2010'; ctx.lineWidth=W*0.014;
-  ctx.beginPath(); ctx.moveTo(W*0.38,H*0.23); ctx.lineTo(W*0.35,H*0.00); ctx.stroke();
-  ctx.lineWidth=W*0.008;
-  ctx.beginPath(); ctx.moveTo(W*0.25,H*0.055); ctx.lineTo(W*0.50,H*0.065); ctx.stroke(); // yard arm
-  // Barnacles / algae on hull
-  ctx.fillStyle='rgba(40,180,80,0.35)';
-  for(let b=0;b<12;b++) ctx.beginPath(),ctx.arc(W*(0.12+b*0.060),H*(0.12+Math.sin(b)*0.04),W*0.010,0,Math.PI*2),ctx.fill();
-  ctx.fillStyle='rgba(200,60,20,0.30)'; // red rust stains
-  for(let b=0;b<8;b++) ctx.beginPath(),ctx.arc(W*(0.20+b*0.072),H*(0.08+Math.sin(b*1.3)*0.04),W*0.008,0,Math.PI*2),ctx.fill();
-
   ctx.restore();
 
-  // Deep water floor
-  const grd=ctx.createLinearGradient(0,H*0.23,0,H);
-  grd.addColorStop(0,'#083040'); grd.addColorStop(0.3,'#041820'); grd.addColorStop(1,'#020810');
-  ctx.fillStyle=grd; ctx.fillRect(0,H*0.23,W,H*0.77);
-  drawGroundRings('rgba(0,60,80,0.30)','rgba(0,40,60,0.30)','rgba(0,80,100,0.50)');
+  // ── GALLEON WRECK SILHOUETTE ──
+  // Hull shadow (depth layer)
+  ctx.fillStyle='rgba(0,0,0,0.55)';
+  ctx.beginPath();
+  ctx.moveTo(W*0.06,H*0.23); ctx.lineTo(W*0.05,H*0.095);
+  ctx.bezierCurveTo(W*0.08,H*0.062,W*0.18,H*0.040,W*0.32,H*0.038);
+  ctx.bezierCurveTo(W*0.52,H*0.036,W*0.70,H*0.052,W*0.84,H*0.075);
+  ctx.lineTo(W*0.86,H*0.23); ctx.closePath(); ctx.fill();
 
-  // Seabed sand dunes
-  ctx.fillStyle='#2a2010';
-  ctx.beginPath(); ctx.moveTo(0,H); ctx.lineTo(0,H*0.88); ctx.quadraticCurveTo(W*0.25,H*0.82,W*0.50,H*0.87); ctx.quadraticCurveTo(W*0.75,H*0.91,W,H*0.85); ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+  // Main hull — dark weathered oak
+  const hullG=ctx.createLinearGradient(0,H*0.04,0,H*0.23);
+  hullG.addColorStop(0,'#1e0c04'); hullG.addColorStop(0.5,'#2c1408'); hullG.addColorStop(1,'#180a02');
+  ctx.fillStyle=hullG;
+  ctx.beginPath();
+  ctx.moveTo(W*0.08,H*0.23); ctx.lineTo(W*0.06,H*0.10);
+  ctx.bezierCurveTo(W*0.08,H*0.070,W*0.16,H*0.050,W*0.30,H*0.045);
+  ctx.bezierCurveTo(W*0.50,H*0.040,W*0.68,H*0.056,W*0.82,H*0.082);
+  ctx.lineTo(W*0.84,H*0.23); ctx.closePath(); ctx.fill();
 
-  // Seaweed — swaying fronds
-  ctx.strokeStyle='rgba(20,160,60,0.55)'; ctx.lineWidth=W*0.006;
-  [[W*0.08,H*0.75],[W*0.20,H*0.78],[W*0.78,H*0.76],[W*0.90,H*0.74]].forEach(([sx,sy])=>{
-    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.bezierCurveTo(sx-W*0.018,sy-H*0.040,sx+W*0.018,sy-H*0.080,sx,sy-H*0.120); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.bezierCurveTo(sx+W*0.020,sy-H*0.030,sx-W*0.020,sy-H*0.070,sx+W*0.010,sy-H*0.110); ctx.stroke();
+  // Hull plank lines — horizontal texture
+  ctx.strokeStyle='rgba(8,4,0,0.55)'; ctx.lineWidth=W*0.0028;
+  for(let pl=0;pl<7;pl++){
+    const py=H*(0.075+pl*0.022);
+    ctx.beginPath(); ctx.moveTo(W*0.07,py); ctx.lineTo(W*0.83,py); ctx.stroke();
+  }
+
+  // Exposed broken ribs on left side
+  ctx.strokeStyle='#140802'; ctx.lineWidth=W*0.0045;
+  [0.10,0.155,0.205].forEach((rx,i)=>{
+    ctx.beginPath(); ctx.moveTo(W*rx,H*0.23); ctx.quadraticCurveTo(W*(rx-0.01),H*0.135,W*(rx+0.008),H*0.065+i*H*0.008); ctx.stroke();
   });
 
-  // Shoal of fish — darting silhouettes
-  ctx.fillStyle='rgba(100,200,220,0.60)';
-  [[W*0.45,H*0.42],[W*0.55,H*0.38],[W*0.48,H*0.50],[W*0.52,H*0.45],[W*0.58,H*0.52],[W*0.44,H*0.58]].forEach(([fx,fy])=>{
-    ctx.save(); ctx.translate(fx,fy); ctx.scale(1,0.5);
-    ctx.beginPath(); ctx.moveTo(W*0.014,0); ctx.lineTo(-W*0.008,-W*0.008); ctx.lineTo(-W*0.008,W*0.008); ctx.closePath(); ctx.fill();
+  // Stern castle (right) — raised poop deck
+  ctx.fillStyle='#1a0a04';
+  ctx.beginPath();
+  ctx.moveTo(W*0.62,H*0.23); ctx.lineTo(W*0.62,H*0.055);
+  ctx.lineTo(W*0.84,H*0.055); ctx.lineTo(W*0.85,H*0.23); ctx.closePath(); ctx.fill();
+  // Stern windows — glowing faint amber
+  ctx.save(); ctx.shadowColor='rgba(255,160,30,0.6)'; ctx.shadowBlur=8;
+  ctx.fillStyle='rgba(200,120,20,0.28)';
+  [[W*0.66,H*0.075],[W*0.72,H*0.075],[W*0.78,H*0.075]].forEach(([wx,wy])=>{
+    ctx.beginPath(); ctx.ellipse(wx,wy,W*0.018,H*0.012,0,0,Math.PI*2); ctx.fill();
+  });
+  ctx.restore();
+
+  // Gun ports along hull — open dark squares with cannon barrels
+  for(let gp=0;gp<5;gp++){
+    const gpx=W*(0.18+gp*0.092), gpy=H*0.095;
+    ctx.fillStyle='#080402'; ctx.fillRect(gpx,gpy,W*0.028,H*0.016);
+    ctx.strokeStyle='#2a1a08'; ctx.lineWidth=W*0.0065; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(gpx+W*0.014,gpy+H*0.008); ctx.lineTo(gpx-W*0.014,gpy+H*0.008); ctx.stroke();
+  }
+
+  // Broken foremast — tilted left
+  ctx.strokeStyle='#2a1408'; ctx.lineWidth=W*0.016; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(W*0.26,H*0.23); ctx.lineTo(W*0.18,H*0.010); ctx.stroke();
+  // Foremast yardarm — drooping at an angle
+  ctx.lineWidth=W*0.009;
+  ctx.beginPath(); ctx.moveTo(W*0.14,H*0.060); ctx.lineTo(W*0.38,H*0.090); ctx.stroke();
+  // Mainmast — snapped, sticking up at angle
+  ctx.lineWidth=W*0.013;
+  ctx.beginPath(); ctx.moveTo(W*0.48,H*0.23); ctx.lineTo(W*0.42,H*0.025); ctx.stroke();
+  ctx.lineWidth=W*0.007;
+  // Broken mainmast yardarm — angled down
+  ctx.beginPath(); ctx.moveTo(W*0.32,H*0.055); ctx.lineTo(W*0.56,H*0.080); ctx.stroke();
+
+  // Rigging — taut ropes between masts, some slack
+  ctx.strokeStyle='rgba(28,14,4,0.70)'; ctx.lineWidth=W*0.0022;
+  [[W*0.19,H*0.014,W*0.43,H*0.028],[W*0.16,H*0.038,W*0.40,H*0.050],[W*0.22,H*0.065,W*0.48,H*0.070]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.quadraticCurveTo((x1+x2)/2,(y1+y2)/2+H*0.012,x2,y2); ctx.stroke();
+  });
+
+  // Tattered sail scraps — translucent, hanging from yardarms
+  ctx.fillStyle='rgba(32,20,10,0.38)';
+  ctx.beginPath(); ctx.moveTo(W*0.18,H*0.062); ctx.lineTo(W*0.25,H*0.062);
+  ctx.bezierCurveTo(W*0.26,H*0.096,W*0.24,H*0.120,W*0.22,H*0.130); ctx.lineTo(W*0.17,H*0.115); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(W*0.44,H*0.082); ctx.lineTo(W*0.54,H*0.082);
+  ctx.bezierCurveTo(W*0.56,H*0.110,W*0.52,H*0.138,W*0.50,H*0.148); ctx.lineTo(W*0.43,H*0.128); ctx.closePath(); ctx.fill();
+
+  // Anchor chain — hanging from bow
+  ctx.strokeStyle='rgba(60,45,20,0.65)'; ctx.lineWidth=W*0.0055; ctx.setLineDash([W*0.006,W*0.005]);
+  ctx.beginPath(); ctx.moveTo(W*0.12,H*0.23); ctx.quadraticCurveTo(W*0.06,H*0.185,W*0.04,H*0.23); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Algae/barnacle crust on hull
+  ctx.fillStyle='rgba(30,160,60,0.32)';
+  for(let b=0;b<14;b++){ const bx=W*(0.10+(b*53%76)/100), by=H*(0.10+(b*37%14)/100); ctx.beginPath(); ctx.arc(bx,by,W*(0.006+(b*19%4)/1000),0,Math.PI*2); ctx.fill(); }
+  // Rust bleeds
+  ctx.fillStyle='rgba(180,50,10,0.22)';
+  for(let b=0;b<9;b++){ const bx=W*(0.15+(b*71%68)/100), by=H*(0.065+(b*43%18)/100); ctx.beginPath(); ctx.arc(bx,by,W*(0.009+(b*23%5)/1000),0,Math.PI*2); ctx.fill(); }
+
+  ctx.restore(); // end backdrop
+
+  // ══ DEEP WATER FIELD ══
+  const wg=ctx.createLinearGradient(0,H*0.23,0,H);
+  wg.addColorStop(0,'#052838'); wg.addColorStop(0.25,'#031520'); wg.addColorStop(0.65,'#020c16'); wg.addColorStop(1,'#010810');
+  ctx.fillStyle=wg; ctx.fillRect(0,H*0.23,W,H*0.77);
+
+  // Animated caustics on water column
+  ctx.save(); ctx.globalAlpha=0.07; ctx.strokeStyle='rgba(60,190,215,1)'; ctx.lineWidth=W*0.0025;
+  for(let c=0;c<18;c++){
+    const cx2=W*(((c*137+22)%88)/100+0.06), cy2=H*(0.28+((c*83)%62)/100);
+    const cr=W*(0.011+((c*31)%6)/100);
+    const phase=t*0.42+c*0.52;
+    ctx.beginPath(); ctx.arc(cx2+Math.sin(phase)*W*0.007,cy2+Math.cos(phase)*H*0.004,cr*(0.7+Math.sin(phase*1.4)*0.3),0,Math.PI*2); ctx.stroke();
+  }
+  ctx.restore();
+
+  drawGroundRings('rgba(0,80,110,0.28)','rgba(0,55,80,0.28)','rgba(0,110,140,0.45)');
+
+  // ══ EVENODD OUTER: SEABED & WRECK DEBRIS ══
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,H*0.23,W,H-H*0.23);
+  ctx.ellipse(W/2,H*0.60,W*0.46,H*0.37,0,0,Math.PI*2);
+  ctx.clip('evenodd');
+
+  // Seabed — silty dark sand, rising slightly at edges
+  const seabedG=ctx.createLinearGradient(0,H*0.82,0,H);
+  seabedG.addColorStop(0,'rgba(0,0,0,0)'); seabedG.addColorStop(0.3,'#0e0c08'); seabedG.addColorStop(1,'#1a1610');
+  ctx.fillStyle=seabedG; ctx.fillRect(0,H*0.82,W,H*0.18);
+  // Silt dunes
+  ctx.fillStyle='#181410';
+  ctx.beginPath(); ctx.moveTo(0,H); ctx.lineTo(0,H*0.900);
+  ctx.quadraticCurveTo(W*0.12,H*0.870,W*0.22,H*0.880); ctx.quadraticCurveTo(W*0.36,H*0.896,W*0.50,H*0.875);
+  ctx.quadraticCurveTo(W*0.64,H*0.856,W*0.78,H*0.870); ctx.quadraticCurveTo(W*0.90,H*0.882,W,H*0.895);
+  ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+
+  // Wreck debris on seabed — scattered planks and timbers
+  ctx.strokeStyle='#1e0e04'; ctx.lineWidth=W*0.012; ctx.lineCap='round';
+  [[W*0.04,H*0.840,W*0.18,H*0.860],[W*0.06,H*0.870,W*0.16,H*0.880],[W*0.84,H*0.855,W*0.96,H*0.868]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  });
+
+  // Cannonballs on seabed
+  ctx.fillStyle='#242018';
+  [[W*0.08,H*0.892],[W*0.12,H*0.900],[W*0.16,H*0.895],[W*0.88,H*0.888],[W*0.92,H*0.896]].forEach(([cx,cy])=>{
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,0.7)'; ctx.shadowBlur=4;
+    ctx.beginPath(); ctx.arc(cx,cy,W*0.013,0,Math.PI*2); ctx.fill();
     ctx.restore();
+    // Glint
+    ctx.fillStyle='rgba(80,75,60,0.55)'; ctx.beginPath(); ctx.arc(cx-W*0.004,cy-W*0.004,W*0.004,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#242018';
   });
 
-  // LEFT — treasure chest with glow
+  // Anchor on left seabed
   {
-    const tx=W*0.14, ty=H*0.70;
-    ctx.save(); ctx.shadowColor='rgba(255,200,50,0.7)'; ctx.shadowBlur=25;
-    ctx.fillStyle='#6a4010'; ctx.fillRect(tx,ty,W*0.080,H*0.050);
-    ctx.fillStyle='#8a5818'; ctx.fillRect(tx,ty,W*0.080,H*0.020);
-    ctx.fillStyle='#c89020'; ctx.fillRect(tx,ty,W*0.080,H*0.005);
-    ctx.fillStyle='#d0a020'; ctx.fillRect(tx+W*0.030,ty-H*0.004,W*0.020,H*0.008); // lock
-    // Gold coins spilling out
-    ctx.fillStyle='#d0a828';
-    [[tx-W*0.012,ty+H*0.040],[tx+W*0.070,ty+H*0.038],[tx+W*0.090,ty+H*0.045]].forEach(([cx,cy2])=>{
-      ctx.beginPath(); ctx.ellipse(cx,cy2,W*0.010,H*0.006,0,0,Math.PI*2); ctx.fill();
-    });
+    const ax=W*0.07, ay=H*0.868;
+    ctx.strokeStyle='#303020'; ctx.lineWidth=W*0.008; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(ax,ay-H*0.040); ctx.lineTo(ax,ay); ctx.stroke(); // shank
+    ctx.lineWidth=W*0.006;
+    ctx.beginPath(); ctx.moveTo(ax-W*0.025,ay-H*0.008); ctx.lineTo(ax+W*0.025,ay-H*0.008); ctx.stroke(); // stock
+    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.bezierCurveTo(ax-W*0.030,ay,ax-W*0.034,ay-H*0.022,ax-W*0.012,ay-H*0.028); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.bezierCurveTo(ax+W*0.030,ay,ax+W*0.034,ay-H*0.022,ax+W*0.012,ay-H*0.028); ctx.stroke();
+  }
+
+  // Coral growing on wreck debris — left side
+  function wreckCoral(cx,cy,h,col){
+    ctx.fillStyle=col;
+    for(let b=0;b<5;b++){
+      const bx=cx+(b-2)*W*0.014, bh=h*(0.6+((b*17)%5)*0.10);
+      ctx.beginPath(); ctx.arc(bx,cy-bh,W*0.012,0,Math.PI*2); ctx.fill();
+      ctx.fillRect(bx-W*0.006,cy-bh,W*0.012,bh);
+    }
+  }
+  wreckCoral(W*0.06,H*0.840,H*0.042,'rgba(200,50,80,0.60)');
+  wreckCoral(W*0.14,H*0.848,H*0.036,'rgba(255,140,30,0.55)');
+  wreckCoral(W*0.90,H*0.844,H*0.040,'rgba(180,40,70,0.58)');
+
+  // Seaweed — dark animated fronds
+  ctx.lineCap='round';
+  [[W*0.03,H*0.820],[W*0.19,H*0.828],[W*0.79,H*0.822],[W*0.96,H*0.818]].forEach(([sx,sy],si)=>{
+    const sw2=Math.sin(t*0.60+si*1.2)*W*0.014;
+    ctx.strokeStyle='rgba(18,100,38,0.62)'; ctx.lineWidth=W*0.0055;
+    ctx.beginPath(); ctx.moveTo(sx,sy);
+    ctx.bezierCurveTo(sx+sw2,sy-H*0.040,sx-sw2+W*0.010,sy-H*0.080,sx+sw2*0.5,sy-H*0.110); ctx.stroke();
+    ctx.strokeStyle='rgba(12,80,28,0.50)'; ctx.lineWidth=W*0.0042;
+    ctx.beginPath(); ctx.moveTo(sx,sy);
+    ctx.bezierCurveTo(sx-sw2+W*0.015,sy-H*0.032,sx+sw2-W*0.008,sy-H*0.066,sx-sw2*0.4+W*0.010,sy-H*0.095); ctx.stroke();
+  });
+
+  // Bioluminescent tube worms on seabed
+  ctx.save(); ctx.shadowColor='rgba(60,255,180,0.8)'; ctx.shadowBlur=8;
+  ctx.strokeStyle='rgba(60,255,160,0.55)'; ctx.lineWidth=W*0.004;
+  [[W*0.04,H*0.850],[W*0.10,H*0.855],[W*0.88,H*0.848],[W*0.94,H*0.852]].forEach(([wx,wy],wi)=>{
+    const ww=Math.sin(t*1.1+wi*0.8)*W*0.008;
+    ctx.beginPath(); ctx.moveTo(wx,wy); ctx.quadraticCurveTo(wx+ww,wy-H*0.028,wx+ww*0.5,wy-H*0.045); ctx.stroke();
+  });
+  ctx.restore();
+
+  // ── TREASURE CHEST — left, glowing gold ──
+  {
+    const tcx=W*0.10, tcy=H*0.718;
+    ctx.save(); ctx.shadowColor='rgba(255,190,30,0.75)'; ctx.shadowBlur=22;
+    // Chest body
+    ctx.fillStyle='#4a2c08'; ctx.fillRect(tcx,tcy+H*0.018,W*0.088,H*0.046);
+    // Lid (open, angled)
+    ctx.fillStyle='#5a3810';
+    ctx.beginPath(); ctx.moveTo(tcx,tcy+H*0.018); ctx.lineTo(tcx+W*0.088,tcy+H*0.018);
+    ctx.lineTo(tcx+W*0.092,tcy); ctx.lineTo(tcx-W*0.004,tcy); ctx.closePath(); ctx.fill();
+    // Gold bands
+    ctx.fillStyle='#c8900a'; ctx.fillRect(tcx,tcy+H*0.018,W*0.088,H*0.006);
+    ctx.fillRect(tcx,tcy+H*0.040,W*0.088,H*0.005);
+    // Lock hasp
+    ctx.fillStyle='#d8a010'; ctx.fillRect(tcx+W*0.034,tcy+H*0.012,W*0.020,H*0.010);
+    // Gold coins spilling
+    ctx.fillStyle='#d4a418';
+    const coins=[[tcx-W*0.016,tcy+H*0.056],[tcx+W*0.080,tcy+H*0.052],[tcx+W*0.098,tcy+H*0.060],[tcx+W*0.014,tcy+H*0.062],[tcx-W*0.002,tcy+H*0.068]];
+    coins.forEach(([ccx,ccy])=>{ ctx.beginPath(); ctx.ellipse(ccx,ccy,W*0.012,H*0.007,0,0,Math.PI*2); ctx.fill(); });
+    // Gold glow bloom
+    const glow=ctx.createRadialGradient(tcx+W*0.044,tcy+H*0.030,0,tcx+W*0.044,tcy+H*0.030,W*0.080);
+    glow.addColorStop(0,'rgba(255,200,40,0.28)'); glow.addColorStop(1,'rgba(255,160,0,0)');
+    ctx.fillStyle=glow; ctx.fillRect(tcx-W*0.040,tcy-H*0.020,W*0.170,H*0.100);
     ctx.restore();
   }
 
-  // RIGHT — bioluminescent jellyfish
+  // ── SHOAL OF FISH — animated school swirling around oval ──
   {
-    [[W*0.80,H*0.40],[W*0.88,H*0.56],[W*0.75,H*0.62]].forEach(([jx,jy],ji)=>{
-      ctx.save();
-      ctx.shadowColor='rgba(80,200,255,0.8)'; ctx.shadowBlur=20;
-      ctx.fillStyle='rgba(100,220,255,0.40)';
-      ctx.beginPath(); ctx.arc(jx,jy,W*0.022,Math.PI,0); ctx.fill();
-      ctx.strokeStyle='rgba(120,230,255,0.60)'; ctx.lineWidth=W*0.004;
-      ctx.beginPath(); ctx.arc(jx,jy,W*0.022,Math.PI,0); ctx.stroke();
-      // Tentacles
-      for(let t=0;t<5;t++){
-        const tx2=jx-W*0.015+t*W*0.008;
-        ctx.strokeStyle='rgba(100,200,255,0.40)'; ctx.lineWidth=W*0.003;
-        ctx.beginPath(); ctx.moveTo(tx2,jy); ctx.quadraticCurveTo(tx2+W*0.008*(ji%2?1:-1),jy+H*0.030,tx2,jy+H*0.050); ctx.stroke();
-      }
+    const shoalCx=W*0.30, shoalCy=H*0.44, shoalR=W*0.14;
+    const phase=t*0.38;
+    ctx.fillStyle='rgba(80,185,210,0.58)';
+    for(let f=0;f<18;f++){
+      const fa=phase+(f/18)*Math.PI*2;
+      const fr=shoalR*(0.82+((f*17)%10)/60);
+      const fx2=shoalCx+Math.cos(fa)*fr+Math.sin(t*0.80+f*0.4)*W*0.008;
+      const fy2=shoalCy+Math.sin(fa)*fr*0.55+Math.cos(t*0.70+f*0.5)*H*0.010;
+      const fang=Math.atan2(Math.cos(fa)*fr*0.55,Math.sin(fa)*fr)+Math.PI/2;
+      ctx.save(); ctx.translate(fx2,fy2); ctx.rotate(fang);
+      ctx.beginPath(); ctx.moveTo(0,-W*0.011); ctx.lineTo(-W*0.005,W*0.006); ctx.lineTo(W*0.005,W*0.006); ctx.closePath(); ctx.fill();
       ctx.restore();
-    });
+    }
   }
+
+  // ── BIOLUMINESCENT JELLYFISH — right side ──
+  [[W*0.84,H*0.340,0.8],[W*0.90,H*0.480,1.1],[W*0.78,H*0.580,0.65]].forEach(([jx,jy,jspd],ji)=>{
+    const jbob=Math.sin(t*jspd+ji*1.8)*H*0.012;
+    ctx.save(); ctx.shadowColor='rgba(60,200,255,0.90)'; ctx.shadowBlur=18;
+    // Bell
+    ctx.fillStyle='rgba(80,210,255,0.36)';
+    ctx.beginPath(); ctx.arc(jx,jy+jbob,W*0.026,Math.PI,0); ctx.fill();
+    ctx.strokeStyle='rgba(120,235,255,0.65)'; ctx.lineWidth=W*0.0032;
+    ctx.beginPath(); ctx.arc(jx,jy+jbob,W*0.026,Math.PI,0); ctx.stroke();
+    // Inner ring
+    ctx.fillStyle='rgba(140,240,255,0.20)';
+    ctx.beginPath(); ctx.arc(jx,jy+jbob,W*0.014,Math.PI,0); ctx.fill();
+    // Tentacles
+    for(let tt=0;tt<6;tt++){
+      const tx2=jx-W*0.020+tt*W*0.009;
+      const twav=Math.sin(t*1.4+tt*0.7+ji)*W*0.008;
+      ctx.strokeStyle='rgba(80,200,255,0.38)'; ctx.lineWidth=W*0.0028;
+      ctx.beginPath(); ctx.moveTo(tx2,jy+jbob);
+      ctx.bezierCurveTo(tx2+twav,jy+jbob+H*0.020,tx2-twav,jy+jbob+H*0.040,tx2+twav*0.5,jy+jbob+H*0.058); ctx.stroke();
+    }
+    ctx.restore();
+  });
+
+  // ── OCTOPUS — lurking bottom right, tentacles curling ──
+  {
+    const ox=W*0.88, oy=H*0.840;
+    ctx.save(); ctx.globalAlpha=0.55; ctx.fillStyle='#1a0830';
+    // body
+    ctx.beginPath(); ctx.ellipse(ox,oy-H*0.018,W*0.036,H*0.024,0,0,Math.PI*2); ctx.fill();
+    // eyes
+    ctx.fillStyle='rgba(80,200,255,0.70)';
+    ctx.beginPath(); ctx.arc(ox-W*0.012,oy-H*0.024,W*0.007,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ox+W*0.012,oy-H*0.024,W*0.007,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#030008';
+    ctx.beginPath(); ctx.arc(ox-W*0.012,oy-H*0.024,W*0.003,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ox+W*0.012,oy-H*0.024,W*0.003,0,Math.PI*2); ctx.fill();
+    // tentacles
+    ctx.strokeStyle='#200a38'; ctx.lineWidth=W*0.014; ctx.lineCap='round';
+    [[-0.10,0.04,-0.06,0.07],[-0.06,0.05,0.02,0.09],[0.00,0.04,0.06,0.07],[0.06,0.03,0.10,0.06],[0.08,0.002,0.14,0.02]].forEach(([dx1,dy1,dx2,dy2],ti)=>{
+      const wav=Math.sin(t*0.80+ti*0.9)*W*0.010;
+      ctx.beginPath(); ctx.moveTo(ox+W*dx1,oy+H*dy1); ctx.quadraticCurveTo(ox+W*(dx1+dx2)/2+wav,oy+H*(dy1+dy2)/2,ox+W*dx2,oy+H*dy2); ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  // ── SMALL SHARK SILHOUETTE — gliding through mid-water ──
+  {
+    const sphase=(t*0.022)%1.0;
+    const sx=W*(sphase*1.30-0.16), sy=H*(0.490+Math.sin(t*0.18)*0.025);
+    ctx.save(); ctx.globalAlpha=0.40; ctx.fillStyle='#0c1a22';
+    ctx.translate(sx,sy);
+    // body
+    ctx.beginPath(); ctx.moveTo(W*0.075,0); ctx.bezierCurveTo(W*0.05,-H*0.012,W*0.02,-H*0.014,0,0);
+    ctx.bezierCurveTo(W*0.02,H*0.012,W*0.05,H*0.012,W*0.075,0); ctx.closePath(); ctx.fill();
+    // dorsal fin
+    ctx.beginPath(); ctx.moveTo(W*0.048,-H*0.013); ctx.lineTo(W*0.034,-H*0.030); ctx.lineTo(W*0.058,-H*0.013); ctx.closePath(); ctx.fill();
+    // tail
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-W*0.018,-H*0.016); ctx.lineTo(-W*0.006,0); ctx.lineTo(-W*0.018,H*0.016); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.restore(); // end evenodd
 
   drawSceneScoreboard();
 }
