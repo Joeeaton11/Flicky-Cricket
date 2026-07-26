@@ -14787,10 +14787,130 @@ function drawReefScene() {
   baseRG.addColorStop(0,'#28342a'); baseRG.addColorStop(1,'#18241a');
   ctx.fillStyle=baseRG; ctx.fill();
 
-  // ── REEF WALL CORALS — drawn here as background layer ──
-  // Positions chosen to fill gaps between sea fan(0.44), brain coral(0.56),
-  // soft coral(0.62-0.65), mounds(0.70-0.77), table(0.82-0.89), pillar(0.92-0.96)
-  // Wall-top base y calculated from the bezier at each x position
+  // ── REEF WALL CORALS — six distinct types, bases sitting on wall top edge ──
+  // Wall top y at each x (from the bezier above): 0.40→H*0.183, 0.52→H*0.163,
+  // 0.63→H*0.143, 0.74→H*0.128, 0.85→H*0.108, 0.95→H*0.103
+
+  // 1. Organ-pipe coral — W*0.40: cluster of tall coloured tubes
+  {
+    const px=W*0.40, base=H*0.183;
+    const tubes=[[W*-0.036,H*0.052],[W*-0.024,H*0.060],[W*-0.012,H*0.056],[W*0,H*0.064],[W*0.012,H*0.058],[W*0.024,H*0.050],[W*0.034,H*0.054]];
+    const tcols=['#c04818','#d05a20','#a83c14','#c84820','#b84018','#d06028','#a03410'];
+    tubes.forEach(([dx,th],i)=>{
+      const tw=W*0.013, tx=px+dx;
+      const tg=ctx.createLinearGradient(tx-tw,base-th,tx+tw,base);
+      tg.addColorStop(0,tcols[i]); tg.addColorStop(1,'rgba(30,10,2,0.80)');
+      ctx.fillStyle=tg; ctx.beginPath(); ctx.roundRect(tx-tw/2,base-th,tw,th,tw*0.45); ctx.fill();
+      // dark hollow at tip
+      ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.beginPath(); ctx.ellipse(tx,base-th+tw*0.45,tw*0.36,tw*0.36,0,0,Math.PI*2); ctx.fill();
+      // rim highlight
+      ctx.strokeStyle='rgba(255,180,120,0.30)'; ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.arc(tx,base-th+tw*0.45,tw*0.36,0,Math.PI*2); ctx.stroke();
+    });
+    ctx.fillStyle='rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(px,base,W*0.052,H*0.007,0,0,Math.PI*2); ctx.fill();
+  }
+
+  // 2. Lettuce coral — W*0.52: wide ruffled plate, upright like a bowl
+  {
+    const px=W*0.52, base=H*0.163, pw=W*0.078, ph=H*0.032;
+    ctx.save();
+    // outer ruffled shape
+    const lg=ctx.createRadialGradient(px,base-ph*0.4,pw*0.05,px,base,pw);
+    lg.addColorStop(0,'#c8e058'); lg.addColorStop(0.55,'#88a828'); lg.addColorStop(1,'rgba(30,50,5,0)');
+    ctx.fillStyle=lg;
+    ctx.beginPath(); ctx.moveTo(px,base);
+    for(let i=0;i<=20;i++){
+      const a=Math.PI+i/20*Math.PI; // top semicircle facing upward
+      const ruf=pw*(0.88+Math.sin(i*3.8)*0.14);
+      ctx.lineTo(px+Math.cos(a)*ruf, base+Math.sin(a)*ph);
+    }
+    ctx.closePath(); ctx.fill();
+    // inner grooves
+    ctx.strokeStyle='rgba(50,70,5,0.30)'; ctx.lineWidth=1.0;
+    for(let r=1;r<=4;r++){
+      const rr=pw*(r*0.20);
+      ctx.beginPath(); ctx.ellipse(px,base,rr,ph*(r*0.20),0,Math.PI,0); ctx.stroke();
+    }
+    // rim highlight
+    ctx.strokeStyle='rgba(200,240,100,0.40)'; ctx.lineWidth=1.6;
+    ctx.beginPath(); ctx.ellipse(px,base,pw*0.92,ph*0.92,0,Math.PI,0); ctx.stroke();
+    ctx.restore();
+  }
+
+  // 3. Whip coral — W*0.635: two sinuous branching stalks with polyp clusters
+  {
+    const px=W*0.635, base=H*0.143;
+    ctx.save(); ctx.strokeStyle='#8a1858'; ctx.lineCap='round';
+    // main stalk
+    ctx.lineWidth=3.5;
+    ctx.beginPath(); ctx.moveTo(px,base);
+    ctx.bezierCurveTo(px+W*0.014,base-H*0.030, px-W*0.010,base-H*0.058, px+W*0.008,base-H*0.084); ctx.stroke();
+    // left branch
+    ctx.lineWidth=2.2;
+    ctx.beginPath(); ctx.moveTo(px+W*0.003,base-H*0.042);
+    ctx.bezierCurveTo(px-W*0.014,base-H*0.055, px-W*0.022,base-H*0.076, px-W*0.018,base-H*0.092); ctx.stroke();
+    // right branch
+    ctx.beginPath(); ctx.moveTo(px+W*0.006,base-H*0.062);
+    ctx.bezierCurveTo(px+W*0.020,base-H*0.072, px+W*0.026,base-H*0.090, px+W*0.022,base-H*0.106); ctx.stroke();
+    // polyp blobs along main stalk
+    ctx.fillStyle='rgba(210,130,190,0.65)';
+    [[px+W*0.004,base-H*0.020,W*0.008],[px+W*0.001,base-H*0.044,W*0.007],[px+W*0.008,base-H*0.066,W*0.008],[px+W*0.007,base-H*0.082,W*0.006]].forEach(([bx,by,br])=>{
+      ctx.beginPath(); ctx.arc(bx,by,br,0,Math.PI*2); ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  // 4. Disc / table coral — W*0.74: wide flat plate on a stem, amber-orange
+  {
+    const px=W*0.74, base=H*0.128, pw=W*0.064, ph=H*0.012;
+    const stemH=H*0.022;
+    // stem
+    ctx.fillStyle='#9a6018';
+    ctx.beginPath(); ctx.roundRect(px-W*0.006,base-stemH,W*0.012,stemH,W*0.003); ctx.fill();
+    // plate shadow
+    ctx.fillStyle='rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(px+W*0.006,base-stemH+ph*2,pw*0.90,ph*1.0,0,0,Math.PI*2); ctx.fill();
+    // plate
+    const dg=ctx.createRadialGradient(px-pw*0.18,base-stemH-ph*0.5,pw*0.06,px,base-stemH,pw);
+    dg.addColorStop(0,'#f0c060'); dg.addColorStop(0.60,'#c88030'); dg.addColorStop(1,'rgba(60,28,4,0)');
+    ctx.fillStyle=dg; ctx.beginPath(); ctx.ellipse(px,base-stemH,pw,ph,0,0,Math.PI*2); ctx.fill();
+    // radial spokes
+    ctx.strokeStyle='rgba(80,42,4,0.25)'; ctx.lineWidth=0.9;
+    for(let i=0;i<10;i++){ const a=i/10*Math.PI*2; ctx.beginPath(); ctx.moveTo(px,base-stemH); ctx.lineTo(px+Math.cos(a)*pw*0.90,base-stemH+Math.sin(a)*ph*0.90); ctx.stroke(); }
+    // rim
+    ctx.strokeStyle='rgba(255,220,140,0.45)'; ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.ellipse(px,base-stemH,pw*0.94,ph*0.94,0,0,Math.PI*2); ctx.stroke();
+  }
+
+  // 5. Finger sponge — W*0.855: tall fat purple columns
+  {
+    const px=W*0.855, base=H*0.108;
+    const fingers=[[-W*0.028,H*0.044,'#6a1870'],[-W*0.014,H*0.052,'#7a2090'],[W*0,H*0.056,'#8a28a0'],[W*0.014,H*0.048,'#6a1870'],[W*0.026,H*0.038,'#5a1060']];
+    fingers.forEach(([dx,fh,col])=>{
+      const fw=W*0.016, tx=px+dx;
+      const fg=ctx.createLinearGradient(tx-fw,base-fh,tx+fw,base);
+      fg.addColorStop(0,'rgba(210,170,230,0.40)'); fg.addColorStop(0.35,col); fg.addColorStop(1,'rgba(25,4,35,0.80)');
+      ctx.fillStyle=fg; ctx.beginPath(); ctx.roundRect(tx-fw/2,base-fh,fw,fh,fw*0.48); ctx.fill();
+      // osculum
+      ctx.fillStyle='rgba(0,0,0,0.50)'; ctx.beginPath(); ctx.ellipse(tx,base-fh+fw*0.45,fw*0.38,fw*0.38,0,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='rgba(200,150,220,0.35)'; ctx.lineWidth=1.0;
+      ctx.beginPath(); ctx.arc(tx,base-fh+fw*0.45,fw*0.38,0,Math.PI*2); ctx.stroke();
+    });
+    ctx.fillStyle='rgba(0,0,0,0.20)'; ctx.beginPath(); ctx.ellipse(px,base,W*0.046,H*0.006,0,0,Math.PI*2); ctx.fill();
+  }
+
+  // 6. Bubble coral — W*0.948: grape-like cluster of glassy spheres
+  {
+    const px=W*0.948, base=H*0.103;
+    const bubbles=[[-W*0.018,-H*0.018,W*0.020],[-W*0.002,-H*0.026,W*0.022],[W*0.016,-H*0.016,W*0.018],[-W*0.026,-H*0.006,W*0.016],[W*0.024,-H*0.008,W*0.015],[-W*0.010,-H*0.038,W*0.015],[W*0.008,-H*0.036,W*0.014]];
+    bubbles.forEach(([dx,dy,br])=>{
+      const bx=px+dx, by=base+dy;
+      const bg=ctx.createRadialGradient(bx-br*0.32,by-br*0.36,0,bx,by,br);
+      bg.addColorStop(0,'rgba(215,240,255,0.88)'); bg.addColorStop(0.50,'rgba(145,200,230,0.60)'); bg.addColorStop(1,'rgba(50,110,160,0.18)');
+      ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(bx,by,br,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.60)'; ctx.beginPath(); ctx.ellipse(bx-br*0.28,by-br*0.32,br*0.24,br*0.15,0,0,Math.PI*2); ctx.fill();
+    });
+    ctx.fillStyle='rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(px,base,W*0.042,H*0.005,0,0,Math.PI*2); ctx.fill();
+  }
 
   // ── BRAIN CORAL — golden dome on reef ──
   {
@@ -14889,110 +15009,6 @@ function drawReefScene() {
       }
     }
   });
-
-  // ── SIX DISTINCT REEF CORALS — placed in gaps between existing features ──
-  // Positions fill: left of sea fan, between fan+brain, after soft coral,
-  // between mounds+table, between table+pillar, right of pillar
-  // Base y values from the reef wall bezier at each x
-
-  // 1. Organ-pipe — W*0.380, between wall start and sea fan, base≈H*0.190
-  {
-    const px=W*0.380, base=H*0.190;
-    const tcols=['#c04818','#d05a20','#a83c14','#c84820','#b84018','#d06028','#a03410'];
-    const offsets=[-W*0.030,-W*0.018,-W*0.006,W*0.006,W*0.018,W*0.030];
-    const heights=[H*0.050,H*0.060,H*0.056,H*0.062,H*0.054,H*0.048];
-    offsets.forEach((dx,i)=>{
-      const tw=W*0.014, tx=px+dx, th=heights[i];
-      const tg=ctx.createLinearGradient(tx,base-th,tx,base);
-      tg.addColorStop(0,tcols[i]); tg.addColorStop(1,'rgba(25,8,2,0.85)');
-      ctx.fillStyle=tg; ctx.beginPath(); ctx.roundRect(tx-tw/2,base-th,tw,th,tw*0.44); ctx.fill();
-      ctx.fillStyle='rgba(0,0,0,0.58)'; ctx.beginPath(); ctx.ellipse(tx,base-th+tw*0.48,tw*0.34,tw*0.34,0,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='rgba(255,170,100,0.28)'; ctx.lineWidth=1.1; ctx.beginPath(); ctx.arc(tx,base-th+tw*0.48,tw*0.34,0,Math.PI*2); ctx.stroke();
-    });
-    ctx.fillStyle='rgba(0,0,0,0.20)'; ctx.beginPath(); ctx.ellipse(px,base,W*0.048,H*0.006,0,0,Math.PI*2); ctx.fill();
-  }
-
-  // 2. Lettuce coral — W*0.505, between sea fan and brain coral, base≈H*0.167
-  {
-    const px=W*0.505, base=H*0.167, pw=W*0.068, ph=H*0.048;
-    ctx.save();
-    const lg=ctx.createRadialGradient(px,base-ph*0.5,pw*0.06,px,base,pw*0.9);
-    lg.addColorStop(0,'#d0e860'); lg.addColorStop(0.55,'#90b030'); lg.addColorStop(1,'rgba(25,45,4,0)');
-    ctx.fillStyle=lg;
-    ctx.beginPath(); ctx.moveTo(px-pw,base);
-    for(let i=0;i<=24;i++){
-      const a=Math.PI+i/24*Math.PI;
-      const ruf=pw*(0.84+Math.sin(i*4.2)*0.20);
-      ctx.lineTo(px+Math.cos(a)*ruf, base+Math.sin(a)*ph);
-    }
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle='rgba(45,65,4,0.28)'; ctx.lineWidth=0.9;
-    for(let r=1;r<=4;r++){ ctx.beginPath(); ctx.ellipse(px,base,pw*(r*0.22),ph*(r*0.22),0,Math.PI,0); ctx.stroke(); }
-    ctx.strokeStyle='rgba(210,250,110,0.38)'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.ellipse(px,base,pw*0.90,ph*0.90,0,Math.PI,0); ctx.stroke();
-    ctx.restore();
-  }
-
-  // 3. Whip coral — W*0.670, between soft coral and encrusting mounds, base≈H*0.138
-  {
-    const px=W*0.670, base=H*0.138;
-    ctx.save(); ctx.lineCap='round';
-    ctx.strokeStyle='#8a1858'; ctx.lineWidth=3.8;
-    ctx.beginPath(); ctx.moveTo(px,base);
-    ctx.bezierCurveTo(px+W*0.016,base-H*0.032, px-W*0.012,base-H*0.062, px+W*0.010,base-H*0.090); ctx.stroke();
-    ctx.lineWidth=2.4;
-    ctx.beginPath(); ctx.moveTo(px+W*0.004,base-H*0.046);
-    ctx.bezierCurveTo(px-W*0.018,base-H*0.060, px-W*0.026,base-H*0.082, px-W*0.020,base-H*0.100); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(px+W*0.008,base-H*0.070);
-    ctx.bezierCurveTo(px+W*0.024,base-H*0.080, px+W*0.030,base-H*0.100, px+W*0.024,base-H*0.112); ctx.stroke();
-    ctx.fillStyle='rgba(215,135,195,0.72)';
-    [[px+W*0.005,base-H*0.022,W*0.010],[px+W*0.002,base-H*0.050,W*0.009],[px+W*0.009,base-H*0.074,W*0.009],[px+W*0.008,base-H*0.088,W*0.008]].forEach(([bx,by,br])=>{
-      ctx.beginPath(); ctx.arc(bx,by,br,0,Math.PI*2); ctx.fill();
-    });
-    ctx.restore();
-  }
-
-  // 4. Disc / table coral — W*0.795, between encrusting mounds and table coral, base≈H*0.118
-  {
-    const px=W*0.795, base=H*0.118, pw=W*0.072, ph=H*0.013, stemH=H*0.026;
-    ctx.fillStyle='#9a6018'; ctx.beginPath(); ctx.roundRect(px-W*0.007,base-stemH,W*0.014,stemH,W*0.003); ctx.fill();
-    ctx.fillStyle='rgba(0,0,0,0.20)'; ctx.beginPath(); ctx.ellipse(px+W*0.007,base-stemH+ph*2.2,pw*0.88,ph*1.1,0,0,Math.PI*2); ctx.fill();
-    const dg=ctx.createRadialGradient(px-pw*0.20,base-stemH-ph*0.5,pw*0.05,px,base-stemH,pw);
-    dg.addColorStop(0,'#f4c865'); dg.addColorStop(0.58,'#cc8535'); dg.addColorStop(1,'rgba(55,25,3,0)');
-    ctx.fillStyle=dg; ctx.beginPath(); ctx.ellipse(px,base-stemH,pw,ph,0,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='rgba(75,40,4,0.22)'; ctx.lineWidth=0.9;
-    for(let i=0;i<12;i++){ const a=i/12*Math.PI*2; ctx.beginPath(); ctx.moveTo(px,base-stemH); ctx.lineTo(px+Math.cos(a)*pw*0.88,base-stemH+Math.sin(a)*ph*0.88); ctx.stroke(); }
-    ctx.strokeStyle='rgba(255,225,145,0.48)'; ctx.lineWidth=2.0;
-    ctx.beginPath(); ctx.ellipse(px,base-stemH,pw*0.93,ph*0.93,0,0,Math.PI*2); ctx.stroke();
-  }
-
-  // 5. Finger sponge — W*0.906, between table coral and pillar coral, base≈H*0.104
-  {
-    const px=W*0.906, base=H*0.104;
-    const fingers=[[-W*0.024,H*0.046,'#6a1870'],[-W*0.010,H*0.056,'#7e28a0'],[W*0.004,H*0.060,'#8c30aa'],[W*0.018,H*0.050,'#6a1870'],[W*0.030,H*0.040,'#5a1060']];
-    fingers.forEach(([dx,fh,col])=>{
-      const fw=W*0.016, tx=px+dx;
-      const fg=ctx.createLinearGradient(tx,base-fh,tx,base);
-      fg.addColorStop(0,'rgba(215,175,235,0.42)'); fg.addColorStop(0.32,col); fg.addColorStop(1,'rgba(22,3,32,0.82)');
-      ctx.fillStyle=fg; ctx.beginPath(); ctx.roundRect(tx-fw/2,base-fh,fw,fh,fw*0.48); ctx.fill();
-      ctx.fillStyle='rgba(0,0,0,0.52)'; ctx.beginPath(); ctx.ellipse(tx,base-fh+fw*0.46,fw*0.36,fw*0.36,0,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='rgba(195,145,218,0.32)'; ctx.lineWidth=1.0; ctx.beginPath(); ctx.arc(tx,base-fh+fw*0.46,fw*0.36,0,Math.PI*2); ctx.stroke();
-    });
-    ctx.fillStyle='rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(px,base,W*0.044,H*0.006,0,0,Math.PI*2); ctx.fill();
-  }
-
-  // 6. Bubble coral — W*0.972, right of pillar coral, base≈H*0.103
-  {
-    const px=W*0.972, base=H*0.103;
-    [[-W*0.016,-H*0.020,W*0.022],[-W*0.002,-H*0.030,W*0.024],[W*0.014,-H*0.018,W*0.020],[-W*0.022,-H*0.008,W*0.017],[W*0.020,-H*0.010,W*0.017],[-W*0.008,-H*0.044,W*0.016],[W*0.006,-H*0.040,W*0.015]].forEach(([dx,dy,br])=>{
-      const bx=px+dx, by=base+dy;
-      const bg=ctx.createRadialGradient(bx-br*0.30,by-br*0.34,0,bx,by,br);
-      bg.addColorStop(0,'rgba(218,242,255,0.90)'); bg.addColorStop(0.48,'rgba(148,202,232,0.62)'); bg.addColorStop(1,'rgba(45,105,155,0.16)');
-      ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(bx,by,br,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.62)'; ctx.beginPath(); ctx.ellipse(bx-br*0.26,by-br*0.30,br*0.25,br*0.16,0,0,Math.PI*2); ctx.fill();
-    });
-    ctx.fillStyle='rgba(0,0,0,0.16)'; ctx.beginPath(); ctx.ellipse(px,base,W*0.038,H*0.005,0,0,Math.PI*2); ctx.fill();
-  }
 
   // ── SEA TURTLE gliding across ──
   {
