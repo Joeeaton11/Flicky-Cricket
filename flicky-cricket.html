@@ -25051,117 +25051,139 @@ function drawLagoonScene() {
   drawRockPool(W*0.898,H*0.665,W*0.015);
   drawRockPool(W*0.950,H*0.800,W*0.014);
 
-  // ── IRREGULAR OCEAN WAVES crashing onto rocks ──
-  // Build a bumpy wave path by sampling points along the right arc, each with independent wobble
-  function wavePath(baseDist, wobAmp, seed, nPts){
+  // ── OCEAN WAVES — vertical bands rolling in from right toward rocks ──
+  // Waves travel left (toward rocks), not as arcs but as real swell lines.
+  // shorelineX(y): x coordinate of the rock shoreline at a given y
+  function shorelineX(y){
+    const dy=Math.max(-1,Math.min(1,(y-H*FIELD_CY)/(H*FIELD_RY)));
+    return W/2+Math.cos(Math.asin(dy))*W*FIELD_RX;
+  }
+  // Build a wave-front path: nPts spanning y range, each with per-point wobbly x
+  function waveFrontPts(ph,seed,nPts){
     const pts=[];
     for(let i=0;i<nPts;i++){
-      const a=-1.08+(i/(nPts-1))*2.16;
-      // Each point gets 3 sine layers at different frequencies — no two points move together
-      const wobble = Math.sin(t*1.1+seed+i*1.8)*wobAmp
-                   + Math.sin(t*2.3+seed*1.7+i*3.1)*wobAmp*0.45
-                   + Math.sin(t*0.6+seed*0.5+i*0.9)*wobAmp*0.25;
-      const r = W*FIELD_RX*baseDist + wobble;
-      pts.push([W/2+Math.cos(a)*r, H*FIELD_CY+Math.sin(a)*r*(H*FIELD_RY)/(W*FIELD_RX)]);
+      const v=i/(nPts-1);
+      const y=H*0.27+v*H*0.65;
+      const sx=shorelineX(y);
+      const travel=W-sx+W*0.10; // total distance from shore to off-screen-right
+      // baseX: starts at W+W*0.10 (ph=0) and arrives at sx (ph=1)
+      const baseX=sx+travel*(1-ph);
+      const wob=Math.sin(t*1.2+seed+i*2.0)*W*0.030
+               +Math.sin(t*2.6+seed*1.8+i*3.3)*W*0.014
+               +Math.sin(t*0.7+seed*0.5+i*1.1)*W*0.008;
+      pts.push([baseX+wob, y]);
     }
     return pts;
   }
-  function strokePath(pts,style,lw){
-    ctx.strokeStyle=style; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.lineJoin='round';
-    ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  function smoothPath(ctx2,pts){
+    ctx2.moveTo(pts[0][0],pts[0][1]);
     for(let i=1;i<pts.length-1;i++){
       const mx=(pts[i][0]+pts[i+1][0])*0.5, my=(pts[i][1]+pts[i+1][1])*0.5;
-      ctx.quadraticCurveTo(pts[i][0],pts[i][1],mx,my);
+      ctx2.quadraticCurveTo(pts[i][0],pts[i][1],mx,my);
     }
-    ctx.lineTo(pts[pts.length-1][0],pts[pts.length-1][1]);
-    ctx.stroke();
+    ctx2.lineTo(pts[pts.length-1][0],pts[pts.length-1][1]);
   }
 
-  // 5 independent waves, each at a different phase and seed so they never look the same
   const waveDefs=[
-    {speed:0.38, offset:0.00, seed:0.0,  wobAmp:W*0.028},
-    {speed:0.42, offset:0.26, seed:2.4,  wobAmp:W*0.022},
-    {speed:0.35, offset:0.54, seed:4.9,  wobAmp:W*0.032},
-    {speed:0.46, offset:0.72, seed:7.2,  wobAmp:W*0.018},
-    {speed:0.40, offset:0.88, seed:11.1, wobAmp:W*0.026},
+    {sp:0.38,off:0.00,seed:0.0},
+    {sp:0.43,off:0.28,seed:3.7},
+    {sp:0.34,off:0.56,seed:7.2},
+    {sp:0.47,off:0.74,seed:11.5},
+    {sp:0.40,off:0.90,seed:15.1},
   ];
   for(let w=0;w<waveDefs.length;w++){
     const wd=waveDefs[w];
-    const ph=((t*wd.speed+wd.offset)%1.0);
-    // Wave travels inward: dist goes from 1.55 (far out) to 1.02 (at rocks)
-    const dist=1.55-ph*0.53;
-    const alpha=Math.sin(ph*Math.PI)*0.70;
-    // Breaking progress — starts to break in last 30% of journey
-    const breaking=Math.max(0,(ph-0.70)/0.30);
+    const ph=(t*wd.sp+wd.off)%1.0;
+    const alpha=Math.sin(ph*Math.PI)*0.88;
+    const breaking=Math.max(0,(ph-0.62)/0.38); // last 38% of journey = breaking
 
-    // Wave trough shadow — dark green-blue band just behind the crest
-    const troughPts=wavePath(dist+0.04, wd.wobAmp*0.6, wd.seed+1.1, 9);
-    strokePath(troughPts,`rgba(8,80,140,${alpha*0.55})`,W*0.014);
+    const N=18;
+    const frontPts=waveFrontPts(ph,wd.seed,N);
 
-    // Wave body — mid teal
-    const bodyPts=wavePath(dist+0.015, wd.wobAmp*0.8, wd.seed+0.4, 11);
-    strokePath(bodyPts,`rgba(22,145,205,${alpha*0.72})`,W*0.020);
+    // ── Wave body fill: from front edge to right side of canvas ──
+    ctx.beginPath();
+    smoothPath(ctx,frontPts);
+    ctx.lineTo(W, frontPts[frontPts.length-1][1]);
+    ctx.lineTo(W, frontPts[0][1]);
+    ctx.closePath();
+    const avgX=frontPts.reduce((s,p)=>s+p[0],0)/N;
+    const wG=ctx.createLinearGradient(avgX,0,W,0);
+    wG.addColorStop(0,`rgba(80,200,240,${alpha*0.70})`);   // bright leading face
+    wG.addColorStop(0.15,`rgba(22,150,215,${alpha*0.65})`);// teal swell
+    wG.addColorStop(0.5,`rgba(10,90,170,${alpha*0.50})`);  // deep blue body
+    wG.addColorStop(1,`rgba(6,55,130,${alpha*0.18})`);     // dark back
+    ctx.fillStyle=wG; ctx.fill();
 
-    // White cap crest — thick and irregular
-    const capPts=wavePath(dist, wd.wobAmp, wd.seed, 13);
-    const capThick=W*(0.006+breaking*0.022); // cap fattens as it breaks
-    strokePath(capPts,`rgba(255,255,255,${alpha*(0.65+breaking*0.35)})`,capThick);
+    // ── Dark trough just behind crest ──
+    const troughPts=waveFrontPts(ph+0.022,wd.seed,N); // slightly behind
+    ctx.beginPath(); smoothPath(ctx,troughPts);
+    ctx.lineTo(W,troughPts[troughPts.length-1][1]);
+    ctx.lineTo(W,troughPts[0][1]);
+    ctx.closePath();
+    ctx.fillStyle=`rgba(4,40,110,${alpha*0.28})`; ctx.fill();
 
-    // Foam streaks — ragged lines peeling off the cap as it breaks
-    if(breaking>0.1){
-      for(let fs=0;fs<8;fs++){
-        const fsi=fs/(7);
-        const a=-1.0+fsi*2.0;
-        const r=W*FIELD_RX*dist + Math.sin(t*1.8+wd.seed+fs*2.2)*wd.wobAmp;
-        const fx=W/2+Math.cos(a)*r, fy=H*FIELD_CY+Math.sin(a)*r*(H*FIELD_RY)/(W*FIELD_RX);
-        const flen=W*(0.018+breaking*0.028);
-        // Streak runs roughly inward (toward oval center)
-        const fang=Math.atan2(H*FIELD_CY-fy, W/2-fx);
-        ctx.strokeStyle=`rgba(255,255,255,${alpha*breaking*(0.6+fsi*0.4)})`; ctx.lineWidth=W*(0.003+breaking*0.004); ctx.lineCap='round';
-        ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(fx+Math.cos(fang)*flen,fy+Math.sin(fang)*flen); ctx.stroke();
-        // Foam blob at streak end
-        ctx.fillStyle=`rgba(235,248,255,${alpha*breaking*0.55})`;
-        ctx.beginPath(); ctx.arc(fx+Math.cos(fang)*flen*0.7,fy+Math.sin(fang)*flen*0.7, W*(0.004+breaking*0.006),0,Math.PI*2); ctx.fill();
-      }
+    // ── White foam cap — thick, irregular, the key visual ──
+    const capW=W*(0.008+breaking*0.026);
+    ctx.lineWidth=capW; ctx.strokeStyle=`rgba(255,255,255,${alpha})`; ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath(); smoothPath(ctx,frontPts); ctx.stroke();
+
+    // ── Chunky foam blobs riding the cap ──
+    for(let i=0;i<N;i++){
+      const blobSeed=Math.sin(wd.seed*3.1+i*7.7);
+      if(blobSeed<0.1) continue; // sparse distribution
+      const bx=frontPts[i][0]+Math.sin(t*1.8+wd.seed+i)*W*0.010;
+      const by=frontPts[i][1];
+      const br=W*(0.005+breaking*0.014+blobSeed*0.008);
+      ctx.fillStyle=`rgba(255,255,255,${alpha*(0.55+breaking*0.35)})`;
+      ctx.beginPath(); ctx.arc(bx,by,br,0,Math.PI*2); ctx.fill();
     }
 
-    // Seafoam trail between wave and shore — churned white water left behind
-    if(ph>0.5){
-      const trailPts=wavePath(dist+0.07+ph*0.04, wd.wobAmp*0.4, wd.seed+5.5, 9);
-      strokePath(trailPts,`rgba(200,235,255,${(ph-0.5)*alpha*0.35})`,W*0.006);
+    // ── Foam streaks peeling toward shore as wave breaks ──
+    if(breaking>0.05){
+      for(let s=0;s<10;s++){
+        const sv=s/9;
+        const sy=H*0.30+sv*H*0.58;
+        const sx=shorelineX(sy);
+        const wfx=waveFrontPts(ph,wd.seed,4)[Math.min(3,Math.floor(sv*3.9))][0];
+        if(wfx>=W) continue;
+        const streakAlpha=alpha*breaking*(0.35+sv*0.25);
+        ctx.strokeStyle=`rgba(210,245,255,${streakAlpha})`; ctx.lineWidth=W*(0.0028+breaking*0.003); ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(wfx,sy); ctx.lineTo(sx+W*0.012,sy+(sv-0.5)*H*0.015); ctx.stroke();
+        // Foam fleck at end of streak
+        ctx.fillStyle=`rgba(255,255,255,${streakAlpha*0.7})`;
+        ctx.beginPath(); ctx.arc(sx+W*0.018, sy+(sv-0.5)*H*0.012, W*0.004,0,Math.PI*2); ctx.fill();
+      }
     }
   }
 
-  // Rock impact spray — bursts at each boulder, triggered by wave arrival
+  // ── ROCK SPRAY — impact burst at each boulder ──
   const sprayAngles=[-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8];
   for(let b=0;b<sprayAngles.length;b++){
     const ba=sprayAngles[b];
     const bx=W/2+Math.cos(ba)*W*FIELD_RX*1.06, by=H*FIELD_CY+Math.sin(ba)*H*FIELD_RY*1.06;
-    // Each rock has own spray phase, slightly offset
     const sph=(t*0.55+b*0.41)%1.0;
-    const sAlpha=Math.sin(sph*Math.PI)*0.88;
-    const sizeMult=1.0+0.5*(1-Math.abs(ba));
-    // Upward spray plume — shoots perpendicular to shore (outward from oval)
+    const sAlpha=Math.sin(sph*Math.PI)*0.90;
+    const sm=1.0+0.5*(1-Math.abs(ba)); // bigger spray at mid-arc
+    // Fan of spray rays
     for(let ray=0;ray<9;ray++){
-      const spread=(ray-4)*0.18;
-      const ang=ba+spread;
-      const len=W*(0.014+sph*0.030)*sizeMult;
-      ctx.strokeStyle=`rgba(255,255,255,${sAlpha*(1-Math.abs(ray-4)*0.13)})`; ctx.lineWidth=W*0.0024; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+Math.cos(ang)*len,by+Math.sin(ang)*len*0.7); ctx.stroke();
+      const ang=ba+(ray-4)*0.19;
+      const len=W*(0.015+sph*0.032)*sm;
+      ctx.strokeStyle=`rgba(255,255,255,${sAlpha*(1-Math.abs(ray-4)*0.11)})`; ctx.lineWidth=W*0.0026; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+Math.cos(ang)*len,by+Math.sin(ang)*len*0.72); ctx.stroke();
     }
-    // Mist halo around impact
-    const mG=ctx.createRadialGradient(bx,by,0,bx,by,W*0.040*sizeMult);
-    mG.addColorStop(0,`rgba(255,255,255,${sAlpha*0.50})`);
-    mG.addColorStop(0.4,`rgba(215,240,255,${sAlpha*0.22})`);
-    mG.addColorStop(1,'rgba(180,225,255,0)');
-    ctx.fillStyle=mG; ctx.beginPath(); ctx.arc(bx,by,W*0.040*sizeMult,0,Math.PI*2); ctx.fill();
-    // Individual droplets arc up and out
+    // Mist bloom
+    const mG=ctx.createRadialGradient(bx,by,0,bx,by,W*0.042*sm);
+    mG.addColorStop(0,`rgba(255,255,255,${sAlpha*0.52})`);
+    mG.addColorStop(0.4,`rgba(210,240,255,${sAlpha*0.20})`);
+    mG.addColorStop(1,'rgba(175,225,255,0)');
+    ctx.fillStyle=mG; ctx.beginPath(); ctx.arc(bx,by,W*0.042*sm,0,Math.PI*2); ctx.fill();
+    // Arcing droplets
     for(let d=0;d<6;d++){
       const dang=ba-0.5+d*0.2;
-      const ddist=W*(0.010+sph*0.025+d*0.005)*sizeMult;
-      const dx=bx+Math.cos(dang)*ddist, dy=by+Math.sin(dang)*ddist-H*sph*0.018;
-      ctx.fillStyle=`rgba(240,250,255,${sAlpha*(1-d*0.14)})`;
-      ctx.beginPath(); ctx.arc(dx,dy,W*(0.002+sph*0.003),0,Math.PI*2); ctx.fill();
+      const dx=bx+Math.cos(dang)*W*(0.012+sph*0.026+d*0.004)*sm;
+      const dy=by+Math.sin(dang)*W*(0.010+sph*0.020)*sm - H*sph*0.015;
+      ctx.fillStyle=`rgba(240,252,255,${sAlpha*(1-d*0.14)})`;
+      ctx.beginPath(); ctx.arc(dx,dy,W*(0.0022+sph*0.0030),0,Math.PI*2); ctx.fill();
     }
   }
   ctx.restore(); // end rocky shoreline clip
