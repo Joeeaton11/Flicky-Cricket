@@ -24827,127 +24827,50 @@ function drawLagoonScene() {
   }
   ctx.restore();
 
-  // ── LEFT SIDE — sandy beach with waves ──
-  // Sandy beach base on left
-  const lBeachG=ctx.createLinearGradient(0,0,W*0.16,0);
-  lBeachG.addColorStop(0,'#f0e4b0'); lBeachG.addColorStop(0.6,'#e8d898'); lBeachG.addColorStop(1,'rgba(230,215,140,0)');
-  ctx.fillStyle=lBeachG; ctx.fillRect(0,H*0.23,W*0.16,H*0.77);
-  // Wet sand near waves
-  const wetSandG=ctx.createLinearGradient(W*0.04,0,W*0.14,0);
-  wetSandG.addColorStop(0,'rgba(140,185,200,0.38)'); wetSandG.addColorStop(1,'rgba(140,185,200,0)');
-  ctx.fillStyle=wetSandG; ctx.fillRect(W*0.04,H*0.25,W*0.10,H*0.70);
-  // Animated wave wash lines on beach (left side)
-  for(let w=0;w<5;w++){
-    const wphase=(t*0.28+w*0.22)%1.0;
-    const wy=H*(0.30+w*0.13);
-    const wAlpha=Math.sin(wphase*Math.PI)*0.40;
-    const wx=W*(0.002+wphase*0.112);
-    ctx.strokeStyle=`rgba(200,240,255,${wAlpha})`; ctx.lineWidth=2.0; ctx.lineCap='round';
+  // ── BEACH — wraps around LEFT half of oval ──
+  // Scale trick: stretch y so oval becomes a circle, use radial gradient for oval-following band
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,H*0.23,W*0.56,H*0.77); ctx.clip(); // left side only
+  ctx.save();
+  ctx.translate(W/2,H*FIELD_CY); ctx.scale(1,(H*FIELD_RY)/(W*FIELD_RX));
+  const beltG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.96,0,0,W*FIELD_RX*1.38);
+  beltG.addColorStop(0,'#f0e4a8'); beltG.addColorStop(0.30,'#e8d888'); beltG.addColorStop(0.70,'rgba(228,212,156,0.55)'); beltG.addColorStop(1,'rgba(200,190,140,0)');
+  ctx.fillStyle=beltG;
+  ctx.beginPath(); ctx.arc(0,0,W*FIELD_RX*1.42,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  // Wet sand strip — darker tint closest to oval edge
+  ctx.save();
+  ctx.translate(W/2,H*FIELD_CY); ctx.scale(1,(H*FIELD_RY)/(W*FIELD_RX));
+  const wetG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.97,0,0,W*FIELD_RX*1.10);
+  wetG.addColorStop(0,'rgba(120,170,190,0.38)'); wetG.addColorStop(1,'rgba(120,170,190,0)');
+  ctx.fillStyle=wetG;
+  ctx.beginPath(); ctx.arc(0,0,W*FIELD_RX*1.12,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  // Animated wave lines following oval curve on left
+  for(let w=0;w<6;w++){
+    const wph=(t*0.28+w*0.19)%1.0;
+    const wOff=W*(0.015+wph*0.058);
+    const wAlpha=Math.sin(wph*Math.PI)*0.42;
+    const scY=(H*FIELD_RY+wOff*(H*FIELD_RY)/(W*FIELD_RX))/(W*FIELD_RX+wOff);
+    ctx.strokeStyle=`rgba(210,245,255,${wAlpha})`; ctx.lineWidth=1.8; ctx.lineCap='round';
     ctx.beginPath();
-    ctx.moveTo(0,wy);
-    ctx.quadraticCurveTo(wx*0.5,wy-H*0.008,wx,wy);
-    ctx.quadraticCurveTo(wx*1.4,wy+H*0.005,wx*1.8,wy-H*0.004);
+    ctx.ellipse(W/2,H*FIELD_CY,W*FIELD_RX+wOff,(W*FIELD_RX+wOff)*scY,0,Math.PI*0.52,Math.PI*1.48);
     ctx.stroke();
-    // Foam scatter
-    ctx.fillStyle=`rgba(255,255,255,${wAlpha*0.6})`;
-    for(let f=0;f<4;f++){
-      const fx=W*(0.01+((f*37)%9)*0.012)*wphase, fy=wy+H*(((f*13)%5-2)*0.006);
+    // foam dots along the wave
+    ctx.fillStyle=`rgba(255,255,255,${wAlpha*0.7})`;
+    for(let f=0;f<5;f++){
+      const fa=Math.PI*0.55+f*0.22;
+      const fx=W/2+Math.cos(fa)*(W*FIELD_RX+wOff), fy=H*FIELD_CY+Math.sin(fa)*(W*FIELD_RX+wOff)*scY;
       ctx.beginPath(); ctx.arc(fx,fy,W*0.004,0,Math.PI*2); ctx.fill();
     }
   }
-  // Footprints / shell scatter on beach left
-  ctx.strokeStyle='rgba(160,130,80,0.30)'; ctx.lineWidth=1.0;
-  [[W*0.024,H*0.42],[W*0.038,H*0.50],[W*0.018,H*0.58],[W*0.044,H*0.66]].forEach(([fx,fy])=>{
+  // Footprints on beach
+  ctx.strokeStyle='rgba(160,130,80,0.28)'; ctx.lineWidth=1.0;
+  [[W*0.028,H*0.42],[W*0.040,H*0.51],[W*0.022,H*0.60],[W*0.042,H*0.69]].forEach(([fx,fy])=>{
     ctx.beginPath(); ctx.ellipse(fx,fy,W*0.006,W*0.010,0.3,0,Math.PI*2); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(fx+W*0.014,fy+H*0.018,W*0.006,W*0.010,-0.3,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(fx+W*0.016,fy+H*0.018,W*0.006,W*0.010,-0.3,0,Math.PI*2); ctx.stroke();
   });
-
-  // ── RIGHT SIDE — rock pool area ──
-  function drawRock(rx,ry,rs,ang){
-    ctx.save(); ctx.translate(rx,ry); ctx.rotate(ang||0);
-    const rG=ctx.createRadialGradient(-rs*0.28,-rs*0.22,rs*0.04,rs*0.04,rs*0.04,rs*1.1);
-    rG.addColorStop(0,'rgba(160,148,132,0.94)'); rG.addColorStop(0.38,'rgba(80,70,58,0.94)'); rG.addColorStop(1,'rgba(30,24,18,0.90)');
-    ctx.fillStyle=rG;
-    ctx.beginPath();
-    ctx.moveTo(rs*0.80,rs*0.22); ctx.bezierCurveTo(rs*0.88,-rs*0.22,rs*0.48,-rs*0.90,0,-rs*1.0);
-    ctx.bezierCurveTo(-rs*0.42,-rs*0.96,-rs*0.84,-rs*0.50,-rs*0.90,rs*0.10);
-    ctx.bezierCurveTo(-rs*0.82,rs*0.56,-rs*0.38,rs*0.74,rs*0.12,rs*0.74);
-    ctx.bezierCurveTo(rs*0.50,rs*0.74,rs*0.78,rs*0.54,rs*0.80,rs*0.22);
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(210,200,185,0.24)';
-    ctx.beginPath(); ctx.ellipse(-rs*0.22,-rs*0.30,rs*0.30,rs*0.18,-0.5,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='rgba(40,100,40,0.38)';
-    for(let a=0;a<3;a++){ ctx.beginPath(); ctx.arc((-0.3+a*0.28)*rs,(0.20+a*0.10)*rs,rs*0.09,0,Math.PI*2); ctx.fill(); }
-    ctx.restore();
-  }
-  // Rock clusters right side
-  drawRock(W*0.952,H*0.310,W*0.038, 0.3);
-  drawRock(W*0.970,H*0.390,W*0.028,-0.4);
-  drawRock(W*0.940,H*0.450,W*0.024, 0.7);
-  drawRock(W*0.965,H*0.520,W*0.032,-0.2);
-  drawRock(W*0.945,H*0.590,W*0.026, 0.5);
-  drawRock(W*0.972,H*0.650,W*0.020,-0.5);
-
-  // Rock pools — teal water trapped in rocks
-  function drawRockPool(px,py,pr){
-    const pgG=ctx.createRadialGradient(px,py,pr*0.10,px,py,pr);
-    pgG.addColorStop(0,'rgba(80,200,200,0.90)'); pgG.addColorStop(0.5,'rgba(40,160,180,0.85)'); pgG.addColorStop(1,'rgba(20,100,140,0.70)');
-    ctx.fillStyle=pgG; ctx.beginPath(); ctx.ellipse(px,py,pr,pr*0.65,0.2,0,Math.PI*2); ctx.fill();
-    // Ripple in pool
-    const rph=Math.sin(t*1.20+px)*0.5+0.5;
-    ctx.strokeStyle=`rgba(180,240,240,${0.35+rph*0.20})`; ctx.lineWidth=0.8;
-    ctx.beginPath(); ctx.ellipse(px,py,pr*0.50*(0.7+rph*0.3),pr*0.32*(0.7+rph*0.3),0.2,0,Math.PI*2); ctx.stroke();
-    // Starfish in pool
-    ctx.fillStyle='rgba(220,90,40,0.82)';
-    for(let a=0;a<5;a++){
-      const ang=a/5*Math.PI*2;
-      ctx.beginPath(); ctx.moveTo(px,py);
-      ctx.quadraticCurveTo(px+Math.cos(ang+0.3)*pr*0.30,py+Math.sin(ang+0.3)*pr*0.28,px+Math.cos(ang)*pr*0.46,py+Math.sin(ang)*pr*0.40);
-      ctx.quadraticCurveTo(px+Math.cos(ang-0.3)*pr*0.30,py+Math.sin(ang-0.3)*pr*0.28,px,py); ctx.fill();
-    }
-  }
-  drawRockPool(W*0.956,H*0.355,W*0.022);
-  drawRockPool(W*0.948,H*0.490,W*0.018);
-  drawRockPool(W*0.960,H*0.620,W*0.016);
-
-  // Wave splash on rocks — animated white spray
-  for(let w=0;w<4;w++){
-    const wph=(t*0.52+w*0.28)%1.0;
-    const wy=H*(0.340+w*0.088);
-    const splashA=Math.sin(wph*Math.PI)*0.55;
-    const splashG=ctx.createRadialGradient(W*0.952,wy,0,W*0.952,wy,W*0.040);
-    splashG.addColorStop(0,`rgba(255,255,255,${splashA})`);
-    splashG.addColorStop(0.5,`rgba(200,240,255,${splashA*0.45})`);
-    splashG.addColorStop(1,'rgba(180,230,255,0)');
-    ctx.fillStyle=splashG; ctx.beginPath(); ctx.arc(W*0.952,wy,W*0.040,0,Math.PI*2); ctx.fill();
-  }
-
-  // Wave foam along oval shore — animated
-  for(let i=0;i<30;i++){
-    const angle=(i/30)*Math.PI*2;
-    const bx=W/2+Math.cos(angle)*W*FIELD_RX, by=H*FIELD_CY+Math.sin(angle)*H*FIELD_RY;
-    if(by<H*0.25) continue;
-    const phase=t*0.65+i*0.36;
-    const fa=0.22+Math.sin(phase)*0.14;
-    const fr=W*(0.018+((i*7)%5)*0.003);
-    const ox=bx+Math.cos(angle)*fr*0.65, oy=by+Math.sin(angle)*fr*0.65;
-    const fG=ctx.createRadialGradient(ox,oy,0,ox,oy,fr*1.8);
-    fG.addColorStop(0,`rgba(255,255,255,${fa})`); fG.addColorStop(0.5,`rgba(210,245,255,${fa*0.40})`); fG.addColorStop(1,'rgba(180,225,255,0)');
-    ctx.fillStyle=fG; ctx.beginPath(); ctx.arc(ox,oy,fr*1.8,0,Math.PI*2); ctx.fill();
-  }
-
-
-  // ── SANDY BEACH STRIP — bottom outer zone ──
-  const beachBotG=ctx.createLinearGradient(0,H*0.916,0,H);
-  beachBotG.addColorStop(0,'rgba(232,210,140,0)'); beachBotG.addColorStop(0.28,'rgba(240,218,152,0.68)'); beachBotG.addColorStop(1,'rgba(228,204,132,0.90)');
-  ctx.fillStyle=beachBotG; ctx.fillRect(0,H*0.916,W,H*0.084);
-  ctx.strokeStyle='rgba(180,150,80,0.20)'; ctx.lineWidth=0.8;
-  for(let i=0;i<5;i++){
-    const sy=H*(0.934+i*0.014);
-    ctx.beginPath(); ctx.moveTo(0,sy); ctx.quadraticCurveTo(W*0.5,sy+H*0.005,W,sy); ctx.stroke();
-  }
-
-  // Shells on beach
+  // Shells on left beach
   function beachShell(sx,sy,sw,ang){
     ctx.save(); ctx.translate(sx,sy); ctx.rotate(ang||0);
     ctx.fillStyle='rgba(240,228,208,0.92)';
@@ -24956,11 +24879,118 @@ function drawLagoonScene() {
     for(let l=1;l<=3;l++){ ctx.beginPath(); ctx.ellipse(0,0,sw*l*0.33,sw*0.58*l*0.33,0,0,Math.PI*2); ctx.stroke(); }
     ctx.restore();
   }
-  beachShell(W*0.082,H*0.958,W*0.012, 0.4);
-  beachShell(W*0.178,H*0.970,W*0.009,-0.3);
-  beachShell(W*0.822,H*0.956,W*0.011, 0.5);
-  beachShell(W*0.918,H*0.966,W*0.008,-0.4);
-  beachShell(W*0.500,H*0.975,W*0.010, 0.2);
+  beachShell(W*0.034,H*0.480,W*0.010, 0.4);
+  beachShell(W*0.044,H*0.580,W*0.008,-0.3);
+  beachShell(W*0.028,H*0.670,W*0.009, 0.6);
+  ctx.restore(); // end beach clip
+
+  // ── ROCK POOL — wraps around RIGHT half of oval ──
+  ctx.save();
+  ctx.beginPath(); ctx.rect(W*0.44,H*0.23,W*0.56,H*0.77); ctx.clip(); // right side only
+  // Rocky ground following oval curve
+  ctx.save();
+  ctx.translate(W/2,H*FIELD_CY); ctx.scale(1,(H*FIELD_RY)/(W*FIELD_RX));
+  const rkG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.95,0,0,W*FIELD_RX*1.36);
+  rkG.addColorStop(0,'rgba(110,98,82,0.92)'); rkG.addColorStop(0.38,'rgba(72,62,50,0.82)'); rkG.addColorStop(0.72,'rgba(48,42,34,0.55)'); rkG.addColorStop(1,'rgba(20,50,90,0)');
+  ctx.fillStyle=rkG;
+  ctx.beginPath(); ctx.arc(0,0,W*FIELD_RX*1.40,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  // Rock texture blobs
+  function drawRock(rx,ry,rs,ang){
+    ctx.save(); ctx.translate(rx,ry); ctx.rotate(ang||0);
+    const rG=ctx.createRadialGradient(-rs*0.28,-rs*0.22,rs*0.04,rs*0.04,rs*0.04,rs*1.1);
+    rG.addColorStop(0,'rgba(168,156,138,0.94)'); rG.addColorStop(0.38,'rgba(84,74,60,0.94)'); rG.addColorStop(1,'rgba(30,24,18,0.90)');
+    ctx.fillStyle=rG;
+    ctx.beginPath();
+    ctx.moveTo(rs*0.80,rs*0.22); ctx.bezierCurveTo(rs*0.88,-rs*0.22,rs*0.48,-rs*0.90,0,-rs*1.0);
+    ctx.bezierCurveTo(-rs*0.42,-rs*0.96,-rs*0.84,-rs*0.50,-rs*0.90,rs*0.10);
+    ctx.bezierCurveTo(-rs*0.82,rs*0.56,-rs*0.38,rs*0.74,rs*0.12,rs*0.74);
+    ctx.bezierCurveTo(rs*0.50,rs*0.74,rs*0.78,rs*0.54,rs*0.80,rs*0.22);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(210,200,185,0.26)';
+    ctx.beginPath(); ctx.ellipse(-rs*0.22,-rs*0.30,rs*0.30,rs*0.18,-0.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(36,96,36,0.38)';
+    for(let a=0;a<3;a++){ ctx.beginPath(); ctx.arc((-0.28+a*0.26)*rs,(0.20+a*0.10)*rs,rs*0.09,0,Math.PI*2); ctx.fill(); }
+    ctx.restore();
+  }
+  // Rocks scattered along right arc
+  drawRock(W*0.952,H*0.320,W*0.034, 0.3);
+  drawRock(W*0.968,H*0.400,W*0.026,-0.4);
+  drawRock(W*0.942,H*0.468,W*0.022, 0.7);
+  drawRock(W*0.962,H*0.534,W*0.028,-0.2);
+  drawRock(W*0.944,H*0.600,W*0.024, 0.5);
+  drawRock(W*0.966,H*0.662,W*0.018,-0.5);
+  drawRock(W*0.940,H*0.728,W*0.020, 0.4);
+
+  // Rock pools — teal tidal pools
+  function drawRockPool(px,py,pr){
+    const pgG=ctx.createRadialGradient(px,py,pr*0.08,px,py,pr);
+    pgG.addColorStop(0,'rgba(88,210,210,0.92)'); pgG.addColorStop(0.5,'rgba(40,165,185,0.86)'); pgG.addColorStop(1,'rgba(18,100,140,0.72)');
+    ctx.fillStyle=pgG; ctx.beginPath(); ctx.ellipse(px,py,pr,pr*0.64,0.2,0,Math.PI*2); ctx.fill();
+    const rph=Math.sin(t*1.20+px*0.01)*0.5+0.5;
+    ctx.strokeStyle=`rgba(180,245,245,${0.35+rph*0.22})`; ctx.lineWidth=0.9;
+    ctx.beginPath(); ctx.ellipse(px,py,pr*0.48*(0.72+rph*0.28),pr*0.30*(0.72+rph*0.28),0.2,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='rgba(222,88,36,0.84)';
+    for(let a=0;a<5;a++){
+      const ang=a/5*Math.PI*2;
+      ctx.beginPath(); ctx.moveTo(px,py);
+      ctx.quadraticCurveTo(px+Math.cos(ang+0.3)*pr*0.30,py+Math.sin(ang+0.3)*pr*0.28,px+Math.cos(ang)*pr*0.44,py+Math.sin(ang)*pr*0.38);
+      ctx.quadraticCurveTo(px+Math.cos(ang-0.3)*pr*0.30,py+Math.sin(ang-0.3)*pr*0.28,px,py); ctx.fill();
+    }
+  }
+  drawRockPool(W*0.954,H*0.362,W*0.020);
+  drawRockPool(W*0.958,H*0.502,W*0.017);
+  drawRockPool(W*0.952,H*0.638,W*0.016);
+  drawRockPool(W*0.950,H*0.748,W*0.014);
+
+  // Animated wave crash lines following right oval arc
+  for(let w=0;w<5;w++){
+    const wph=(t*0.48+w*0.22)%1.0;
+    const wOff=W*(0.006+wph*0.038);
+    const wAlpha=Math.sin(wph*Math.PI)*0.55;
+    const scY=(H*FIELD_RY+wOff*(H*FIELD_RY)/(W*FIELD_RX))/(W*FIELD_RX+wOff);
+    ctx.strokeStyle=`rgba(255,255,255,${wAlpha})`; ctx.lineWidth=2.2; ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.ellipse(W/2,H*FIELD_CY,W*FIELD_RX+wOff,(W*FIELD_RX+wOff)*scY,0,-Math.PI*0.48,Math.PI*0.48);
+    ctx.stroke();
+    // splash dots
+    ctx.fillStyle=`rgba(255,255,255,${wAlpha*0.65})`;
+    for(let f=0;f<4;f++){
+      const fa=-Math.PI*0.40+f*0.28;
+      const fx=W/2+Math.cos(fa)*(W*FIELD_RX+wOff), fy=H*FIELD_CY+Math.sin(fa)*(W*FIELD_RX+wOff)*scY;
+      ctx.beginPath(); ctx.arc(fx,fy,W*(0.004+((f*7)%3)*0.002),0,Math.PI*2); ctx.fill();
+    }
+  }
+  ctx.restore(); // end rock pool clip
+
+  // Wave foam along full oval shore (both sides)
+  for(let i=0;i<32;i++){
+    const angle=(i/32)*Math.PI*2;
+    const bx=W/2+Math.cos(angle)*W*FIELD_RX, by=H*FIELD_CY+Math.sin(angle)*H*FIELD_RY;
+    if(by<H*0.25) continue;
+    const phase=t*0.62+i*0.34;
+    const fa=0.20+Math.sin(phase)*0.14;
+    const fr=W*(0.016+((i*7)%5)*0.003);
+    const ox=bx+Math.cos(angle)*fr*0.60, oy=by+Math.sin(angle)*fr*0.60;
+    const fG=ctx.createRadialGradient(ox,oy,0,ox,oy,fr*1.7);
+    fG.addColorStop(0,`rgba(255,255,255,${fa})`); fG.addColorStop(0.5,`rgba(210,245,255,${fa*0.40})`); fG.addColorStop(1,'rgba(180,225,255,0)');
+    ctx.fillStyle=fG; ctx.beginPath(); ctx.arc(ox,oy,fr*1.7,0,Math.PI*2); ctx.fill();
+  }
+
+  // Bottom beach: shells scattered along the base arc
+  function beachShell(sx,sy,sw,ang){
+    ctx.save(); ctx.translate(sx,sy); ctx.rotate(ang||0);
+    ctx.fillStyle='rgba(240,228,208,0.92)';
+    ctx.beginPath(); ctx.ellipse(0,0,sw,sw*0.58,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(175,148,108,0.45)'; ctx.lineWidth=0.7;
+    for(let l=1;l<=3;l++){ ctx.beginPath(); ctx.ellipse(0,0,sw*l*0.33,sw*0.58*l*0.33,0,0,Math.PI*2); ctx.stroke(); }
+    ctx.restore();
+  }
+  beachShell(W*0.180,H*0.946,W*0.010, 0.4);
+  beachShell(W*0.320,H*0.958,W*0.008,-0.3);
+  beachShell(W*0.500,H*0.964,W*0.010, 0.2);
+  beachShell(W*0.680,H*0.960,W*0.009, 0.5);
+  beachShell(W*0.820,H*0.950,W*0.011,-0.4);
 
   // ── CRABS — top-down view scuttling in beach zone ──
   function drawCrab(cx,cy,cs){
