@@ -24823,9 +24823,13 @@ function drawLagoonScene() {
   oceanG.addColorStop(0,'#1880d8'); oceanG.addColorStop(0.30,'#1060c0'); oceanG.addColorStop(0.65,'#0848a8'); oceanG.addColorStop(1,'#063088');
   ctx.fillStyle=oceanG; ctx.fillRect(0,H*0.23,W,H*0.77);
   // Sand-to-ocean fade at top — merges backdrop beach into outer zone
-  const sandMergeG=ctx.createLinearGradient(0,H*0.23,0,H*0.36);
-  sandMergeG.addColorStop(0,'rgba(228,208,128,0.88)'); sandMergeG.addColorStop(0.35,'rgba(215,195,112,0.55)'); sandMergeG.addColorStop(1,'rgba(180,165,90,0)');
-  ctx.fillStyle=sandMergeG; ctx.fillRect(0,H*0.23,W,H*0.13);
+  const sandMergeG=ctx.createLinearGradient(0,H*0.23,0,H*0.42);
+  sandMergeG.addColorStop(0,'rgba(228,208,128,0.98)'); sandMergeG.addColorStop(0.18,'rgba(222,202,118,0.88)'); sandMergeG.addColorStop(0.50,'rgba(210,192,108,0.55)'); sandMergeG.addColorStop(1,'rgba(185,170,92,0)');
+  ctx.fillStyle=sandMergeG; ctx.fillRect(0,H*0.23,W,H*0.19);
+  // Extra corner fills — top-left and top-right wedges get a sandy overlay to cover ocean seam
+  const cornerG=ctx.createLinearGradient(0,H*0.23,W*0.28,H*0.38);
+  cornerG.addColorStop(0,'rgba(224,204,124,0.82)'); cornerG.addColorStop(1,'rgba(200,185,110,0)');
+  ctx.fillStyle=cornerG; ctx.fillRect(0,H*0.23,W*0.28,H*0.15);
   // Animated caustics
   ctx.save(); ctx.globalAlpha=0.055; ctx.strokeStyle='rgba(160,230,255,1)'; ctx.lineWidth=W*0.0018;
   for(let c=0;c<14;c++){
@@ -24895,19 +24899,61 @@ function drawLagoonScene() {
   // ── ROCK POOL — wraps around RIGHT half of oval ──
   ctx.save();
   ctx.beginPath(); ctx.rect(W*0.44,H*0.23,W*0.56,H*0.77); ctx.clip(); // right side only
-  // Rocky ground following oval curve
+  // Dark pebbly base behind boulders
   ctx.save();
   ctx.translate(W/2,H*FIELD_CY); ctx.scale(1,(H*FIELD_RY)/(W*FIELD_RX));
-  const rkG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.95,0,0,W*FIELD_RX*1.36);
-  rkG.addColorStop(0,'rgba(110,98,82,0.92)'); rkG.addColorStop(0.38,'rgba(72,62,50,0.82)'); rkG.addColorStop(0.72,'rgba(48,42,34,0.55)'); rkG.addColorStop(1,'rgba(20,50,90,0)');
-  ctx.fillStyle=rkG;
-  ctx.beginPath(); ctx.arc(0,0,W*FIELD_RX*1.40,0,Math.PI*2); ctx.fill();
+  const rkBaseG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.97,0,0,W*FIELD_RX*1.65);
+  rkBaseG.addColorStop(0,'rgba(52,44,34,0.96)'); rkBaseG.addColorStop(0.45,'rgba(38,32,24,0.90)'); rkBaseG.addColorStop(0.80,'rgba(24,38,60,0.60)'); rkBaseG.addColorStop(1,'rgba(16,30,54,0)');
+  ctx.fillStyle=rkBaseG;
+  ctx.beginPath(); ctx.arc(0,0,W*FIELD_RX*1.65,0,Math.PI*2); ctx.fill();
   ctx.restore();
-  // Rock texture blobs
+
+  // Big boulder shapes along the right arc
+  function drawBoulder(bx,by,bs,ang,v){
+    ctx.save(); ctx.translate(bx,by); ctx.rotate(ang||0);
+    const bG=ctx.createRadialGradient(-bs*0.30,-bs*0.26,bs*0.06,-bs*0.06,-bs*0.06,bs*1.30);
+    bG.addColorStop(0,'rgba(185,172,152,0.99)'); bG.addColorStop(0.20,'rgba(122,108,88,0.99)');
+    bG.addColorStop(0.52,'rgba(70,60,46,0.97)'); bG.addColorStop(1,'rgba(20,16,12,0.93)');
+    ctx.fillStyle=bG;
+    // Each boulder gets a slightly different outline via variant v (0–3)
+    const p=v||0;
+    ctx.beginPath();
+    ctx.moveTo(bs*(0.76+p*0.04),  bs*(0.18+p*0.06));
+    ctx.bezierCurveTo(bs*(0.94+p*0.03),-bs*(0.16+p*0.06), bs*(0.56-p*0.04),-bs*(0.84+p*0.04), bs*(0.06-p*0.06),-bs*(1.02+p*0.02));
+    ctx.bezierCurveTo(-bs*(0.36+p*0.06),-bs*(0.96+p*0.04), -bs*(0.90-p*0.03),-bs*(0.56+p*0.05), -bs*(0.94+p*0.02), bs*(0.08+p*0.04));
+    ctx.bezierCurveTo(-bs*(0.82-p*0.04), bs*(0.54+p*0.05), -bs*(0.28+p*0.06), bs*(0.80+p*0.04), bs*(0.16+p*0.05), bs*(0.82+p*0.03));
+    ctx.bezierCurveTo(bs*(0.54+p*0.04),  bs*(0.80+p*0.02), bs*(0.78+p*0.03), bs*(0.54+p*0.05), bs*(0.76+p*0.04), bs*(0.18+p*0.06));
+    ctx.closePath(); ctx.fill();
+    // Highlight glint on top-left face
+    ctx.fillStyle='rgba(224,214,198,0.24)';
+    ctx.beginPath(); ctx.ellipse(-bs*0.26,-bs*0.30,bs*0.38,bs*0.22,-0.55,0,Math.PI*2); ctx.fill();
+    // Algae patches
+    ctx.fillStyle='rgba(34,88,34,0.46)';
+    for(let a=0;a<4;a++){
+      const ax=(-0.24+(a%2)*0.40)*bs, ay=(0.10+Math.floor(a/2)*0.26)*bs;
+      ctx.beginPath(); ctx.arc(ax,ay,bs*0.095,0,Math.PI*2); ctx.fill();
+    }
+    // Crack
+    ctx.strokeStyle='rgba(12,10,6,0.50)'; ctx.lineWidth=bs*0.055; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(-bs*0.20,bs*0.14); ctx.quadraticCurveTo(bs*0.08,-bs*0.16,bs*0.32,bs*0.06); ctx.stroke();
+    ctx.restore();
+  }
+  // 9 boulders at 1.12× oval radius along the right arc (angles -0.8 to +0.8)
+  drawBoulder(W*0.859,H*0.303, W*0.060, 0.36, 0);
+  drawBoulder(W*0.925,H*0.366, W*0.070,-0.28, 1);
+  drawBoulder(W*0.974,H*0.439, W*0.065, 0.52, 2);
+  drawBoulder(W*1.005,H*0.518, W*0.074,-0.18, 3);
+  drawBoulder(W*1.015,H*0.600, W*0.078, 0.12, 0);
+  drawBoulder(W*1.005,H*0.682, W*0.074, 0.42, 1);
+  drawBoulder(W*0.974,H*0.761, W*0.065,-0.44, 2);
+  drawBoulder(W*0.925,H*0.834, W*0.070, 0.22, 3);
+  drawBoulder(W*0.859,H*0.897, W*0.060,-0.30, 0);
+
+  // Rock texture blobs (smaller accent rocks between boulders)
   function drawRock(rx,ry,rs,ang){
     ctx.save(); ctx.translate(rx,ry); ctx.rotate(ang||0);
     const rG=ctx.createRadialGradient(-rs*0.28,-rs*0.22,rs*0.04,rs*0.04,rs*0.04,rs*1.1);
-    rG.addColorStop(0,'rgba(168,156,138,0.94)'); rG.addColorStop(0.38,'rgba(84,74,60,0.94)'); rG.addColorStop(1,'rgba(30,24,18,0.90)');
+    rG.addColorStop(0,'rgba(158,146,128,0.94)'); rG.addColorStop(0.38,'rgba(80,70,56,0.94)'); rG.addColorStop(1,'rgba(28,22,16,0.90)');
     ctx.fillStyle=rG;
     ctx.beginPath();
     ctx.moveTo(rs*0.80,rs*0.22); ctx.bezierCurveTo(rs*0.88,-rs*0.22,rs*0.48,-rs*0.90,0,-rs*1.0);
@@ -24915,22 +24961,17 @@ function drawLagoonScene() {
     ctx.bezierCurveTo(-rs*0.82,rs*0.56,-rs*0.38,rs*0.74,rs*0.12,rs*0.74);
     ctx.bezierCurveTo(rs*0.50,rs*0.74,rs*0.78,rs*0.54,rs*0.80,rs*0.22);
     ctx.closePath(); ctx.fill();
-    ctx.fillStyle='rgba(210,200,185,0.26)';
+    ctx.fillStyle='rgba(205,195,178,0.24)';
     ctx.beginPath(); ctx.ellipse(-rs*0.22,-rs*0.30,rs*0.30,rs*0.18,-0.5,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='rgba(36,96,36,0.38)';
-    for(let a=0;a<3;a++){ ctx.beginPath(); ctx.arc((-0.28+a*0.26)*rs,(0.20+a*0.10)*rs,rs*0.09,0,Math.PI*2); ctx.fill(); }
     ctx.restore();
   }
-  // Rocks scattered along right arc
-  drawRock(W*0.952,H*0.320,W*0.034, 0.3);
-  drawRock(W*0.968,H*0.400,W*0.026,-0.4);
-  drawRock(W*0.942,H*0.468,W*0.022, 0.7);
-  drawRock(W*0.962,H*0.534,W*0.028,-0.2);
-  drawRock(W*0.944,H*0.600,W*0.024, 0.5);
-  drawRock(W*0.966,H*0.662,W*0.018,-0.5);
-  drawRock(W*0.940,H*0.728,W*0.020, 0.4);
+  drawRock(W*0.880,H*0.338,W*0.020, 0.5);
+  drawRock(W*0.950,H*0.408,W*0.018,-0.3);
+  drawRock(W*0.868,H*0.464,W*0.016, 0.7);
+  drawRock(W*0.900,H*0.700,W*0.019,-0.4);
+  drawRock(W*0.870,H*0.776,W*0.017, 0.6);
 
-  // Rock pools — teal tidal pools
+  // Rock pools — teal tidal pools between boulders
   function drawRockPool(px,py,pr){
     const pgG=ctx.createRadialGradient(px,py,pr*0.08,px,py,pr);
     pgG.addColorStop(0,'rgba(88,210,210,0.92)'); pgG.addColorStop(0.5,'rgba(40,165,185,0.86)'); pgG.addColorStop(1,'rgba(18,100,140,0.72)');
@@ -24946,27 +24987,24 @@ function drawLagoonScene() {
       ctx.quadraticCurveTo(px+Math.cos(ang-0.3)*pr*0.30,py+Math.sin(ang-0.3)*pr*0.28,px,py); ctx.fill();
     }
   }
-  drawRockPool(W*0.954,H*0.362,W*0.020);
-  drawRockPool(W*0.958,H*0.502,W*0.017);
-  drawRockPool(W*0.952,H*0.638,W*0.016);
-  drawRockPool(W*0.950,H*0.748,W*0.014);
+  drawRockPool(W*0.898,H*0.335,W*0.016);
+  drawRockPool(W*0.950,H*0.480,W*0.015);
+  drawRockPool(W*0.898,H*0.665,W*0.015);
+  drawRockPool(W*0.950,H*0.800,W*0.014);
 
-  // Animated wave crash lines following right oval arc
-  for(let w=0;w<5;w++){
-    const wph=(t*0.48+w*0.22)%1.0;
-    const wOff=W*(0.006+wph*0.038);
-    const wAlpha=Math.sin(wph*Math.PI)*0.55;
-    const scY=(H*FIELD_RY+wOff*(H*FIELD_RY)/(W*FIELD_RX))/(W*FIELD_RX+wOff);
-    ctx.strokeStyle=`rgba(255,255,255,${wAlpha})`; ctx.lineWidth=2.2; ctx.lineCap='round';
-    ctx.beginPath();
-    ctx.ellipse(W/2,H*FIELD_CY,W*FIELD_RX+wOff,(W*FIELD_RX+wOff)*scY,0,-Math.PI*0.48,Math.PI*0.48);
-    ctx.stroke();
-    // splash dots
-    ctx.fillStyle=`rgba(255,255,255,${wAlpha*0.65})`;
-    for(let f=0;f<4;f++){
-      const fa=-Math.PI*0.40+f*0.28;
-      const fx=W/2+Math.cos(fa)*(W*FIELD_RX+wOff), fy=H*FIELD_CY+Math.sin(fa)*(W*FIELD_RX+wOff)*scY;
-      ctx.beginPath(); ctx.arc(fx,fy,W*(0.004+((f*7)%3)*0.002),0,Math.PI*2); ctx.fill();
+  // Animated splash foam on boulder faces (small burst dots, not stripe arcs)
+  const boulderAngles=[-0.8,-0.6,-0.4,-0.2,0,0.2,0.4,0.6,0.8];
+  for(let b=0;b<boulderAngles.length;b++){
+    const ba=boulderAngles[b];
+    const bx=W/2+Math.cos(ba)*W*FIELD_RX*1.10, by=H*FIELD_CY+Math.sin(ba)*H*FIELD_RY*1.10;
+    const sph=(t*0.55+b*0.35)%1.0;
+    const sAlpha=Math.sin(sph*Math.PI)*0.50;
+    ctx.fillStyle=`rgba(255,255,255,${sAlpha})`;
+    for(let f=0;f<5;f++){
+      const dr=W*(0.006+sph*0.012), da=ba-Math.PI*0.18+f*0.09;
+      const fx=bx+Math.cos(da-Math.PI*0.5)*dr*(f*0.4+0.4);
+      const fy=by+Math.sin(da-Math.PI*0.5)*dr*(f*0.4+0.4);
+      ctx.beginPath(); ctx.arc(fx,fy,W*(0.0025+sph*0.003),0,Math.PI*2); ctx.fill();
     }
   }
   ctx.restore(); // end rock pool clip
