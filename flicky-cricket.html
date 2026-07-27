@@ -24896,17 +24896,11 @@ function drawLagoonScene() {
   beachShell(W*0.028,H*0.670,W*0.009, 0.6);
   ctx.restore(); // end beach clip
 
-  // ── ROCK POOL — wraps around RIGHT half of oval ──
+  // ── ROCKY SHORELINE — wraps around RIGHT half of oval ──
   ctx.save();
   ctx.beginPath(); ctx.rect(W*0.44,H*0.23,W*0.56,H*0.77); ctx.clip(); // right side only
-  // Dark pebbly base behind boulders
-  ctx.save();
-  ctx.translate(W/2,H*FIELD_CY); ctx.scale(1,(H*FIELD_RY)/(W*FIELD_RX));
-  const rkBaseG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.97,0,0,W*FIELD_RX*1.65);
-  rkBaseG.addColorStop(0,'rgba(52,44,34,0.96)'); rkBaseG.addColorStop(0.45,'rgba(38,32,24,0.90)'); rkBaseG.addColorStop(0.80,'rgba(24,38,60,0.60)'); rkBaseG.addColorStop(1,'rgba(16,30,54,0)');
-  ctx.fillStyle=rkBaseG;
-  ctx.beginPath(); ctx.arc(0,0,W*FIELD_RX*1.65,0,Math.PI*2); ctx.fill();
-  ctx.restore();
+  // Ocean base for right side — same blue as main ocean, no dark overlay
+  // (ocean is already painted; no extra fill needed — boulders sit on top of existing blue)
 
   // Big boulder shapes along the right arc
   function drawBoulder(bx,by,bs,ang,v){
@@ -24992,22 +24986,55 @@ function drawLagoonScene() {
   drawRockPool(W*0.898,H*0.665,W*0.015);
   drawRockPool(W*0.950,H*0.800,W*0.014);
 
-  // Animated splash foam on boulder faces (small burst dots, not stripe arcs)
+  // Waves rolling in from the right, crashing on the rocks
+  for(let w=0;w<5;w++){
+    const wph=(t*0.50+w*0.24)%1.0;
+    const wOff=W*(0.008+wph*0.048);
+    const wAlpha=Math.sin(wph*Math.PI)*0.52;
+    const scY=(H*FIELD_RY+wOff*(H*FIELD_RY)/(W*FIELD_RX))/(W*FIELD_RX+wOff);
+    // Wave swell line — arc on right side
+    ctx.strokeStyle=`rgba(140,210,255,${wAlpha*0.7})`; ctx.lineWidth=2.8; ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.ellipse(W/2,H*FIELD_CY,W*FIELD_RX+wOff,(W*FIELD_RX+wOff)*scY,0,-Math.PI*0.55,Math.PI*0.55);
+    ctx.stroke();
+    // White foam crest on top of swell
+    ctx.strokeStyle=`rgba(255,255,255,${wAlpha})`; ctx.lineWidth=1.4;
+    ctx.beginPath();
+    ctx.ellipse(W/2,H*FIELD_CY,W*FIELD_RX+wOff*0.96,(W*FIELD_RX+wOff*0.96)*scY,0,-Math.PI*0.50,Math.PI*0.50);
+    ctx.stroke();
+  }
+  // Crash spray bursting off each boulder face toward the sea
   const boulderAngles=[-0.8,-0.6,-0.4,-0.2,0,0.2,0.4,0.6,0.8];
   for(let b=0;b<boulderAngles.length;b++){
     const ba=boulderAngles[b];
-    const bx=W/2+Math.cos(ba)*W*FIELD_RX*1.10, by=H*FIELD_CY+Math.sin(ba)*H*FIELD_RY*1.10;
-    const sph=(t*0.55+b*0.35)%1.0;
-    const sAlpha=Math.sin(sph*Math.PI)*0.50;
-    ctx.fillStyle=`rgba(255,255,255,${sAlpha})`;
-    for(let f=0;f<5;f++){
-      const dr=W*(0.006+sph*0.012), da=ba-Math.PI*0.18+f*0.09;
-      const fx=bx+Math.cos(da-Math.PI*0.5)*dr*(f*0.4+0.4);
-      const fy=by+Math.sin(da-Math.PI*0.5)*dr*(f*0.4+0.4);
-      ctx.beginPath(); ctx.arc(fx,fy,W*(0.0025+sph*0.003),0,Math.PI*2); ctx.fill();
+    // Boulder sits at 1.12× radius; wave hits the seaward face at ~1.06×
+    const bx=W/2+Math.cos(ba)*W*FIELD_RX*1.06, by=H*FIELD_CY+Math.sin(ba)*H*FIELD_RY*1.06;
+    const sph=(t*0.62+b*0.38)%1.0;
+    const sAlpha=Math.sin(sph*Math.PI)*0.72;
+    // Spray fan — arcs outward from the boulder face
+    for(let f=0;f<7;f++){
+      const spread=(f-3)*0.14;
+      const outward=ba+spread;
+      const sprayLen=W*(0.008+sph*0.022);
+      const sx=bx+Math.cos(outward)*sprayLen*0.3, sy=by+Math.sin(outward)*sprayLen*0.3;
+      const ex=bx+Math.cos(outward)*sprayLen, ey=by+Math.sin(outward)*sprayLen;
+      const dropAlpha=sAlpha*(1-Math.abs(f-3)*0.18);
+      ctx.strokeStyle=`rgba(255,255,255,${dropAlpha})`; ctx.lineWidth=W*(0.0016+sph*0.0008); ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey); ctx.stroke();
+      // Droplet at tip
+      ctx.fillStyle=`rgba(220,240,255,${dropAlpha*0.8})`;
+      ctx.beginPath(); ctx.arc(ex,ey,W*(0.0018+sph*0.0014),0,Math.PI*2); ctx.fill();
+    }
+    // Foam pool at base — white froth spreading inward
+    if(sAlpha>0.15){
+      const fG=ctx.createRadialGradient(bx,by,0,bx,by,W*0.032);
+      fG.addColorStop(0,`rgba(255,255,255,${sAlpha*0.55})`);
+      fG.addColorStop(0.5,`rgba(200,235,255,${sAlpha*0.22})`);
+      fG.addColorStop(1,'rgba(160,220,255,0)');
+      ctx.fillStyle=fG; ctx.beginPath(); ctx.arc(bx,by,W*0.032,0,Math.PI*2); ctx.fill();
     }
   }
-  ctx.restore(); // end rock pool clip
+  ctx.restore(); // end rocky shoreline clip
 
   // Wave foam along full oval shore (both sides)
   for(let i=0;i<32;i++){
