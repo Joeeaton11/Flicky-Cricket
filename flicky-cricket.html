@@ -25585,136 +25585,259 @@ function drawShipwreckScene() {
   const CX=W/2, CY=H*0.60, RX=W*0.46, RY=H*0.37;
 
   // =======================================================
-  // BACKDROP — top 23%: galleon wreck in vivid teal ocean
+  // BACKDROP — top 23%: sunken galleon in deep ocean
   // =======================================================
   ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
+  const BH=H*0.23; // backdrop height shorthand
 
-  // Ocean water — vivid teal, depth at bottom
-  const sky=ctx.createLinearGradient(0,0,0,H*0.23);
-  sky.addColorStop(0,'#0d4060'); sky.addColorStop(0.40,'#0f5272'); sky.addColorStop(0.75,'#0d4862'); sky.addColorStop(1,'#0a3850');
-  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.23);
+  // ─── DEEP WATER ──────────────────────────────────────
+  // Deep ocean — enough colour to silhouette the dark hull against
+  const sky=ctx.createLinearGradient(0,0,0,BH);
+  sky.addColorStop(0,'#04202e'); sky.addColorStop(0.45,'#062a3c'); sky.addColorStop(1,'#073040');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,BH);
 
-  // Broad sunlight column from surface
-  const sunG=ctx.createRadialGradient(W*0.44,0,0,W*0.44,H*0.23,W*0.65);
-  sunG.addColorStop(0,'rgba(80,200,240,0.38)'); sunG.addColorStop(0.45,'rgba(30,140,190,0.14)'); sunG.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=sunG; ctx.fillRect(0,0,W,H*0.23);
+  // Faint ambient scatter — bioluminescence/particles in water column
+  const ambG=ctx.createRadialGradient(W*0.40,0,0,W*0.40,BH*0.6,W*0.70);
+  ambG.addColorStop(0,'rgba(30,110,160,0.22)'); ambG.addColorStop(0.50,'rgba(12,60,100,0.10)'); ambG.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=ambG; ctx.fillRect(0,0,W,BH);
 
-  // Crepuscular light rays
-  ctx.save(); ctx.globalAlpha=0.18;
-  for(let r=0;r<9;r++){
-    const rx=W*(0.06+r*0.106), rw=W*(0.018+((r*7)%5)*0.005);
-    const sw=Math.sin(t*0.50+r*0.85)*W*0.011;
-    const rG=ctx.createLinearGradient(rx,0,rx,H*0.23);
-    rG.addColorStop(0,'rgba(120,240,255,0)'); rG.addColorStop(0.20,'rgba(100,235,255,1)'); rG.addColorStop(1,'rgba(40,180,220,0.30)');
+  // Light rays — thin, faint, from surface above
+  ctx.save(); ctx.globalAlpha=0.13;
+  for(let r=0;r<7;r++){
+    const rx=W*(0.05+r*0.140), rw=W*(0.012+((r*7)%4)*0.004);
+    const sw=Math.sin(t*0.45+r*1.1)*W*0.009;
+    const rG=ctx.createLinearGradient(rx+sw,0,rx+sw*1.5,BH);
+    rG.addColorStop(0,'rgba(60,180,230,0)'); rG.addColorStop(0.15,'rgba(50,165,220,1)'); rG.addColorStop(1,'rgba(15,80,140,0)');
     ctx.fillStyle=rG;
-    ctx.beginPath(); ctx.moveTo(rx-rw+sw,0); ctx.lineTo(rx+rw+sw,0);
-    ctx.lineTo(rx+rw*2.8+sw*2.2,H*0.23); ctx.lineTo(rx-rw*0.8+sw*2.2,H*0.23); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(rx-rw+sw,0); ctx.lineTo(rx+rw+sw,0);
+    ctx.lineTo(rx+rw*3+sw*2,BH); ctx.lineTo(rx-rw*0.5+sw*2,BH);
+    ctx.closePath(); ctx.fill();
   }
   ctx.restore();
 
-  // Mast stumps drawn BEFORE hull so hull covers their bases
-  ctx.lineCap='round';
-  ctx.strokeStyle='#9e6235'; ctx.lineWidth=W*0.020;
-  ctx.beginPath(); ctx.moveTo(W*0.29,H*0.23); ctx.lineTo(W*0.21,-H*0.005); ctx.stroke();
-  ctx.strokeStyle='rgba(190,120,52,0.65)'; ctx.lineWidth=W*0.008;
-  ctx.beginPath(); ctx.moveTo(W*0.292,H*0.23); ctx.lineTo(W*0.212,-H*0.005); ctx.stroke();
-  ctx.strokeStyle='#9e6235'; ctx.lineWidth=W*0.018;
-  ctx.beginPath(); ctx.moveTo(W*0.51,H*0.23); ctx.lineTo(W*0.45,H*0.010); ctx.stroke();
-  ctx.strokeStyle='rgba(190,120,52,0.65)'; ctx.lineWidth=W*0.007;
-  ctx.beginPath(); ctx.moveTo(W*0.512,H*0.23); ctx.lineTo(W*0.452,H*0.010); ctx.stroke();
+  // ─── GALLEON WRECK ───────────────────────────────────
+  // The ship silhouette path — drawn as ONE unified shape.
+  // Bow (left) narrows to a curved stem. Stern castle (right) rises tall.
+  // The hull is dark — centuries-old waterlogged oak, near black-brown.
 
-  // Main hull body — rich warm oak gradient
-  const hullG=ctx.createLinearGradient(0,H*0.04,0,H*0.23);
-  hullG.addColorStop(0,'#9a6238'); hullG.addColorStop(0.25,'#8a5530'); hullG.addColorStop(0.55,'#6e4020'); hullG.addColorStop(0.85,'#4a2810'); hullG.addColorStop(1,'#2c1608');
+  // Full silhouette (shadow/depth layer first)
+  ctx.fillStyle='rgba(0,0,0,0.55)';
+  ctx.beginPath();
+  // Start at bottom-left (bow base, at bottom of backdrop)
+  ctx.moveTo(W*0.06, BH);
+  // Bow stem curves upward — the forward curving cutwater of the bow
+  ctx.bezierCurveTo(W*0.04,BH*0.78, W*0.03,BH*0.55, W*0.07,BH*0.38);
+  // Bow meets the sheer line (deck) — curves into the foredeck
+  ctx.bezierCurveTo(W*0.10,BH*0.28, W*0.18,BH*0.22, W*0.28,BH*0.24);
+  // Sheer line dips very slightly at mid-ship (classic galleon sheer)
+  ctx.bezierCurveTo(W*0.38,BH*0.26, W*0.48,BH*0.28, W*0.58,BH*0.25);
+  // Rise to stern castle base
+  ctx.lineTo(W*0.60, BH*0.25);
+  // Stern castle vertical rise
+  ctx.lineTo(W*0.60, BH*0.05);
+  // Stern castle top — flat
+  ctx.lineTo(W*0.88, BH*0.05);
+  // Stern transom drops to bottom
+  ctx.lineTo(W*0.88, BH);
+  ctx.closePath(); ctx.fill();
+
+  // Main hull — waterlogged dark oak, aged centuries underwater
+  // Slightly lighter gradient so planks can show through
+  const hullG=ctx.createLinearGradient(0,BH*0.05,0,BH);
+  hullG.addColorStop(0,'#2e1a08'); hullG.addColorStop(0.30,'#241408'); hullG.addColorStop(0.65,'#180e04'); hullG.addColorStop(1,'#0e0802');
   ctx.fillStyle=hullG;
   ctx.beginPath();
-  ctx.moveTo(W*0.11,H*0.23); ctx.lineTo(W*0.10,H*0.112);
-  ctx.bezierCurveTo(W*0.12,H*0.078,W*0.21,H*0.056,W*0.35,H*0.050);
-  ctx.bezierCurveTo(W*0.53,H*0.044,W*0.71,H*0.060,W*0.83,H*0.086);
-  ctx.lineTo(W*0.85,H*0.23); ctx.closePath(); ctx.fill();
+  ctx.moveTo(W*0.06, BH);
+  ctx.bezierCurveTo(W*0.04,BH*0.78, W*0.03,BH*0.55, W*0.07,BH*0.38);
+  ctx.bezierCurveTo(W*0.10,BH*0.28, W*0.18,BH*0.22, W*0.28,BH*0.24);
+  ctx.bezierCurveTo(W*0.38,BH*0.26, W*0.48,BH*0.28, W*0.58,BH*0.25);
+  ctx.lineTo(W*0.60, BH*0.25);
+  ctx.lineTo(W*0.60, BH*0.05);
+  ctx.lineTo(W*0.88, BH*0.05);
+  ctx.lineTo(W*0.88, BH);
+  ctx.closePath(); ctx.fill();
 
-  // Plank lines clipped to hull shape
+  // Clip plank lines to hull shape
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(W*0.11,H*0.23); ctx.lineTo(W*0.10,H*0.112);
-  ctx.bezierCurveTo(W*0.12,H*0.078,W*0.21,H*0.056,W*0.35,H*0.050);
-  ctx.bezierCurveTo(W*0.53,H*0.044,W*0.71,H*0.060,W*0.83,H*0.086);
-  ctx.lineTo(W*0.85,H*0.23); ctx.closePath(); ctx.clip();
-  ctx.strokeStyle='rgba(15,5,0,0.52)'; ctx.lineWidth=W*0.0028;
-  for(let pl=0;pl<9;pl++){ const py=H*(0.080+pl*0.018); ctx.beginPath(); ctx.moveTo(W*0.09,py); ctx.lineTo(W*0.87,py); ctx.stroke(); }
-  ctx.strokeStyle='rgba(180,110,45,0.22)'; ctx.lineWidth=W*0.0014;
-  for(let pl=0;pl<8;pl++){ const py=H*(0.079+pl*0.018); ctx.beginPath(); ctx.moveTo(W*0.09,py); ctx.lineTo(W*0.87,py); ctx.stroke(); }
+  ctx.moveTo(W*0.06, BH);
+  ctx.bezierCurveTo(W*0.04,BH*0.78, W*0.03,BH*0.55, W*0.07,BH*0.38);
+  ctx.bezierCurveTo(W*0.10,BH*0.28, W*0.18,BH*0.22, W*0.28,BH*0.24);
+  ctx.bezierCurveTo(W*0.38,BH*0.26, W*0.48,BH*0.28, W*0.58,BH*0.25);
+  ctx.lineTo(W*0.60, BH*0.25); ctx.lineTo(W*0.60, BH*0.05);
+  ctx.lineTo(W*0.88, BH*0.05); ctx.lineTo(W*0.88, BH);
+  ctx.closePath(); ctx.clip();
+  // Plank lines — subtle horizontal grain
+  ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=W*0.0022;
+  for(let pl=0;pl<14;pl++){
+    const py=BH*(0.08+pl*0.065);
+    ctx.beginPath(); ctx.moveTo(0,py); ctx.lineTo(W,py); ctx.stroke();
+  }
+  // Faint plank highlight (lighter edge above each groove)
+  ctx.strokeStyle='rgba(60,30,8,0.20)'; ctx.lineWidth=W*0.0010;
+  for(let pl=0;pl<13;pl++){
+    const py=BH*(0.078+pl*0.065);
+    ctx.beginPath(); ctx.moveTo(0,py); ctx.lineTo(W,py); ctx.stroke();
+  }
   ctx.restore();
 
-  // Deck rail highlight
-  ctx.strokeStyle='rgba(200,128,48,0.92)'; ctx.lineWidth=W*0.006; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(W*0.10,H*0.112); ctx.bezierCurveTo(W*0.21,H*0.058,W*0.53,H*0.046,W*0.83,H*0.086); ctx.stroke();
-  ctx.strokeStyle='rgba(255,185,85,0.48)'; ctx.lineWidth=W*0.0026;
-  ctx.beginPath(); ctx.moveTo(W*0.10,H*0.110); ctx.bezierCurveTo(W*0.21,H*0.056,W*0.53,H*0.044,W*0.83,H*0.084); ctx.stroke();
+  // ─── SHEER LINE — the deck edge, catching ambient light ──
+  // This is the most important single line — it defines the ship profile
+  ctx.strokeStyle='rgba(130,75,24,0.95)'; ctx.lineWidth=W*0.0065; ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(W*0.07, BH*0.38);
+  ctx.bezierCurveTo(W*0.10,BH*0.28, W*0.18,BH*0.22, W*0.28,BH*0.24);
+  ctx.bezierCurveTo(W*0.38,BH*0.26, W*0.48,BH*0.28, W*0.58,BH*0.25);
+  ctx.stroke();
+  // Brighter highlight on top of sheer line
+  ctx.strokeStyle='rgba(200,120,38,0.70)'; ctx.lineWidth=W*0.0028;
+  ctx.beginPath();
+  ctx.moveTo(W*0.07, BH*0.378);
+  ctx.bezierCurveTo(W*0.10,BH*0.278, W*0.18,BH*0.218, W*0.28,BH*0.238);
+  ctx.bezierCurveTo(W*0.38,BH*0.258, W*0.48,BH*0.278, W*0.58,BH*0.248);
+  ctx.stroke();
 
-  // Broken hull ribs
-  ctx.strokeStyle='#7a4c22'; ctx.lineWidth=W*0.0065;
-  [0.13,0.18,0.24].forEach((rx,i)=>{
-    ctx.beginPath(); ctx.moveTo(W*rx,H*0.23); ctx.quadraticCurveTo(W*(rx-0.012),H*0.150,W*(rx+0.006),H*0.072+i*H*0.007); ctx.stroke();
-  });
+  // Bow stem edge — the forward edge of the hull
+  ctx.strokeStyle='rgba(70,38,12,0.70)'; ctx.lineWidth=W*0.0040;
+  ctx.beginPath();
+  ctx.moveTo(W*0.07, BH*0.38);
+  ctx.bezierCurveTo(W*0.03,BH*0.55, W*0.04,BH*0.78, W*0.06,BH);
+  ctx.stroke();
 
-  // Stern castle
-  const stG=ctx.createLinearGradient(0,H*0.050,0,H*0.23);
-  stG.addColorStop(0,'#8a5530'); stG.addColorStop(0.5,'#6a3e1e'); stG.addColorStop(1,'#3a2010');
-  ctx.fillStyle=stG;
-  ctx.beginPath(); ctx.moveTo(W*0.64,H*0.23); ctx.lineTo(W*0.64,H*0.056); ctx.lineTo(W*0.84,H*0.056); ctx.lineTo(W*0.85,H*0.23); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle='rgba(210,135,52,0.82)'; ctx.lineWidth=W*0.004;
-  ctx.beginPath(); ctx.moveTo(W*0.64,H*0.056); ctx.lineTo(W*0.84,H*0.056); ctx.stroke();
+  // ─── STERN CASTLE ────────────────────────────────────
+  // Already part of hull silhouette. Add its own tonal gradient.
+  const scG=ctx.createLinearGradient(0,BH*0.05,0,BH*0.35);
+  scG.addColorStop(0,'#221408'); scG.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=scG;
+  ctx.fillRect(W*0.60, BH*0.05, W*0.28, BH*0.20);
 
-  // Stern portholes — glowing amber
-  ctx.save(); ctx.shadowColor='rgba(255,170,30,0.90)'; ctx.shadowBlur=14;
-  [[W*0.685,H*0.076],[W*0.740,H*0.076],[W*0.795,H*0.076]].forEach(([wx,wy])=>{
-    const pG=ctx.createRadialGradient(wx,wy,0,wx,wy,W*0.020);
-    pG.addColorStop(0,'rgba(255,210,60,0.88)'); pG.addColorStop(0.5,'rgba(230,150,25,0.58)'); pG.addColorStop(1,'rgba(200,110,10,0)');
-    ctx.fillStyle=pG; ctx.beginPath(); ctx.ellipse(wx,wy,W*0.020,H*0.013,0,0,Math.PI*2); ctx.fill();
+  // Stern castle top edge
+  ctx.strokeStyle='rgba(80,44,14,0.75)'; ctx.lineWidth=W*0.0045;
+  ctx.beginPath(); ctx.moveTo(W*0.60,BH*0.05); ctx.lineTo(W*0.88,BH*0.05); ctx.stroke();
+  ctx.strokeStyle='rgba(140,75,22,0.45)'; ctx.lineWidth=W*0.0020;
+  ctx.beginPath(); ctx.moveTo(W*0.60,BH*0.048); ctx.lineTo(W*0.88,BH*0.048); ctx.stroke();
+
+  // Stern castle dividing line (where castle meets main deck level)
+  ctx.strokeStyle='rgba(60,32,10,0.60)'; ctx.lineWidth=W*0.0030;
+  ctx.beginPath(); ctx.moveTo(W*0.60,BH*0.25); ctx.lineTo(W*0.88,BH*0.25); ctx.stroke();
+
+  // ─── STERN WINDOWS — the one bright element ───────────
+  // Glowing amber/orange — trapped air pockets, bioluminescence inside
+  ctx.save();
+  ctx.shadowColor='rgba(255,140,20,0.95)'; ctx.shadowBlur=18;
+  [[W*0.655,BH*0.14],[W*0.720,BH*0.14],[W*0.785,BH*0.14],[W*0.850,BH*0.14]].forEach(([wx,wy],wi)=>{
+    const pulse=0.55+0.30*Math.sin(t*0.80+wi*1.2);
+    const pG=ctx.createRadialGradient(wx,wy,0,wx,wy,W*0.022);
+    pG.addColorStop(0,`rgba(255,200,50,${(pulse*0.85).toFixed(2)})`);
+    pG.addColorStop(0.40,`rgba(220,130,18,${(pulse*0.55).toFixed(2)})`);
+    pG.addColorStop(1,'rgba(180,80,0,0)');
+    ctx.fillStyle=pG;
+    ctx.beginPath(); ctx.ellipse(wx,wy,W*0.018,BH*0.090,0,0,Math.PI*2); ctx.fill();
   });
   ctx.restore();
 
-  // Gun ports with cannon barrels
-  for(let gp=0;gp<4;gp++){
-    const gpx=W*(0.22+gp*0.095), gpy=H*0.096;
-    ctx.fillStyle='#080300'; ctx.fillRect(gpx,gpy,W*0.030,H*0.018);
-    ctx.strokeStyle='#3a2210'; ctx.lineWidth=W*0.007; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(gpx+W*0.015,gpy+H*0.009); ctx.lineTo(gpx-W*0.016,gpy+H*0.009); ctx.stroke();
+  // ─── GUN PORTS ────────────────────────────────────────
+  // Dark rectangular openings in the hull side
+  for(let gp=0;gp<5;gp++){
+    const gpx=W*(0.10+gp*0.090), gpy=BH*0.48;
+    // Dark port hole opening
+    ctx.fillStyle='rgba(0,0,0,0.80)';
+    ctx.fillRect(gpx, gpy, W*0.028, BH*0.14);
+    // Port rim — slightly lighter wood around opening
+    ctx.strokeStyle='rgba(50,25,8,0.60)'; ctx.lineWidth=W*0.0030;
+    ctx.strokeRect(gpx-W*0.002, gpy-BH*0.008, W*0.032, BH*0.155);
+    // Cannon barrel protruding
+    ctx.strokeStyle='#181008'; ctx.lineWidth=W*0.0090; ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(gpx+W*0.014, gpy+BH*0.070);
+    ctx.lineTo(gpx-W*0.020, gpy+BH*0.070);
+    ctx.stroke();
   }
 
-  // Yardarms
-  ctx.strokeStyle='#9e6235'; ctx.lineWidth=W*0.010;
-  ctx.beginPath(); ctx.moveTo(W*0.15,H*0.060); ctx.lineTo(W*0.42,H*0.092); ctx.stroke();
-  ctx.lineWidth=W*0.008;
-  ctx.beginPath(); ctx.moveTo(W*0.35,H*0.038); ctx.lineTo(W*0.56,H*0.062); ctx.stroke();
+  // ─── BROKEN MASTS ─────────────────────────────────────
+  // Foremast — snapped, leaning slightly
+  // Dark against the lighter water sky, not against the hull
+  ctx.lineCap='round';
+  // Foremast — dark wood but lighter than hull to read against water above
+  ctx.strokeStyle='#3e2210'; ctx.lineWidth=W*0.022;
+  ctx.beginPath(); ctx.moveTo(W*0.280,BH*0.28); ctx.lineTo(W*0.220,BH*0.005); ctx.stroke();
+  // Foremast rim highlight — cylindrical catch on the lit side
+  ctx.strokeStyle='rgba(100,58,18,0.70)'; ctx.lineWidth=W*0.009;
+  ctx.beginPath(); ctx.moveTo(W*0.282,BH*0.28); ctx.lineTo(W*0.222,BH*0.005); ctx.stroke();
+  // Foremast break (snapped end, splintered)
+  ctx.strokeStyle='rgba(70,38,12,0.90)'; ctx.lineWidth=W*0.018;
+  ctx.beginPath(); ctx.moveTo(W*0.220,BH*0.005); ctx.lineTo(W*0.200,BH*0.042); ctx.stroke();
 
-  // Rigging — warm hemp
-  ctx.strokeStyle='rgba(160,102,30,1.0)'; ctx.lineWidth=W*0.0044; ctx.lineCap='round';
-  [[W*0.22,H*0.010,W*0.46,H*0.026],[W*0.19,H*0.038,W*0.44,H*0.052],[W*0.25,H*0.065,W*0.52,H*0.076]].forEach(([x1,y1,x2,y2])=>{
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.quadraticCurveTo((x1+x2)/2,(y1+y2)/2+H*0.016,x2,y2); ctx.stroke();
+  // Mainmast — taller, more upright
+  ctx.strokeStyle='#3e2210'; ctx.lineWidth=W*0.020;
+  ctx.beginPath(); ctx.moveTo(W*0.490,BH*0.27); ctx.lineTo(W*0.450,BH*0.008); ctx.stroke();
+  ctx.strokeStyle='rgba(100,58,18,0.70)'; ctx.lineWidth=W*0.008;
+  ctx.beginPath(); ctx.moveTo(W*0.492,BH*0.27); ctx.lineTo(W*0.452,BH*0.008); ctx.stroke();
+
+  // Foremast yardarm
+  ctx.strokeStyle='#382010'; ctx.lineWidth=W*0.013;
+  ctx.beginPath(); ctx.moveTo(W*0.132,BH*0.180); ctx.lineTo(W*0.400,BH*0.220); ctx.stroke();
+  // Main yardarm
+  ctx.strokeStyle='#382010'; ctx.lineWidth=W*0.011;
+  ctx.beginPath(); ctx.moveTo(W*0.328,BH*0.100); ctx.lineTo(W*0.562,BH*0.140); ctx.stroke();
+
+  // ─── RIGGING ──────────────────────────────────────────
+  // Old rope — very dark, almost invisible, just enough to read
+  ctx.strokeStyle='rgba(45,24,6,0.85)'; ctx.lineWidth=W*0.0035; ctx.lineCap='round';
+  // Forestay — foremast to bowsprit area
+  ctx.beginPath(); ctx.moveTo(W*0.220,BH*0.010); ctx.quadraticCurveTo(W*0.150,BH*0.040,W*0.080,BH*0.34); ctx.stroke();
+  // Shrouds on foremast
+  [[W*0.220,BH*0.010,W*0.155,BH*0.245],[W*0.220,BH*0.010,W*0.260,BH*0.250]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
   });
-  ctx.strokeStyle='rgba(220,158,55,0.58)'; ctx.lineWidth=W*0.0019;
-  [[W*0.22,H*0.010,W*0.46,H*0.026],[W*0.25,H*0.065,W*0.52,H*0.076]].forEach(([x1,y1,x2,y2])=>{
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.quadraticCurveTo((x1+x2)/2,(y1+y2)/2+H*0.016,x2,y2); ctx.stroke();
+  // Main stay
+  ctx.beginPath(); ctx.moveTo(W*0.450,BH*0.010); ctx.quadraticCurveTo(W*0.360,BH*0.025,W*0.240,BH*0.095); ctx.stroke();
+  // Shrouds on mainmast
+  [[W*0.450,BH*0.010,W*0.420,BH*0.270],[W*0.450,BH*0.010,W*0.510,BH*0.272]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
   });
 
-  // Tattered sails
-  ctx.fillStyle='rgba(65,38,14,0.54)';
-  ctx.beginPath(); ctx.moveTo(W*0.21,H*0.062); ctx.lineTo(W*0.29,H*0.062); ctx.bezierCurveTo(W*0.31,H*0.098,W*0.27,H*0.128,W*0.24,H*0.140); ctx.lineTo(W*0.18,H*0.120); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='rgba(55,30,10,0.46)';
-  ctx.beginPath(); ctx.moveTo(W*0.47,H*0.080); ctx.lineTo(W*0.58,H*0.080); ctx.bezierCurveTo(W*0.60,H*0.110,W*0.56,H*0.142,W*0.53,H*0.158); ctx.lineTo(W*0.46,H*0.138); ctx.closePath(); ctx.fill();
+  // ─── TATTERED SAIL REMNANTS ───────────────────────────
+  // Shredded fabric — dark grey-brown, barely visible
+  ctx.fillStyle='rgba(22,12,4,0.55)';
+  // Foremast sail fragment
+  ctx.beginPath();
+  ctx.moveTo(W*0.155,BH*0.185); ctx.lineTo(W*0.245,BH*0.210);
+  ctx.bezierCurveTo(W*0.260,BH*0.310,W*0.225,BH*0.370,W*0.195,BH*0.375);
+  ctx.lineTo(W*0.148,BH*0.340); ctx.closePath(); ctx.fill();
+  // Main sail fragment
+  ctx.fillStyle='rgba(20,10,4,0.50)';
+  ctx.beginPath();
+  ctx.moveTo(W*0.425,BH*0.140); ctx.lineTo(W*0.528,BH*0.160);
+  ctx.bezierCurveTo(W*0.540,BH*0.240,W*0.510,BH*0.290,W*0.488,BH*0.292);
+  ctx.lineTo(W*0.415,BH*0.268); ctx.closePath(); ctx.fill();
 
-  // Anchor chain
-  ctx.strokeStyle='rgba(88,68,26,0.78)'; ctx.lineWidth=W*0.007; ctx.setLineDash([W*0.007,W*0.006]);
-  ctx.beginPath(); ctx.moveTo(W*0.16,H*0.23); ctx.quadraticCurveTo(W*0.09,H*0.195,W*0.07,H*0.23); ctx.stroke();
-  ctx.setLineDash([]);
+  // ─── AGING / ALGAE / DAMAGE ───────────────────────────
+  // Green algae colonies on hull surface
+  ctx.fillStyle='rgba(14,55,18,0.40)';
+  for(let b=0;b<24;b++){
+    const bx=W*(0.07+(b*53%85)/100*0.80), by=BH*(0.30+(b*37%58)/100*0.65);
+    ctx.beginPath(); ctx.arc(bx,by,W*(0.004+(b*19%5)/1000),0,Math.PI*2); ctx.fill();
+  }
+  // Lighter algae highlight
+  ctx.fillStyle='rgba(22,80,28,0.22)';
+  for(let b=0;b<12;b++){
+    const bx=W*(0.08+(b*67%82)/100*0.78), by=BH*(0.28+(b*41%60)/100*0.65);
+    ctx.beginPath(); ctx.arc(bx,by,W*(0.006+(b*23%4)/1000),0,Math.PI*2); ctx.fill();
+  }
+  // Rust bleeds from iron fittings
+  ctx.fillStyle='rgba(80,20,4,0.28)';
+  for(let b=0;b<8;b++){
+    const bx=W*(0.12+(b*71%72)/100*0.72), by=BH*(0.25+(b*43%55)/100*0.65);
+    ctx.beginPath(); ctx.arc(bx,by,W*(0.010+(b*17%6)/1000),0,Math.PI*2); ctx.fill();
+  }
 
-  // Barnacles and rust
-  ctx.fillStyle='rgba(22,110,48,0.42)';
-  for(let b=0;b<18;b++){ const bx=W*(0.13+(b*53%72)/100*0.72), by=H*(0.098+(b*37%18)/100*0.60); ctx.beginPath(); ctx.arc(bx,by,W*(0.005+(b*19%5)/1000),0,Math.PI*2); ctx.fill(); }
-  ctx.fillStyle='rgba(185,52,12,0.24)';
-  for(let b=0;b<10;b++){ const bx=W*(0.15+(b*71%68)/100*0.68), by=H*(0.070+(b*43%22)/100*0.40); ctx.beginPath(); ctx.arc(bx,by,W*(0.008+(b*23%6)/1000),0,Math.PI*2); ctx.fill(); }
+  // ─── WATER DEPTH GRADIENT OVER HULL BOTTOM ────────────
+  // Darkens the lower hull back into the deep water — adds depth
+  const depthG=ctx.createLinearGradient(0,BH*0.65,0,BH);
+  depthG.addColorStop(0,'rgba(1,8,16,0)'); depthG.addColorStop(1,'rgba(1,8,16,0.60)');
+  ctx.fillStyle=depthG; ctx.fillRect(0,BH*0.65,W,BH*0.35);
 
   ctx.restore(); // end backdrop
 
