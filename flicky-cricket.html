@@ -24640,7 +24640,7 @@ function drawLagoonScene() {
 
   // Sky
   const sky=ctx.createLinearGradient(0,0,0,H*0.23);
-  sky.addColorStop(0,'#1460d0'); sky.addColorStop(0.38,'#2888e8'); sky.addColorStop(0.72,'#52bef4'); sky.addColorStop(0.90,'#80d4f8'); sky.addColorStop(1,'#a8e8fa');
+  sky.addColorStop(0,'#1460d0'); sky.addColorStop(0.35,'#2888e8'); sky.addColorStop(0.62,'#52bef4'); sky.addColorStop(0.78,'#78ccee'); sky.addColorStop(0.90,'#c8d890'); sky.addColorStop(1,'#e8d470');
   ctx.fillStyle=sky; ctx.fillRect(0,0,W,H*0.23);
 
   // Horizon atmospheric haze — golden warm glow at water level
@@ -24843,6 +24843,39 @@ function drawLagoonScene() {
 
   drawGroundRings('rgba(200,160,30,0.20)','rgba(160,120,15,0.25)','rgba(224,185,55,0.55)');
 
+  // Cricket pitch strip — lighter sand rectangle through oval centre
+  {
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(W/2,H*FIELD_CY,W*FIELD_RX,H*FIELD_RY,0,0,Math.PI*2); ctx.clip();
+    const pitchW=W*0.110, pitchH=H*0.340;
+    const pitchX=W/2-pitchW/2, pitchY=H*FIELD_CY-pitchH*0.50;
+    const pitchG=ctx.createLinearGradient(pitchX,0,pitchX+pitchW,0);
+    pitchG.addColorStop(0,'rgba(235,205,100,0.92)'); pitchG.addColorStop(0.5,'rgba(248,222,128,0.96)'); pitchG.addColorStop(1,'rgba(235,205,100,0.92)');
+    ctx.fillStyle=pitchG; ctx.fillRect(pitchX,pitchY,pitchW,pitchH);
+    // Pitch edge shadow
+    ctx.strokeStyle='rgba(160,120,20,0.35)'; ctx.lineWidth=1.5;
+    ctx.strokeRect(pitchX,pitchY,pitchW,pitchH);
+    // Crease lines (bowling + popping at each end)
+    ctx.strokeStyle='rgba(255,255,255,0.78)'; ctx.lineCap='square';
+    [[pitchY+pitchH*0.08,2.0],[pitchY+pitchH*0.16,1.0],[pitchY+pitchH*0.84,1.0],[pitchY+pitchH*0.92,2.0]].forEach(([cy2,lw])=>{
+      ctx.lineWidth=lw; ctx.beginPath(); ctx.moveTo(pitchX-W*0.004,cy2); ctx.lineTo(pitchX+pitchW+W*0.004,cy2); ctx.stroke();
+    });
+    // Return crease stubs
+    ctx.lineWidth=1.0;
+    [pitchY+pitchH*0.08, pitchY+pitchH*0.92].forEach(cy2=>{
+      ctx.beginPath(); ctx.moveTo(pitchX,cy2); ctx.lineTo(pitchX,cy2+pitchH*0.08); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pitchX+pitchW,cy2); ctx.lineTo(pitchX+pitchW,cy2+pitchH*0.08); ctx.stroke();
+    });
+    // Stumps — faint white posts at each end
+    ctx.fillStyle='rgba(255,255,255,0.82)';
+    for(let s=0;s<3;s++){
+      const sx=W/2+(s-1)*pitchW*0.18;
+      ctx.fillRect(sx-W*0.0015,pitchY+pitchH*0.04,W*0.003,pitchH*0.08);
+      ctx.fillRect(sx-W*0.0015,pitchY+pitchH*0.88,W*0.003,pitchH*0.08);
+    }
+    ctx.restore();
+  }
+
   // ══ OUTER OCEAN — evenodd clip ══
   ctx.save();
   ctx.beginPath();
@@ -24874,13 +24907,13 @@ function drawLagoonScene() {
   // ── BEACH — wraps around LEFT half of oval ──
   // Scale trick: stretch y so oval becomes a circle, use radial gradient for oval-following band
   ctx.save();
-  ctx.beginPath(); ctx.rect(0,H*0.23,W*0.56,H*0.77); ctx.clip(); // left side only
+  ctx.beginPath(); ctx.rect(0,H*0.23,W*0.50,H*0.77); ctx.clip(); // left side only — narrowed
   ctx.save();
   ctx.translate(W/2,H*FIELD_CY); ctx.scale(1,(H*FIELD_RY)/(W*FIELD_RX));
-  const beltG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.96,0,0,W*FIELD_RX*1.42);
-  beltG.addColorStop(0,'#eee0a0'); beltG.addColorStop(0.25,'#e8d888'); beltG.addColorStop(0.65,'rgba(228,212,150,0.60)'); beltG.addColorStop(1,'rgba(200,190,140,0)');
+  const beltG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.96,0,0,W*FIELD_RX*1.28);
+  beltG.addColorStop(0,'#eee0a0'); beltG.addColorStop(0.30,'#e8d888'); beltG.addColorStop(0.70,'rgba(228,212,150,0.50)'); beltG.addColorStop(1,'rgba(200,190,140,0)');
   ctx.fillStyle=beltG;
-  ctx.beginPath(); ctx.arc(0,0,W*FIELD_RX*1.42,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0,0,W*FIELD_RX*1.28,0,Math.PI*2); ctx.fill();
   ctx.restore();
   // Wet sand strip — darker tint closest to oval edge with animated shimmer
   ctx.save();
@@ -24908,18 +24941,20 @@ function drawLagoonScene() {
     return W/2-Math.cos(Math.asin(dy))*W*FIELD_RX;
   }
   // Wave front path: nPts spanning beach height, each x independently wobbly
+  // Waves lap INWARD toward the oval left edge — travel from ocean (left) toward shore (lsx)
   function beachWavePts(ph,seed,nPts){
     const pts=[];
     for(let i=0;i<nPts;i++){
       const v=i/(nPts-1);
       const y=H*0.30+v*H*0.58;
       const lsx=leftShoreX(y);
-      // wave travels from x≈0 (ph=0) to lsx (ph=1)
-      const baseX=lsx*(1-ph)*0.88;
+      // wave starts W*0.22 out from shore (ocean side) and arrives at shore (ph=1)
+      const beachW=W*0.22;
+      const baseX=lsx-beachW*(1-ph);
       const wob=Math.sin(t*1.0+seed+i*1.9)*W*0.018
                +Math.sin(t*2.2+seed*1.7+i*3.1)*W*0.009
                +Math.sin(t*0.6+seed*0.4+i*0.9)*W*0.005;
-      pts.push([Math.max(0,baseX+wob), y]);
+      pts.push([Math.max(0,Math.min(lsx,baseX+wob)), y]);
     }
     return pts;
   }
@@ -24944,15 +24979,19 @@ function drawLagoonScene() {
     const N=14;
     const frontPts=beachWavePts(ph,wd.seed,N);
 
-    // Soft teal wave body — filled band from wave front back to x=0
+    // Soft teal wave body — filled band from ocean (left) up to wave front
+    // Compute average shore x for gradient anchoring
+    const avgShoreX=frontPts.reduce((s,p,i)=>s+leftShoreX(p[1]),0)/N;
+    const avgX=frontPts.reduce((s,p)=>s+p[0],0)/N;
     ctx.beginPath(); smoothBeachPath(frontPts);
+    // Fill from wave front back to x=0 (ocean side is left)
     ctx.lineTo(0,frontPts[frontPts.length-1][1]);
     ctx.lineTo(0,frontPts[0][1]); ctx.closePath();
-    const avgX=frontPts.reduce((s,p)=>s+p[0],0)/N;
-    const bG=ctx.createLinearGradient(0,0,avgX+W*0.04,0);
-    bG.addColorStop(0,`rgba(8,80,155,${alpha*0.18})`);
-    bG.addColorStop(0.55,`rgba(18,140,205,${alpha*0.50})`);
-    bG.addColorStop(1,`rgba(72,195,235,${alpha*0.65})`);
+    const bG=ctx.createLinearGradient(0,0,avgShoreX,0);
+    bG.addColorStop(0,`rgba(8,80,155,${alpha*0.10})`);
+    bG.addColorStop(0.5,`rgba(18,140,205,${alpha*0.40})`);
+    bG.addColorStop(0.85,`rgba(72,195,235,${alpha*0.62})`);
+    bG.addColorStop(1,`rgba(120,220,240,${alpha*0.72})`);
     ctx.fillStyle=bG; ctx.fill();
 
     // White foam cap
@@ -25206,6 +25245,37 @@ function drawLagoonScene() {
     }
   }
 
+  // ── BOULDERS + ROCK POOLS redrawn OVER waves (z-order: waves then rocks) ──
+  drawBoulder(W*0.864,H*0.295, W*0.068, 0.36, 0);
+  drawBoulder(W*0.934,H*0.357, W*0.078,-0.28, 1);
+  drawBoulder(W*0.985,H*0.430, W*0.074, 0.52, 2);
+  drawBoulder(W*1.018,H*0.510, W*0.082,-0.18, 3);
+  drawBoulder(W*1.028,H*0.600, W*0.086, 0.12, 0);
+  drawBoulder(W*1.018,H*0.690, W*0.082, 0.42, 1);
+  drawBoulder(W*0.985,H*0.770, W*0.074,-0.44, 2);
+  drawBoulder(W*0.934,H*0.843, W*0.078, 0.22, 3);
+  drawBoulder(W*0.864,H*0.905, W*0.068,-0.30, 0);
+  drawBoulder(W*0.798,H*0.299, W*0.055,-0.42, 2);
+  drawBoulder(W*0.866,H*0.352, W*0.062, 0.55, 3);
+  drawBoulder(W*0.920,H*0.416, W*0.058,-0.30, 0);
+  drawBoulder(W*0.957,H*0.486, W*0.064, 0.38, 1);
+  drawBoulder(W*0.976,H*0.562, W*0.068,-0.22, 2);
+  drawBoulder(W*0.976,H*0.638, W*0.068, 0.48, 3);
+  drawBoulder(W*0.957,H*0.714, W*0.064,-0.36, 0);
+  drawBoulder(W*0.920,H*0.784, W*0.058, 0.28, 1);
+  drawBoulder(W*0.866,H*0.848, W*0.062,-0.50, 2);
+  drawBoulder(W*0.798,H*0.901, W*0.055, 0.44, 3);
+  drawRock(W*0.880,H*0.338,W*0.020, 0.5);
+  drawRock(W*0.950,H*0.408,W*0.018,-0.3);
+  drawRock(W*0.868,H*0.464,W*0.016, 0.7);
+  drawRock(W*0.900,H*0.700,W*0.019,-0.4);
+  drawRock(W*0.870,H*0.776,W*0.017, 0.6);
+  // Rock pools on top of everything — tidal pools visible between boulders
+  drawRockPool(W*0.898,H*0.335,W*0.016);
+  drawRockPool(W*0.950,H*0.480,W*0.015);
+  drawRockPool(W*0.898,H*0.665,W*0.015);
+  drawRockPool(W*0.950,H*0.800,W*0.014);
+
   // ── ROCK SPRAY — impact burst at each boulder ──
   const sprayAngles=[-0.8,-0.6,-0.4,-0.2,0.0,0.2,0.4,0.6,0.8];
   for(let b=0;b<sprayAngles.length;b++){
@@ -25244,24 +25314,24 @@ function drawLagoonScene() {
   ctx.beginPath(); ctx.rect(0,H*0.23,W,H*0.77); ctx.clip();
   ctx.save();
   ctx.translate(W/2,H*FIELD_CY); ctx.scale(1,(H*FIELD_RY)/(W*FIELD_RX));
-  const btmBlendG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.96,0,0,W*FIELD_RX*1.42);
-  btmBlendG.addColorStop(0,'rgba(238,212,130,0.96)');
-  btmBlendG.addColorStop(0.20,'rgba(220,195,110,0.72)');
-  btmBlendG.addColorStop(0.52,'rgba(175,205,165,0.38)');
-  btmBlendG.addColorStop(1,'rgba(40,130,200,0)');
+  // Sandy-to-ocean gradient — wide arc covering the bottom half
+  const btmBlendG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.94,0,0,W*FIELD_RX*1.46);
+  btmBlendG.addColorStop(0.00,'rgba(238,212,130,0.98)');
+  btmBlendG.addColorStop(0.14,'rgba(225,200,115,0.82)');
+  btmBlendG.addColorStop(0.32,'rgba(188,205,148,0.60)');
+  btmBlendG.addColorStop(0.55,'rgba(120,185,200,0.38)');
+  btmBlendG.addColorStop(0.80,'rgba(40,130,200,0.14)');
+  btmBlendG.addColorStop(1.00,'rgba(20,100,180,0)');
   ctx.fillStyle=btmBlendG;
-  // π/2 = 6 o'clock in canvas coords; sweep from ~4 o'clock (π*0.18) to ~8 o'clock (π*0.82)
+  // π/2 = 6 o'clock; sweep from ~4 o'clock (π*0.15) to ~8 o'clock (π*0.85)
   ctx.beginPath();
-  ctx.arc(0,0,W*FIELD_RX*1.42,Math.PI*0.18,Math.PI*0.82);
+  ctx.arc(0,0,W*FIELD_RX*1.46,Math.PI*0.15,Math.PI*0.85);
   ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
-  ctx.restore();
-  // Wet-sand shimmer at the bottom waterline
-  ctx.save();
-  ctx.translate(W/2,H*FIELD_CY); ctx.scale(1,(H*FIELD_RY)/(W*FIELD_RX));
-  const btmWetG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.97,0,0,W*FIELD_RX*1.10);
-  btmWetG.addColorStop(0,'rgba(100,160,190,0.44)'); btmWetG.addColorStop(1,'rgba(100,160,190,0)');
+  // Wet-sand teal tint right at the waterline
+  const btmWetG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.97,0,0,W*FIELD_RX*1.12);
+  btmWetG.addColorStop(0,'rgba(80,175,210,0.52)'); btmWetG.addColorStop(0.5,'rgba(90,180,215,0.22)'); btmWetG.addColorStop(1,'rgba(100,185,218,0)');
   ctx.fillStyle=btmWetG;
-  ctx.beginPath(); ctx.arc(0,0,W*FIELD_RX*1.12,Math.PI*0.22,Math.PI*0.78); ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(0,0,W*FIELD_RX*1.14,Math.PI*0.20,Math.PI*0.80); ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
   ctx.restore();
   ctx.restore(); // end bottom blend clip
 
