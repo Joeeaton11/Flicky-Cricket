@@ -24710,11 +24710,34 @@ function drawLagoonScene() {
   const horizSeaG=ctx.createLinearGradient(0,H*0.155,0,H*0.180);
   horizSeaG.addColorStop(0,'#1e8cd8'); horizSeaG.addColorStop(1,'#3ab8e8');
   ctx.fillStyle=horizSeaG; ctx.fillRect(0,H*0.155,W,H*0.026);
-  // Shimmer on distant water
-  ctx.strokeStyle='rgba(255,255,255,0.42)'; ctx.lineWidth=1.0;
+  // Shimmer on distant water — animated heat-shimmer ripples + sun glitter
+  // Static base lines
+  ctx.strokeStyle='rgba(255,255,255,0.38)'; ctx.lineWidth=1.0;
   for(let i=0;i<3;i++){
     const wy=H*(0.159+i*0.007);
     ctx.beginPath(); ctx.moveTo(0,wy); ctx.lineTo(W,wy); ctx.stroke();
+  }
+  // Animated glitter dashes — short bright strokes at random-ish positions driven by t
+  ctx.lineCap='round';
+  for(let g=0;g<18;g++){
+    const gx=W*(((g*137+23)%97)/100+0.015);
+    const gy=H*(0.157+((g*61)%8)/1000);
+    const gph=(t*0.55+g*0.38)%1.0;
+    const ga=Math.sin(gph*Math.PI)*0.88;
+    const gw=W*(0.010+((g*29)%7)/520);
+    const shimmerX=gx+Math.sin(t*1.1+g*0.7)*W*0.012;
+    ctx.strokeStyle=`rgba(255,245,200,${ga})`; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(shimmerX-gw/2,gy); ctx.lineTo(shimmerX+gw/2,gy); ctx.stroke();
+  }
+  // Sun path glitter column — brighter streak directly below sun
+  const sunGX=W*0.80;
+  for(let sg=0;sg<8;sg++){
+    const sgy=H*(0.158+sg*0.002);
+    const sgph=(t*0.80+sg*0.22)%1.0;
+    const sga=Math.sin(sgph*Math.PI)*0.70;
+    const sgw=W*(0.022-sg*0.002);
+    ctx.strokeStyle=`rgba(255,240,160,${sga})`; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(sunGX-sgw/2,sgy); ctx.lineTo(sunGX+sgw/2,sgy); ctx.stroke();
   }
 
   // ── ISLAND VEGETATION ENTRANCE — centre of backdrop ──
@@ -25024,6 +25047,34 @@ function drawLagoonScene() {
   beachShell(W*0.034,H*0.480,W*0.010, 0.4);
   beachShell(W*0.044,H*0.580,W*0.008,-0.3);
   beachShell(W*0.028,H*0.670,W*0.009, 0.6);
+  // Fallen coconuts on beach
+  function drawCoconut(cx,cy,cr,roll){
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(roll||0);
+    // Husk shadow
+    ctx.fillStyle='rgba(0,0,0,0.18)';
+    ctx.beginPath(); ctx.ellipse(cr*0.2,cr*0.5,cr*0.80,cr*0.22,0,0,Math.PI*2); ctx.fill();
+    // Main husk — dark fibrous brown
+    const hG=ctx.createRadialGradient(-cr*0.28,-cr*0.30,cr*0.06,cr*0.06,cr*0.06,cr*1.10);
+    hG.addColorStop(0,'#8a6030'); hG.addColorStop(0.45,'#5a3c18'); hG.addColorStop(1,'#2e1a08');
+    ctx.fillStyle=hG;
+    ctx.beginPath(); ctx.ellipse(0,0,cr,cr*0.82,0,0,Math.PI*2); ctx.fill();
+    // Fibre texture lines
+    ctx.strokeStyle='rgba(40,20,8,0.38)'; ctx.lineWidth=cr*0.06; ctx.lineCap='round';
+    for(let f=0;f<5;f++){
+      const fa=-0.6+f*0.3;
+      ctx.beginPath(); ctx.moveTo(Math.cos(fa+Math.PI)*cr*0.72,Math.sin(fa+Math.PI)*cr*0.62);
+      ctx.quadraticCurveTo(0,0,Math.cos(fa)*cr*0.72,Math.sin(fa)*cr*0.62); ctx.stroke();
+    }
+    // Eyes — three dark spots
+    ctx.fillStyle='rgba(18,8,2,0.85)';
+    [[-0.20,-0.12],[0.10,-0.18],[0.08,0.14]].forEach(([ex,ey])=>{
+      ctx.beginPath(); ctx.arc(ex*cr,ey*cr,cr*0.12,0,Math.PI*2); ctx.fill();
+    });
+    ctx.restore();
+  }
+  drawCoconut(W*0.038,H*0.530,W*0.022, 0.4);
+  drawCoconut(W*0.026,H*0.620,W*0.018,-0.6);
+  drawCoconut(W*0.045,H*0.730,W*0.020, 1.1);
   ctx.restore(); // end beach clip
 
   // ── ROCKY SHORELINE — wraps around RIGHT half of oval ──
@@ -25125,6 +25176,7 @@ function drawLagoonScene() {
     const rph=Math.sin(t*1.20+px*0.01)*0.5+0.5;
     ctx.strokeStyle=`rgba(180,245,245,${0.35+rph*0.22})`; ctx.lineWidth=0.9;
     ctx.beginPath(); ctx.ellipse(px,py,pr*0.48*(0.72+rph*0.28),pr*0.30*(0.72+rph*0.28),0.2,0,Math.PI*2); ctx.stroke();
+    // Anemones
     ctx.fillStyle='rgba(222,88,36,0.84)';
     for(let a=0;a<5;a++){
       const ang=a/5*Math.PI*2;
@@ -25132,6 +25184,40 @@ function drawLagoonScene() {
       ctx.quadraticCurveTo(px+Math.cos(ang+0.3)*pr*0.30,py+Math.sin(ang+0.3)*pr*0.28,px+Math.cos(ang)*pr*0.44,py+Math.sin(ang)*pr*0.38);
       ctx.quadraticCurveTo(px+Math.cos(ang-0.3)*pr*0.30,py+Math.sin(ang-0.3)*pr*0.28,px,py); ctx.fill();
     }
+    // Starfish — orange/pink 5-pointed star resting on pool floor
+    ctx.save();
+    const sfx=px+pr*0.28, sfy=py-pr*0.10, sfr=pr*0.30;
+    ctx.translate(sfx,sfy); ctx.rotate(t*0.08+px);
+    ctx.fillStyle='rgba(228,110,60,0.90)';
+    ctx.beginPath();
+    for(let p2=0;p2<10;p2++){
+      const a2=p2/10*Math.PI*2-Math.PI/2;
+      const r2=p2%2===0?sfr:sfr*0.42;
+      if(p2===0) ctx.moveTo(Math.cos(a2)*r2,Math.sin(a2)*r2);
+      else ctx.lineTo(Math.cos(a2)*r2,Math.sin(a2)*r2);
+    }
+    ctx.closePath(); ctx.fill();
+    // Starfish texture dots
+    ctx.fillStyle='rgba(255,170,100,0.60)';
+    for(let p2=0;p2<5;p2++){
+      const a2=p2/5*Math.PI*2-Math.PI/2;
+      ctx.beginPath(); ctx.arc(Math.cos(a2)*sfr*0.56,Math.sin(a2)*sfr*0.56,sfr*0.10,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+    // Seaweed fronds — swaying green filaments
+    ctx.save();
+    const swx=px-pr*0.30, swy=py+pr*0.15;
+    const swayA=Math.sin(t*0.9+px*0.02)*0.20;
+    for(let sw=0;sw<3;sw++){
+      const ox=(sw-1)*pr*0.18;
+      const hue=sw%2===0?'rgba(30,140,60,0.82)':'rgba(20,160,80,0.70)';
+      ctx.strokeStyle=hue; ctx.lineWidth=pr*0.12; ctx.lineCap='round';
+      ctx.beginPath();
+      ctx.moveTo(swx+ox, swy+pr*0.12);
+      ctx.quadraticCurveTo(swx+ox+Math.sin(swayA+sw)*pr*0.22, swy-pr*0.18, swx+ox+Math.sin(swayA+sw)*pr*0.30, swy-pr*0.42);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
   drawRockPool(W*0.898,H*0.335,W*0.016);
   drawRockPool(W*0.950,H*0.480,W*0.015);
