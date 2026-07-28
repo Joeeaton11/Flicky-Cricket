@@ -24901,22 +24901,72 @@ function drawLagoonScene() {
     ctx.ellipse(W/2,H*FIELD_CY,W*FIELD_RX+sOff,(W*FIELD_RX+sOff)*sScY,0,Math.PI*0.56,Math.PI*1.44);
     ctx.stroke();
   }
-  // Animated wave lines following oval curve on left
-  for(let w=0;w<6;w++){
-    const wph=(t*0.28+w*0.19)%1.0;
-    const wOff=W*(0.015+wph*0.058);
-    const wAlpha=Math.sin(wph*Math.PI)*0.42;
-    const scY=(H*FIELD_RY+wOff*(H*FIELD_RY)/(W*FIELD_RX))/(W*FIELD_RX+wOff);
-    ctx.strokeStyle=`rgba(210,245,255,${wAlpha})`; ctx.lineWidth=1.8; ctx.lineCap='round';
-    ctx.beginPath();
-    ctx.ellipse(W/2,H*FIELD_CY,W*FIELD_RX+wOff,(W*FIELD_RX+wOff)*scY,0,Math.PI*0.52,Math.PI*1.48);
-    ctx.stroke();
-    // foam dots along the wave
-    ctx.fillStyle=`rgba(255,255,255,${wAlpha*0.7})`;
-    for(let f=0;f<5;f++){
-      const fa=Math.PI*0.55+f*0.22;
-      const fx=W/2+Math.cos(fa)*(W*FIELD_RX+wOff), fy=H*FIELD_CY+Math.sin(fa)*(W*FIELD_RX+wOff)*scY;
-      ctx.beginPath(); ctx.arc(fx,fy,W*0.004,0,Math.PI*2); ctx.fill();
+  // Beach waves — lapping shore-break traveling from left toward the oval
+  // Left shoreline x at a given y
+  function leftShoreX(y){
+    const dy=Math.max(-1,Math.min(1,(y-H*FIELD_CY)/(H*FIELD_RY)));
+    return W/2-Math.cos(Math.asin(dy))*W*FIELD_RX;
+  }
+  // Wave front path: nPts spanning beach height, each x independently wobbly
+  function beachWavePts(ph,seed,nPts){
+    const pts=[];
+    for(let i=0;i<nPts;i++){
+      const v=i/(nPts-1);
+      const y=H*0.30+v*H*0.58;
+      const lsx=leftShoreX(y);
+      // wave travels from x≈0 (ph=0) to lsx (ph=1)
+      const baseX=lsx*(1-ph)*0.88;
+      const wob=Math.sin(t*1.0+seed+i*1.9)*W*0.018
+               +Math.sin(t*2.2+seed*1.7+i*3.1)*W*0.009
+               +Math.sin(t*0.6+seed*0.4+i*0.9)*W*0.005;
+      pts.push([Math.max(0,baseX+wob), y]);
+    }
+    return pts;
+  }
+  function smoothBeachPath(pts){
+    ctx.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length-1;i++){
+      const mx=(pts[i][0]+pts[i+1][0])*0.5, my=(pts[i][1]+pts[i+1][1])*0.5;
+      ctx.quadraticCurveTo(pts[i][0],pts[i][1],mx,my);
+    }
+    ctx.lineTo(pts[pts.length-1][0],pts[pts.length-1][1]);
+  }
+  const beachWaveDefs=[
+    {sp:0.30,off:0.00,seed:1.2},
+    {sp:0.26,off:0.38,seed:4.5},
+    {sp:0.34,off:0.65,seed:8.1},
+    {sp:0.28,off:0.82,seed:12.3},
+  ];
+  for(let w=0;w<beachWaveDefs.length;w++){
+    const wd=beachWaveDefs[w];
+    const ph=(t*wd.sp+wd.off)%1.0;
+    const alpha=Math.sin(ph*Math.PI)*0.60;
+    const N=14;
+    const frontPts=beachWavePts(ph,wd.seed,N);
+
+    // Soft teal wave body — filled band from wave front back to x=0
+    ctx.beginPath(); smoothBeachPath(frontPts);
+    ctx.lineTo(0,frontPts[frontPts.length-1][1]);
+    ctx.lineTo(0,frontPts[0][1]); ctx.closePath();
+    const avgX=frontPts.reduce((s,p)=>s+p[0],0)/N;
+    const bG=ctx.createLinearGradient(0,0,avgX+W*0.04,0);
+    bG.addColorStop(0,`rgba(8,80,155,${alpha*0.18})`);
+    bG.addColorStop(0.55,`rgba(18,140,205,${alpha*0.50})`);
+    bG.addColorStop(1,`rgba(72,195,235,${alpha*0.65})`);
+    ctx.fillStyle=bG; ctx.fill();
+
+    // White foam cap
+    ctx.lineWidth=W*(0.005+alpha*0.008); ctx.strokeStyle=`rgba(255,255,255,${alpha*0.82})`;
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath(); smoothBeachPath(frontPts); ctx.stroke();
+
+    // Foam blobs on cap — gentler than right side
+    for(let i=0;i<N;i++){
+      const bs=Math.sin(wd.seed*2.8+i*6.4);
+      if(bs<0.15) continue;
+      const bx=frontPts[i][0]+Math.sin(t*1.5+wd.seed+i)*W*0.007;
+      ctx.fillStyle=`rgba(255,255,255,${alpha*(0.40+bs*0.30)})`;
+      ctx.beginPath(); ctx.arc(bx,frontPts[i][1],W*(0.003+bs*0.004),0,Math.PI*2); ctx.fill();
     }
   }
   // Footprints on beach
@@ -25194,24 +25244,24 @@ function drawLagoonScene() {
   ctx.beginPath(); ctx.rect(0,H*0.23,W,H*0.77); ctx.clip();
   ctx.save();
   ctx.translate(W/2,H*FIELD_CY); ctx.scale(1,(H*FIELD_RY)/(W*FIELD_RX));
-  const btmBlendG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.96,0,0,W*FIELD_RX*1.40);
-  btmBlendG.addColorStop(0,'rgba(238,212,130,0.95)');
-  btmBlendG.addColorStop(0.22,'rgba(220,195,110,0.70)');
-  btmBlendG.addColorStop(0.55,'rgba(180,200,160,0.35)');
+  const btmBlendG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.96,0,0,W*FIELD_RX*1.42);
+  btmBlendG.addColorStop(0,'rgba(238,212,130,0.96)');
+  btmBlendG.addColorStop(0.20,'rgba(220,195,110,0.72)');
+  btmBlendG.addColorStop(0.52,'rgba(175,205,165,0.38)');
   btmBlendG.addColorStop(1,'rgba(40,130,200,0)');
   ctx.fillStyle=btmBlendG;
-  // Only paint the bottom half (angles π*0.55 → π*1.45 = bottom arc)
+  // π/2 = 6 o'clock in canvas coords; sweep from ~4 o'clock (π*0.18) to ~8 o'clock (π*0.82)
   ctx.beginPath();
-  ctx.arc(0,0,W*FIELD_RX*1.40,Math.PI*0.55,Math.PI*1.45);
+  ctx.arc(0,0,W*FIELD_RX*1.42,Math.PI*0.18,Math.PI*0.82);
   ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
   ctx.restore();
-  // Wet-sand shimmer at very edge of oval bottom
+  // Wet-sand shimmer at the bottom waterline
   ctx.save();
   ctx.translate(W/2,H*FIELD_CY); ctx.scale(1,(H*FIELD_RY)/(W*FIELD_RX));
   const btmWetG=ctx.createRadialGradient(0,0,W*FIELD_RX*0.97,0,0,W*FIELD_RX*1.10);
-  btmWetG.addColorStop(0,'rgba(100,160,190,0.42)'); btmWetG.addColorStop(1,'rgba(100,160,190,0)');
+  btmWetG.addColorStop(0,'rgba(100,160,190,0.44)'); btmWetG.addColorStop(1,'rgba(100,160,190,0)');
   ctx.fillStyle=btmWetG;
-  ctx.beginPath(); ctx.arc(0,0,W*FIELD_RX*1.12,Math.PI*0.50,Math.PI*1.50); ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(0,0,W*FIELD_RX*1.12,Math.PI*0.22,Math.PI*0.78); ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
   ctx.restore();
   ctx.restore(); // end bottom blend clip
 
