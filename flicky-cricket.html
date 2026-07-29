@@ -25843,6 +25843,36 @@ function drawShipwreckScene() {
   });
   ctx.restore();
 
+  // ── SHARK — slow patrol across backdrop ──
+  {
+    const sp=t*0.055;
+    const cycle=sp%2;
+    const goRight=cycle<1;
+    const sx=goRight ? W*(0.05+cycle*0.90) : W*(0.95-(cycle-1)*0.90);
+    const sy=H*(0.085+Math.sin(sp*Math.PI*0.5)*0.030);
+    ctx.save(); ctx.translate(sx,sy); ctx.scale(goRight?1:-1,1);
+    ctx.fillStyle='rgba(18,45,58,0.78)';
+    ctx.beginPath();
+    ctx.moveTo(W*0.065,0);
+    ctx.bezierCurveTo(W*0.040,-H*0.012,-W*0.020,-H*0.014,-W*0.055,-H*0.004);
+    ctx.bezierCurveTo(-W*0.040,H*0.010,W*0.020,H*0.012,W*0.065,0);
+    ctx.fill();
+    ctx.beginPath(); // caudal fin
+    ctx.moveTo(-W*0.055,0); ctx.lineTo(-W*0.082,-H*0.016);
+    ctx.lineTo(-W*0.068,0); ctx.lineTo(-W*0.082,H*0.014); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); // dorsal fin
+    ctx.moveTo(W*0.010,-H*0.014); ctx.lineTo(W*0.028,-H*0.032);
+    ctx.lineTo(W*0.040,-H*0.014); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); // pectoral fin
+    ctx.moveTo(W*0.005,H*0.004); ctx.lineTo(-W*0.015,H*0.022);
+    ctx.lineTo(W*0.020,H*0.010); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(200,220,230,0.70)';
+    ctx.beginPath(); ctx.arc(W*0.040,-H*0.004,W*0.005,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(10,10,15,0.90)';
+    ctx.beginPath(); ctx.arc(W*0.041,-H*0.004,W*0.003,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
   ctx.restore(); // end backdrop clip
 
   // ── HORIZON BLEND — feathers the hard clip edge at H*0.23 ──
@@ -25908,6 +25938,45 @@ function drawShipwreckScene() {
   ctx.restore();
 
   drawGroundRings('rgba(0,70,95,0.22)','rgba(0,45,65,0.22)','rgba(0,90,118,0.35)');
+
+  // ── JELLYFISH — drifting through field water ──
+  const drawJellyfish=(jx,jy,jr,col,phase)=>{
+    const pulse=0.75+Math.sin(t*1.4+phase)*0.25; // bell pulsing
+    ctx.save(); ctx.translate(jx,jy);
+    // bell body
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    ctx.ellipse(0,0,jr*pulse,jr*0.55*pulse,0,Math.PI,Math.PI*2); ctx.fill();
+    // bell underside dome highlight
+    ctx.fillStyle='rgba(255,255,255,0.12)';
+    ctx.beginPath();
+    ctx.ellipse(0,-jr*0.25*pulse,jr*0.50*pulse,jr*0.20*pulse,0,Math.PI,Math.PI*2); ctx.fill();
+    // rim fringe
+    ctx.strokeStyle=col; ctx.lineWidth=W*0.003;
+    for(let f=0;f<7;f++){
+      const fx=(f-3)*jr*0.28*pulse;
+      const flen=jr*(0.30+((f*5)%3)*0.10)*pulse;
+      const fsway=Math.sin(t*1.2+phase+f*0.8)*jr*0.15;
+      ctx.beginPath(); ctx.moveTo(fx,0);
+      ctx.quadraticCurveTo(fx+fsway,flen*0.5,fx+fsway*1.5,flen);
+      ctx.stroke();
+    }
+    // long trailing tentacles
+    ctx.lineWidth=W*0.0015; ctx.globalAlpha=0.55;
+    [-jr*0.4,0,jr*0.4].forEach((tx2,ti)=>{
+      const tsway=Math.sin(t*0.9+phase+ti*1.2)*jr*0.3;
+      ctx.beginPath(); ctx.moveTo(tx2,0);
+      ctx.bezierCurveTo(tx2+tsway,jr*0.8,tx2-tsway,jr*1.4,tx2+tsway*0.5,jr*2.0);
+      ctx.stroke();
+    });
+    ctx.globalAlpha=1;
+    ctx.restore();
+  };
+  // three jellyfish at different depths, drifting slowly upward then reset
+  const jDrift=t*0.022;
+  drawJellyfish(W*0.22, H*(0.72-(jDrift%0.38)), W*0.038, 'rgba(120,200,240,0.45)', 0);
+  drawJellyfish(W*0.68, H*(0.58-(( jDrift+0.15)%0.30)), W*0.028, 'rgba(200,120,240,0.40)', 2.1);
+  drawJellyfish(W*0.42, H*(0.82-((jDrift+0.08)%0.50)), W*0.022, 'rgba(100,220,180,0.38)', 4.4);
 
   // ── OUTER ZONE — seabed outside the oval ──
   ctx.save();
@@ -26189,8 +26258,9 @@ function drawShipwreckScene() {
   ctx.beginPath(); ctx.roundRect(-tw,-th*0.3,tw*2,th,W*0.008); ctx.fill();
   ctx.strokeStyle='rgba(120,72,20,0.80)'; ctx.lineWidth=W*0.0035;
   ctx.beginPath(); ctx.roundRect(-tw,-th*0.3,tw*2,th,W*0.008); ctx.stroke();
-  // chest lid (slightly open)
-  ctx.save(); ctx.translate(-tw,-th*0.3); ctx.rotate(-0.18);
+  // chest lid (creaking open and closed)
+  const lidAngle=-0.10-Math.abs(Math.sin(t*0.35))*0.32;
+  ctx.save(); ctx.translate(-tw,-th*0.3); ctx.rotate(lidAngle);
   const lidG=ctx.createLinearGradient(0,0,tw*2,0);
   lidG.addColorStop(0,'#6a3812'); lidG.addColorStop(1,'#4a2808');
   ctx.fillStyle=lidG;
@@ -26270,9 +26340,10 @@ function drawShipwreckScene() {
                         [tw*0.1,th*0.60],[tw*0.5,th*0.45],[-tw*1.1,th*0.65],
                         [-tw*0.75,th*0.72],[tw*0.25,th*0.30]];
   coinPositions.forEach(([cx,cy],i)=>{
+    const glint=0.70+Math.sin(t*1.8+i*1.1)*0.30;
     ctx.save();
-    ctx.shadowColor='rgba(255,190,20,0.8)'; ctx.shadowBlur=W*0.012;
-    ctx.fillStyle=i%3===0?'rgba(255,195,20,0.90)':'rgba(210,155,10,0.80)';
+    ctx.shadowColor='rgba(255,190,20,0.8)'; ctx.shadowBlur=W*0.012*glint;
+    ctx.fillStyle=i%3===0?`rgba(255,195,20,${glint*0.92})`:`rgba(210,155,10,${glint*0.82})`;
     ctx.beginPath(); ctx.ellipse(cx,cy,W*0.008,W*0.004,i*0.4,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle='rgba(180,120,5,0.60)'; ctx.lineWidth=W*0.0015;
     ctx.beginPath(); ctx.ellipse(cx,cy,W*0.008,W*0.004,i*0.4,0,Math.PI*2); ctx.stroke();
@@ -26333,6 +26404,39 @@ function drawShipwreckScene() {
   for(let i=0;i<rc;i++){
     const rr=W*(0.016-i*0.004);
     ctx.beginPath(); ctx.ellipse(rcx,rcy,rr,rr*0.45,0.3,0,Math.PI*2); ctx.stroke();
+  }
+
+  // ── OCTOPUS — bottom-left, near barrel, tentacles curling ──
+  {
+    const ox=W*0.148, oy=H*0.892;
+    const or2=W*0.026;
+    // body
+    ctx.fillStyle='rgba(90,30,60,0.82)';
+    ctx.beginPath(); ctx.ellipse(ox,oy,or2,or2*0.75,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(130,50,85,0.60)';
+    ctx.beginPath(); ctx.ellipse(ox-or2*0.15,oy-or2*0.2,or2*0.55,or2*0.45,0,0,Math.PI*2); ctx.fill();
+    // eyes
+    ctx.fillStyle='rgba(255,220,80,0.90)';
+    ctx.beginPath(); ctx.arc(ox-or2*0.32,oy-or2*0.18,or2*0.16,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ox+or2*0.32,oy-or2*0.18,or2*0.16,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(10,5,5,0.95)';
+    ctx.beginPath(); ctx.arc(ox-or2*0.30,oy-or2*0.18,or2*0.09,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ox+or2*0.30,oy-or2*0.18,or2*0.09,0,Math.PI*2); ctx.fill();
+    // eight tentacles curling with different phases
+    ctx.strokeStyle='rgba(80,25,52,0.80)'; ctx.lineWidth=W*0.0055; ctx.lineCap='round';
+    for(let i=0;i<8;i++){
+      const baseAngle=Math.PI*0.1+i*(Math.PI*0.85/7);
+      const curl=Math.sin(t*0.9+i*0.7)*0.4;
+      const len=or2*(1.8+((i*3)%3)*0.3);
+      const tx3=ox+Math.cos(baseAngle)*or2*0.7;
+      const ty3=oy+Math.sin(baseAngle)*or2*0.5;
+      const ex=tx3+Math.cos(baseAngle+curl)*len;
+      const ey=ty3+Math.sin(baseAngle+curl)*len;
+      const cpx=tx3+Math.cos(baseAngle+curl*0.5)*len*0.55;
+      const cpy=ty3+Math.sin(baseAngle+curl*0.5)*len*0.55;
+      ctx.beginPath(); ctx.moveTo(tx3,ty3);
+      ctx.quadraticCurveTo(cpx,cpy,ex,ey); ctx.stroke();
+    }
   }
 
   // ── TALL KELP — mid outer sides, animated sway ──
