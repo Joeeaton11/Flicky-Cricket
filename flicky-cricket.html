@@ -14250,74 +14250,116 @@ function drawCarnivalScene() {
   drawCloud(W*0.36,H*0.038,W*0.060,H*0.024);
   drawCloud(W*0.58,H*0.062,W*0.068,H*0.028);
 
-  // ── BIG TOP TENT — fills backdrop ──
-  // Tent spans full width, apex near top centre
-  const tApexX=CX, tApexY=H*0.005;
-  const tBaseY=H*0.230;
-  const tL=0, tR=W;
+  // ── BIG TOP TENT — 3-peak circus tent ──
+  const eaveY=H*0.192;   // top of rectangular wall
+  const wallY=H*0.230;   // bottom of wall / base of tent
+  const wallH=wallY-eaveY;
+  // Three peaks: left, centre (tallest), right
+  const tPeaks=[{x:W*0.20,y:H*0.062},{x:CX,y:H*0.004},{x:W*0.80,y:H*0.062}];
+  // Saddle y between peaks
+  const saddleY=H*0.130;
 
-  // Shadow on right side of tent panels
-  const tentShadow=ctx.createLinearGradient(CX,0,W,0);
-  tentShadow.addColorStop(0,'rgba(0,0,0,0)'); tentShadow.addColorStop(1,'rgba(0,0,0,0.22)');
+  // --- Tent silhouette fill (cream base) ---
+  ctx.fillStyle='#f5f0e2';
+  ctx.beginPath();
+  ctx.moveTo(0,wallY);
+  ctx.lineTo(0,eaveY);
+  ctx.lineTo(tPeaks[0].x,tPeaks[0].y);
+  ctx.lineTo((tPeaks[0].x+tPeaks[1].x)/2,saddleY);
+  ctx.lineTo(tPeaks[1].x,tPeaks[1].y);
+  ctx.lineTo((tPeaks[1].x+tPeaks[2].x)/2,saddleY);
+  ctx.lineTo(tPeaks[2].x,tPeaks[2].y);
+  ctx.lineTo(W,eaveY);
+  ctx.lineTo(W,wallY);
+  ctx.closePath();
+  ctx.fill();
 
-  // Tent panels — alternating red/cream with slight 3D shading
-  const nPanels=14;
-  for(let i=0;i<nPanels;i++){
-    const x1=tL+i/nPanels*(tR-tL);
-    const x2=tL+(i+1)/nPanels*(tR-tL);
-    // Base colour
-    ctx.fillStyle=i%2===0?'#d42b20':'#f5f0e2';
-    ctx.beginPath(); ctx.moveTo(tApexX,tApexY); ctx.lineTo(x1,tBaseY); ctx.lineTo(x2,tBaseY); ctx.closePath(); ctx.fill();
-    // Panel shading — darker on right half
-    if(i>=nPanels/2){
-      ctx.fillStyle=`rgba(0,0,0,${0.04+(i-nPanels/2)*0.012})`;
-      ctx.beginPath(); ctx.moveTo(tApexX,tApexY); ctx.lineTo(x1,tBaseY); ctx.lineTo(x2,tBaseY); ctx.closePath(); ctx.fill();
+  // --- Stripes radiating from each peak ---
+  // Each peak "owns" a zone of the eave line
+  const peakZones=[
+    {pk:tPeaks[0],eL:0,      eR:W*0.350},
+    {pk:tPeaks[1],eL:W*0.350,eR:W*0.650},
+    {pk:tPeaks[2],eL:W*0.650,eR:W},
+  ];
+  peakZones.forEach(({pk,eL,eR},zi)=>{
+    const nS=14;
+    for(let i=0;i<nS;i++){
+      const x1=eL+i/nS*(eR-eL);
+      const x2=eL+(i+1)/nS*(eR-eL);
+      if(i%2===0){
+        // Red stripe
+        ctx.fillStyle='#d42b20';
+        ctx.beginPath(); ctx.moveTo(pk.x,pk.y); ctx.lineTo(x1,eaveY); ctx.lineTo(x2,eaveY); ctx.closePath(); ctx.fill();
+        // Right-side shading on each peak's right half
+        if(i>=nS/2){
+          ctx.fillStyle=`rgba(0,0,0,${0.03+(i-nS/2)*0.010})`;
+          ctx.beginPath(); ctx.moveTo(pk.x,pk.y); ctx.lineTo(x1,eaveY); ctx.lineTo(x2,eaveY); ctx.closePath(); ctx.fill();
+        }
+      }
     }
+    // Light sheen on left face of each peak
+    const sheen=ctx.createLinearGradient(eL,0,pk.x,0);
+    sheen.addColorStop(0,'rgba(255,255,255,0.08)'); sheen.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=sheen;
+    ctx.beginPath(); ctx.moveTo(pk.x,pk.y); ctx.lineTo(eL,eaveY); ctx.lineTo((eL+pk.x)/2,eaveY); ctx.closePath(); ctx.fill();
+  });
+
+  // --- Rectangular lower wall ---
+  ctx.fillStyle='#c02218';
+  ctx.fillRect(0,eaveY,W,wallH);
+  // Highlight top edge of wall
+  ctx.fillStyle='rgba(255,255,255,0.18)';
+  ctx.fillRect(0,eaveY,W,H*0.004);
+
+  // Diamond decorations on wall
+  const nDia=10;
+  for(let i=0;i<nDia;i++){
+    const dx=W*(i+0.5)/nDia, dy=eaveY+wallH*0.50;
+    const dw=W*0.032, dh=wallH*0.38;
+    ctx.strokeStyle='rgba(255,255,255,0.75)'; ctx.lineWidth=W*0.0018;
+    ctx.beginPath(); ctx.moveTo(dx,dy-dh); ctx.lineTo(dx+dw,dy); ctx.lineTo(dx,dy+dh); ctx.lineTo(dx-dw,dy); ctx.closePath(); ctx.stroke();
   }
 
-  // Tent outline seams
-  ctx.strokeStyle='rgba(120,30,10,0.35)'; ctx.lineWidth=W*0.0015;
-  for(let i=1;i<nPanels;i++){
-    const x=tL+i/nPanels*(tR-tL);
-    ctx.beginPath(); ctx.moveTo(tApexX,tApexY); ctx.lineTo(x,tBaseY); ctx.stroke();
-  }
+  // Eave outline (where roof meets wall)
+  ctx.strokeStyle='rgba(255,255,255,0.40)'; ctx.lineWidth=W*0.0018;
+  ctx.beginPath(); ctx.moveTo(0,eaveY); ctx.lineTo(W,eaveY); ctx.stroke();
 
-  // Scalloped eave fringe
-  const nScallops=20;
-  for(let i=0;i<nScallops;i++){
-    const sx=tL+i/nScallops*(tR-tL);
-    const sw=(tR-tL)/nScallops;
-    ctx.fillStyle=i%2===0?'#d42b20':'#f4d03f';
-    ctx.beginPath(); ctx.arc(sx+sw/2,tBaseY,sw*0.58,Math.PI,0); ctx.fill();
-    // scallop outline
-    ctx.strokeStyle='rgba(120,30,10,0.30)'; ctx.lineWidth=W*0.0010;
-    ctx.beginPath(); ctx.arc(sx+sw/2,tBaseY,sw*0.58,Math.PI,0); ctx.stroke();
-  }
+  // --- Guy ropes from each peak ---
+  ctx.strokeStyle='rgba(90,70,35,0.50)'; ctx.lineWidth=W*0.0013; ctx.setLineDash([W*0.004,W*0.003]);
+  tPeaks.forEach((p,pi)=>{
+    const offsets=pi===0?[-W*0.14,W*0.08]:pi===2?[-W*0.08,W*0.14]:[-W*0.20,W*0.20];
+    offsets.forEach(ox=>{ ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+ox,wallY); ctx.stroke(); });
+  });
+  ctx.setLineDash([]);
 
-  // Apex finial & flag
-  ctx.fillStyle='#f4d03f'; ctx.beginPath(); ctx.arc(tApexX,tApexY,W*0.012,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#8a5010'; ctx.lineWidth=W*0.010;
-  ctx.beginPath(); ctx.moveTo(tApexX,tApexY); ctx.lineTo(tApexX,tApexY-H*0.015); ctx.stroke();
-  // Waving flag
-  const flagWave=Math.sin(t*1.8)*H*0.008;
-  ctx.fillStyle='#e74c3c';
-  ctx.beginPath(); ctx.moveTo(tApexX,tApexY-H*0.015);
-  ctx.quadraticCurveTo(tApexX+W*0.040,tApexY-H*0.015+flagWave,tApexX+W*0.068,tApexY-H*0.008);
-  ctx.quadraticCurveTo(tApexX+W*0.040,tApexY-H*0.002+flagWave,tApexX,tApexY+H*0.005);
-  ctx.closePath(); ctx.fill();
-
-  // Side pennant poles
-  [[W*0.04,H*0.055,'#e74c3c',-1],[W*0.96,H*0.055,'#3498db',1]].forEach(([px,py,col,dir])=>{
-    ctx.strokeStyle='#8a5010'; ctx.lineWidth=W*0.008;
-    ctx.beginPath(); ctx.moveTo(px,tBaseY); ctx.lineTo(px,py); ctx.stroke();
-    ctx.fillStyle='#f4d03f'; ctx.beginPath(); ctx.arc(px,py,W*0.008,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle=col;
-    ctx.beginPath(); ctx.moveTo(px,py);
-    ctx.lineTo(px+dir*W*0.055,py+H*0.015); ctx.lineTo(px,py+H*0.030); ctx.closePath(); ctx.fill();
+  // --- Finials & flags on each peak ---
+  tPeaks.forEach((p,pi)=>{
+    const poleLen=pi===1?H*0.028:H*0.020;
+    // Pole
+    ctx.strokeStyle='#6a4010'; ctx.lineWidth=W*(pi===1?0.009:0.007); ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x,p.y-poleLen); ctx.stroke();
+    // Red knob
+    ctx.fillStyle='#c02218'; ctx.beginPath(); ctx.arc(p.x,p.y-poleLen,W*(pi===1?0.012:0.009),0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#f4d03f'; ctx.beginPath(); ctx.arc(p.x,p.y-poleLen,W*(pi===1?0.006:0.005),0,Math.PI*2); ctx.fill();
+    // Waving flag
+    const fw=Math.sin(t*1.8+pi*1.1)*H*0.007;
+    ctx.fillStyle='#d42b20';
+    ctx.beginPath();
+    ctx.moveTo(p.x,p.y-poleLen);
+    ctx.quadraticCurveTo(p.x+W*0.028,p.y-poleLen+fw,p.x+W*0.050,p.y-poleLen+H*0.006);
+    ctx.quadraticCurveTo(p.x+W*0.028,p.y-poleLen+H*0.010+fw,p.x,p.y-poleLen+H*0.016);
+    ctx.closePath(); ctx.fill();
+    // White stripe on flag
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.beginPath();
+    ctx.moveTo(p.x,p.y-poleLen+H*0.004);
+    ctx.quadraticCurveTo(p.x+W*0.022,p.y-poleLen+H*0.004+fw*0.5,p.x+W*0.050,p.y-poleLen+H*0.006);
+    ctx.quadraticCurveTo(p.x+W*0.022,p.y-poleLen+H*0.007+fw*0.5,p.x,p.y-poleLen+H*0.010);
+    ctx.closePath(); ctx.fill();
   });
 
   // Grand entrance arch at base centre
-  const ew=W*0.22, ex=CX, ey=tBaseY;
+  const ew=W*0.22, ex=CX, ey=wallY;
   // Dark interior
   ctx.fillStyle='#1a0820';
   ctx.beginPath(); ctx.ellipse(ex,ey,ew*0.5,H*0.048,0,Math.PI,Math.PI*2); ctx.fill();
@@ -14369,8 +14411,8 @@ function drawCarnivalScene() {
     ctx.fillStyle='#c0a020'; ctx.beginPath(); ctx.arc(fwx,fwy,W*0.010,0,Math.PI*2); ctx.fill();
     // Support legs
     ctx.strokeStyle='#8a6020'; ctx.lineWidth=W*0.006;
-    ctx.beginPath(); ctx.moveTo(fwx-fwr*0.6,tBaseY); ctx.lineTo(fwx,fwy+fwr); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(fwx+fwr*0.6,tBaseY); ctx.lineTo(fwx,fwy+fwr); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fwx-fwr*0.6,wallY); ctx.lineTo(fwx,fwy+fwr); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fwx+fwr*0.6,wallY); ctx.lineTo(fwx,fwy+fwr); ctx.stroke();
   }
 
   // Carousel — right of tent
@@ -14407,7 +14449,7 @@ function drawCarnivalScene() {
     ctx.fillStyle='#f4d03f'; ctx.beginPath(); ctx.arc(crx,cry-H*0.065,W*0.008,0,Math.PI*2); ctx.fill();
     // Support pole
     ctx.strokeStyle='#8a5820'; ctx.lineWidth=W*0.010;
-    ctx.beginPath(); ctx.moveTo(crx,tBaseY); ctx.lineTo(crx,cry+H*0.014); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(crx,wallY); ctx.lineTo(crx,cry+H*0.014); ctx.stroke();
   }
 
   // Bunting strings across backdrop — two rows
