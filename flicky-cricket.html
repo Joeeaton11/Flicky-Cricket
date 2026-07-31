@@ -755,6 +755,65 @@
     border-radius:10px; margin:8px; font-size:13px; line-height:1.7; color:#fff;
   }
 
+  /* ── Milestone Celebration Overlay ── */
+  #milestoneOverlay {
+    position:fixed; top:0; left:0; width:100%; height:100%; z-index:8500;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.72); backdrop-filter:blur(2px);
+    cursor:pointer; touch-action:manipulation;
+  }
+  #milestoneOverlay.hidden { display:none; pointer-events:none; }
+  #milestoneCard {
+    position:relative;
+    background:linear-gradient(160deg,#1a2a1a 0%,#0d1a10 60%,#0a1008 100%);
+    border:2px solid rgba(80,220,120,0.45);
+    border-radius:18px;
+    padding:32px 40px 28px;
+    text-align:center;
+    width:min(82vw,340px);
+    box-shadow:0 0 60px rgba(80,220,120,0.22), 0 8px 40px rgba(0,0,0,0.6);
+  }
+  #milestoneScore {
+    font-family:'Courier New',monospace;
+    font-size:clamp(64px,18vw,96px);
+    font-weight:900;
+    line-height:1;
+    color:#50dc78;
+    text-shadow:0 0 40px rgba(80,220,120,0.7),0 0 80px rgba(80,220,120,0.3);
+    letter-spacing:-2px;
+  }
+  #milestoneLabel {
+    font-family:'Courier New',monospace;
+    font-size:clamp(13px,4vw,17px);
+    font-weight:700;
+    letter-spacing:4px;
+    color:rgba(255,255,255,0.7);
+    margin-top:4px;
+    text-transform:uppercase;
+  }
+  #milestoneStar {
+    font-size:clamp(28px,8vw,40px);
+    margin-bottom:8px;
+    animation:milestonePop 0.5s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  #milestoneCta {
+    margin-top:22px;
+    font-family:'Courier New',monospace;
+    font-size:clamp(11px,3.2vw,14px);
+    font-weight:700;
+    letter-spacing:3px;
+    color:rgba(255,255,255,0.45);
+    animation:milestoneBlink 1.2s ease-in-out infinite;
+  }
+  @keyframes milestonePop {
+    from { transform:scale(0.3); opacity:0; }
+    to   { transform:scale(1);   opacity:1; }
+  }
+  @keyframes milestoneBlink {
+    0%,100% { opacity:0.35; }
+    50%      { opacity:0.85; }
+  }
+
   /* ── Chest Opening Overlay ── */
   #chestOpenOverlay {
     position:fixed; top:0; left:0; width:100%; height:100%; z-index:9000;
@@ -1557,6 +1616,16 @@
   </div>
   <div id="leagueCardsTrack"></div>
   <div id="leagueDotsRow"></div>
+</div>
+
+<!-- Milestone Celebration Overlay -->
+<div id="milestoneOverlay" class="hidden">
+  <div id="milestoneCard">
+    <div id="milestoneStar">⭐</div>
+    <div id="milestoneScore">50</div>
+    <div id="milestoneLabel">RUNS</div>
+    <div id="milestoneCta">TAP TO CONTINUE</div>
+  </div>
 </div>
 
 <!-- Chest Opening Overlay -->
@@ -7043,7 +7112,7 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
       ballsBowled++;
       if (outcome === 'FOUR!') { thisRunFours++; playCrowdCheer(false); }
       if (outcome === 'SIX!') { thisRunSixes++; playCrowdCheer(true); }
-      checkMilestone(prevRuns, runs);
+      const hitMilestone = checkMilestone(prevRuns, runs);
       updateHud();
       const color = runsScored >= 4 ? '#f4d03f' : (runsScored === 0 ? '#bbb' : '#fff');
       // Don't show the small message bar for FOUR/SIX — the big canvas popText handles those
@@ -7055,7 +7124,12 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
       }
       if (outcome === 'FOUR!') { umpireSignal = 'four'; umpireSignalTimer = 60; }
       if (outcome === 'SIX!') { umpireSignal = 'six'; umpireSignalTimer = 60; }
-      setTimeout(nextOrEnd, 1000);
+      if (hitMilestone) {
+        // Show celebration pause — player taps to continue after milestone
+        setTimeout(() => showMilestonePause(hitMilestone, nextOrEnd), 900);
+      } else {
+        setTimeout(nextOrEnd, 1000);
+      }
     }
   }, targetDist);
 
@@ -7214,14 +7288,39 @@ function checkMilestone(prev, next) {
     }
   }
 
-  // Hit milestone
+  // Hit milestone — return the milestone value so caller can show pause screen
   for (const m of milestones) {
     if (prev < m && next >= m) {
       triggerMilestone(m);
-      break;
+      return m;
     }
   }
+  return null;
 }
+
+let _milestoneCallback = null;
+
+function showMilestonePause(score, onContinue) {
+  const overlay = document.getElementById('milestoneOverlay');
+  const scoreEl = document.getElementById('milestoneScore');
+  const starEl  = document.getElementById('milestoneStar');
+  scoreEl.textContent = score;
+  // special star for centuries
+  starEl.textContent = score >= 100 ? '💯' : '⭐';
+  // reset star animation
+  starEl.style.animation = 'none';
+  requestAnimationFrame(() => { starEl.style.animation = ''; });
+  overlay.classList.remove('hidden');
+  _milestoneCallback = () => {
+    overlay.classList.add('hidden');
+    _milestoneCallback = null;
+    if (onContinue) onContinue();
+  };
+}
+
+document.getElementById('milestoneOverlay').addEventListener('click', () => {
+  if (_milestoneCallback) { hapticTap(); _milestoneCallback(); }
+});
 
 function triggerMilestone(score) {
   hapticBig();
@@ -27013,12 +27112,7 @@ function drawUmpireArms(x, y, ac) {
 function drawUmpire(x, y) {
   const beach = currentTimeOfDay.key === 'beach';
   const moon = currentTimeOfDay.key === 'moon';
-  // Scale up so the umpire is clearly visible on small screens
-  const sc = Math.max(1.5, W * 0.004);
   ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(sc, sc);
-  x = 0; y = 0;
   // shadow
   ctx.fillStyle = 'rgba(0,0,0,0.15)';
   ctx.beginPath(); ctx.ellipse(x, y+1, 6, 2, 0, 0, Math.PI*2); ctx.fill();
