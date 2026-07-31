@@ -9799,10 +9799,17 @@ function drawMaidanScene() {
 }
 
 function drawStands() {
-  if (currentTimeOfDay.key === 'beach') { drawBeachScene(); return; }
-  if (currentTimeOfDay.key === 'moon') { drawMoonScene(); return; }
+  // All scene functions are wrapped in save/restore so any leaked clip or
+  // transform from a mid-throw error can't bleed into the rest of drawField.
+  const _runScene = (fn) => {
+    ctx.save();
+    try { fn(); } catch(e) {}
+    ctx.restore();
+  };
+  if (currentTimeOfDay.key === 'beach') { _runScene(drawBeachScene); return; }
+  if (currentTimeOfDay.key === 'moon')  { _runScene(drawMoonScene);  return; }
   const customScenes = {day:drawVillageGreenScene, recground:drawRecGroundScene, gully:drawGullyCricketScene, villagepitch:drawVillagePitchScene, homeground:drawHomeGroundScene, bigground:drawBigGroundScene, coliseum:drawColiseumScene, pirate:drawPirateScene, arctic:drawArcticScene, jungle:drawJungleScene, westwild:drawWestwildScene, volcano:drawVolcanoScene, cyberpunk:drawCyberpunkScene, carnival:drawCarnivalScene, halloween:drawHalloweenScene, reef:drawReefScene, desert:drawDesertScene, christmas:drawChristmasScene, steampunk:drawSteampunkScene, construction:drawConstructionScene, medieval:drawMedievalScene, mars:drawMarsScene, county:drawCountyGroundScene, maidan:drawMaidanScene, twilight:drawTwilightScene, afterglow:drawAfterglowScene, rockpool:drawRockpoolScene, pier:drawPierScene, dusk_stadium:drawDuskStadiumScene, fognight:drawFognightScene, canopy:drawCanopyScene, riverbank:drawRiverbankScene, glacier:drawGlacierScene, tundra:drawTundraScene, oasis:drawOasisScene, bazaar:drawBazaarScene, ghost_town:drawGhostTownScene, canyon:drawCanyonScene, lagoon:drawLagoonScene, shipwreck:drawShipwreckScene};
-  if (customScenes[currentTimeOfDay.key]) { customScenes[currentTimeOfDay.key](); return; }
+  if (customScenes[currentTimeOfDay.key]) { _runScene(customScenes[currentTimeOfDay.key]); return; }
   drawClassicStadium();
 }
 
@@ -28408,6 +28415,12 @@ function updateShake() {
 }
 
 function gameLoop() {
+  // Reset canvas state at the start of every frame so a clip or transform
+  // leak from a previous frame error can never carry over.
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+
   try {
     updateBall();
     updateParticles();
@@ -28435,7 +28448,10 @@ function gameLoop() {
 
     ctx.restore();
   } catch(e) {
-    try { ctx.restore(); } catch(_) {}
+    // Drain the entire save stack so leaked clips/transforms don't persist.
+    for (let _i = 0; _i < 32; _i++) try { ctx.restore(); } catch(_) { break; }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
   }
   try { drawFlash(); } catch(e) {}
   try { drawTutorialPrompt(); } catch(e) {}
