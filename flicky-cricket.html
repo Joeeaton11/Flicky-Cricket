@@ -7994,7 +7994,11 @@ function drawField() {
     ctx.fillRect(tx, ty, 2, 2);
   }
 
+  // Wrap drawStands in save/restore so no scene's clip or transform can leak
+  // into the pitch, umpire, fielder, or ball drawing that follows.
+  ctx.save();
   drawStands();
+  ctx.restore();
   drawBoundary();
 
   // pitch (trapezoid)
@@ -9810,7 +9814,7 @@ function drawStands() {
   if (currentTimeOfDay.key === 'moon')  { _runScene(drawMoonScene);  return; }
   const customScenes = {day:drawVillageGreenScene, recground:drawRecGroundScene, gully:drawGullyCricketScene, villagepitch:drawVillagePitchScene, homeground:drawHomeGroundScene, bigground:drawBigGroundScene, coliseum:drawColiseumScene, pirate:drawPirateScene, arctic:drawArcticScene, jungle:drawJungleScene, westwild:drawWestwildScene, volcano:drawVolcanoScene, cyberpunk:drawCyberpunkScene, carnival:drawCarnivalScene, halloween:drawHalloweenScene, reef:drawReefScene, desert:drawDesertScene, christmas:drawChristmasScene, steampunk:drawSteampunkScene, construction:drawConstructionScene, medieval:drawMedievalScene, mars:drawMarsScene, county:drawCountyGroundScene, maidan:drawMaidanScene, twilight:drawTwilightScene, afterglow:drawAfterglowScene, rockpool:drawRockpoolScene, pier:drawPierScene, dusk_stadium:drawDuskStadiumScene, fognight:drawFognightScene, canopy:drawCanopyScene, riverbank:drawRiverbankScene, glacier:drawGlacierScene, tundra:drawTundraScene, oasis:drawOasisScene, bazaar:drawBazaarScene, ghost_town:drawGhostTownScene, canyon:drawCanyonScene, lagoon:drawLagoonScene, shipwreck:drawShipwreckScene};
   if (customScenes[currentTimeOfDay.key]) { _runScene(customScenes[currentTimeOfDay.key]); return; }
-  drawClassicStadium();
+  _runScene(drawClassicStadium);
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -27009,6 +27013,12 @@ function drawUmpireArms(x, y, ac) {
 function drawUmpire(x, y) {
   const beach = currentTimeOfDay.key === 'beach';
   const moon = currentTimeOfDay.key === 'moon';
+  // Scale up so the umpire is clearly visible on small screens
+  const sc = Math.max(1.5, W * 0.004);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(sc, sc);
+  x = 0; y = 0;
   // shadow
   ctx.fillStyle = 'rgba(0,0,0,0.15)';
   ctx.beginPath(); ctx.ellipse(x, y+1, 6, 2, 0, 0, Math.PI*2); ctx.fill();
@@ -27240,6 +27250,7 @@ function drawUmpire(x, y) {
   }
   if (umpireSignalTimer > 0) umpireSignalTimer--;
   else umpireSignal = null;
+  ctx.restore(); // end umpire scale transform
 }
 
 const STUMP_COLORS = {
