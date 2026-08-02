@@ -28700,11 +28700,14 @@ function _doRevealSequence() {
 
   _updateRemainingBadge();
 
-  // Delay slightly so burst-tap doesn't auto-reveal first item
+  // Auto-show first item, then register tap for the rest
   setTimeout(() => {
-    chestRevealScreen.addEventListener('click', _onRevealTap);
-    chestRevealScreen.addEventListener('touchend', _onRevealTapTouch, { passive: false });
-  }, 380);
+    _onRevealTap();
+    setTimeout(() => {
+      chestRevealScreen.addEventListener('click', _onRevealTap);
+      chestRevealScreen.addEventListener('touchend', _onRevealTapTouch, { passive: false });
+    }, 380);
+  }, 500);
 }
 
 function _updateRemainingBadge() {
@@ -28733,14 +28736,40 @@ function _onRevealTap() {
   }
 
   if (_revealIndex >= _revealItems.length) {
-    // Last item — swap SKIP for COLLECT after a beat
-    setTimeout(() => {
-      document.getElementById('chestSkipBtn').style.display = 'none';
-      document.getElementById('chestOpenDoneBtn').classList.add('visible');
-      chestRevealScreen.removeEventListener('click', _onRevealTap);
-      chestRevealScreen.removeEventListener('touchend', _onRevealTapTouch);
-    }, 350);
+    chestRevealScreen.removeEventListener('click', _onRevealTap);
+    chestRevealScreen.removeEventListener('touchend', _onRevealTapTouch);
+    setTimeout(() => _showChestSummary(), 600);
   }
+}
+
+function _showChestSummary() {
+  // Hide card/coin popups
+  chestCardPopup.classList.remove('visible', 'pop-in');
+  chestCoinPopup.classList.remove('visible');
+
+  // Build summary HTML
+  const lines = _revealItems.map(item => {
+    if (item.type === 'coins') return `<div class="csRow">🪙 <span>${item.amount} COINS</span></div>`;
+    if (item.type === 'gems')  return `<div class="csRow">💎 <span>${item.amount} GEMS</span></div>`;
+    const rc = rarityColor(item.card.rarity);
+    return `<div class="csRow"><span style="color:${rc}">${item.card.rarity.toUpperCase()}</span> · ${item.card.name}${item.count > 1 ? ' ×' + item.count : ''}</div>`;
+  }).join('');
+
+  let summaryEl = document.getElementById('chestSummaryPanel');
+  if (!summaryEl) {
+    summaryEl = document.createElement('div');
+    summaryEl.id = 'chestSummaryPanel';
+    summaryEl.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.82);z-index:10;padding:24px;box-sizing:border-box;';
+    chestRevealScreen.appendChild(summaryEl);
+  }
+  summaryEl.innerHTML = `
+    <div style="color:#f4d03f;font-size:13px;letter-spacing:3px;margin-bottom:14px;">YOU RECEIVED</div>
+    <div style="width:100%;max-width:320px;background:rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:14px;color:#e8e8e8;line-height:2;">${lines}</div>
+  `;
+  summaryEl.style.display = 'flex';
+
+  document.getElementById('chestSkipBtn').style.display = 'none';
+  document.getElementById('chestOpenDoneBtn').classList.add('visible');
 }
 
 // Per-rarity card backgrounds and dim colours
@@ -28971,6 +29000,7 @@ function _closeChestAnim() {
   document.getElementById('chestRevealScreen').removeEventListener('touchend', _onRevealTapTouch);
   chestOpenOverlay.classList.add('hidden');
   chestOpenCanvas.style.display = 'block';
+  const sp = document.getElementById('chestSummaryPanel'); if (sp) sp.style.display = 'none';
   if (_chestAnimFrame) { cancelAnimationFrame(_chestAnimFrame); _chestAnimFrame = null; }
   _chestOpenPhase = 'idle';
   if (_chestOpenAfterCallback) { _chestOpenAfterCallback(); _chestOpenAfterCallback = null; }
