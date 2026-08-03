@@ -3142,7 +3142,7 @@ const TIME_OF_DAY = [
   { key:'westwild', skyTop:'#5a2e22', skyBottom:'#f4c878', grass:'#a87c46', grassStripeLight:'rgba(255,220,150,0.06)', grassStripeDark:'rgba(80,50,10,0.10)', pitch:'#8a6038', overlay:null, floodlights:false },
   { key:'volcano', skyTop:'#150603', skyBottom:'#c9501f', grass:'#221e1a', grassStripeLight:'rgba(255,140,60,0.05)', grassStripeDark:'rgba(0,0,0,0.18)', pitch:'#221e1a', overlay:null, floodlights:false },
   { key:'cyberpunk', skyTop:'#050208', skyBottom:'#3a0e4a', grass:'#120c20', grassStripeLight:'rgba(0,229,255,0.05)', grassStripeDark:'rgba(255,32,192,0.05)', pitch:'#0a0614', overlay:null, floodlights:false },
-  { key:'carnival', skyTop:'#3a1448', skyBottom:'#ff8ac8', grass:'#9a7c44', grassStripeLight:'rgba(255,255,255,0.06)', grassStripeDark:'rgba(80,50,10,0.10)', pitch:'#b08850', overlay:null, floodlights:false },
+  { key:'carnival', skyTop:'#1a0630', skyBottom:'#e060a0', grass:'#6a8c3a', grassStripeLight:'rgba(255,255,200,0.07)', grassStripeDark:'rgba(20,60,10,0.14)', pitch:'#c4a858', overlay:null, floodlights:false },
   { key:'halloween', skyTop:'#070310', skyBottom:'#3a1a44', grass:'#26262c', grassStripeLight:'rgba(255,255,255,0.03)', grassStripeDark:'rgba(0,0,0,0.14)', pitch:'#4a4a4e', overlay:null, floodlights:false },
   { key:'reef', skyTop:'#2a98c8', skyBottom:'#062a48', grass:'#d4c080', grassStripeLight:'rgba(255,255,255,0.07)', grassStripeDark:'rgba(120,90,30,0.08)', pitch:'#d4c090', overlay:null, floodlights:false },
   { key:'desert', skyTop:'#d88c40', skyBottom:'#fde6b0', grass:'#d4a850', grassStripeLight:'rgba(255,240,180,0.06)', grassStripeDark:'rgba(120,80,20,0.08)', pitch:'#caa468', overlay:null, floodlights:false },
@@ -14340,27 +14340,51 @@ function drawCarnivalScene() {
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Bright daytime sky
+  // Twilight carnival sky — deep violet to warm magenta
   const skyG=ctx.createLinearGradient(0,0,0,H*0.23);
-  skyG.addColorStop(0,'#3a8fd4'); skyG.addColorStop(0.6,'#6ab8e8'); skyG.addColorStop(1,'#a8d8f0');
+  skyG.addColorStop(0,'#1a0630'); skyG.addColorStop(0.5,'#6a1858'); skyG.addColorStop(1,'#d45090');
   ctx.fillStyle=skyG; ctx.fillRect(0,0,W,H*0.23);
 
-  // Sun — upper right
-  const sunG=ctx.createRadialGradient(W*0.86,H*0.04,0,W*0.86,H*0.04,H*0.12);
-  sunG.addColorStop(0,'rgba(255,248,120,1)'); sunG.addColorStop(0.3,'rgba(255,230,60,0.6)'); sunG.addColorStop(1,'rgba(255,200,0,0)');
-  ctx.fillStyle=sunG; ctx.fillRect(0,0,W,H*0.23);
-  ctx.fillStyle='#fff070'; ctx.beginPath(); ctx.arc(W*0.86,H*0.040,H*0.038,0,Math.PI*2); ctx.fill();
+  // A handful of faint stars
+  const starData=[[0.08,0.12],[0.18,0.05],[0.31,0.18],[0.44,0.08],[0.55,0.03],[0.68,0.16],[0.77,0.06],[0.90,0.12],[0.96,0.04]];
+  starData.forEach(([sx,sy])=>{
+    const pulse=0.4+0.35*Math.sin(t*1.8+sx*17);
+    ctx.fillStyle=`rgba(255,240,200,${pulse.toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(W*sx,H*sy,1.2,0,Math.PI*2); ctx.fill();
+  });
 
-  // Fluffy white clouds
-  const drawCloud=(cx,cy,rw,rh)=>{
-    ctx.fillStyle='rgba(255,255,255,0.92)';
-    [[0,0,1],[-.38,.08,.65],[.38,.05,.70],[-.18,-.18,.55],[.20,-.15,.50]].forEach(([ox,oy,s])=>{
-      ctx.beginPath(); ctx.ellipse(cx+rw*ox,cy+rh*oy,rw*s,rh*s*0.7,0,0,Math.PI*2); ctx.fill();
-    });
-  };
-  drawCloud(W*0.12,H*0.055,W*0.075,H*0.030);
-  drawCloud(W*0.36,H*0.038,W*0.060,H*0.024);
-  drawCloud(W*0.58,H*0.062,W*0.068,H*0.028);
+  // Warm glow rising from the tent below (carnival light spill)
+  const glowG=ctx.createLinearGradient(0,H*0.14,0,H*0.23);
+  glowG.addColorStop(0,'rgba(255,160,40,0)'); glowG.addColorStop(1,'rgba(255,120,30,0.28)');
+  ctx.fillStyle=glowG; ctx.fillRect(0,H*0.14,W,H*0.09);
+
+  // Festive string lights across the sky — two drooping strings
+  const lightCols=['#ff4444','#ffdd00','#44dd44','#4488ff','#dd44ff','#ff8800'];
+  [[0.05,0.19,0.95,0.19,0.50,0.23],[0.0,0.15,1.0,0.15,0.50,0.20]].forEach(([x1f,y1f,x2f,y2f,mxf,myf],li)=>{
+    const x1=W*x1f, y1=H*y1f, x2=W*x2f, y2=H*y2f, mx=W*mxf, my=H*myf;
+    // Draw the string
+    ctx.strokeStyle='rgba(60,30,10,0.55)'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.quadraticCurveTo(mx,my,x2,y2); ctx.stroke();
+    // Draw bulbs along the catenary
+    const nBulbs=14;
+    for(let bi=0;bi<nBulbs;bi++){
+      const bf=(bi+0.5)/nBulbs;
+      // Quadratic bezier point
+      const bx=(1-bf)*(1-bf)*x1+2*(1-bf)*bf*mx+bf*bf*x2;
+      const by=(1-bf)*(1-bf)*y1+2*(1-bf)*bf*my+bf*bf*y2;
+      const col=lightCols[(bi+li*3)%lightCols.length];
+      const pulse=0.7+0.3*Math.sin(t*3.0+bi*0.9+li*1.5);
+      // Glow halo
+      ctx.save(); ctx.shadowColor=col; ctx.shadowBlur=6*pulse;
+      ctx.fillStyle=col;
+      ctx.globalAlpha=pulse;
+      ctx.beginPath(); ctx.ellipse(bx,by+1.5,2.5,3.5,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,220,0.85)';
+      ctx.beginPath(); ctx.arc(bx,by,1.4,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+      ctx.globalAlpha=1;
+    }
+  });
 
   // ── BIG TOP TENT — 3-peak circus tent ──
   const eaveY=H*0.192;   // top of rectangular wall
@@ -27051,11 +27075,27 @@ function drawShipwreckScene() {
 
 function drawBoundary() {
   // 30-yard circle
-  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.ellipse(W/2, H*FIELD_CY, W*FIELD_RX*0.55, H*FIELD_RY*0.55, 0, 0, Math.PI*2);
-  ctx.stroke();
+  const is30Carnival = currentTimeOfDay.key === 'carnival';
+  if (is30Carnival) {
+    // Alternating coloured dots around the 30-yard circle
+    const cx30=W/2, cy30=H*FIELD_CY, rx30=W*FIELD_RX*0.55, ry30=H*FIELD_RY*0.55;
+    const dotCols=['#e74c3c','#f4d03f','#2ecc71','#3498db','#e67e22','#9b59b6'];
+    const nDots=48;
+    for(let di=0;di<nDots;di++){
+      const a=di/nDots*Math.PI*2;
+      const dx=cx30+rx30*Math.cos(a), dy=cy30+ry30*Math.sin(a);
+      ctx.fillStyle=dotCols[di%dotCols.length];
+      ctx.globalAlpha=0.75;
+      ctx.beginPath(); ctx.arc(dx,dy,2.2,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  } else {
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(W/2, H*FIELD_CY, W*FIELD_RX*0.55, H*FIELD_RY*0.55, 0, 0, Math.PI*2);
+    ctx.stroke();
+  }
 
   // boundary rope
   ctx.save();
@@ -27752,14 +27792,23 @@ function drawBall() {
     core.addColorStop(0,'#aef6ff'); core.addColorStop(0.5,'#00c2e0'); core.addColorStop(1,'#a020c0');
     ctx.fillStyle = core; ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2); ctx.fill();
   } else if (currentTimeOfDay.key === 'carnival') {
+    // Spinning gobstopper — 6 vivid wedge segments
     const r = Math.max(size,1);
-    const spin = ball.hitAnim ? ball.flightDist * 12 : ball.z * 8;
+    const spin = ball.hitAnim ? ball.flightDist * 14 : ball.z * 9;
+    const gcols=['#e74c3c','#f4d03f','#2ecc71','#3498db','#9b59b6','#e67e22'];
     ctx.save(); ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2); ctx.clip();
-    ctx.fillStyle = '#fff'; ctx.fillRect(px-r,py-r,r*2,r*2);
-    ctx.fillStyle = '#e74c3c';
-    for (let i=-4;i<5;i++) { ctx.save(); ctx.translate(px,py); ctx.rotate(spin); ctx.fillRect(i*r*0.4-r*0.1,-r*1.5,r*0.2,r*3); ctx.restore(); }
+    for(let i=0;i<6;i++){
+      const a1=spin+i/6*Math.PI*2, a2=spin+(i+1)/6*Math.PI*2;
+      ctx.fillStyle=gcols[i];
+      ctx.beginPath(); ctx.moveTo(px,py); ctx.arc(px,py,r,a1,a2); ctx.closePath(); ctx.fill();
+    }
     ctx.restore();
-    ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2); ctx.stroke();
+    // White highlight glint
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.beginPath(); ctx.ellipse(px-r*0.28,py-r*0.30,r*0.28,r*0.18,-0.5,0,Math.PI*2); ctx.fill();
+    // Thin dark outline
+    ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2); ctx.stroke();
   } else if (currentTimeOfDay.key === 'halloween') {
     const r = Math.max(size,1);
     ctx.fillStyle = '#ff8c1a'; ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2); ctx.fill();
