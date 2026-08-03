@@ -14526,29 +14526,100 @@ function drawCarnivalScene() {
     ctx.restore();
   }
 
-  // Ferris wheel — left of tent, peeking above eave
+  // ── FERRIS WHEEL — left side, large and distinctive ──
   {
-    const fwx=W*0.09, fwy=H*0.130, fwr=H*0.072;
-    const fwRot=t*0.25;
-    ctx.strokeStyle='rgba(200,160,30,0.75)'; ctx.lineWidth=W*0.005;
+    const fwx=W*0.115, fwy=H*0.112, fwr=H*0.098;
+    const fwRot=t*0.22;
+    const gondCols2=['#e74c3c','#f4d03f','#2ecc71','#3498db','#9b59b6','#e67e22','#e74c3c','#2ecc71'];
+
+    // Support A-frame legs — drawn first (behind wheel)
+    ctx.strokeStyle='#5a3a08'; ctx.lineWidth=W*0.010;
+    ctx.beginPath(); ctx.moveTo(fwx-fwr*0.55,wallY); ctx.lineTo(fwx,fwy+fwr*0.12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fwx+fwr*0.55,wallY); ctx.lineTo(fwx,fwy+fwr*0.12); ctx.stroke();
+    // Cross brace
+    ctx.lineWidth=W*0.005;
+    ctx.beginPath(); ctx.moveTo(fwx-fwr*0.40,wallY-H*0.010); ctx.lineTo(fwx+fwr*0.40,wallY-H*0.010); ctx.stroke();
+
+    // Outer rim shadow
+    ctx.strokeStyle='rgba(0,0,0,0.28)'; ctx.lineWidth=W*0.025;
+    ctx.beginPath(); ctx.arc(fwx+2,fwy+3,fwr,0,Math.PI*2); ctx.stroke();
+
+    // Outer rim — thick dark base
+    ctx.strokeStyle='#3a2005'; ctx.lineWidth=W*0.022;
     ctx.beginPath(); ctx.arc(fwx,fwy,fwr,0,Math.PI*2); ctx.stroke();
-    // Spokes
+    // Outer rim — gold mid layer
+    ctx.strokeStyle='#c89020'; ctx.lineWidth=W*0.016;
+    ctx.beginPath(); ctx.arc(fwx,fwy,fwr,0,Math.PI*2); ctx.stroke();
+    // Outer rim — bright highlight
+    ctx.strokeStyle='#f0d040'; ctx.lineWidth=W*0.006;
+    ctx.beginPath(); ctx.arc(fwx,fwy,fwr,0,Math.PI*2); ctx.stroke();
+
+    // Inner ring
+    ctx.strokeStyle='#c89020'; ctx.lineWidth=W*0.007;
+    ctx.beginPath(); ctx.arc(fwx,fwy,fwr*0.62,0,Math.PI*2); ctx.stroke();
+
+    // Spokes — from inner ring to outer rim
+    ctx.strokeStyle='#a07818'; ctx.lineWidth=W*0.006;
     for(let s=0;s<8;s++){
       const a=fwRot+s*Math.PI/4;
-      ctx.beginPath(); ctx.moveTo(fwx,fwy); ctx.lineTo(fwx+Math.cos(a)*fwr,fwy+Math.sin(a)*fwr); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(fwx+Math.cos(a)*fwr*0.62, fwy+Math.sin(a)*fwr*0.62);
+      ctx.lineTo(fwx+Math.cos(a)*fwr*0.97, fwy+Math.sin(a)*fwr*0.97);
+      ctx.stroke();
     }
-    // Gondolas
-    cc.forEach((col,s)=>{
+    // Hub spokes (inner ring to centre)
+    ctx.strokeStyle='#c89020'; ctx.lineWidth=W*0.005;
+    for(let s=0;s<8;s++){
+      const a=fwRot+s*Math.PI/4;
+      ctx.beginPath();
+      ctx.moveTo(fwx, fwy);
+      ctx.lineTo(fwx+Math.cos(a)*fwr*0.62, fwy+Math.sin(a)*fwr*0.62);
+      ctx.stroke();
+    }
+
+    // Rim light bulbs — 16 evenly spaced, alternating colours
+    const bulbCols=['#ff4040','#ffee00','#40ee40','#4080ff','#ee44ee','#ff9000'];
+    for(let b=0;b<16;b++){
+      const a=fwRot*0.5+b/16*Math.PI*2;
+      const bx=fwx+Math.cos(a)*fwr, by=fwy+Math.sin(a)*fwr;
+      const bc=bulbCols[b%bulbCols.length];
+      const pulse=0.65+0.35*Math.sin(t*4.0+b*0.8);
+      ctx.save(); ctx.shadowColor=bc; ctx.shadowBlur=8*pulse;
+      ctx.fillStyle=bc; ctx.globalAlpha=pulse;
+      ctx.beginPath(); ctx.arc(bx,by,W*0.012,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,220,0.80)';
+      ctx.beginPath(); ctx.arc(bx-W*0.003,by-W*0.003,W*0.005,0,Math.PI*2); ctx.fill();
+      ctx.restore(); ctx.globalAlpha=1;
+    }
+
+    // Gondola cars at spoke tips (8 cars)
+    gondCols2.forEach((col,s)=>{
       const a=fwRot+s*Math.PI/4;
       const gx=fwx+Math.cos(a)*fwr, gy=fwy+Math.sin(a)*fwr;
+      // Car body (always hangs down from attachment point)
+      const cw=W*0.030, ch=W*0.022;
+      ctx.fillStyle='rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.roundRect(gx-cw/2+1,gy+1,cw,ch,W*0.004); ctx.fill();
       ctx.fillStyle=col;
-      ctx.beginPath(); ctx.roundRect(gx-W*0.012,gy-H*0.014,W*0.024,H*0.020,W*0.004); ctx.fill();
+      ctx.beginPath(); ctx.roundRect(gx-cw/2,gy,cw,ch,W*0.004); ctx.fill();
+      // Car roof
+      ctx.fillStyle='rgba(255,255,255,0.35)';
+      ctx.beginPath(); ctx.roundRect(gx-cw/2,gy,cw,ch*0.35,W*0.004); ctx.fill();
+      // Car window
+      ctx.fillStyle='rgba(180,220,255,0.60)';
+      ctx.beginPath(); ctx.roundRect(gx-cw*0.25,gy+ch*0.40,cw*0.50,ch*0.38,W*0.002); ctx.fill();
+      // Hanger wire from rim
+      ctx.strokeStyle='rgba(180,140,40,0.70)'; ctx.lineWidth=W*0.002;
+      ctx.beginPath(); ctx.moveTo(gx,gy); ctx.lineTo(gx,gy); ctx.stroke();
     });
-    ctx.fillStyle='#c0a020'; ctx.beginPath(); ctx.arc(fwx,fwy,W*0.010,0,Math.PI*2); ctx.fill();
-    // Support legs
-    ctx.strokeStyle='#8a6020'; ctx.lineWidth=W*0.006;
-    ctx.beginPath(); ctx.moveTo(fwx-fwr*0.6,wallY); ctx.lineTo(fwx,fwy+fwr); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(fwx+fwr*0.6,wallY); ctx.lineTo(fwx,fwy+fwr); ctx.stroke();
+
+    // Centre hub
+    ctx.fillStyle='#2a1800';
+    ctx.beginPath(); ctx.arc(fwx,fwy,W*0.020,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#f0c820';
+    ctx.beginPath(); ctx.arc(fwx,fwy,W*0.013,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,200,0.75)';
+    ctx.beginPath(); ctx.arc(fwx,fwy,W*0.006,0,Math.PI*2); ctx.fill();
   }
 
   // Carousel — right of tent
