@@ -15284,53 +15284,64 @@ function drawFairgroundScene() {
       }
     });
 
-    // ── External slide ramp — wide angled board coming off the right side ──
-    // The slide is a flat ramp: a filled trapezoid from upper-right tower edge
-    // diagonally down to ground, with a shallow outward lean.
-    const sTopX=hx+coneR(0.28);          // where slide meets tower (top)
-    const sTopY=htop+hH*0.28;
-    const sBotX=hx+botR+W*0.068;         // ground landing point
-    const sBotY=hbot+W*0.004;
-    const sW=W*0.026;                     // slide width (perpendicular to slope)
-    // Compute perpendicular offset (normal to the slide direction, pointing left)
-    const dx=sBotX-sTopX, dy=sBotY-sTopY;
-    const len=Math.sqrt(dx*dx+dy*dy);
-    const nx=-dy/len*sW, ny=dx/len*sW;   // left-side normal (inward face)
+    // ── External slide ramp — trapezoid spreading outward from tower to ground ──
+    // 4 explicit corners: the ramp is narrow where it exits the tower and fans
+    // outward to the landing point, showing a clear angled board shape.
+    const sfTop = 0.30;                          // height fraction where slide exits
+    const sTY = htop + hH*sfTop;                 // y at top of slide
+    const sBY = hbot;                            // y at bottom (ground)
+    const sTiX = hx + coneR(sfTop);             // top-inner x (flush with cone surface)
+    const sToX = sTiX + W*0.022;                // top-outer x (shows slide width at top)
+    const sBiX = hx + botR - W*0.008;           // bottom-inner x (near tower base)
+    const sBoX = hx + botR + W*0.072;           // bottom-outer x (landing point)
+    const thick = W*0.013;                       // visible slide thickness (underside)
 
-    // Underside of slide (dark, structural)
-    ctx.fillStyle='#6a4808';
+    // Underside / structural thickness — dark band just below the ramp surface
+    ctx.fillStyle='#4a3008';
     ctx.beginPath();
-    ctx.moveTo(sTopX,sTopY); ctx.lineTo(sTopX+nx,sTopY+ny);
-    ctx.lineTo(sBotX+nx,sBotY+ny); ctx.lineTo(sBotX,sBotY);
+    ctx.moveTo(sTiX, sTY+thick); ctx.lineTo(sToX, sTY+thick);
+    ctx.lineTo(sBoX, sBY+thick); ctx.lineTo(sBiX, sBY+thick);
     ctx.closePath(); ctx.fill();
-    // Slide surface (bright gold/yellow)
-    const slideG=ctx.createLinearGradient(sTopX,sTopY,sTopX+nx,sTopY+ny);
-    slideG.addColorStop(0,'#e8c030'); slideG.addColorStop(0.5,'#f5d848'); slideG.addColorStop(1,'#c09020');
+
+    // Ramp surface — bright yellow-gold trapezoid
+    const slideG=ctx.createLinearGradient(sTiX,sTY,sBoX,sBY);
+    slideG.addColorStop(0,'#f0cc38'); slideG.addColorStop(0.5,'#f8d848'); slideG.addColorStop(1,'#c89820');
     ctx.fillStyle=slideG;
     ctx.beginPath();
-    ctx.moveTo(sTopX,sTopY); ctx.lineTo(sTopX+nx,sTopY+ny);
-    ctx.lineTo(sBotX+nx,sBotY+ny); ctx.lineTo(sBotX,sBotY);
+    ctx.moveTo(sTiX,sTY); ctx.lineTo(sToX,sTY);
+    ctx.lineTo(sBoX,sBY); ctx.lineTo(sBiX,sBY);
     ctx.closePath(); ctx.fill();
-    // Lane lines across the slide surface (3 stripes)
-    ctx.strokeStyle='rgba(255,255,200,0.40)'; ctx.lineWidth=W*0.002;
+
+    // Slide lane lines (running down the length)
+    ctx.strokeStyle='rgba(255,255,200,0.45)'; ctx.lineWidth=W*0.002;
     for(let li=1;li<=2;li++){
       const f=li/3;
-      ctx.beginPath();
-      ctx.moveTo(sTopX+nx*f, sTopY+ny*f);
-      ctx.lineTo(sBotX+nx*f, sBotY+ny*f);
-      ctx.stroke();
+      // Interpolate between inner and outer edges
+      const tx=sTiX+(sToX-sTiX)*f, bx=sBiX+(sBoX-sBiX)*f;
+      ctx.beginPath(); ctx.moveTo(tx,sTY); ctx.lineTo(bx,sBY); ctx.stroke();
     }
-    // Left-edge handrail post + rail
-    ctx.strokeStyle='#c0a030'; ctx.lineWidth=W*0.004;
-    ctx.beginPath(); ctx.moveTo(sTopX+nx,sTopY+ny); ctx.lineTo(sBotX+nx,sBotY+ny); ctx.stroke();
-    ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=W*0.003;
-    ctx.beginPath(); ctx.moveTo(sTopX+nx-W*0.004,sTopY+ny-W*0.004); ctx.lineTo(sBotX+nx-W*0.004,sBotY+ny-W*0.004); ctx.stroke();
+
+    // Outer handrail (right edge)
+    ctx.strokeStyle='#b08820'; ctx.lineWidth=W*0.005;
+    ctx.beginPath(); ctx.moveTo(sToX,sTY); ctx.lineTo(sBoX,sBY); ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,180,0.60)'; ctx.lineWidth=W*0.002;
+    ctx.beginPath(); ctx.moveTo(sToX,sTY); ctx.lineTo(sBoX,sBY); ctx.stroke();
+
+    // Inner handrail (left edge)
+    ctx.strokeStyle='#b08820'; ctx.lineWidth=W*0.004;
+    ctx.beginPath(); ctx.moveTo(sTiX,sTY); ctx.lineTo(sBiX,sBY); ctx.stroke();
+
     // Outline
-    ctx.strokeStyle='#8a6010'; ctx.lineWidth=W*0.002;
+    ctx.strokeStyle='#7a5008'; ctx.lineWidth=W*0.002;
     ctx.beginPath();
-    ctx.moveTo(sTopX,sTopY); ctx.lineTo(sTopX+nx,sTopY+ny);
-    ctx.lineTo(sBotX+nx,sBotY+ny); ctx.lineTo(sBotX,sBotY);
+    ctx.moveTo(sTiX,sTY); ctx.lineTo(sToX,sTY);
+    ctx.lineTo(sBoX,sBY); ctx.lineTo(sBiX,sBY);
     ctx.closePath(); ctx.stroke();
+
+    // Support strut underneath mid-point
+    const smX=(sTiX+sBoX)/2+W*0.010, smY=(sTY+sBY)/2;
+    ctx.strokeStyle='#6a4808'; ctx.lineWidth=W*0.003;
+    ctx.beginPath(); ctx.moveTo(smX,smY+thick); ctx.lineTo(smX,smY+thick+W*0.022); ctx.stroke();
 
     // ── Conical hat roof — triple layer ──
     // Bottom/wide brim (yellow)
