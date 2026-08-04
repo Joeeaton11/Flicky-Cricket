@@ -15015,21 +15015,30 @@ function drawFairgroundScene() {
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Dusk sky — deep violet to warm amber
+  // Dusk sky — ink navy to deep magenta to hot amber
   const skyG=ctx.createLinearGradient(0,0,0,H*0.23);
-  skyG.addColorStop(0,'#0a0420'); skyG.addColorStop(0.40,'#3a1050'); skyG.addColorStop(1,'#b84018');
+  skyG.addColorStop(0,'#06021a'); skyG.addColorStop(0.22,'#1c0840');
+  skyG.addColorStop(0.55,'#681040'); skyG.addColorStop(0.80,'#c83820'); skyG.addColorStop(1,'#f06008');
   ctx.fillStyle=skyG; ctx.fillRect(0,0,W,H*0.23);
 
-  // Stars
-  [[0.05,0.06],[0.14,0.02],[0.28,0.11],[0.42,0.04],[0.58,0.08],[0.71,0.02],[0.84,0.10],[0.94,0.05]].forEach(([sx,sy])=>{
-    const p=0.35+0.4*Math.sin(t*2.0+sx*15);
-    ctx.fillStyle=`rgba(255,245,210,${p.toFixed(2)})`; ctx.beginPath(); ctx.arc(W*sx,H*sy,1.1,0,Math.PI*2); ctx.fill();
+  // Stars — more of them, varied sizes
+  [[0.04,0.04,1.4],[0.11,0.08,1.0],[0.19,0.02,1.2],[0.27,0.10,0.9],[0.36,0.05,1.3],
+   [0.44,0.02,1.1],[0.51,0.08,1.0],[0.60,0.04,1.4],[0.68,0.07,0.9],[0.74,0.01,1.2],
+   [0.82,0.09,1.0],[0.89,0.03,1.3],[0.95,0.07,1.1]].forEach(([sx,sy,sr])=>{
+    const p=0.40+0.45*Math.sin(t*1.8+sx*17+sy*11);
+    ctx.fillStyle=`rgba(255,248,220,${p.toFixed(2)})`; ctx.beginPath(); ctx.arc(W*sx,H*sy,sr,0,Math.PI*2); ctx.fill();
   });
 
-  // Sunset horizon glow
-  const hGlow=ctx.createLinearGradient(0,H*0.13,0,H*0.23);
-  hGlow.addColorStop(0,'rgba(255,120,20,0)'); hGlow.addColorStop(1,'rgba(255,90,10,0.50)');
-  ctx.fillStyle=hGlow; ctx.fillRect(0,H*0.13,W,H*0.10);
+  // Amber-orange glow bloom at horizon (ride lights spilling up)
+  const hGlow=ctx.createLinearGradient(0,H*0.10,0,H*0.23);
+  hGlow.addColorStop(0,'rgba(255,100,10,0)'); hGlow.addColorStop(0.60,'rgba(255,80,5,0.18)'); hGlow.addColorStop(1,'rgba(255,60,0,0.65)');
+  ctx.fillStyle=hGlow; ctx.fillRect(0,H*0.10,W,H*0.13);
+  // Spot glows above each major ride
+  [{x:0.11,c:'rgba(100,50,255,0.18)'},{x:0.30,c:'rgba(255,100,20,0.15)'},{x:0.52,c:'rgba(255,80,20,0.20)'},{x:0.76,c:'rgba(255,180,30,0.18)'},{x:0.92,c:'rgba(255,40,180,0.14)'}].forEach(({x,c})=>{
+    const rg=ctx.createRadialGradient(W*x,H*0.23,0,W*x,H*0.23,W*0.12);
+    rg.addColorStop(0,c); rg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=rg; ctx.fillRect(0,0,W,H*0.23);
+  });
 
   // ── SKYLINE OF RIDES — full width ──
   const wallY=H*0.230;
@@ -15186,51 +15195,165 @@ function drawFairgroundScene() {
 
   // ── CENTRE: Helter-Skelter — tallest structure ──
   {
-    const hx=CX+W*0.015, hbot=wallY, htop=H*0.002, hbw=W*0.130;
-    const tg=ctx.createLinearGradient(hx-hbw/2,0,hx+hbw/2,0);
-    tg.addColorStop(0,'#aa1808'); tg.addColorStop(0.5,'#e02818'); tg.addColorStop(1,'#901008');
-    ctx.fillStyle=tg;
+    const hx=CX-W*0.005, hbot=wallY, htop=H*0.003;
+    const hH=hbot-htop;
+    const topR=W*0.020, botR=W*0.072; // radii at top and base
+    // Helper: half-width of cone at height fraction f (0=top,1=base)
+    const coneR=(f)=>topR+(botR-topR)*f;
+    const fAtY=(y)=>(y-htop)/hH;
+
+    // ── Glow aura behind tower
+    const hsGlow=ctx.createRadialGradient(hx,htop+hH*0.5,0,hx,htop+hH*0.5,botR*2.2);
+    hsGlow.addColorStop(0,'rgba(255,60,10,0.22)'); hsGlow.addColorStop(1,'rgba(255,60,10,0)');
+    ctx.fillStyle=hsGlow; ctx.fillRect(hx-botR*2.5,htop,botR*5,hH);
+
+    // ── Cone body with barber-pole spiral stripes (clip to cone shape) ──
+    ctx.save();
     ctx.beginPath();
-    ctx.moveTo(hx-W*0.022,htop); ctx.lineTo(hx+W*0.022,htop);
-    ctx.lineTo(hx+hbw/2,hbot); ctx.lineTo(hx-hbw/2,hbot); ctx.closePath(); ctx.fill();
-    // Spiral stripe (more bands)
-    ctx.strokeStyle='#fff8e0'; ctx.lineWidth=W*0.011;
-    for(let si=0;si<7;si++){
-      const sy1=htop+(hbot-htop)*si/7, sy2=htop+(hbot-htop)*(si+1)/7;
-      const w1=W*0.022+(hbw/2-W*0.022)*si/7;
-      const w2=W*0.022+(hbw/2-W*0.022)*(si+1)/7;
+    ctx.moveTo(hx-topR,htop); ctx.lineTo(hx+topR,htop);
+    ctx.lineTo(hx+botR,hbot); ctx.lineTo(hx-botR,hbot);
+    ctx.closePath(); ctx.clip();
+
+    // Base red fill
+    const coneG=ctx.createLinearGradient(hx-botR,0,hx+botR,0);
+    coneG.addColorStop(0,'#8a1005'); coneG.addColorStop(0.38,'#e02015'); coneG.addColorStop(0.62,'#e82818'); coneG.addColorStop(1,'#7a0e04');
+    ctx.fillStyle=coneG; ctx.fillRect(hx-botR,htop,botR*2,hH);
+
+    // White spiral stripes: parallelogram bands offset by half the height
+    // Each band shifts right→left as it descends creating the spiral illusion
+    const nBands=12; // total bands (6 white, 6 red)
+    const shift=hH*0.60; // lateral offset over the full height (controls spiral tightness)
+    for(let s=-2;s<nBands+2;s++){
+      if(s%2===0) continue; // only white bands
+      const f1=s/nBands, f2=(s+1)/nBands;
+      const y1=htop+f1*hH, y2=htop+f2*hH;
+      // Left-side x offset at y (stripe sweeps left as it goes down)
+      // Right edge of cone for coverage, clip handles the trim
+      ctx.fillStyle='rgba(255,252,240,0.92)';
       ctx.beginPath();
-      ctx.moveTo(si%2===0?hx-w1:hx+w1, sy1);
-      ctx.lineTo(si%2===0?hx+w2:hx-w2, sy2); ctx.stroke();
+      ctx.moveTo(hx-botR*1.1, y1);
+      ctx.lineTo(hx-botR*1.1+shift*(f1), y1);
+      ctx.lineTo(hx-botR*1.1+shift*(f2), y2);
+      ctx.lineTo(hx-botR*1.1, y2);
+      ctx.closePath(); ctx.fill();
+      // Mirror band on the other half
+      ctx.beginPath();
+      ctx.moveTo(hx, y1);
+      ctx.lineTo(hx+botR*1.1, y1);
+      ctx.lineTo(hx+botR*1.1, y2);
+      ctx.lineTo(hx-shift*(f2-f1)*0.5, y2);
+      ctx.closePath(); ctx.fill();
     }
-    // Viewing platform rings at mid-height
-    ctx.strokeStyle='rgba(255,220,60,0.60)'; ctx.lineWidth=W*0.008;
-    [0.35,0.65].forEach(f=>{
-      const ry2=htop+(hbot-htop)*f;
-      const rw=(hbw/2)*(f+0.1);
-      ctx.beginPath(); ctx.ellipse(hx,ry2,rw,rw*0.22,0,0,Math.PI*2); ctx.stroke();
+    // Slight right-side shadow to add roundness
+    const roundShadow=ctx.createLinearGradient(hx+botR*0.5,0,hx+botR,0);
+    roundShadow.addColorStop(0,'rgba(0,0,0,0)'); roundShadow.addColorStop(1,'rgba(0,0,0,0.35)');
+    ctx.fillStyle=roundShadow; ctx.fillRect(hx,htop,botR,hH);
+    const roundShadowL=ctx.createLinearGradient(hx-botR,0,hx-botR*0.5,0);
+    roundShadowL.addColorStop(0,'rgba(0,0,0,0.30)'); roundShadowL.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=roundShadowL; ctx.fillRect(hx-botR,htop,botR*0.5,hH);
+
+    ctx.restore(); // end cone clip
+
+    // ── Viewing platforms (3 rings) ──
+    [0.30, 0.58, 0.82].forEach((f,pi)=>{
+      const py=htop+hH*f;
+      const pr=coneR(f)+W*0.008;
+      const pry=pr*0.18; // ellipse y radius (foreshortened ring)
+      // Platform ring
+      ctx.strokeStyle='#2a1405'; ctx.lineWidth=W*0.008;
+      ctx.beginPath(); ctx.ellipse(hx,py,pr,pry,0,0,Math.PI*2); ctx.stroke();
+      ctx.strokeStyle='#f4d03f'; ctx.lineWidth=W*0.004;
+      ctx.beginPath(); ctx.ellipse(hx,py,pr,pry,0,0,Math.PI*2); ctx.stroke();
+      // Railing posts
+      ctx.strokeStyle='#c0a030'; ctx.lineWidth=W*0.002;
+      for(let pp=0;pp<8;pp++){
+        const pa=pp/8*Math.PI*2;
+        const px2=hx+Math.cos(pa)*pr, py2=py+Math.sin(pa)*pry;
+        ctx.beginPath(); ctx.moveTo(px2,py2); ctx.lineTo(px2,py2-W*0.012); ctx.stroke();
+      }
+      // Pulsing bulbs around ring
+      for(let bi=0;bi<10;bi++){
+        const ba=bi/10*Math.PI*2;
+        const bx2=hx+Math.cos(ba)*pr, by2=py+Math.sin(ba)*pry;
+        const pulse=0.55+0.45*Math.sin(t*4+bi*0.9+pi*1.5);
+        const bc=['#ff4040','#fff060','#40e0ff'][bi%3];
+        ctx.save(); ctx.shadowColor=bc; ctx.shadowBlur=6*pulse;
+        ctx.fillStyle=bc; ctx.globalAlpha=pulse;
+        ctx.beginPath(); ctx.arc(bx2,by2,W*0.005,0,Math.PI*2); ctx.fill();
+        ctx.restore(); ctx.globalAlpha=1;
+      }
     });
-    // Slide ramp spiralling down right side
-    ctx.strokeStyle='#c09020'; ctx.lineWidth=W*0.009;
+
+    // ── External slide ramp — spirals visibly down the right side ──
+    // Draw as a thick filled band with handrail, curving outward
+    ctx.save();
+    ctx.strokeStyle='#c09828'; ctx.lineWidth=W*0.018;
     ctx.beginPath();
-    ctx.moveTo(hx+hbw/2*0.55,htop+(hbot-htop)*0.20);
-    ctx.quadraticCurveTo(hx+hbw/2+W*0.030,htop+(hbot-htop)*0.55,hx+hbw/2+W*0.055,hbot+H*0.008);
+    ctx.moveTo(hx+coneR(0.30)+W*0.005, htop+hH*0.30);
+    ctx.bezierCurveTo(
+      hx+botR+W*0.020, htop+hH*0.45,
+      hx+botR+W*0.040, htop+hH*0.65,
+      hx+botR+W*0.060, hbot
+    );
     ctx.stroke();
-    // Conical roof — double layer
+    // Slide surface (lighter)
+    ctx.strokeStyle='#e8c040'; ctx.lineWidth=W*0.010;
+    ctx.beginPath();
+    ctx.moveTo(hx+coneR(0.30)+W*0.005, htop+hH*0.30);
+    ctx.bezierCurveTo(
+      hx+botR+W*0.020, htop+hH*0.45,
+      hx+botR+W*0.040, htop+hH*0.65,
+      hx+botR+W*0.060, hbot
+    );
+    ctx.stroke();
+    // Handrail (thin line beside slide)
+    ctx.strokeStyle='rgba(255,255,255,0.45)'; ctx.lineWidth=W*0.003;
+    ctx.beginPath();
+    ctx.moveTo(hx+coneR(0.30)+W*0.014, htop+hH*0.30);
+    ctx.bezierCurveTo(
+      hx+botR+W*0.030, htop+hH*0.45,
+      hx+botR+W*0.050, htop+hH*0.65,
+      hx+botR+W*0.070, hbot
+    );
+    ctx.stroke();
+    ctx.restore();
+
+    // ── Conical hat roof — triple layer ──
+    // Bottom/wide brim (yellow)
     ctx.fillStyle='#f4d03f';
-    ctx.beginPath(); ctx.moveTo(hx,htop-H*0.025); ctx.lineTo(hx-W*0.036,htop); ctx.lineTo(hx+W*0.036,htop); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(hx,htop-W*0.040); ctx.lineTo(hx-W*0.048,htop+W*0.002); ctx.lineTo(hx+W*0.048,htop+W*0.002); ctx.closePath(); ctx.fill();
+    // Mid cone (red)
+    ctx.fillStyle='#e02010';
+    ctx.beginPath(); ctx.moveTo(hx,htop-W*0.058); ctx.lineTo(hx-W*0.022,htop-W*0.038); ctx.lineTo(hx+W*0.022,htop-W*0.038); ctx.closePath(); ctx.fill();
+    // Top cone (yellow)
+    ctx.fillStyle='#f4d03f';
+    ctx.beginPath(); ctx.moveTo(hx,htop-W*0.074); ctx.lineTo(hx-W*0.010,htop-W*0.056); ctx.lineTo(hx+W*0.010,htop-W*0.056); ctx.closePath(); ctx.fill();
+    // Roof rim highlight
+    ctx.strokeStyle='rgba(255,255,200,0.55)'; ctx.lineWidth=W*0.002;
+    ctx.beginPath(); ctx.moveTo(hx-W*0.048,htop+W*0.002); ctx.lineTo(hx+W*0.048,htop+W*0.002); ctx.stroke();
+
+    // ── Flagpole & flag ──
+    ctx.strokeStyle='#3a1c04'; ctx.lineWidth=W*0.004;
+    ctx.beginPath(); ctx.moveTo(hx,htop-W*0.074); ctx.lineTo(hx,htop-W*0.105); ctx.stroke();
+    const fw=t*2.5; // flag wave phase
     ctx.fillStyle='#e74c3c';
-    ctx.beginPath(); ctx.moveTo(hx,htop-H*0.038); ctx.lineTo(hx-W*0.014,htop-H*0.025); ctx.lineTo(hx+W*0.014,htop-H*0.025); ctx.closePath(); ctx.fill();
-    // Flag
-    ctx.strokeStyle='#5a3010'; ctx.lineWidth=W*0.003;
-    ctx.beginPath(); ctx.moveTo(hx,htop-H*0.038); ctx.lineTo(hx,htop-H*0.060); ctx.stroke();
-    ctx.fillStyle='#f4d03f'; ctx.beginPath(); ctx.moveTo(hx,htop-H*0.058); ctx.lineTo(hx+W*0.024,htop-H*0.047); ctx.lineTo(hx,htop-H*0.036); ctx.closePath(); ctx.fill();
-    // Light bulbs around base
-    for(let b=0;b<8;b++){
-      const bx2=hx-hbw/2+b/7*hbw, by2=hbot-H*0.006;
-      const pulse=0.5+0.5*Math.sin(t*5+b*0.7);
-      ctx.fillStyle=`rgba(255,230,80,${pulse.toFixed(2)})`;
-      ctx.beginPath(); ctx.arc(bx2,by2,W*0.007,0,Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(hx,htop-W*0.103);
+    ctx.quadraticCurveTo(hx+W*0.018,htop-W*0.096+Math.sin(fw)*W*0.004,hx+W*0.030,htop-W*0.090+Math.sin(fw+0.5)*W*0.005);
+    ctx.quadraticCurveTo(hx+W*0.018,htop-W*0.084+Math.sin(fw+1)*W*0.004,hx,htop-W*0.079);
+    ctx.closePath(); ctx.fill();
+
+    // ── Base light bulbs — double row ──
+    for(let b=0;b<=9;b++){
+      const bx2=hx-botR+b/9*(botR*2);
+      [hbot-W*0.015, hbot-W*0.030].forEach((by2,ri)=>{
+        const pulse=0.50+0.50*Math.sin(t*4.5+b*0.6+ri*Math.PI);
+        const bc=['#ffe050','#ff6030','#80ffff'][b%3];
+        ctx.save(); ctx.shadowColor=bc; ctx.shadowBlur=7*pulse;
+        ctx.fillStyle=bc; ctx.globalAlpha=pulse*0.90;
+        ctx.beginPath(); ctx.arc(bx2,by2,W*0.006,0,Math.PI*2); ctx.fill();
+        ctx.restore(); ctx.globalAlpha=1;
+      });
     }
   }
 
