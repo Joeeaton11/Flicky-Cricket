@@ -15029,6 +15029,52 @@ function drawFairgroundScene() {
     ctx.fillStyle=`rgba(255,248,220,${p.toFixed(2)})`; ctx.beginPath(); ctx.arc(W*sx,H*sy,sr,0,Math.PI*2); ctx.fill();
   });
 
+  // ── FIREWORKS ──
+  {
+    const fwDefs=[
+      {tx:0.14,ty:0.06,period:3.7,hue:'255,60,60',   phase:0.0},
+      {tx:0.82,ty:0.04,period:4.1,hue:'255,220,30',  phase:1.3},
+      {tx:0.54,ty:0.09,period:3.4,hue:'80,200,255',  phase:2.1},
+      {tx:0.30,ty:0.02,period:5.0,hue:'200,60,255',  phase:0.8},
+      {tx:0.68,ty:0.07,period:4.4,hue:'60,255,120',  phase:3.0},
+    ];
+    fwDefs.forEach(({tx,ty,period,hue,phase})=>{
+      const age=(t+phase)%period; // 0..period
+      if(age>2.2) return; // only show burst for 2.2s of every period
+      const prog=age/2.2; // 0=just burst 1=faded
+      const maxR=W*0.075;
+      const bx=W*tx, by=H*ty;
+      // Trail of sparks expanding outward
+      const nRays=16;
+      for(let r=0;r<nRays;r++){
+        const ang=r/nRays*Math.PI*2;
+        const dist=maxR*Math.pow(prog,0.55);
+        const ex=bx+Math.cos(ang)*dist, ey=by+Math.sin(ang)*dist;
+        // gravity droop
+        const droopY=W*0.018*prog*prog;
+        const alpha=(1-prog)*(0.9-0.5*prog);
+        ctx.save();
+        ctx.strokeStyle=`rgba(${hue},${alpha.toFixed(2)})`;
+        ctx.lineWidth=W*0.0025*(1-prog*0.7);
+        ctx.shadowColor=`rgba(${hue},0.8)`; ctx.shadowBlur=6;
+        ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(ex,ey+droopY); ctx.stroke();
+        // spark head dot
+        ctx.fillStyle=`rgba(255,255,230,${(alpha*0.9).toFixed(2)})`;
+        ctx.beginPath(); ctx.arc(ex,ey+droopY,W*0.0018*(1-prog*0.5),0,Math.PI*2); ctx.fill();
+        ctx.restore();
+      }
+      // Central flash at very start
+      if(prog<0.15){
+        const flashA=(0.15-prog)/0.15;
+        const fg=ctx.createRadialGradient(bx,by,0,bx,by,W*0.016);
+        fg.addColorStop(0,`rgba(255,255,255,${(flashA*0.9).toFixed(2)})`);
+        fg.addColorStop(0.5,`rgba(${hue},${(flashA*0.6).toFixed(2)})`);
+        fg.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=fg; ctx.fillRect(bx-W*0.016,by-W*0.016,W*0.032,W*0.032);
+      }
+    });
+  }
+
   // Amber-orange glow bloom at horizon (ride lights spilling up)
   const hGlow=ctx.createLinearGradient(0,H*0.10,0,H*0.23);
   hGlow.addColorStop(0,'rgba(255,100,10,0)'); hGlow.addColorStop(0.60,'rgba(255,80,5,0.18)'); hGlow.addColorStop(1,'rgba(255,60,0,0.65)');
@@ -15394,6 +15440,38 @@ function drawFairgroundScene() {
     }
   });
 
+  // ── CROWD SILHOUETTES — row of heads/shoulders at wallY ──
+  {
+    // Seed a consistent set of crowd figures from a simple deterministic list
+    const figures=[
+      {x:0.02,h:0.042,w:0.038},{x:0.055,h:0.036,w:0.032},{x:0.085,h:0.048,w:0.040},
+      {x:0.115,h:0.038,w:0.034},{x:0.145,h:0.044,w:0.038},{x:0.176,h:0.034,w:0.030},
+      // gap for helter-skelter base, resume right side
+      {x:0.600,h:0.040,w:0.034},{x:0.630,h:0.046,w:0.038},{x:0.660,h:0.032,w:0.028},
+      {x:0.688,h:0.042,w:0.036},{x:0.718,h:0.036,w:0.032},{x:0.748,h:0.050,w:0.042},
+      {x:0.778,h:0.038,w:0.034},{x:0.808,h:0.044,w:0.036},{x:0.838,h:0.030,w:0.028},
+      {x:0.862,h:0.040,w:0.034},{x:0.890,h:0.046,w:0.038},{x:0.920,h:0.034,w:0.030},
+      {x:0.950,h:0.042,w:0.036},{x:0.975,h:0.038,w:0.032},
+    ];
+    ctx.save();
+    figures.forEach(({x,h,w})=>{
+      const fx=W*x, fh=W*h, fw=W*w;
+      const fy=wallY-fh;
+      ctx.fillStyle='rgba(10,5,2,0.92)';
+      // Body/shoulders trapezoid
+      ctx.beginPath();
+      ctx.moveTo(fx,wallY);
+      ctx.lineTo(fx-fw*0.5,wallY);
+      ctx.lineTo(fx-fw*0.3,fy+fh*0.42);
+      ctx.lineTo(fx+fw*0.3,fy+fh*0.42);
+      ctx.lineTo(fx+fw*0.5,wallY);
+      ctx.closePath(); ctx.fill();
+      // Head
+      ctx.beginPath(); ctx.ellipse(fx,fy+fh*0.22,fw*0.26,fw*0.32,0,0,Math.PI*2); ctx.fill();
+    });
+    ctx.restore();
+  }
+
   ctx.restore(); // end backdrop clip
 
   // ── OUTER ZONE (evenodd clip) ──
@@ -15403,20 +15481,56 @@ function drawFairgroundScene() {
   ctx.ellipse(CX,H*FIELD_CY,W*FIELD_RX,H*FIELD_RY,0,0,Math.PI*2);
   ctx.clip('evenodd');
 
-  // Dark tarmac ground with warm light spill from rides above
+  // Dark tarmac ground — deep near horizon, near-black at feet
   const gndG=ctx.createLinearGradient(0,H*0.23,0,H);
-  gndG.addColorStop(0,'#2a1c10'); gndG.addColorStop(1,'#160a04');
+  gndG.addColorStop(0,'#2e1c0e'); gndG.addColorStop(0.35,'#1a0e06'); gndG.addColorStop(1,'#0e0604');
   ctx.fillStyle=gndG; ctx.fillRect(0,H*0.23,W,H*0.77);
-  // Warm glow puddles from ride lights
-  [{x:0.08,c:'rgba(255,120,20,0.12)'},{x:0.92,c:'rgba(255,60,180,0.10)'},{x:0.50,c:'rgba(255,200,40,0.10)'}].forEach(({x,c})=>{
-    const pg=ctx.createRadialGradient(W*x,H*0.24,0,W*x,H*0.24,W*0.14);
+
+  // Coloured light pools from each ride — dodge cars=blue, helter-skelter=warm orange, waltzer=red, fortune teller=purple
+  [
+    {x:0.10,y:0.28,rx:0.14,ry:0.06,c:'rgba(60,120,255,0.13)'},   // dodgems blue
+    {x:0.50,y:0.27,rx:0.12,ry:0.055,c:'rgba(255,160,30,0.16)'},  // helter-skelter orange
+    {x:0.80,y:0.30,rx:0.13,ry:0.060,c:'rgba(200,30,220,0.12)'},  // fortune teller purple
+    {x:0.10,y:0.70,rx:0.09,ry:0.08,c:'rgba(60,100,255,0.09)'},   // dodgem left base
+    {x:0.88,y:0.68,rx:0.09,ry:0.09,c:'rgba(200,30,220,0.09)'},   // fortune teller base
+    {x:0.50,y:0.85,rx:0.10,ry:0.08,c:'rgba(255,140,10,0.08)'},   // centre warm
+  ].forEach(({x,y,rx,ry,c})=>{
+    const pg=ctx.createRadialGradient(W*x,H*y,0,W*x,H*y,W*rx);
     pg.addColorStop(0,c); pg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=pg; ctx.fillRect(0,H*0.23,W,H*0.25);
+    ctx.fillStyle=pg; ctx.fillRect(0,H*0.23,W,H*0.77);
   });
-  // Tarmac texture
-  ctx.fillStyle='rgba(255,200,100,0.03)';
-  for(let i=0;i<100;i++){
-    ctx.fillRect((i*131)%W,H*0.24+((i*199)%(H*0.74)),2,1);
+
+  // Wet tarmac sheen — horizontal specular streaks near lights
+  ctx.save(); ctx.globalCompositeOperation='screen';
+  [
+    {x:0.10,y:0.305,w:0.16,h:0.006,c:'rgba(60,100,200,0.10)'},
+    {x:0.46,y:0.295,w:0.14,h:0.005,c:'rgba(255,160,30,0.12)'},
+    {x:0.78,y:0.320,w:0.15,h:0.006,c:'rgba(180,30,200,0.10)'},
+  ].forEach(({x,y,w,h,c})=>{
+    const sg=ctx.createLinearGradient(W*x,0,W*(x+w),0);
+    sg.addColorStop(0,'rgba(0,0,0,0)'); sg.addColorStop(0.5,c); sg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=sg; ctx.fillRect(W*x,H*y,W*w,H*h);
+  });
+  ctx.restore();
+
+  // Scattered litter — small glowing bits on the ground
+  ctx.save();
+  [[0.06,0.42,'#ff4040'],[0.18,0.65,'#ffe000'],[0.30,0.80,'#4080ff'],[0.42,0.55,'#ff8020'],
+   [0.60,0.72,'#ff40cc'],[0.72,0.48,'#40ff80'],[0.80,0.88,'#ffee30'],[0.90,0.60,'#ff3030'],
+   [0.14,0.78,'#80ff40'],[0.55,0.90,'#4040ff'],[0.38,0.36,'#ffaa00'],[0.68,0.82,'#ff60ff']
+  ].forEach(([lx,ly,lc],i)=>{
+    const rx=W*lx+(Math.sin(i*4.3)*W*0.012);
+    const ry=H*ly+(Math.cos(i*3.7)*H*0.014);
+    ctx.shadowColor=lc; ctx.shadowBlur=4;
+    ctx.fillStyle=lc; ctx.globalAlpha=0.35;
+    ctx.beginPath(); ctx.ellipse(rx,ry,W*0.004,W*0.002,i*0.5,0,Math.PI*2); ctx.fill();
+  });
+  ctx.restore();
+
+  // Tarmac grain texture
+  ctx.fillStyle='rgba(255,200,100,0.025)';
+  for(let i=0;i<80;i++){
+    ctx.fillRect((i*131+17)%W,H*0.24+((i*199+31)%(H*0.73)),1,1);
   }
 
   ctx.restore(); // end evenodd
