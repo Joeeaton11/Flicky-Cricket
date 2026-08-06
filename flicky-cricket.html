@@ -15533,6 +15533,42 @@ function drawFairgroundScene() {
     ctx.fillRect((i*131+17)%W,H*0.24+((i*199+31)%(H*0.73)),1,1);
   }
 
+  // ── CONFETTI — falling in the outer side zones ──
+  {
+    const confettiCols=['#ff3030','#ffe030','#30c0ff','#ff40cc','#40ff80','#ff8020','#b040ff','#ffffff'];
+    const nPieces=60;
+    // Each piece has a fixed horizontal lane and a phase offset so they fall at different rates
+    for(let i=0;i<nPieces;i++){
+      // Deterministic lane x — bias toward the left and right outer strips (avoid centre)
+      const seed1=(i*137)%1000/1000;
+      // Map seed to either left strip (0..0.30) or right strip (0.70..1.0)
+      let lx;
+      if(i<30){
+        lx=seed1*0.26; // left strip
+      } else {
+        lx=0.74+seed1*0.26; // right strip
+      }
+      const col=confettiCols[i%confettiCols.length];
+      const phase=(i*0.317)%1;
+      const speed=0.18+((i*0.191)%0.22); // pieces/sec — slow drift
+      const yFrac=(phase+t*speed)%1; // 0=top 1=bottom of outer zone
+      const cx2=W*lx + Math.sin(t*0.8+i*1.3)*W*0.018; // gentle horizontal sway
+      const cy2=H*(0.26+yFrac*0.70);
+      const rot=t*1.5+i*0.7;
+      const hw=W*0.007, hh=W*0.003; // half-width, half-height of rectangle piece
+      // Tumble — alternate between square and flat to simulate spin
+      const spinScale=Math.abs(Math.cos(rot));
+      ctx.save();
+      ctx.translate(cx2,cy2);
+      ctx.rotate(rot);
+      ctx.scale(1,spinScale+0.15);
+      ctx.globalAlpha=0.72;
+      ctx.fillStyle=col;
+      ctx.fillRect(-hw,-hh,hw*2,hh*2);
+      ctx.restore();
+    }
+  }
+
   ctx.restore(); // end evenodd
 
   // ── NO-CLIP PROPS — drawn over everything ──
