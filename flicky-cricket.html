@@ -15891,19 +15891,21 @@ function drawCircusNightScene() {
   skyG.addColorStop(0,'#0e0008'); skyG.addColorStop(0.55,'#280010'); skyG.addColorStop(1,'#3a0818');
   ctx.fillStyle=skyG; ctx.fillRect(0,0,W,H*0.23);
 
-  // ── TENT CANVAS STRIPES radiating from peak ──
-  // Classic red/white/blue/yellow panels radiating from top-centre
+  // ── TENT CANVAS STRIPES radiating from peak — vivid classic Big Top ──
   {
     const peakX=CX, peakY=0;
-    const nPanels=14;
-    const panelCols=['#c80018','#f0f0f0','#1040a0','#f4d03f','#c80018','#f0f0f0','#1040a0','#f4d03f',
-                     '#c80018','#f0f0f0','#1040a0','#f4d03f','#c80018','#f0f0f0'];
-    const spread=W*0.72; // half-spread at eave
+    const nPanels=16;
+    // Alternating bold red and crisp white, with blue and yellow accents every 4th
+    const panelCols=['#d40020','#f8f8f8','#d40020','#f8f8f8',
+                     '#d40020','#f8f8f8','#1848c8','#f8f8f8',
+                     '#d40020','#f8f8f8','#d40020','#f8f8f8',
+                     '#d40020','#f8f8f8','#f4c800','#f8f8f8'];
+    const spread=W*0.75;
     for(let i=0;i<nPanels;i++){
       const x1=CX-spread+i/nPanels*spread*2;
       const x2=CX-spread+(i+1)/nPanels*spread*2;
       ctx.fillStyle=panelCols[i];
-      ctx.globalAlpha=0.82;
+      ctx.globalAlpha=0.95;
       ctx.beginPath();
       ctx.moveTo(peakX,peakY);
       ctx.lineTo(x1,wallY);
@@ -15911,33 +15913,42 @@ function drawCircusNightScene() {
       ctx.closePath(); ctx.fill();
     }
     ctx.globalAlpha=1;
-    // Dark overlay to keep it moody
+    // Subtle dark vignette at peak and depth shadow
     const overlay=ctx.createLinearGradient(0,0,0,H*0.23);
-    overlay.addColorStop(0,'rgba(0,0,0,0.55)');
-    overlay.addColorStop(0.7,'rgba(0,0,0,0.20)');
-    overlay.addColorStop(1,'rgba(0,0,0,0.10)');
+    overlay.addColorStop(0,'rgba(0,0,0,0.62)');
+    overlay.addColorStop(0.50,'rgba(0,0,0,0.18)');
+    overlay.addColorStop(1,'rgba(0,0,0,0.06)');
     ctx.fillStyle=overlay; ctx.fillRect(0,0,W,H*0.23);
+    // Gold ridge line along peak seam
+    ctx.strokeStyle='rgba(255,210,40,0.55)'; ctx.lineWidth=W*0.004;
+    ctx.beginPath(); ctx.moveTo(CX-W*0.001,0); ctx.lineTo(CX-W*0.001,wallY); ctx.stroke();
   }
 
-  // ── SPOTLIGHT BEAMS from rig above ──
+  // ── SPOTLIGHT BEAMS — strong God rays from rig ──
   {
-    // 5 beams: 3 fixed, 2 slow-sweeping
     const beams=[
-      {bx:CX,        spread:0.060, alpha:0.18, speed:0},
-      {bx:W*0.22,    spread:0.045, alpha:0.13, speed:0},
-      {bx:W*0.78,    spread:0.045, alpha:0.13, speed:0},
-      {bx:CX-W*0.08+Math.sin(t*0.4)*W*0.12, spread:0.038, alpha:0.10, speed:1},
-      {bx:CX+W*0.08+Math.sin(t*0.4+Math.PI)*W*0.12, spread:0.038, alpha:0.10, speed:1},
+      // Central beam — always on, bright
+      {bx:()=>CX,                                      wTop:0.020, wBot:0.090, a:0.38, col:'255,240,180'},
+      // Left fixed
+      {bx:()=>W*0.18,                                  wTop:0.014, wBot:0.060, a:0.24, col:'255,220,160'},
+      // Right fixed
+      {bx:()=>W*0.82,                                  wTop:0.014, wBot:0.060, a:0.24, col:'255,220,160'},
+      // Sweeping left — coloured
+      {bx:()=>W*0.30+Math.sin(t*0.45)*W*0.18,          wTop:0.010, wBot:0.048, a:0.18, col:'160,200,255'},
+      // Sweeping right — warm colour
+      {bx:()=>W*0.70+Math.sin(t*0.45+Math.PI)*W*0.18,  wTop:0.010, wBot:0.048, a:0.18, col:'255,180,120'},
     ];
-    beams.forEach(({bx,spread,alpha})=>{
+    beams.forEach(({bx,wTop,wBot,a,col})=>{
+      const x=bx();
+      const pulse=a*(0.88+0.12*Math.sin(t*1.1+x));
       const sg=ctx.createLinearGradient(0,0,0,H*0.23);
-      sg.addColorStop(0,`rgba(255,230,160,${alpha})`);
-      sg.addColorStop(1,'rgba(255,200,100,0)');
+      sg.addColorStop(0,`rgba(${col},${pulse.toFixed(2)})`);
+      sg.addColorStop(0.7,`rgba(${col},${(pulse*0.4).toFixed(2)})`);
+      sg.addColorStop(1,`rgba(${col},0)`);
       ctx.fillStyle=sg;
       ctx.beginPath();
-      ctx.moveTo(bx,0);
-      ctx.lineTo(bx-W*spread,wallY);
-      ctx.lineTo(bx+W*spread,wallY);
+      ctx.moveTo(x-W*wTop,0); ctx.lineTo(x+W*wTop,0);
+      ctx.lineTo(x+W*wBot,wallY); ctx.lineTo(x-W*wBot,wallY);
       ctx.closePath(); ctx.fill();
     });
   }
@@ -16032,32 +16043,53 @@ function drawCircusNightScene() {
 
   // Warm sandy sawdust base
   const ringG=ctx.createRadialGradient(CX,H*FIELD_CY,0,CX,H*FIELD_CY,W*FIELD_RX);
-  ringG.addColorStop(0,'#e8c060'); ringG.addColorStop(0.55,'#c89030'); ringG.addColorStop(1,'#8a5010');
+  ringG.addColorStop(0,'#f0cc68'); ringG.addColorStop(0.50,'#d09830'); ringG.addColorStop(1,'#8a5010');
   ctx.fillStyle=ringG; ctx.fillRect(0,H*0.23,W,H*0.77);
 
-  // Radial sun-ray lines from centre
+  // Classic circus star pattern — large 5-pointed star in centre
+  {
+    ctx.save();
+    ctx.globalAlpha=0.14;
+    ctx.fillStyle='#fff8e0';
+    const drawStar5=(sx,sy,r1,r2)=>{
+      ctx.beginPath();
+      for(let p=0;p<10;p++){
+        const a=p/10*Math.PI*2-Math.PI/2;
+        const r=p%2===0?r1:r2;
+        p===0?ctx.moveTo(sx+Math.cos(a)*r,sy+Math.sin(a)*r):ctx.lineTo(sx+Math.cos(a)*r,sy+Math.sin(a)*r);
+      }
+      ctx.closePath(); ctx.fill();
+    };
+    drawStar5(CX,H*FIELD_CY,W*0.18,W*0.08);
+    ctx.globalAlpha=0.07;
+    drawStar5(CX,H*FIELD_CY,W*0.32,W*0.14);
+    ctx.restore();
+  }
+
+  // Radial sun-ray lines
   ctx.save();
   const nRays=24;
   for(let i=0;i<nRays;i++){
     const ang=i/nRays*Math.PI*2;
-    ctx.strokeStyle=i%2===0?'rgba(180,100,10,0.18)':'rgba(255,220,80,0.10)';
+    ctx.strokeStyle=i%2===0?'rgba(160,90,10,0.22)':'rgba(255,230,100,0.12)';
     ctx.lineWidth=W*0.004;
     ctx.beginPath(); ctx.moveTo(CX,H*FIELD_CY); ctx.lineTo(CX+Math.cos(ang)*W*FIELD_RX,H*FIELD_CY+Math.sin(ang)*H*FIELD_RY); ctx.stroke();
   }
   ctx.restore();
 
-  // Central spotlight pool
-  const spotG=ctx.createRadialGradient(CX,H*FIELD_CY,0,CX,H*FIELD_CY,W*0.22);
-  spotG.addColorStop(0,'rgba(255,240,160,0.55)');
-  spotG.addColorStop(0.45,'rgba(255,200,80,0.22)');
+  // Central spotlight pool — brighter, more dramatic
+  const spotG=ctx.createRadialGradient(CX,H*FIELD_CY,0,CX,H*FIELD_CY,W*0.26);
+  spotG.addColorStop(0,'rgba(255,248,200,0.70)');
+  spotG.addColorStop(0.35,'rgba(255,220,100,0.35)');
+  spotG.addColorStop(0.75,'rgba(255,160,40,0.12)');
   spotG.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=spotG; ctx.fillRect(0,H*0.23,W,H*0.77);
 
   // Sawdust texture speckles
   ctx.save();
-  for(let i=0;i<160;i++){
+  for(let i=0;i<200;i++){
     const fx=(i*131+7)%W, fy=H*0.25+((i*197+3)%(H*0.68));
-    ctx.fillStyle=i%3===0?'rgba(120,70,10,0.20)':'rgba(255,220,120,0.12)';
+    ctx.fillStyle=i%3===0?'rgba(100,60,8,0.22)':'rgba(255,210,100,0.10)';
     ctx.fillRect(fx,fy,i%4===0?3:2,1);
   }
   ctx.restore();
@@ -16168,34 +16200,95 @@ function drawCircusNightScene() {
     ctx.globalAlpha=1;
   }
 
+  // ── CONFETTI raining in the outer seating zone ──
+  {
+    const confCols=['#e74c3c','#f4d03f','#3498db','#2ecc71','#9b59b6','#ff8020','#ff69b4','#ffffff','#00e5ff'];
+    const nPieces=70;
+    for(let i=0;i<nPieces;i++){
+      // Each piece has a fixed angular position and fall phase
+      const rowExpand=1.12+(i%5)*0.22;
+      const baseAng=(i/nPieces)*Math.PI*2;
+      const speed=0.14+((i*0.191)%0.18);
+      const phase=(i*0.317)%1;
+      const yPhase=(phase+t*speed)%1;
+      // Drift slightly outward as it falls
+      const expandF=rowExpand+yPhase*0.30;
+      const angDrift=baseAng+Math.sin(t*0.5+i)*0.06;
+      const px=CX+Math.cos(angDrift)*W*FIELD_RX*expandF;
+      const py=H*FIELD_CY+Math.sin(angDrift)*H*FIELD_RY*expandF;
+      const col=confCols[i%confCols.length];
+      const rot=t*2.0+i*0.9;
+      const hw=W*0.008, hh=W*0.003;
+      const spinScale=Math.abs(Math.cos(rot*1.3))+0.15;
+      ctx.save();
+      ctx.translate(px,py);
+      ctx.rotate(rot);
+      ctx.scale(1,spinScale);
+      ctx.globalAlpha=0.75;
+      ctx.fillStyle=col;
+      ctx.fillRect(-hw,-hh,hw*2,hh*2);
+      ctx.restore();
+    }
+  }
+
   ctx.restore(); // end evenodd
 
   // ── NO-CLIP PROPS ──
 
-  // ── RING BORDER — decorative triangle pennants around oval edge ──
+  // ── RING BORDER — proper layered circus barrier ──
   {
-    const nTri=36;
-    const triCols=['#c80018','#1848c0','#f4d03f','#c80018','#1848c0'];
-    for(let i=0;i<nTri;i++){
-      const ang1=i/nTri*Math.PI*2, ang2=(i+1)/nTri*Math.PI*2, angM=(ang1+ang2)/2;
-      const ox=CX+Math.cos(angM)*(W*FIELD_RX+W*0.008);
-      const oy=H*FIELD_CY+Math.sin(angM)*(H*FIELD_RY+W*0.008);
-      const il=W*0.018; // pennant length
-      const ix=CX+Math.cos(angM)*(W*FIELD_RX-il);
-      const iy=H*FIELD_CY+Math.sin(angM)*(H*FIELD_RY-il);
-      const ex1=CX+Math.cos(ang1)*W*FIELD_RX, ey1=H*FIELD_CY+Math.sin(ang1)*H*FIELD_RY;
-      const ex2=CX+Math.cos(ang2)*W*FIELD_RX, ey2=H*FIELD_CY+Math.sin(ang2)*H*FIELD_RY;
-      ctx.fillStyle=triCols[i%triCols.length];
-      ctx.beginPath(); ctx.moveTo(ex1,ey1); ctx.lineTo(ex2,ey2); ctx.lineTo(ix,iy); ctx.closePath(); ctx.fill();
-    }
-    // Gold ring outline
-    ctx.strokeStyle='#c8a020'; ctx.lineWidth=W*0.005;
+    // Layer 1: outer shadow ring
+    ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=W*0.022;
+    ctx.beginPath(); ctx.ellipse(CX,H*FIELD_CY,W*FIELD_RX+W*0.008,H*FIELD_RY+W*0.008,0,0,Math.PI*2); ctx.stroke();
+
+    // Layer 2: thick base ring — dark navy
+    ctx.strokeStyle='#10183a'; ctx.lineWidth=W*0.018;
     ctx.beginPath(); ctx.ellipse(CX,H*FIELD_CY,W*FIELD_RX,H*FIELD_RY,0,0,Math.PI*2); ctx.stroke();
+
+    // Layer 3: red barrier band
+    ctx.strokeStyle='#c80018'; ctx.lineWidth=W*0.012;
+    ctx.beginPath(); ctx.ellipse(CX,H*FIELD_CY,W*FIELD_RX,H*FIELD_RY,0,0,Math.PI*2); ctx.stroke();
+
+    // Layer 4: white highlight stripe on top of red
+    ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=W*0.003;
+    ctx.beginPath(); ctx.ellipse(CX,H*FIELD_CY,W*FIELD_RX,H*FIELD_RY,0,0,Math.PI*2); ctx.stroke();
+
+    // Layer 5: alternating colour blocks on top of the barrier
+    const nBlocks=48;
+    const blockCols=['#c80018','#f8f8f0','#c80018','#1848c0'];
+    for(let i=0;i<nBlocks;i++){
+      const ang1=i/nBlocks*Math.PI*2, ang2=(i+1)/nBlocks*Math.PI*2;
+      const inner=0.95, outer=1.042;
+      ctx.fillStyle=blockCols[i%blockCols.length];
+      ctx.beginPath();
+      ctx.ellipse(CX,H*FIELD_CY,W*FIELD_RX*outer,H*FIELD_RY*outer,0,ang1,ang2);
+      ctx.ellipse(CX,H*FIELD_CY,W*FIELD_RX*inner,H*FIELD_RY*inner,0,ang2,ang1,true);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // Layer 6: gold pinstripe outline
+    ctx.strokeStyle='#f4c820'; ctx.lineWidth=W*0.003;
+    ctx.beginPath(); ctx.ellipse(CX,H*FIELD_CY,W*FIELD_RX*1.042,H*FIELD_RY*1.042,0,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(CX,H*FIELD_CY,W*FIELD_RX*0.95,H*FIELD_RY*0.95,0,0,Math.PI*2); ctx.stroke();
+
+    // Evenly spaced gold studs around outer edge
+    const nStuds=32;
+    for(let i=0;i<nStuds;i++){
+      const ang=i/nStuds*Math.PI*2;
+      const sx=CX+Math.cos(ang)*W*FIELD_RX*1.042;
+      const sy=H*FIELD_CY+Math.sin(ang)*H*FIELD_RY*1.042;
+      const pulse=0.7+0.3*Math.sin(t*2.5+i*0.6);
+      ctx.save(); ctx.shadowColor='#ffe060'; ctx.shadowBlur=5*pulse;
+      ctx.fillStyle='#f4c820'; ctx.globalAlpha=pulse;
+      ctx.beginPath(); ctx.arc(sx,sy,W*0.0045,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
   }
 
-  // ── PERFORMER ENTRANCE — red curtains + CIRCUS sign at back centre ──
+  // ── PERFORMER ENTRANCE — red curtains + CIRCUS sign at TOP of oval ──
   {
-    const ex=CX, ey=H*0.355; // entry arch centre, just above field centre
+    // Position at the top-centre edge of the oval
+    const ex=CX, ey=H*FIELD_CY-H*FIELD_RY-W*0.020;
     const ew=W*0.130, eh=W*0.095;
     // Arch surround with bulbs
     const archR=ew*0.55;
