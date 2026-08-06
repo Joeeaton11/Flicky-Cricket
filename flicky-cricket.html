@@ -16138,34 +16138,36 @@ function drawCircusNightScene() {
     const shirtCols=['#e74c3c','#3498db','#f4d03f','#2ecc71','#9b59b6','#ff8020','#e0e0ff','#c0392b','#1abc9c','#e67e22','#ff69b4','#00bcd4','#ff5722','#8bc34a','#ffc107'];
     const skinTones=['#f5cba7','#e59866','#ca6f1e','#d4a06a','#f0d9b5','#c68642'];
 
-    // Draw a single audience person: head + body + optional raised arm
-    const drawPerson=(px,py,hr,shirtCol,skinCol,raiseLeft,raiseRight)=>{
+    // Draw an animated audience person — arms driven by t for waving/clapping
+    const drawPerson=(px,py,hr,shirtCol,skinCol,leftAng,rightAng,bobY)=>{
       const bw=hr*1.8, bh=hr*2.0;
+      const oy=bobY*hr*0.5; // head bob offset
       // Body
       ctx.fillStyle=shirtCol; ctx.globalAlpha=0.88;
-      ctx.beginPath(); ctx.roundRect(px-bw/2,py+hr*0.9,bw,bh,hr*0.4); ctx.fill();
-      // Arms
-      ctx.strokeStyle=shirtCol; ctx.lineWidth=hr*1.1; ctx.lineCap='round'; ctx.globalAlpha=0.80;
-      if(raiseRight){
-        ctx.beginPath(); ctx.moveTo(px+bw*0.4,py+hr*1.4); ctx.lineTo(px+bw*1.1,py-hr*0.4); ctx.stroke();
-      } else {
-        ctx.beginPath(); ctx.moveTo(px+bw*0.4,py+hr*1.4); ctx.lineTo(px+bw*1.0,py+hr*2.2); ctx.stroke();
-      }
-      if(raiseLeft){
-        ctx.beginPath(); ctx.moveTo(px-bw*0.4,py+hr*1.4); ctx.lineTo(px-bw*1.1,py-hr*0.4); ctx.stroke();
-      } else {
-        ctx.beginPath(); ctx.moveTo(px-bw*0.4,py+hr*1.4); ctx.lineTo(px-bw*1.0,py+hr*2.2); ctx.stroke();
-      }
+      ctx.beginPath(); ctx.roundRect(px-bw/2,py+hr*0.9+oy,bw,bh,hr*0.4); ctx.fill();
+      // Arms — driven by angle parameters (-PI/2 = fully raised, PI/2 = lowered)
+      ctx.strokeStyle=shirtCol; ctx.lineWidth=hr*1.1; ctx.lineCap='round'; ctx.globalAlpha=0.82;
+      const armLen=hr*2.0;
+      // Right arm
+      ctx.beginPath();
+      ctx.moveTo(px+bw*0.4,py+hr*1.4+oy);
+      ctx.lineTo(px+bw*0.4+Math.cos(rightAng)*armLen, py+hr*1.4+oy+Math.sin(rightAng)*armLen);
+      ctx.stroke();
+      // Left arm
+      ctx.beginPath();
+      ctx.moveTo(px-bw*0.4,py+hr*1.4+oy);
+      ctx.lineTo(px-bw*0.4-Math.cos(leftAng)*armLen, py+hr*1.4+oy+Math.sin(leftAng)*armLen);
+      ctx.stroke();
       ctx.lineCap='butt';
       // Neck
       ctx.fillStyle=skinCol; ctx.globalAlpha=1;
-      ctx.beginPath(); ctx.rect(px-hr*0.35,py+hr*0.55,hr*0.7,hr*0.5); ctx.fill();
+      ctx.beginPath(); ctx.rect(px-hr*0.35,py+hr*0.55+oy,hr*0.7,hr*0.5); ctx.fill();
       // Head
-      ctx.beginPath(); ctx.arc(px,py,hr,0,Math.PI*2); ctx.fill();
-      // Simple face: eyes
+      ctx.beginPath(); ctx.arc(px,py+oy,hr,0,Math.PI*2); ctx.fill();
+      // Eyes
       ctx.fillStyle='rgba(0,0,0,0.55)';
-      ctx.beginPath(); ctx.arc(px-hr*0.32,py-hr*0.08,hr*0.14,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(px+hr*0.32,py-hr*0.08,hr*0.14,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px-hr*0.32,py-hr*0.08+oy,hr*0.14,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px+hr*0.32,py-hr*0.08+oy,hr*0.14,0,Math.PI*2); ctx.fill();
       ctx.globalAlpha=1;
     };
 
@@ -16182,21 +16184,43 @@ function drawCircusNightScene() {
       {expand:2.52, n:26, hr:W*0.008},
     ];
 
-    // Draw back rows first so front rows overlap them naturally
+    // Mexican wave speed — one full loop around ring every ~4 seconds
+    const waveSpeed=t*1.6;
+
     arcRows.slice().reverse().forEach(({expand,n,hr},rri)=>{
       const ri=arcRows.length-1-rri;
       const rx2=W*FIELD_RX*expand, ry2=H*FIELD_RY*expand;
       for(let i=0;i<n;i++){
-        const ang=i/n*Math.PI*2-(ri*0.08); // slight offset per row so heads don't stack exactly
+        const ang=i/n*Math.PI*2-(ri*0.08);
         const hx2=CX+Math.cos(ang)*rx2;
         const hy2=H*FIELD_CY+Math.sin(ang)*ry2;
         const shirt=shirtCols[(i*3+ri*7)%shirtCols.length];
         const skin=skinTones[(i*5+ri*3)%skinTones.length];
-        // ~25% chance of raised arm(s) — more excitement near front rows
-        const excitement=ri<3?0.40:0.20;
-        const raiseL=((i*17+ri*11)%100)/100 < excitement;
-        const raiseR=((i*13+ri*9)%100)/100 < excitement;
-        drawPerson(hx2,hy2,hr,shirt,skin,raiseL,raiseR);
+
+        // Each person has a unique phase seed
+        const seed=i*0.37+ri*1.1;
+
+        // Mexican wave: position along ring mapped to wave phase
+        // ang goes 0..2PI around ring; wave travels at waveSpeed
+        const wavePhase=((ang/(Math.PI*2)*n - waveSpeed) % n + n) % n;
+        // Wave lift: raised when wavePhase is close to 0 (mod n)
+        const waveWindow=n*0.12; // ~12% of ring lit at once
+        const inWave=wavePhase < waveWindow;
+        const waveLift=inWave ? Math.sin(wavePhase/waveWindow*Math.PI) : 0;
+
+        // Individual random waving on top of wave
+        const clap=Math.sin(t*4.5+seed)*0.5+0.5; // 0..1 clapping rhythm
+        const idleWave=Math.sin(t*1.8+seed*2.3)*0.3; // gentle idle sway
+
+        // Arm angles: 0=horizontal, -PI/2=straight up, PI/2=straight down
+        const baseRaise=-Math.PI*0.5*waveLift; // wave lifts arms up
+        const leftAng =baseRaise - Math.PI*0.25*clap + idleWave - Math.PI*0.15;
+        const rightAng=baseRaise - Math.PI*0.25*clap - idleWave - Math.PI*0.15;
+
+        // Head bob with wave
+        const bobY=-waveLift*0.8 + Math.sin(t*2.2+seed)*0.15;
+
+        drawPerson(hx2,hy2,hr,shirt,skin,leftAng,rightAng,bobY);
       }
     });
     ctx.globalAlpha=1;
