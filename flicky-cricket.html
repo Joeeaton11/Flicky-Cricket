@@ -17020,6 +17020,12 @@ function drawHalloweenScene() {
      [0.872,0.502, W*0.036,W*0.060,-0.08,1],
      [0.948,0.538, W*0.046,W*0.070, 0.05,0],
      [0.892,0.572, W*0.040,W*0.062,-0.04,2],
+     // Extended graveyard — more graves lower down the right zone
+     [0.962,0.598, W*0.034,W*0.056, 0.09,0],
+     [0.878,0.630, W*0.042,W*0.066,-0.06,1],
+     [0.950,0.656, W*0.038,W*0.060, 0.04,2],
+     [0.882,0.690, W*0.036,W*0.058,-0.10,0],
+     [0.958,0.714, W*0.040,W*0.064, 0.07,1],
     ].forEach(([fx,fy,w,h,a,s])=>drawTombstone(W*fx,H*fy,w,h,a,s));
   }
 
@@ -17261,6 +17267,71 @@ function drawHalloweenScene() {
   lowFog.addColorStop(0,'rgba(0,0,0,0)'); lowFog.addColorStop(0.5,'rgba(50,90,35,0.25)'); lowFog.addColorStop(1,'rgba(60,100,42,0.40)');
   ctx.fillStyle=lowFog; ctx.fillRect(0,H*0.88,W,H*0.12);
 
+  // ── Bonfire — bottom-right outer zone corner ──
+  {
+    const bx=W*0.886, by=H*0.878; // base of fire
+    // Ember glow on ground
+    const eg2=ctx.createRadialGradient(bx,by,0,bx,by,W*0.090);
+    eg2.addColorStop(0,`rgba(220,80,10,${(0.30+0.12*Math.sin(t*3.1)).toFixed(2)})`);
+    eg2.addColorStop(0.5,`rgba(160,40,5,${(0.14+0.06*Math.sin(t*2.3)).toFixed(2)})`);
+    eg2.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=eg2; ctx.fillRect(bx-W*0.100,by-H*0.040,W*0.200,H*0.080);
+    // Logs — two crossed trunks
+    ctx.strokeStyle='#1a0e06'; ctx.lineWidth=7; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(bx-W*0.048,by+H*0.008); ctx.lineTo(bx+W*0.036,by-H*0.006); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx-W*0.036,by-H*0.008); ctx.lineTo(bx+W*0.048,by+H*0.010); ctx.stroke();
+    ctx.strokeStyle='#2c1a08'; ctx.lineWidth=5;
+    ctx.beginPath(); ctx.moveTo(bx-W*0.048,by+H*0.008); ctx.lineTo(bx+W*0.036,by-H*0.006); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx-W*0.036,by-H*0.008); ctx.lineTo(bx+W*0.048,by+H*0.010); ctx.stroke();
+    // Log highlights
+    ctx.strokeStyle='rgba(100,50,8,0.60)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(bx-W*0.046,by+H*0.006); ctx.lineTo(bx+W*0.034,by-H*0.008); ctx.stroke();
+    // Animated flames — layered teardrop shapes
+    const flameFlk=(ph)=>0.82+0.18*Math.sin(t*6.8+ph)+0.10*Math.sin(t*4.1+ph*1.7);
+    const drawFlame=(fx,fy,fw,fh,ph,col1,col2)=>{
+      const ff=flameFlk(ph);
+      const sway=Math.sin(t*3.4+ph)*fw*0.22;
+      const fg=ctx.createRadialGradient(fx+sway*0.3,fy-fh*0.5,0,fx+sway*0.3,fy-fh*0.5,fh*0.8);
+      fg.addColorStop(0,col1.replace('A',`${(ff).toFixed(2)}`));
+      fg.addColorStop(0.6,col2.replace('A',`${(ff*0.7).toFixed(2)}`));
+      fg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=fg;
+      ctx.beginPath();
+      ctx.moveTo(fx+sway-fw*0.5,fy);
+      ctx.quadraticCurveTo(fx+sway-fw*0.55,fy-fh*0.45, fx+sway,fy-fh);
+      ctx.quadraticCurveTo(fx+sway+fw*0.55,fy-fh*0.45, fx+sway+fw*0.5,fy);
+      ctx.closePath(); ctx.fill();
+    };
+    ctx.save(); ctx.globalCompositeOperation='source-over';
+    // Core — white-hot centre
+    drawFlame(bx,by,W*0.024,H*0.060,0.0,'rgba(255,240,180,A)','rgba(255,160,40,A)');
+    // Mid flames
+    drawFlame(bx-W*0.012,by,W*0.030,H*0.075,1.1,'rgba(255,140,20,A)','rgba(200,50,5,A)');
+    drawFlame(bx+W*0.014,by,W*0.028,H*0.070,2.3,'rgba(255,130,15,A)','rgba(180,40,4,A)');
+    // Outer flickers
+    drawFlame(bx-W*0.022,by,W*0.022,H*0.050,3.7,'rgba(200,80,10,A)','rgba(140,20,2,A)');
+    drawFlame(bx+W*0.024,by,W*0.020,H*0.048,0.9,'rgba(210,90,12,A)','rgba(150,25,3,A)');
+    // Embers — small sparks rising
+    for(let i=0;i<6;i++){
+      const ep=((t*0.8+i*0.7)%1.0);
+      const ex2=bx+Math.sin(i*2.3+t*1.1)*W*0.030;
+      const ey2=by-H*0.060*ep-H*0.010;
+      const es=W*0.004*(1-ep*0.7);
+      ctx.fillStyle=`rgba(255,${150-ep*80|0},0,${(0.9*(1-ep)).toFixed(2)})`;
+      ctx.beginPath(); ctx.arc(ex2,ey2,es,0,PI*2); ctx.fill();
+    }
+    // Smoke wisps rising above fire
+    for(let i=0;i<3;i++){
+      const sp=((t*0.25+i*0.42)%1.0);
+      const swX=bx+Math.sin(i*1.7+t*0.5)*W*0.028;
+      const swY=by-H*0.065-H*0.120*sp;
+      const sr=W*0.018*(0.3+sp*0.7);
+      ctx.fillStyle=`rgba(8,14,6,${(0.18*(1-sp)).toFixed(2)})`;
+      ctx.beginPath(); ctx.arc(swX,swY,sr,0,PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   // ── Eerie ground mist pooling around graveyard tombstones ──
   {
     const driftA=Math.sin(t*0.28)*0.018, driftB=Math.sin(t*0.19+1.2)*0.014;
@@ -17270,6 +17341,8 @@ function drawHalloweenScene() {
      [0.878-driftA, 0.540, 0.090, 0.28],
      [0.944+driftB, 0.560, 0.068, 0.18],
      [0.900-driftB, 0.370, 0.058, 0.20],
+     [0.928+driftA, 0.635, 0.078, 0.24],
+     [0.958-driftB, 0.700, 0.062, 0.18],
     ].forEach(([fx,fy,rad,op])=>{
       const mg=ctx.createRadialGradient(W*fx,H*fy,0,W*fx,H*fy,W*rad);
       const pulse=0.80+0.20*Math.sin(t*0.45+fx*8);
