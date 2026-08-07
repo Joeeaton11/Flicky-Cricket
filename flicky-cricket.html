@@ -17378,8 +17378,70 @@ function drawHalloweenScene() {
   ctx.restore(); // end evenodd
 
   // ══════════════════════════════════════════
-  //  NO-CLIP — gate arch + spiderwebs
+  //  NO-CLIP — chain, gate arch + spiderwebs
   // ══════════════════════════════════════════
+
+  // ── Wrought iron chain boundary ──
+  {
+    const CX=W/2, CY=H*FIELD_CY, RX=W*FIELD_RX*0.986, RY=H*FIELD_RY*0.986;
+    const N=64;
+    const lw=W*0.017, lh=W*0.008; // half-dims of each link
+
+    // Bonfire glow influence on lower-right arc
+    const bfX=W*0.908, bfY=H*0.910;
+
+    // Thick dark base so links read against both inner and outer ground
+    ctx.strokeStyle='rgba(4,6,2,0.75)'; ctx.lineWidth=9;
+    ctx.beginPath(); ctx.ellipse(CX,CY,RX,RY,0,0,PI*2); ctx.stroke();
+
+    for(let i=0;i<N;i++){
+      const a=i/N*PI*2;
+      const px=CX+RX*Math.sin(a);
+      const py=CY-RY*Math.cos(a);
+
+      // Tangent angle in screen space
+      const dtx= RX*Math.cos(a);
+      const dty= RY*Math.sin(a);
+      const tangentAngle=Math.atan2(dty,dtx);
+
+      // Alternate link orientation: even=along chain, odd=across chain
+      const linkAngle=i%2===0 ? tangentAngle : tangentAngle+PI*0.5;
+      const isEven=i%2===0;
+
+      // Bonfire warmth — links near bottom-right glow faintly orange
+      const dx=px-bfX, dy=py-bfY;
+      const bfDist=Math.sqrt(dx*dx+dy*dy);
+      const bfWarm=Math.max(0,1-bfDist/(W*0.4));
+
+      ctx.save();
+      ctx.translate(px,py);
+      ctx.rotate(linkAngle);
+
+      // Link ring — iron body
+      const bodyCol=`rgb(${16+bfWarm*22|0},${18+bfWarm*8|0},${10|0})`;
+      ctx.strokeStyle=bodyCol;
+      ctx.lineWidth=isEven?4.5:4.0;
+      ctx.beginPath();
+      ctx.ellipse(0,0,lw,lh,0,0,PI*2);
+      ctx.stroke();
+
+      // Forged surface — slightly lighter centre band
+      ctx.strokeStyle=`rgba(${44+bfWarm*30|0},${52+bfWarm*12|0},28,0.70)`;
+      ctx.lineWidth=1.5;
+      ctx.beginPath();
+      ctx.ellipse(0,0,lw*0.60,lh*0.55,0,0,PI*2);
+      ctx.stroke();
+
+      // Moonlit highlight — upper-left arc edge
+      ctx.strokeStyle=`rgba(160,220,90,${0.28+bfWarm*0.10})`;
+      ctx.lineWidth=1.0;
+      ctx.beginPath();
+      ctx.ellipse(0,0,lw,lh,0,PI*0.9,PI*1.65);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
 
   // ── Wrought iron gate — top-left outer zone, properly scaled ──
   // At y≈H*0.32 the left outer zone extends to x≈0.20, giving enough room
