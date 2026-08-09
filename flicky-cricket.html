@@ -17710,252 +17710,241 @@ function drawGraveyardScene() {
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Deep navy-black sky — gradient from near-black top to deep blue-violet horizon
+  // Deep purple-violet sky
   const skyG=ctx.createLinearGradient(0,0,0,H*0.23);
-  skyG.addColorStop(0,'#03020e');
-  skyG.addColorStop(0.5,'#06051a');
-  skyG.addColorStop(1,'#0c0a22');
+  skyG.addColorStop(0,'#060112');
+  skyG.addColorStop(0.45,'#0f0525');
+  skyG.addColorStop(1,'#1e0a3a');
   ctx.fillStyle=skyG; ctx.fillRect(0,0,W,H*0.23);
 
-  // ── FULL MOON — centre-left, cold silver-white ──
-  const moonX=W*0.34, moonY=H*0.095, moonR=W*0.092;
+  // ── FULL MOON — centre-stage, glowing behind the spire ──
+  const moonX=W*0.62, moonY=H*0.090, moonR=W*0.110;
 
-  // Moon atmosphere halo — wide cold glow bleeding into sky
-  const moonAtmo=ctx.createRadialGradient(moonX,moonY,moonR*0.8,moonX,moonY,W*0.65);
-  moonAtmo.addColorStop(0,'rgba(210,225,255,0.22)');
-  moonAtmo.addColorStop(0.15,'rgba(170,190,240,0.14)');
-  moonAtmo.addColorStop(0.40,'rgba(100,120,200,0.07)');
+  // Moon atmosphere halo — wide violet-white glow
+  const moonAtmo=ctx.createRadialGradient(moonX,moonY,moonR*0.8,moonX,moonY,W*0.70);
+  moonAtmo.addColorStop(0,'rgba(230,215,255,0.28)');
+  moonAtmo.addColorStop(0.12,'rgba(190,165,250,0.18)');
+  moonAtmo.addColorStop(0.35,'rgba(120,80,200,0.09)');
   moonAtmo.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=moonAtmo; ctx.fillRect(0,0,W,H*0.23);
 
-  // Moon disc — bright, cold white with very subtle warm centre
+  // Moon disc — bright cold white, slight violet corona
   const moonDisc=ctx.createRadialGradient(moonX-moonR*0.18,moonY-moonR*0.18,0,moonX,moonY,moonR);
-  moonDisc.addColorStop(0,'#f8faff');
-  moonDisc.addColorStop(0.40,'#e8eeff');
-  moonDisc.addColorStop(0.75,'#c8d4f0');
-  moonDisc.addColorStop(1,'#a0b4e0');
+  moonDisc.addColorStop(0,'#fafaff');
+  moonDisc.addColorStop(0.38,'#ebebff');
+  moonDisc.addColorStop(0.72,'#ccc4f8');
+  moonDisc.addColorStop(1,'#a090d8');
   ctx.fillStyle=moonDisc; ctx.beginPath(); ctx.arc(moonX,moonY,moonR,0,PI*2); ctx.fill();
 
-  // Moon surface — subtle crater shadows
-  ctx.save(); ctx.globalAlpha=0.10; ctx.fillStyle='#6070a0';
-  [[-0.28,0.12,0.22,0.10],[ 0.30,-0.22,0.18,0.08],[ 0.10, 0.30,0.14,0.06],
-   [-0.40,-0.15,0.14,0.06],[ 0.20, 0.10,0.10,0.05]].forEach(([ox,oy,rw,rh])=>{
+  // Moon craters
+  ctx.save(); ctx.globalAlpha=0.10; ctx.fillStyle='#5040a0';
+  [[-0.28,0.12,0.22,0.10],[0.30,-0.22,0.18,0.08],[0.10,0.30,0.14,0.06],
+   [-0.40,-0.15,0.14,0.06],[0.20,0.10,0.10,0.05]].forEach(([ox,oy,rw,rh])=>{
     ctx.beginPath(); ctx.ellipse(moonX+moonR*ox,moonY+moonR*oy,moonR*rw,moonR*rh,0,0,PI*2); ctx.fill();
   }); ctx.restore();
 
-  // Sharp cold stars — clear patches away from clouds
-  [[0.62,0.04,1.0],[0.70,0.14,0.8],[0.76,0.06,1.2],[0.84,0.10,0.9],[0.88,0.02,1.1],
-   [0.92,0.16,0.8],[0.96,0.07,1.3],[0.14,0.06,0.9],[0.20,0.13,1.0],[0.08,0.10,0.8]].forEach(([sx,sy,sz])=>{
+  // Stars — left side only (right dominated by church), violet-white
+  [[0.08,0.04,1.1],[0.16,0.14,0.9],[0.04,0.12,0.8],[0.24,0.06,1.2],[0.32,0.16,0.8],
+   [0.12,0.19,0.7],[0.40,0.08,1.0],[0.28,0.19,0.9],[0.36,0.12,0.7],[0.44,0.16,0.8]].forEach(([sx,sy,sz])=>{
     const tw=0.55+0.45*Math.abs(Math.sin(t*2.2+sx*22+sy*15));
-    ctx.fillStyle=`rgba(210,220,255,${(tw*0.85).toFixed(2)})`;
+    ctx.fillStyle=`rgba(220,210,255,${(tw*0.90).toFixed(2)})`;
     ctx.beginPath(); ctx.arc(W*sx,H*sy,sz*0.9,0,PI*2); ctx.fill();
   });
 
-  // ── CLOUDS — ragged, fast-moving, silver-rimmed ──
+  // ── CLOUDS — two chunky menacing banks, purple-black with violet rims ──
   {
-    // Cloud system: two heavy banks drifting left to right across the moon
-    const c1x=((t*0.028)%2.6-0.4)*W;  // fast
-    const c2x=((t*0.018+0.8)%2.6-0.4)*W; // slower
-    const c3x=((t*0.022+1.8)%2.6-0.4)*W; // medium
+    const c1x=((t*0.026)%2.8-0.5)*W;
+    const c2x=((t*0.016+1.0)%2.8-0.5)*W;
 
     const drawCloudBank=(cx,cy,blobs,darkCol,rimAlpha)=>{
-      // Dark underbody
       ctx.fillStyle=darkCol;
       blobs.forEach(([ox,oy,rx,ry])=>{
         ctx.beginPath(); ctx.ellipse(cx+W*ox,cy+H*oy,W*rx,H*ry,0,0,PI*2); ctx.fill();
       });
-      // Silver moonlit rim — top edges catch the moon
+      // Hard dense underbelly
+      ctx.fillStyle='rgba(4,1,14,0.80)';
+      blobs.forEach(([ox,oy,rx,ry])=>{
+        ctx.beginPath(); ctx.ellipse(cx+W*ox,cy+H*oy+H*ry*0.4,W*rx*0.85,H*ry*0.55,0,0,PI*2); ctx.fill();
+      });
+      // Violet-white moonlit rim on top
       ctx.save();
-      ctx.globalCompositeOperation='source-over';
-      const rimG=ctx.createLinearGradient(cx,cy-H*0.06,cx,cy+H*0.02);
-      rimG.addColorStop(0,`rgba(200,215,255,${rimAlpha})`);
-      rimG.addColorStop(0.5,`rgba(160,180,240,${rimAlpha*0.4})`);
+      const rimG=ctx.createLinearGradient(cx,cy-H*0.07,cx,cy+H*0.02);
+      rimG.addColorStop(0,`rgba(220,200,255,${rimAlpha})`);
+      rimG.addColorStop(0.4,`rgba(170,140,240,${rimAlpha*0.5})`);
       rimG.addColorStop(1,'rgba(0,0,0,0)');
       ctx.fillStyle=rimG;
       blobs.forEach(([ox,oy,rx,ry])=>{
-        ctx.beginPath(); ctx.ellipse(cx+W*ox,cy+H*oy,W*rx,H*ry*1.1,0,0,PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(cx+W*ox,cy+H*oy,W*rx,H*ry*1.15,0,0,PI*2); ctx.fill();
       });
       ctx.restore();
     };
 
-    // Bank 1 — large, crossing moon
-    drawCloudBank(c1x+W*0.42, H*0.048,
-      [[0,0,0.160,0.052],[0.12,-0.016,0.110,0.040],[-0.11,-0.014,0.105,0.038],
-       [0.22,0.008,0.080,0.030],[-0.22,0.008,0.085,0.032],[0.32,0.014,0.055,0.022],[-0.32,0.014,0.058,0.022]],
-      '#0a0820', 0.55);
+    // Bank 1 — massive, sweeping across moon zone
+    drawCloudBank(c1x+W*0.38, H*0.044,
+      [[0,0,0.200,0.066],[0.16,-0.020,0.145,0.052],[-0.15,-0.018,0.140,0.050],
+       [0.30,0.010,0.100,0.040],[-0.30,0.010,0.105,0.042],[0.44,0.020,0.070,0.030],[-0.44,0.018,0.072,0.028]],
+      '#09051e', 0.62);
 
-    // Dark underside layer for density
-    ctx.fillStyle='#060515';
-    ctx.beginPath(); ctx.ellipse(c1x+W*0.42,H*0.062,W*0.140,H*0.030,0,0,PI*2); ctx.fill();
-
-    // Bank 2 — smaller, trailing
-    drawCloudBank(c2x+W*0.20, H*0.100,
-      [[0,0,0.110,0.038],[0.10,-0.012,0.082,0.030],[-0.09,-0.010,0.086,0.028],[0.18,0.006,0.058,0.022]],
-      '#090718', 0.40);
-
-    // Bank 3 — thin wispy edge
-    drawCloudBank(c3x+W*0.72, H*0.060,
-      [[0,0,0.075,0.026],[0.08,-0.008,0.056,0.020],[-0.07,-0.007,0.058,0.018]],
-      '#0a0820', 0.30);
+    // Bank 2 — second heavy mass, lower and slower
+    drawCloudBank(c2x+W*0.22, H*0.108,
+      [[0,0,0.150,0.050],[0.14,-0.014,0.110,0.040],[-0.13,-0.012,0.108,0.038],
+       [0.26,0.010,0.075,0.030],[-0.26,0.008,0.080,0.028]],
+      '#080418', 0.45);
   }
 
-  // ── GOTHIC CHURCH — dominant right side, tall spire reaching out of frame ──
+  // ── GOTHIC CHURCH — massive dark silhouette, right half of backdrop ──
   {
-    const cs='#04021a'; // very dark ink silhouette
+    const cs='#020109'; // near-black ink
 
-    // ── Ambient glow: moonlight on the church face ──
-    const cglow=ctx.createRadialGradient(W*0.82,H*0.18,0,W*0.82,H*0.18,W*0.28);
-    cglow.addColorStop(0,'rgba(160,180,240,0.10)');
-    cglow.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=cglow; ctx.fillRect(0,0,W,H*0.23);
+    // Moon backlights the spire — warm violet glow around the spire base
+    const spireglow=ctx.createRadialGradient(W*0.740,H*0.115,0,W*0.740,H*0.115,W*0.22);
+    spireglow.addColorStop(0,'rgba(180,140,255,0.14)');
+    spireglow.addColorStop(0.5,'rgba(100,60,180,0.06)');
+    spireglow.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=spireglow; ctx.fillRect(W*0.44,0,W*0.56,H*0.23);
 
     ctx.fillStyle=cs;
 
-    // Nave body — wide, solid
-    ctx.fillRect(W*0.60, H*0.115, W*0.34, H*0.115);
+    // ── Main nave — wide, fills right half ──
+    ctx.fillRect(W*0.480, H*0.128, W*0.52, H*0.102);
 
-    // Nave pitched roof — steep gothic
+    // Nave roof — steep gothic, peak above spire
     ctx.beginPath();
-    ctx.moveTo(W*0.60, H*0.115); ctx.lineTo(W*0.77, H*0.040); ctx.lineTo(W*0.94, H*0.115);
+    ctx.moveTo(W*0.480,H*0.128); ctx.lineTo(W*0.740,H*0.026); ctx.lineTo(W*1.000,H*0.128);
     ctx.closePath(); ctx.fill();
 
-    // Side chapel — lower, left of nave
-    ctx.fillRect(W*0.60, H*0.150, W*0.10, H*0.080);
-    ctx.beginPath(); ctx.moveTo(W*0.60,H*0.150); ctx.lineTo(W*0.65,H*0.116); ctx.lineTo(W*0.70,H*0.150); ctx.closePath(); ctx.fill();
+    // Left side chapel
+    ctx.fillRect(W*0.480, H*0.158, W*0.110, H*0.072);
+    ctx.beginPath(); ctx.moveTo(W*0.480,H*0.158); ctx.lineTo(W*0.535,H*0.122); ctx.lineTo(W*0.590,H*0.158); ctx.closePath(); ctx.fill();
 
-    // ── SPIRE — very tall, erupts from nave centre straight up out of frame ──
-    // Spire base tower
-    ctx.fillRect(W*0.724, H*-0.040, W*0.092, H*0.160);
-    // Tower battlements at base of spire
+    // Right transept — wider bump on right
+    ctx.fillRect(W*0.880, H*0.150, W*0.12, H*0.080);
+    ctx.beginPath(); ctx.moveTo(W*0.880,H*0.150); ctx.lineTo(W*0.920,H*0.118); ctx.lineTo(W*0.960,H*0.150); ctx.closePath(); ctx.fill();
+
+    // ── SPIRE — towering, erupts straight up through moon halo ──
+    // Broad tower base
+    ctx.fillRect(W*0.700, H*-0.060, W*0.080, H*0.192);
+    // Tower battlements
+    for(let i=0;i<6;i++){
+      ctx.fillRect(W*(0.700+i*0.013), H*0.128, W*0.008, H*-0.048);
+    }
+    // Flying buttresses — angled supports either side of tower
+    ctx.beginPath(); ctx.moveTo(W*0.700,H*0.128); ctx.lineTo(W*0.658,H*0.170); ctx.lineTo(W*0.660,H*0.182); ctx.lineTo(W*0.706,H*0.136); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(W*0.780,H*0.128); ctx.lineTo(W*0.822,H*0.170); ctx.lineTo(W*0.820,H*0.182); ctx.lineTo(W*0.774,H*0.136); ctx.closePath(); ctx.fill();
+
+    // Spire shaft — needle-thin, erupts off-frame
+    ctx.beginPath();
+    ctx.moveTo(W*0.700,H*-0.060);
+    ctx.lineTo(W*0.740,H*-0.320);
+    ctx.lineTo(W*0.780,H*-0.060);
+    ctx.closePath(); ctx.fill();
+    // Spire right-face shadow
+    ctx.fillStyle='rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.moveTo(W*0.740,H*-0.320); ctx.lineTo(W*0.780,H*-0.060); ctx.lineTo(W*0.752,H*-0.060);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle=cs;
+
+    // Crocket finials up spire edges
     for(let i=0;i<5;i++){
-      ctx.fillRect(W*(0.724+i*0.018), H*0.116, W*0.011, H*-0.040);
-    }
-    // Octagonal spire shaft
-    ctx.beginPath();
-    ctx.moveTo(W*0.724,H*-0.040);
-    ctx.lineTo(W*0.768,H*-0.240); // tip — off screen
-    ctx.lineTo(W*0.816,H*-0.040);
-    ctx.closePath(); ctx.fill();
-    // Spire shadow face — slightly darker left side
-    ctx.fillStyle='rgba(0,0,0,0.30)';
-    ctx.beginPath();
-    ctx.moveTo(W*0.724,H*-0.040); ctx.lineTo(W*0.768,H*-0.240); ctx.lineTo(W*0.770,H*-0.040);
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle=cs;
-
-    // Spire crocket finials — little bumps up the spire edge
-    for(let i=0;i<4;i++){
-      const frac=0.15+i*0.18;
-      const fx=W*(0.724+(0.816-0.724)*(1-frac)/2);
-      const fy=H*(-0.040-frac*0.200);
-      ctx.beginPath(); ctx.arc(fx,fy,W*0.008,0,PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(W*0.816-(fx-W*0.724),fy,W*0.008,0,PI*2); ctx.fill();
+      const frac=0.10+i*0.14;
+      const fw=(0.780-0.700)*(1-frac)/2;
+      ctx.beginPath(); ctx.arc(W*(0.700+fw),H*(-0.060-frac*0.260),W*0.007,0,PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(W*(0.780-fw),H*(-0.060-frac*0.260),W*0.007,0,PI*2); ctx.fill();
     }
 
-    // Cross at very top of spire (will be off-screen mostly — just the base)
-    ctx.strokeStyle=cs; ctx.lineWidth=W*0.007; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(W*0.768,H*-0.240); ctx.lineTo(W*0.768,H*-0.270); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(W*0.758,H*-0.254); ctx.lineTo(W*0.778,H*-0.254); ctx.stroke();
-
-    // ── WINDOWS — glowing amber from within ──
-    // Tall lancet nave windows
-    [[0.638,0.130,0.022,0.058],[0.680,0.130,0.022,0.058],[0.722,0.130,0.022,0.058],
-     [0.808,0.130,0.022,0.058],[0.850,0.130,0.022,0.058],[0.892,0.130,0.022,0.058]].forEach(([wx,wy,ww,wh])=>{
-      // Window glow halo
-      const wg=ctx.createRadialGradient(W*(wx+ww/2),H*(wy+wh/2),0,W*(wx+ww/2),H*(wy+wh/2),W*0.040);
-      wg.addColorStop(0,'rgba(200,140,30,0.35)'); wg.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=wg; ctx.fillRect(W*wx-W*0.04,H*wy-H*0.04,W*(ww+0.08),H*(wh+0.08));
-      // Amber glass
-      ctx.fillStyle='rgba(200,130,20,0.78)';
-      ctx.beginPath(); ctx.rect(W*wx,H*(wy+wh*0.30),W*ww,H*wh*0.70);
-      ctx.arc(W*(wx+ww/2),H*(wy+wh*0.30),W*ww/2,PI,0); ctx.fill();
-      // Stone tracery cross
-      ctx.strokeStyle='rgba(10,8,25,0.85)'; ctx.lineWidth=1.5;
+    // ── WINDOWS — bright amber glow seeping from within ──
+    // Nave windows — 5 along the wider nave
+    [[0.510,0.143,0.022,0.062],[0.556,0.143,0.022,0.062],[0.602,0.143,0.022,0.062],
+     [0.808,0.143,0.022,0.062],[0.856,0.143,0.022,0.062]].forEach(([wx,wy,ww,wh])=>{
+      const wg=ctx.createRadialGradient(W*(wx+ww/2),H*(wy+wh/2),0,W*(wx+ww/2),H*(wy+wh/2),W*0.048);
+      wg.addColorStop(0,'rgba(255,160,20,0.50)'); wg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=wg; ctx.fillRect(W*(wx-0.05),H*(wy-0.05),W*(ww+0.10),H*(wh+0.10));
+      ctx.fillStyle='rgba(220,140,15,0.88)';
+      ctx.beginPath(); ctx.rect(W*wx,H*(wy+wh*0.28),W*ww,H*wh*0.72);
+      ctx.arc(W*(wx+ww/2),H*(wy+wh*0.28),W*ww/2,PI,0); ctx.fill();
+      ctx.strokeStyle='rgba(8,4,20,0.90)'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.moveTo(W*(wx+ww/2),H*wy); ctx.lineTo(W*(wx+ww/2),H*(wy+wh)); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(W*wx,H*(wy+wh*0.55)); ctx.lineTo(W*(wx+ww),H*(wy+wh*0.55)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(W*wx,H*(wy+wh*0.52)); ctx.lineTo(W*(wx+ww),H*(wy+wh*0.52)); ctx.stroke();
     });
 
-    // Rose window in nave gable — circular stained glass
-    const rwx=W*0.77, rwy=H*0.068, rwr=W*0.026;
-    const rwg=ctx.createRadialGradient(rwx,rwy,0,rwx,rwy,rwr*2.2);
-    rwg.addColorStop(0,'rgba(180,100,200,0.70)'); rwg.addColorStop(0.5,'rgba(120,50,160,0.40)'); rwg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=rwg; ctx.beginPath(); ctx.arc(rwx,rwy,rwr*2.2,0,PI*2); ctx.fill();
-    ctx.fillStyle='rgba(160,80,200,0.75)'; ctx.beginPath(); ctx.arc(rwx,rwy,rwr,0,PI*2); ctx.fill();
-    // Rose window spokes
-    ctx.strokeStyle='rgba(10,8,25,0.80)'; ctx.lineWidth=1.5;
+    // Tower lancet windows
+    [[0.710,0.018,0.016,0.056],[0.754,0.014,0.016,0.060]].forEach(([wx,wy,ww,wh])=>{
+      const wg2=ctx.createRadialGradient(W*(wx+ww/2),H*(wy+wh/2),0,W*(wx+ww/2),H*(wy+wh/2),W*0.036);
+      wg2.addColorStop(0,'rgba(240,160,20,0.55)'); wg2.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=wg2; ctx.fillRect(W*(wx-0.04),H*wy,W*(ww+0.08),H*wh);
+      ctx.fillStyle='rgba(230,150,18,0.90)';
+      ctx.beginPath(); ctx.rect(W*wx,H*(wy+wh*0.26),W*ww,H*wh*0.74);
+      ctx.arc(W*(wx+ww/2),H*(wy+wh*0.26),W*ww/2,PI,0); ctx.fill();
+    });
+
+    // Rose window — vibrant violet, centred on the nave gable
+    const rwx=W*0.740, rwy=H*0.054, rwr=W*0.030;
+    const rwg=ctx.createRadialGradient(rwx,rwy,0,rwx,rwy,rwr*2.4);
+    rwg.addColorStop(0,'rgba(200,100,255,0.80)'); rwg.addColorStop(0.5,'rgba(140,40,200,0.45)'); rwg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=rwg; ctx.beginPath(); ctx.arc(rwx,rwy,rwr*2.4,0,PI*2); ctx.fill();
+    ctx.fillStyle='rgba(180,70,230,0.85)'; ctx.beginPath(); ctx.arc(rwx,rwy,rwr,0,PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(8,4,20,0.85)'; ctx.lineWidth=1.5;
     for(let s=0;s<8;s++){
       const ang=s/8*PI*2;
       ctx.beginPath(); ctx.moveTo(rwx,rwy); ctx.lineTo(rwx+Math.cos(ang)*rwr,rwy+Math.sin(ang)*rwr); ctx.stroke();
     }
-    ctx.beginPath(); ctx.arc(rwx,rwy,rwr*0.5,0,PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(rwx,rwy,rwr*0.45,0,PI*2); ctx.stroke();
 
-    // Tower lancet windows — taller, thinner
-    [[0.730,0.020,0.016,0.050],[0.810,0.018,0.016,0.052]].forEach(([wx,wy,ww,wh])=>{
-      const wg2=ctx.createRadialGradient(W*(wx+ww/2),H*(wy+wh/2),0,W*(wx+ww/2),H*(wy+wh/2),W*0.030);
-      wg2.addColorStop(0,'rgba(210,150,30,0.40)'); wg2.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=wg2; ctx.fillRect(W*wx-W*0.03,H*wy,W*(ww+0.06),H*wh);
-      ctx.fillStyle='rgba(210,145,25,0.80)';
-      ctx.beginPath(); ctx.rect(W*wx,H*(wy+wh*0.28),W*ww,H*wh*0.72);
-      ctx.arc(W*(wx+ww/2),H*(wy+wh*0.28),W*ww/2,PI,0); ctx.fill();
-      ctx.strokeStyle='rgba(10,8,25,0.80)'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(W*(wx+ww/2),H*wy); ctx.lineTo(W*(wx+ww/2),H*(wy+wh)); ctx.stroke();
-    });
-
-    // Moonlit face — thin silver highlight on left-facing church edges
-    ctx.strokeStyle='rgba(190,210,255,0.28)'; ctx.lineWidth=1.5;
-    // Nave roof left pitch — moonlit
-    ctx.beginPath(); ctx.moveTo(W*0.60,H*0.115); ctx.lineTo(W*0.77,H*0.040); ctx.stroke();
-    // Tower left edge
-    ctx.beginPath(); ctx.moveTo(W*0.724,H*-0.040); ctx.lineTo(W*0.724,H*0.116); ctx.stroke();
-    // Spire left edge
-    ctx.beginPath(); ctx.moveTo(W*0.724,H*-0.040); ctx.lineTo(W*0.768,H*-0.240); ctx.stroke();
+    // Rim lighting — moon is behind/left of spire so left silhouette edges glow violet-white
+    ctx.strokeStyle='rgba(220,195,255,0.35)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(W*0.480,H*0.128); ctx.lineTo(W*0.740,H*0.026); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W*0.700,H*-0.060); ctx.lineTo(W*0.700,H*0.128); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W*0.700,H*-0.060); ctx.lineTo(W*0.740,H*-0.320); ctx.stroke();
+    // Right rim — fainter (moon is left, so right faces are deeper shadow)
+    ctx.strokeStyle='rgba(180,140,230,0.15)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(W*0.780,H*-0.060); ctx.lineTo(W*0.740,H*-0.320); ctx.stroke();
 
     // ── BATS — circling the spire ──
     const drawBat=(bx,by,phase,sz)=>{
       const wx=Math.sin(t*4.8+phase)*W*sz;
-      const wy=Math.sin(t*4.8*2+phase)*H*sz*0.3;
+      const wy=Math.sin(t*9.6+phase)*H*sz*0.35;
       const flap=Math.sin(t*9.6+phase);
-      ctx.fillStyle='#040218';
-      // Left wing
+      ctx.fillStyle='#030112';
       ctx.beginPath();
       ctx.moveTo(bx+wx,by+wy);
-      ctx.bezierCurveTo(bx+wx-W*sz*1.4,by+wy-H*sz*0.4*flap, bx+wx-W*sz*2.2,by+wy+H*sz*0.2, bx+wx-W*sz*2.6,by+wy);
-      ctx.bezierCurveTo(bx+wx-W*sz*2.0,by+wy+H*sz*0.5, bx+wx-W*sz*0.8,by+wy+H*sz*0.4, bx+wx,by+wy);
+      ctx.bezierCurveTo(bx+wx-W*sz*1.4,by+wy-H*sz*0.4*flap,bx+wx-W*sz*2.2,by+wy+H*sz*0.2,bx+wx-W*sz*2.6,by+wy);
+      ctx.bezierCurveTo(bx+wx-W*sz*2.0,by+wy+H*sz*0.5,bx+wx-W*sz*0.8,by+wy+H*sz*0.4,bx+wx,by+wy);
       ctx.fill();
-      // Right wing
       ctx.beginPath();
       ctx.moveTo(bx+wx,by+wy);
-      ctx.bezierCurveTo(bx+wx+W*sz*1.4,by+wy-H*sz*0.4*flap, bx+wx+W*sz*2.2,by+wy+H*sz*0.2, bx+wx+W*sz*2.6,by+wy);
-      ctx.bezierCurveTo(bx+wx+W*sz*2.0,by+wy+H*sz*0.5, bx+wx+W*sz*0.8,by+wy+H*sz*0.4, bx+wx,by+wy);
+      ctx.bezierCurveTo(bx+wx+W*sz*1.4,by+wy-H*sz*0.4*flap,bx+wx+W*sz*2.2,by+wy+H*sz*0.2,bx+wx+W*sz*2.6,by+wy);
+      ctx.bezierCurveTo(bx+wx+W*sz*2.0,by+wy+H*sz*0.5,bx+wx+W*sz*0.8,by+wy+H*sz*0.4,bx+wx,by+wy);
       ctx.fill();
-      // Body
       ctx.beginPath(); ctx.ellipse(bx+wx,by+wy,W*sz*0.5,H*sz*0.3,0,0,PI*2); ctx.fill();
     };
-    drawBat(W*0.710, H*0.050, 0.0, 0.022);
-    drawBat(W*0.820, H*0.028, 1.8, 0.018);
-    drawBat(W*0.760, H*0.080, 3.5, 0.016);
-    drawBat(W*0.690, H*0.018, 5.1, 0.014);
-    drawBat(W*0.835, H*0.060, 2.7, 0.015);
+    drawBat(W*0.680, H*0.042, 0.0, 0.022);
+    drawBat(W*0.800, H*0.022, 1.8, 0.019);
+    drawBat(W*0.750, H*0.070, 3.5, 0.016);
+    drawBat(W*0.650, H*0.016, 5.1, 0.015);
 
-    // ── DEAD TREES — flanking church on left side ──
+    // ── DEAD TREES — left half of backdrop, big and gnarled ──
     const drawDeadTree=(tx,ty,lean,ht,thick)=>{
-      ctx.strokeStyle='#040218'; ctx.lineCap='round';
+      ctx.strokeStyle='#030115'; ctx.lineCap='round';
       const drawBranch=(x0,y0,dx,dy,w,depth)=>{
-        if(depth<0||w<0.6) return;
+        if(depth<0||w<0.5) return;
         ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x0+dx,y0+dy); ctx.stroke();
-        const spread=0.38+depth*0.08;
-        drawBranch(x0+dx,y0+dy,dx*spread-dy*0.22,-dy*spread-dx*0.22,w*0.52,depth-1);
-        drawBranch(x0+dx,y0+dy,dx*spread+dy*0.22,-dy*spread+dx*0.22,w*0.50,depth-1);
-        if(depth>1) drawBranch(x0+dx,y0+dy,dx*0.7,-dy*0.7,w*0.40,depth-2);
+        const spread=0.40+depth*0.07;
+        drawBranch(x0+dx,y0+dy, dx*spread-dy*0.28,-dy*spread-dx*0.28, w*0.54,depth-1);
+        drawBranch(x0+dx,y0+dy, dx*spread+dy*0.28,-dy*spread+dx*0.28, w*0.52,depth-1);
+        if(depth>2) drawBranch(x0+dx,y0+dy,dx*0.6,-dy*0.6,w*0.38,depth-2);
       };
-      drawBranch(tx,ty,W*lean*ht,-H*ht,W*thick,4);
+      drawBranch(tx,ty,W*lean*ht,-H*ht,W*thick,5);
     };
-    drawDeadTree(W*0.52,H*0.230, 0.02,0.28,0.022);
-    drawDeadTree(W*0.58,H*0.230,-0.02,0.24,0.018);
-    drawDeadTree(W*0.44,H*0.230, 0.03,0.22,0.016);
-    // Moonlit edge on right-facing branches
-    ctx.strokeStyle='rgba(160,180,230,0.12)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(W*0.52,H*0.230); ctx.lineTo(W*0.530,H*0.060); ctx.stroke();
+    // Four trees sprawling across the left half
+    drawDeadTree(W*0.06, H*0.230,  0.06, 0.36, 0.026);
+    drawDeadTree(W*0.18, H*0.230, -0.03, 0.32, 0.020);
+    drawDeadTree(W*0.30, H*0.230,  0.04, 0.30, 0.018);
+    drawDeadTree(W*0.42, H*0.230,  0.02, 0.26, 0.015);
+    // Violet moonlit edge catches on rightward-facing branches
+    ctx.strokeStyle='rgba(200,180,255,0.14)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(W*0.18,H*0.230); ctx.lineTo(W*0.22,H*0.050); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W*0.30,H*0.230); ctx.lineTo(W*0.35,H*0.070); ctx.stroke();
   }
 
   ctx.restore(); // end backdrop clip
@@ -17978,7 +17967,7 @@ function drawGraveyardScene() {
 
   // ── DIRECTIONAL MOONLIGHT WASH — from upper-centre-left (moon position) ──
   // Sweeps silver-blue light across the ground, brighter top-left fading to shadow bottom-right
-  const moonLightG=ctx.createLinearGradient(W*0.34,wallY,W*0.80,H);
+  const moonLightG=ctx.createLinearGradient(W*0.62,wallY,W*0.90,H);
   moonLightG.addColorStop(0,'rgba(190,210,255,0.18)');
   moonLightG.addColorStop(0.4,'rgba(160,185,240,0.10)');
   moonLightG.addColorStop(1,'rgba(80,100,160,0.04)');
