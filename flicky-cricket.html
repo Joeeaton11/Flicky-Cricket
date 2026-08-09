@@ -17984,109 +17984,222 @@ function drawGraveyardScene() {
   moonLightG.addColorStop(1,'rgba(80,100,160,0.04)');
   ctx.fillStyle=moonLightG; ctx.fillRect(0,wallY,W,H-wallY);
 
-  // ── TOMBSTONES — placed in the four visible corner zones ──
-  // Oval: CX=W/2, CY=H*0.60, RX=W*0.46, RY=H*0.37
-  // Safe top corners: x 0.86–0.98, y 0.26–0.38  /  x 0.02–0.14, y 0.26–0.38
-  // Safe bottom corners: x 0.86–0.98, y 0.84–0.96  /  x 0.02–0.14, y 0.84–0.96
-  {
-    const drawStoneSlab=(sx,sy,sw,sh,angle,style)=>{
-      ctx.save(); ctx.translate(sx,sy); ctx.rotate(angle);
+  // ══════════════════════════════════════════
+  //  SHARED PROP HELPERS
+  // ══════════════════════════════════════════
 
-      // Cast shadow on ground — falls right & down (away from moon at upper-left)
-      ctx.fillStyle='rgba(0,0,10,0.60)';
+  // ── Tombstone slab ──
+  const drawStoneSlab=(sx,sy,sw,sh,angle,style)=>{
+    ctx.save(); ctx.translate(sx,sy); ctx.rotate(angle);
+    ctx.fillStyle='rgba(0,0,10,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(-sw/2,0); ctx.lineTo(sw/2,0);
+    ctx.lineTo(sw/2+sw*0.7,sh*0.30); ctx.lineTo(-sw/2+sw*0.3,sh*0.30);
+    ctx.closePath(); ctx.fill();
+    const baseCol=style===0?'#3a3648':style===1?'#3e3040':'#323c3a';
+    const shadowCol=style===0?'#1a1628':style===1?'#1e1424':'#161e1a';
+    const litCol=style===0?'#5a5670':style===1?'#584258':'#4a5854';
+    ctx.fillStyle=shadowCol;
+    ctx.beginPath(); ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,-sh*0.75);
+    ctx.arc(0,-sh*0.75,sw/2,PI,0); ctx.lineTo(sw/2,0); ctx.closePath(); ctx.fill();
+    const sg=ctx.createLinearGradient(-sw/2,-sh,sw/2,0);
+    sg.addColorStop(0,litCol); sg.addColorStop(0.45,baseCol); sg.addColorStop(1,shadowCol);
+    ctx.fillStyle=sg;
+    ctx.beginPath(); ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,-sh*0.75);
+    ctx.arc(0,-sh*0.75,sw/2,PI,0); ctx.lineTo(sw/2,0); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(190,210,255,0.50)'; ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,-sh*0.75);
+    ctx.arc(0,-sh*0.75,sw/2,PI,PI*0.5,true); ctx.stroke();
+    ctx.strokeStyle='rgba(0,0,0,0.65)'; ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.moveTo(sw/2,0); ctx.lineTo(sw/2,-sh*0.75); ctx.stroke();
+    ctx.strokeStyle='rgba(100,110,150,0.32)'; ctx.lineWidth=1;
+    [[0.40],[0.52],[0.64]].forEach(([fy])=>{
+      ctx.beginPath(); ctx.moveTo(-sw*0.28,-sh*fy); ctx.lineTo(sw*0.28,-sh*fy); ctx.stroke();
+    });
+    ctx.strokeStyle='rgba(0,0,0,0.40)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(-sw*0.08,-sh*0.28); ctx.lineTo(sw*0.10,-sh*0.54); ctx.stroke();
+    ctx.fillStyle='rgba(28,52,26,0.50)';
+    ctx.beginPath(); ctx.ellipse(-sw*0.28,-sh*0.07,sw*0.13,H*0.006,-0.3,0,PI*2); ctx.fill();
+    ctx.restore();
+  };
+
+  // ── Wrought-iron cross ──
+  const drawCross=(cx,cy,h,a)=>{
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(a);
+    ctx.strokeStyle='#0e0c18'; ctx.lineWidth=W*0.009; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(2,2); ctx.lineTo(2,-h+2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-h*0.36+2,-h*0.62+2); ctx.lineTo(h*0.36+2,-h*0.62+2); ctx.stroke();
+    ctx.strokeStyle='#6a6888'; ctx.lineWidth=W*0.008;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-h*0.36,-h*0.62); ctx.lineTo(h*0.36,-h*0.62); ctx.stroke();
+    ctx.strokeStyle='rgba(180,200,250,0.45)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(-W*0.003,0); ctx.lineTo(-W*0.003,-h); ctx.stroke();
+    ctx.restore();
+  };
+
+  // ── Grave candle (replaces pumpkin) ──
+  const drawGraveCandle=(cx,cy,r,ph)=>{
+    const flk=0.80+0.20*Math.sin(t*7.4+ph)+0.08*Math.sin(t*11.2+ph*1.3);
+    // Wax pool glow on ground
+    const glow=ctx.createRadialGradient(cx,cy,0,cx,cy,r*5.0);
+    glow.addColorStop(0,`rgba(255,180,60,${(0.38*flk).toFixed(2)})`);
+    glow.addColorStop(0.45,`rgba(220,120,20,${(0.14*flk).toFixed(2)})`);
+    glow.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(cx,cy,r*5.0,0,PI*2); ctx.fill();
+    // Shadow under candle
+    ctx.fillStyle='rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.ellipse(cx+r*0.4,cy+r*0.3,r*0.9,r*0.22,0,0,PI*2); ctx.fill();
+    // Wax body — three candles clustered
+    [[-r*0.9,0,r*0.38,r*3.2],[-r*0.08,-r*0.4,r*0.32,r*3.8],[r*0.8,r*0.1,r*0.34,r*2.8]].forEach(([ox,oy,cw,ch])=>{
+      const wg=ctx.createLinearGradient(cx+ox-cw,cy+oy-ch,cx+ox+cw,cy+oy);
+      wg.addColorStop(0,'#e8e0d8'); wg.addColorStop(0.4,'#c8c0b4'); wg.addColorStop(1,'#908880');
+      ctx.fillStyle=wg;
+      ctx.beginPath(); ctx.roundRect(cx+ox-cw,cy+oy-ch,cw*2,ch+r,r*0.3); ctx.fill();
+      // Wax drips
+      ctx.fillStyle='rgba(220,210,195,0.70)';
+      ctx.beginPath(); ctx.ellipse(cx+ox-cw*0.3,cy+oy-ch*0.6,cw*0.25,r*0.5,0.3,0,PI*2); ctx.fill();
+      // Flame
+      const fx=cx+ox, fy=cy+oy-ch;
+      const fh=r*(1.4+0.6*flk);
+      const flameg=ctx.createRadialGradient(fx,fy-fh*0.3,0,fx,fy,fh);
+      flameg.addColorStop(0,`rgba(255,240,180,${(0.98*flk).toFixed(2)})`);
+      flameg.addColorStop(0.35,`rgba(255,160,30,${(0.85*flk).toFixed(2)})`);
+      flameg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=flameg; ctx.fillRect(fx-fh,fy-fh*2,fh*2,fh*2);
+      ctx.fillStyle=`rgba(255,230,120,${(0.95*flk).toFixed(2)})`;
       ctx.beginPath();
-      ctx.moveTo(-sw/2,0); ctx.lineTo(sw/2,0);
-      ctx.lineTo(sw/2+sw*0.8, sh*0.35); ctx.lineTo(-sw/2+sw*0.4, sh*0.35);
+      ctx.moveTo(fx,fy-fh*1.6);
+      ctx.quadraticCurveTo(fx+r*0.5*flk,fy-fh*0.5,fx+r*0.3,fy);
+      ctx.quadraticCurveTo(fx,fy+r*0.2,fx-r*0.3,fy);
+      ctx.quadraticCurveTo(fx-r*0.5*flk,fy-fh*0.5,fx,fy-fh*1.6);
+      ctx.fill();
+    });
+  };
+
+  // ── Iron post lantern (replaces generic lantern) ──
+  const drawIronLantern=(lx,ly,ph)=>{
+    const flk=0.78+0.22*Math.sin(t*5.0+ph)+0.08*Math.sin(t*3.1+ph*1.7);
+    const postH=H*0.110;
+    const lhx=lx, lhy=ly-postH;
+    // Ground pool
+    const pool=ctx.createRadialGradient(lhx,ly,0,lhx,ly,W*0.080);
+    pool.addColorStop(0,`rgba(255,190,70,${(0.28*flk).toFixed(2)})`);
+    pool.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=pool; ctx.beginPath(); ctx.arc(lhx,ly,W*0.080,0,PI*2); ctx.fill();
+    // Post
+    ctx.strokeStyle='#181422'; ctx.lineWidth=W*0.008; ctx.lineCap='butt';
+    ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx,ly-postH*0.82); ctx.stroke();
+    // Decorative scroll arm
+    ctx.strokeStyle='#201830'; ctx.lineWidth=W*0.006;
+    ctx.beginPath();
+    ctx.moveTo(lx,ly-postH*0.72);
+    ctx.quadraticCurveTo(lx+W*0.020,ly-postH*0.76,lhx,lhy);
+    ctx.stroke();
+    // Lantern housing — hexagonal cage
+    const lw=W*0.016, lh=H*0.034;
+    ctx.strokeStyle='#181422'; ctx.lineWidth=W*0.005;
+    // Cage bars
+    [-lw,0,lw].forEach(ox=>{
+      ctx.beginPath(); ctx.moveTo(lhx+ox,lhy-lh); ctx.lineTo(lhx+ox,lhy+H*0.006); ctx.stroke();
+    });
+    ctx.beginPath(); ctx.moveTo(lhx-lw-W*0.004,lhy-lh*0.5); ctx.lineTo(lhx+lw+W*0.004,lhy-lh*0.5); ctx.stroke();
+    // Flame inside
+    const flg=ctx.createRadialGradient(lhx,lhy-lh*0.4,0,lhx,lhy,lh);
+    flg.addColorStop(0,`rgba(255,210,80,${(0.85*flk).toFixed(2)})`);
+    flg.addColorStop(0.5,`rgba(230,140,20,${(0.45*flk).toFixed(2)})`);
+    flg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=flg; ctx.fillRect(lhx-lw*2,lhy-lh*1.2,lw*4,lh*1.6);
+    // Cap and base plate
+    ctx.fillStyle='#1c1630';
+    ctx.beginPath(); ctx.moveTo(lhx-lw-W*0.004,lhy-lh); ctx.lineTo(lhx,lhy-lh-H*0.016); ctx.lineTo(lhx+lw+W*0.004,lhy-lh); ctx.closePath(); ctx.fill();
+    ctx.fillRect(lhx-lw-W*0.003,lhy,lw*2+W*0.006,H*0.006);
+    // Finial
+    ctx.beginPath(); ctx.arc(lhx,lhy-lh-H*0.018,W*0.006,0,PI*2); ctx.fill();
+  };
+
+  // ── Wrought-iron fence section ──
+  const drawFenceSection=(fx,fy,fw,fh,flipped)=>{
+    const dir=flipped?-1:1;
+    const railCol='#181422';
+    // Top rail
+    ctx.strokeStyle=railCol; ctx.lineWidth=W*0.007; ctx.lineCap='butt';
+    ctx.beginPath(); ctx.moveTo(fx,fy-fh*0.82); ctx.lineTo(fx+fw*dir,fy-fh*0.82); ctx.stroke();
+    // Bottom rail
+    ctx.beginPath(); ctx.moveTo(fx,fy-fh*0.28); ctx.lineTo(fx+fw*dir,fy-fh*0.28); ctx.stroke();
+    // Pickets
+    const nPickets=Math.round(Math.abs(fw)/W*18);
+    const spacing=fw/nPickets;
+    for(let i=0;i<=nPickets;i++){
+      const px=fx+spacing*i*dir;
+      ctx.strokeStyle=railCol; ctx.lineWidth=W*0.005;
+      ctx.beginPath(); ctx.moveTo(px,fy); ctx.lineTo(px,fy-fh); ctx.stroke();
+      // Spear tip
+      ctx.fillStyle='#201830';
+      ctx.beginPath(); ctx.moveTo(px,fy-fh);
+      ctx.lineTo(px-W*0.006,fy-fh+H*0.012); ctx.lineTo(px+W*0.006,fy-fh+H*0.012);
       ctx.closePath(); ctx.fill();
+      // Moonlit left face
+      ctx.strokeStyle='rgba(160,175,220,0.30)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(px-W*0.002,fy); ctx.lineTo(px-W*0.002,fy-fh); ctx.stroke();
+    }
+  };
 
-      // Stone body — base colour per style
-      const baseCol=style===0?'#3a3648':style===1?'#3e3040':'#323c3a';
-      const shadowCol=style===0?'#1a1628':style===1?'#1e1424':'#161e1a';
-      const litCol=style===0?'#5a5670':style===1?'#584258':'#4a5854';
+  // ── Dead flower wreath ──
+  const drawWreath=(wx,wy,r)=>{
+    for(let i=0;i<8;i++){
+      const a=i/8*PI*2, px=wx+Math.cos(a)*r, py=wy+Math.sin(a)*r;
+      ctx.fillStyle=i%2===0?'rgba(55,38,28,0.70)':'rgba(38,28,22,0.55)';
+      ctx.beginPath(); ctx.ellipse(px,py,r*0.38,r*0.28,a,0,PI*2); ctx.fill();
+    }
+    ctx.fillStyle='rgba(40,30,20,0.60)';
+    ctx.beginPath(); ctx.arc(wx,wy,r*0.30,0,PI*2); ctx.fill();
+  };
 
-      // Shadow side (right face)
-      ctx.fillStyle=shadowCol;
-      ctx.beginPath();
-      ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,-sh*0.75);
-      ctx.arc(0,-sh*0.75,sw/2,PI,0);
-      ctx.lineTo(sw/2,0); ctx.closePath(); ctx.fill();
+  // ══════════════════════════════════════════
+  //  TOMBSTONES & CROSSES
+  // ══════════════════════════════════════════
 
-      // Moonlit face — left half brighter
-      const stoneG=ctx.createLinearGradient(-sw/2,-sh,sw/2,0);
-      stoneG.addColorStop(0,litCol);
-      stoneG.addColorStop(0.45,baseCol);
-      stoneG.addColorStop(1,shadowCol);
-      ctx.fillStyle=stoneG;
-      ctx.beginPath();
-      ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,-sh*0.75);
-      ctx.arc(0,-sh*0.75,sw/2,PI,0);
-      ctx.lineTo(sw/2,0); ctx.closePath(); ctx.fill();
+  // TOP-RIGHT — 5 stones + cross
+  [
+    [0.900, 0.294, W*0.040, W*0.062, -0.05, 0],
+    [0.950, 0.282, W*0.036, W*0.056,  0.08, 1],
+    [0.876, 0.334, W*0.038, W*0.060, -0.03, 2],
+    [0.932, 0.322, W*0.044, W*0.068,  0.06, 0],
+    [0.966, 0.306, W*0.032, W*0.052, -0.07, 1],
+  ].forEach(([fx,fy,sw,sh,a,s])=>drawStoneSlab(W*fx,H*fy,sw,sh,a,s));
+  drawCross(W*0.972, H*0.268, H*0.066, -0.05);
 
-      // Bright silver rim on moon-facing left edge
-      ctx.strokeStyle='rgba(200,215,255,0.55)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,-sh*0.75);
-      ctx.arc(0,-sh*0.75,sw/2,PI,PI*0.5,true); ctx.stroke();
+  // TOP-LEFT — 4 stones + cross (balanced with top-right now)
+  [
+    [0.040, 0.312, W*0.036, W*0.058,  0.06, 2],
+    [0.082, 0.298, W*0.040, W*0.062, -0.05, 0],
+    [0.114, 0.320, W*0.034, W*0.054,  0.09, 1],
+    [0.060, 0.340, W*0.030, W*0.048, -0.08, 2],
+  ].forEach(([fx,fy,sw,sh,a,s])=>drawStoneSlab(W*fx,H*fy,sw,sh,a,s));
+  drawCross(W*0.022, H*0.282, H*0.058, 0.07);
 
-      // Dark right-edge shadow line
-      ctx.strokeStyle='rgba(0,0,0,0.70)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(sw/2,0); ctx.lineTo(sw/2,-sh*0.75); ctx.stroke();
+  // BOTTOM-RIGHT — 2 stones
+  [
+    [0.878, 0.862, W*0.038, W*0.058, -0.05, 1],
+    [0.952, 0.858, W*0.034, W*0.054,  0.07, 2],
+  ].forEach(([fx,fy,sw,sh,a,s])=>drawStoneSlab(W*fx,H*fy,sw,sh,a,s));
 
-      // Engraved text lines
-      ctx.strokeStyle='rgba(100,110,150,0.35)'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(-sw*0.28,-sh*0.40); ctx.lineTo(sw*0.28,-sh*0.40); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(-sw*0.20,-sh*0.52); ctx.lineTo(sw*0.20,-sh*0.52); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(-sw*0.16,-sh*0.64); ctx.lineTo(sw*0.16,-sh*0.64); ctx.stroke();
+  // Dead flower wreaths on a couple of graves
+  drawWreath(W*0.900, H*0.295, W*0.014);
+  drawWreath(W*0.040, H*0.343, W*0.012);
 
-      // Crack
-      ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(-sw*0.08,-sh*0.30); ctx.lineTo(sw*0.12,-sh*0.55); ctx.stroke();
+  // ══════════════════════════════════════════
+  //  WROUGHT-IRON FENCE — top corners
+  // ══════════════════════════════════════════
 
-      // Moss
-      ctx.fillStyle='rgba(30,55,28,0.55)';
-      ctx.beginPath(); ctx.ellipse(-sw*0.30,-sh*0.08,sw*0.14,H*0.007,-0.3,0,PI*2); ctx.fill();
+  // Top-right fence — runs inward from right edge
+  drawFenceSection(W*0.998, H*0.370, -W*0.120, H*0.055, false);
+  // Top-left fence — runs inward from left edge
+  drawFenceSection(W*0.002, H*0.362, W*0.110, H*0.055, false);
 
-      ctx.restore();
-    };
-
-    // TOP-RIGHT — main graveyard cluster, 5 stones
-    [
-      [0.900, 0.294, W*0.040, W*0.062, -0.05, 0],
-      [0.950, 0.282, W*0.036, W*0.056,  0.08, 1],
-      [0.876, 0.334, W*0.038, W*0.060, -0.03, 2],
-      [0.932, 0.322, W*0.044, W*0.068,  0.06, 0],
-      [0.966, 0.306, W*0.032, W*0.052, -0.07, 1],
-    ].forEach(([fx,fy,sw,sh,a,s])=>drawStoneSlab(W*fx,H*fy,sw,sh,a,s));
-
-    // TOP-LEFT — two lonely graves
-    [
-      [0.046, 0.306, W*0.036, W*0.058,  0.05, 2],
-      [0.094, 0.318, W*0.040, W*0.062, -0.06, 0],
-    ].forEach(([fx,fy,sw,sh,a,s])=>drawStoneSlab(W*fx,H*fy,sw,sh,a,s));
-
-    // BOTTOM-RIGHT — two stones beside the crow
-    [
-      [0.878, 0.862, W*0.038, W*0.058, -0.05, 1],
-      [0.952, 0.858, W*0.034, W*0.054,  0.07, 2],
-    ].forEach(([fx,fy,sw,sh,a,s])=>drawStoneSlab(W*fx,H*fy,sw,sh,a,s));
-
-    // Cross markers — one per active corner
-    const drawCross=(cx,cy,h,a)=>{
-      ctx.save(); ctx.translate(cx,cy); ctx.rotate(a);
-      ctx.strokeStyle='#0e0c18'; ctx.lineWidth=W*0.009; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(2,2); ctx.lineTo(2,-h+2); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(-h*0.36+2,-h*0.62+2); ctx.lineTo(h*0.36+2,-h*0.62+2); ctx.stroke();
-      ctx.strokeStyle='#6a6888'; ctx.lineWidth=W*0.008;
-      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-h); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(-h*0.36,-h*0.62); ctx.lineTo(h*0.36,-h*0.62); ctx.stroke();
-      ctx.strokeStyle='rgba(180,195,240,0.50)'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.moveTo(-W*0.003,0); ctx.lineTo(-W*0.003,-h); ctx.stroke();
-      ctx.restore();
-    };
-    drawCross(W*0.972, H*0.270, H*0.066, -0.05); // top-right
-    drawCross(W*0.026, H*0.284, H*0.058,  0.07); // top-left
-  }
-
-  // ── ABOVE-GROUND TOMB — bottom-left corner ──
+  // ══════════════════════════════════════════
+  //  ABOVE-GROUND TOMB — bottom-left
+  // ══════════════════════════════════════════
   {
     const tx=W*0.072, ty=H*0.832, tw=W*0.090, th=H*0.064;
     ctx.fillStyle='rgba(0,0,10,0.55)';
@@ -18107,7 +18220,9 @@ function drawGraveyardScene() {
     ctx.beginPath(); ctx.moveTo(tx-tw*0.08,ty-th); ctx.lineTo(tx+tw*0.05,ty-th*0.38); ctx.stroke();
   }
 
-  // ── CROW — perched on a tombstone, bottom-right corner ──
+  // ══════════════════════════════════════════
+  //  CROW — bottom-right
+  // ══════════════════════════════════════════
   {
     const crx=W*0.944, cry=H*0.830;
     ctx.fillStyle='#141020';
@@ -18124,7 +18239,9 @@ function drawGraveyardScene() {
     ctx.beginPath(); ctx.moveTo(crx+W*0.008,cry+H*0.012); ctx.lineTo(crx+W*0.014,cry+H*0.018); ctx.stroke();
   }
 
-  // ── GHOST — drifting below the oval, bottom-left zone ──
+  // ══════════════════════════════════════════
+  //  GHOST — drifting, bottom-left
+  // ══════════════════════════════════════════
   {
     const ghDrift=Math.sin(t*0.28)*W*0.032;
     const ghBob=Math.sin(t*0.60)*H*0.012;
@@ -18153,70 +18270,26 @@ function drawGraveyardScene() {
     ctx.restore();
   }
 
-  // ── PUMPKINS — corners ──
-  {
-    const drawPumpkin=(px,py,r,flicker)=>{
-      const glow=ctx.createRadialGradient(px,py,0,px,py,r*4.0);
-      glow.addColorStop(0,`rgba(255,120,0,${(0.45*flicker).toFixed(2)})`);
-      glow.addColorStop(0.4,`rgba(200,70,0,${(0.20*flicker).toFixed(2)})`);
-      glow.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(px,py,r*4.0,0,PI*2); ctx.fill();
-      ctx.fillStyle='rgba(0,0,0,0.40)';
-      ctx.beginPath(); ctx.ellipse(px+r*0.5,py+r*0.6,r*1.2,r*0.3,0,0,PI*2); ctx.fill();
-      ctx.fillStyle='#c83808';
-      ctx.beginPath(); ctx.ellipse(px,py,r,r*1.08,0,0,PI*2); ctx.fill();
-      ctx.fillStyle='#9a2c06';
-      ctx.beginPath(); ctx.ellipse(px-r*0.28,py,r*0.28,r*1.08,0,0,PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(px+r*0.28,py,r*0.28,r*1.08,0,0,PI*2); ctx.fill();
-      ctx.fillStyle='rgba(210,180,140,0.30)';
-      ctx.beginPath(); ctx.ellipse(px-r*0.20,py-r*0.50,r*0.40,r*0.25,-0.4,0,PI*2); ctx.fill();
-      ctx.fillStyle=`rgba(255,150,20,${(0.90*flicker).toFixed(2)})`;
-      ctx.beginPath(); ctx.moveTo(px-r*0.32,py-r*0.18); ctx.lineTo(px-r*0.20,py-r*0.38); ctx.lineTo(px-r*0.08,py-r*0.18); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(px+r*0.08,py-r*0.18); ctx.lineTo(px+r*0.20,py-r*0.38); ctx.lineTo(px+r*0.32,py-r*0.18); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle='#3a2010'; ctx.lineWidth=W*0.005; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(px,py-r*1.08); ctx.lineTo(px-r*0.10,py-r*1.30); ctx.stroke();
-    };
-    const f1=0.78+0.22*Math.sin(t*6.2);
-    const f2=0.72+0.28*Math.sin(t*5.4+1.8);
-    drawPumpkin(W*0.926, H*0.920, W*0.022, f1);  // bottom-right
-    drawPumpkin(W*0.036, H*0.900, W*0.020, f2);  // bottom-left
-  }
+  // ══════════════════════════════════════════
+  //  GRAVE CANDLES (replaces pumpkins)
+  // ══════════════════════════════════════════
+  drawGraveCandle(W*0.936, H*0.912, W*0.014, 0.0);   // bottom-right
+  drawGraveCandle(W*0.038, H*0.896, W*0.013, 2.4);   // bottom-left
 
-  // ── LANTERNS — far left and right sides ──
-  {
-    const drawLantern=(lx,ly,ph,dir)=>{
-      const flk=0.75+0.25*Math.sin(t*5.2+ph)+0.10*Math.sin(t*3.0+ph*1.5);
-      const hx=lx+W*0.022*dir, hy=ly-H*0.074;
-      const pool=ctx.createRadialGradient(hx,ly,0,hx,ly,W*0.095);
-      pool.addColorStop(0,`rgba(220,160,50,${(0.30*flk).toFixed(2)})`);
-      pool.addColorStop(0.5,`rgba(180,100,20,${(0.12*flk).toFixed(2)})`);
-      pool.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=pool; ctx.beginPath(); ctx.arc(hx,ly,W*0.095,0,PI*2); ctx.fill();
-      ctx.strokeStyle='#2a2038'; ctx.lineWidth=W*0.007; ctx.lineCap='butt';
-      ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx,ly-H*0.085); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(lx,ly-H*0.072); ctx.lineTo(hx,hy); ctx.stroke();
-      const lg=ctx.createRadialGradient(hx,hy,0,hx,hy,W*0.055);
-      lg.addColorStop(0,`rgba(255,200,80,${(0.70*flk).toFixed(2)})`);
-      lg.addColorStop(0.35,`rgba(220,130,30,${(0.35*flk).toFixed(2)})`);
-      lg.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=lg; ctx.fillRect(hx-W*0.06,hy-H*0.07,W*0.12,H*0.10);
-      ctx.fillStyle=`rgba(255,200,60,${(0.90*flk).toFixed(2)})`;
-      ctx.fillRect(hx-W*0.012,hy-H*0.028,W*0.024,H*0.030);
-      ctx.strokeStyle='#2a2038'; ctx.lineWidth=1.5;
-      ctx.strokeRect(hx-W*0.012,hy-H*0.028,W*0.024,H*0.030);
-      ctx.fillStyle='#2a2038';
-      ctx.beginPath(); ctx.moveTo(hx-W*0.016,hy-H*0.028); ctx.lineTo(hx,hy-H*0.042); ctx.lineTo(hx+W*0.016,hy-H*0.028); ctx.closePath(); ctx.fill();
-    };
-    // One lantern per side, mid-height
-    drawLantern(W*0.020, H*0.580, 0.0,  1);
-    drawLantern(W*0.980, H*0.580, 2.2, -1);
-  }
+  // ══════════════════════════════════════════
+  //  IRON POST LANTERNS (replaces generic lanterns)
+  // ══════════════════════════════════════════
+  drawIronLantern(W*0.022, H*0.570, 0.0);
+  drawIronLantern(W*0.978, H*0.570, 2.2);
 
-  // ── WILL-O'-WISPS — one per side ──
+  // ══════════════════════════════════════════
+  //  WILL-O'-WISPS
+  // ══════════════════════════════════════════
   [
-    {bx:0.958, by:0.316, sp:0.36, ph:0.0, dr:0.016, col:[140,220,255]},
-    {bx:0.032, by:0.862, sp:0.38, ph:1.6, dr:0.016, col:[140,215,255]},
-  ].forEach(({bx,by,sp,ph,dr,col})=>{
+    {bx:0.958, by:0.316, sp:0.36, ph:0.0, col:[140,220,255]},
+    {bx:0.032, by:0.862, sp:0.38, ph:1.6, col:[140,215,255]},
+  ].forEach(({bx,by,sp,ph,col})=>{
+    const dr=0.016;
     const wx=W*(bx+Math.sin(t*sp+ph)*dr+Math.sin(t*sp*0.6+ph+1.3)*dr*0.5);
     const wy=H*(by+Math.cos(t*sp*0.8+ph+0.7)*dr*0.4);
     const pulse=0.65+0.35*Math.sin(t*3.2+ph);
@@ -18240,18 +18313,20 @@ function drawGraveyardScene() {
     ctx.stroke();
   });
 
-  // ── GROUND MIST — in corner zones ──
+  // ══════════════════════════════════════════
+  //  GROUND MIST
+  // ══════════════════════════════════════════
   {
     const dA=Math.sin(t*0.22)*0.012, dB=Math.sin(t*0.18+1.4)*0.010;
     [
-      [0.920+dA, 0.338, 0.076, 0.18],  // top-right
-      [0.066+dA, 0.322, 0.058, 0.14],  // top-left
-      [0.910-dA, 0.888, 0.070, 0.16],  // bottom-right
-      [0.058-dB, 0.894, 0.056, 0.14],  // bottom-left
+      [0.920+dA, 0.342, 0.080, 0.18],
+      [0.068+dA, 0.326, 0.064, 0.16],
+      [0.912-dA, 0.890, 0.072, 0.16],
+      [0.060-dB, 0.896, 0.058, 0.14],
     ].forEach(([cx,cy,rx,a])=>{
       const mg=ctx.createRadialGradient(W*cx,H*cy,0,W*cx,H*cy,W*rx);
-      mg.addColorStop(0,`rgba(180,195,230,${a})`);
-      mg.addColorStop(0.5,`rgba(140,160,210,${a*0.50})`);
+      mg.addColorStop(0,`rgba(175,192,228,${a})`);
+      mg.addColorStop(0.5,`rgba(135,158,208,${a*0.50})`);
       mg.addColorStop(1,'rgba(0,0,0,0)');
       ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(W*cx,H*cy,W*rx,0,PI*2); ctx.fill();
     });
