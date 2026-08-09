@@ -18189,13 +18189,110 @@ function drawGraveyardScene() {
   drawWreath(W*0.040, H*0.343, W*0.012);
 
   // ══════════════════════════════════════════
-  //  WROUGHT-IRON FENCE — top corners
+  //  WROUGHT-IRON FENCE — top-right corner
   // ══════════════════════════════════════════
-
-  // Top-right fence — runs inward from right edge
   drawFenceSection(W*0.998, H*0.370, -W*0.120, H*0.055, false);
-  // Top-left fence — runs inward from left edge
-  drawFenceSection(W*0.002, H*0.362, W*0.110, H*0.055, false);
+
+  // ══════════════════════════════════════════
+  //  GRAVEYARD WALL + GATE — top-left
+  //  Low stone wall with gate opening set into it
+  // ══════════════════════════════════════════
+  {
+    // Layout:  |--wall--|  gate  |--wall--|
+    //   x:     0 → 0.038         0.168 → 0.240
+    //   wall top: H*0.282,  base: H*0.310
+    const wallTop  = H*0.282;
+    const wallBase = H*0.310;
+    const wallH    = wallBase - wallTop;
+    const gateLX   = W*0.038;   // left gate pillar x
+    const gateRX   = W*0.168;   // right gate pillar x
+    const gcx      = (gateLX+gateRX)/2;
+    const gw       = gateRX - gateLX;
+
+    // Helper: draw a low stone wall segment from x0 to x1
+    const drawStoneWall=(x0,x1,wt,wb)=>{
+      const ww=x1-x0;
+      // Shadow under wall
+      ctx.fillStyle='rgba(0,0,0,0.40)';
+      ctx.fillRect(x0+ww*0.04, wb, ww*0.96, H*0.010);
+      // Wall body with subtle stone gradient
+      const wg=ctx.createLinearGradient(x0,wt,x0+ww,wb);
+      wg.addColorStop(0,'#2e2840'); wg.addColorStop(0.3,'#24203a'); wg.addColorStop(0.7,'#1e1a30'); wg.addColorStop(1,'#181424');
+      ctx.fillStyle=wg; ctx.fillRect(x0,wt,ww,wb-wt);
+      // Moonlit top edge
+      ctx.strokeStyle='rgba(185,200,245,0.45)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(x0,wt); ctx.lineTo(x1,wt); ctx.stroke();
+      // Stone mortar lines — vertical seams every ~20px
+      ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=1;
+      for(let sx=x0+W*0.030; sx<x1; sx+=W*0.028+Math.sin(sx)*W*0.008){
+        const sTop = wt + (wallH*0.15)*(1+Math.sin(sx*0.7));
+        ctx.beginPath(); ctx.moveTo(sx,sTop); ctx.lineTo(sx,wb); ctx.stroke();
+      }
+      // Occasional moss patch
+      ctx.fillStyle='rgba(22,48,20,0.50)';
+      for(let mx=x0+W*0.018; mx<x1-W*0.010; mx+=W*0.068+Math.sin(mx*1.3)*W*0.012){
+        ctx.beginPath(); ctx.ellipse(mx,wt+wallH*0.20,W*0.018,H*0.004,0,0,PI*2); ctx.fill();
+      }
+      // Dark right shadow edge
+      ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(x1,wt); ctx.lineTo(x1,wb); ctx.stroke();
+    };
+
+    // Left wall: screen edge → left gate pillar
+    drawStoneWall(0, gateLX, wallTop, wallBase);
+    // Right wall: right gate pillar → runs past tombstones
+    drawStoneWall(gateRX, W*0.250, wallTop+H*0.004, wallBase);
+
+    // Gate pillars — taller than the wall, same stone
+    const pillarW=W*0.018, pillarH=wallBase-H*0.195;
+    [[gateLX-pillarW/2],[gateRX-pillarW/2]].forEach(([px])=>{
+      const py=wallBase-pillarH;
+      const pg=ctx.createLinearGradient(px,py,px+pillarW,wallBase);
+      pg.addColorStop(0,'#362c4c'); pg.addColorStop(0.5,'#28203c'); pg.addColorStop(1,'#1a1428');
+      ctx.fillStyle=pg; ctx.fillRect(px,py,pillarW,pillarH);
+      // Cap
+      ctx.fillStyle='#3e3050'; ctx.fillRect(px-W*0.004,py-H*0.010,pillarW+W*0.008,H*0.013);
+      // Spike finial
+      ctx.fillStyle='#1e1630';
+      ctx.beginPath(); ctx.moveTo(px+pillarW/2,py-H*0.026); ctx.lineTo(px+pillarW/2-W*0.007,py-H*0.010); ctx.lineTo(px+pillarW/2+W*0.007,py-H*0.010); ctx.closePath(); ctx.fill();
+      // Moonlit left rim
+      ctx.strokeStyle='rgba(190,205,250,0.40)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px,wallBase); ctx.stroke();
+    });
+
+    // Iron gate — pickets between the two pillars
+    const gateTop2 = H*0.210;
+    const railColor='#181030';
+    ctx.strokeStyle=railColor; ctx.lineCap='butt';
+    // Top rail
+    ctx.lineWidth=W*0.006;
+    ctx.beginPath(); ctx.moveTo(gateLX,gateTop2+H*0.008); ctx.lineTo(gateRX,gateTop2+H*0.008); ctx.stroke();
+    // Mid rail
+    ctx.lineWidth=W*0.004;
+    ctx.beginPath(); ctx.moveTo(gateLX,gateTop2+H*0.038); ctx.lineTo(gateRX,gateTop2+H*0.038); ctx.stroke();
+    // Pickets
+    const nP=9;
+    for(let i=0;i<nP;i++){
+      const px=gateLX+(i+0.5)*(gw/nP);
+      ctx.strokeStyle=railColor; ctx.lineWidth=W*0.005;
+      ctx.beginPath(); ctx.moveTo(px,gateTop2+H*0.008); ctx.lineTo(px,wallBase); ctx.stroke();
+      // Spear tip
+      ctx.fillStyle=railColor;
+      ctx.beginPath(); ctx.moveTo(px,gateTop2+H*0.008);
+      ctx.lineTo(px-W*0.005,gateTop2+H*0.022); ctx.lineTo(px+W*0.005,gateTop2+H*0.022);
+      ctx.closePath(); ctx.fill();
+      // Moonlit sheen
+      ctx.strokeStyle='rgba(155,170,215,0.22)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(px-W*0.002,gateTop2+H*0.022); ctx.lineTo(px-W*0.002,wallBase); ctx.stroke();
+    }
+    // Arch over gate
+    ctx.strokeStyle=railColor; ctx.lineWidth=W*0.006;
+    ctx.beginPath(); ctx.arc(gcx,gateTop2+H*0.008,gw/2,PI,0); ctx.stroke();
+    // Central diamond ornament
+    ctx.fillStyle=railColor;
+    ctx.save(); ctx.translate(gcx,gateTop2+H*0.008-gw*0.055); ctx.rotate(PI/4);
+    ctx.fillRect(-W*0.007,-W*0.007,W*0.014,W*0.014); ctx.restore();
+  }
 
   // ══════════════════════════════════════════
   //  ABOVE-GROUND TOMB — bottom-left
@@ -18338,68 +18435,6 @@ function drawGraveyardScene() {
   //  NO-CLIP SECTION — drawn after ctx.restore
   // ══════════════════════════════════════════
 
-  // ── WROUGHT-IRON ENTRANCE GATE — top-left, straddling backdrop/ground ──
-  {
-    // Gate sits at the top-left corner where backdrop meets outer zone.
-    // Pillars root at H*0.265 so gate top dips into the backdrop (intentional overlap).
-    const gateBase=H*0.310;    // pillar base (ground level at top-left)
-    const gateTop =H*0.192;    // top of pickets (overlaps backdrop slightly)
-    const gw      =W*0.130;    // total gate width
-    const gcx     =W*0.100;    // gate centre-x (top-left corner)
-    const pillarW =W*0.018, pillarH=gateBase-H*0.200;
-
-    // Stone pillars
-    [[gcx-gw/2-pillarW/2],[gcx+gw/2-pillarW/2]].forEach(([px])=>{
-      const py=gateBase-pillarH;
-      const pg=ctx.createLinearGradient(px,py,px+pillarW,gateBase);
-      pg.addColorStop(0,'#2e2440'); pg.addColorStop(0.5,'#221c32'); pg.addColorStop(1,'#181224');
-      ctx.fillStyle=pg; ctx.fillRect(px,py,pillarW,pillarH);
-      // Cap
-      ctx.fillStyle='#362a48'; ctx.fillRect(px-W*0.004,py-H*0.010,pillarW+W*0.008,H*0.012);
-      // Finial spike
-      ctx.fillStyle='#241c36';
-      ctx.beginPath(); ctx.moveTo(px+pillarW/2,py-H*0.024); ctx.lineTo(px+pillarW/2-W*0.008,py-H*0.010); ctx.lineTo(px+pillarW/2+W*0.008,py-H*0.010); ctx.closePath(); ctx.fill();
-      // Moonlit left rim
-      ctx.strokeStyle='rgba(180,195,240,0.35)'; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px,gateBase); ctx.stroke();
-    });
-
-    const railColor='#1a1230';
-    ctx.strokeStyle=railColor; ctx.lineCap='butt';
-
-    // Top and mid horizontal rails
-    ctx.lineWidth=W*0.006;
-    ctx.beginPath(); ctx.moveTo(gcx-gw/2,gateTop+H*0.008); ctx.lineTo(gcx+gw/2,gateTop+H*0.008); ctx.stroke();
-    ctx.lineWidth=W*0.005;
-    ctx.beginPath(); ctx.moveTo(gcx-gw/2,gateTop+H*0.040); ctx.lineTo(gcx+gw/2,gateTop+H*0.040); ctx.stroke();
-
-    // Vertical pickets — 10 across
-    const nP=10;
-    for(let i=0;i<nP;i++){
-      const px=gcx-gw/2+(i+0.5)*(gw/nP);
-      ctx.strokeStyle=railColor; ctx.lineWidth=W*0.005;
-      ctx.beginPath(); ctx.moveTo(px,gateTop+H*0.008); ctx.lineTo(px,gateBase); ctx.stroke();
-      // Spear tip
-      ctx.fillStyle=railColor;
-      ctx.beginPath(); ctx.moveTo(px,gateTop+H*0.008);
-      ctx.lineTo(px-W*0.005,gateTop+H*0.022); ctx.lineTo(px+W*0.005,gateTop+H*0.022);
-      ctx.closePath(); ctx.fill();
-      // Moonlit left face on pickets
-      ctx.strokeStyle='rgba(160,175,220,0.25)'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(px-W*0.002,gateTop+H*0.022); ctx.lineTo(px-W*0.002,gateBase); ctx.stroke();
-    }
-
-    // Decorative arch over gate
-    ctx.strokeStyle=railColor; ctx.lineWidth=W*0.006;
-    ctx.beginPath(); ctx.arc(gcx,gateTop+H*0.008,gw/2,PI,0); ctx.stroke();
-
-    // Central diamond ornament on arch
-    const dmx=gcx, dmy=gateTop+H*0.008-gw*0.06;
-    ctx.fillStyle=railColor;
-    ctx.save(); ctx.translate(dmx,dmy); ctx.rotate(PI/4);
-    ctx.fillRect(-W*0.008,-W*0.008,W*0.016,W*0.016);
-    ctx.restore();
-  }
 
   // ── OVAL BOUNDARY — low weathered stone wall ──
   {
