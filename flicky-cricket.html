@@ -17918,60 +17918,48 @@ function drawGraveyardScene() {
     drawBat(W*0.865, H*0.075, 3.5, 0.016);
     drawBat(W*0.770, H*0.016, 5.1, 0.015);
 
-    // ── DEAD TREES — left half of backdrop, organic curved branching ──
+    // ── DEAD TREES — left half of backdrop ──
+    // Simple seeded LCG: visible dark-purple silhouette against the violet sky
     const drawDeadTree=(tx,ty,seed,thick)=>{
       ctx.lineCap='round';
-      // Deterministic per-tree pseudo-random (xorshift)
-      let _s=seed*73856093^1234567;
-      const rnd=()=>{ _s^=_s<<13; _s^=(_s>>>17); _s^=_s<<5; return((_s>>>0)/4294967296); };
+      let _s=(seed+1)*1664525+1013904223;
+      const rnd=()=>{ _s=(_s*1664525+1013904223)>>>0; return _s/4294967296; };
 
       const branch=(x0,y0,ang,len,w,d)=>{
-        if(d<0||w<0.45||len<3) return;
-        // Curved segment — control point offset perpendicular to direction
-        const curve=(rnd()-0.5)*len*0.28;
-        const na=ang+PI/2;
-        const qx=x0+Math.cos(ang)*len*0.55+Math.cos(na)*curve;
-        const qy=y0+Math.sin(ang)*len*0.55+Math.sin(na)*curve;
-        const ex=x0+Math.cos(ang)*len;
-        const ey=y0+Math.sin(ang)*len;
-        // Slightly brighter toward tips (thinner branches catch moonlight)
-        const moonlit=d<2?'rgba(4,2,22,0.85)':'#030115';
-        ctx.strokeStyle=moonlit; ctx.lineWidth=w;
+        if(d<0||w<0.5||len<2) return;
+        const ex=x0+Math.cos(ang)*len, ey=y0+Math.sin(ang)*len;
+        // Control point slightly off-centre for a natural curve
+        const bend=(rnd()-0.5)*len*0.30;
+        const qx=x0+Math.cos(ang)*len*0.5 - Math.sin(ang)*bend;
+        const qy=y0+Math.sin(ang)*len*0.5 + Math.cos(ang)*bend;
+        ctx.strokeStyle='#2a1248'; ctx.lineWidth=w;
         ctx.beginPath(); ctx.moveTo(x0,y0); ctx.quadraticCurveTo(qx,qy,ex,ey); ctx.stroke();
-
-        // Irregular fork — not symmetric, angles vary per branch
-        const spr=0.26+rnd()*0.22;
-        const leftAng =ang - spr*(0.75+rnd()*0.50);
-        const rightAng=ang + spr*(0.75+rnd()*0.50);
-        const lenR=len*(0.50+rnd()*0.16);
-        branch(ex,ey,leftAng,  lenR,             w*(0.54+rnd()*0.08),d-1);
-        branch(ex,ey,rightAng, lenR*(0.88+rnd()*0.16), w*(0.50+rnd()*0.08),d-1);
-        // Occasional upward spur — gives the characteristic dead-tree silhouette
-        if(d>1&&rnd()>0.50) branch(ex,ey,ang+(rnd()-0.5)*0.30,lenR*0.60,w*0.36,d-2);
+        // Moonlit highlight on upper face of thicker branches
+        if(w>2.5){
+          ctx.strokeStyle='rgba(200,170,255,0.22)'; ctx.lineWidth=1;
+          ctx.beginPath(); ctx.moveTo(x0,y0); ctx.quadraticCurveTo(qx,qy,ex,ey); ctx.stroke();
+        }
+        const spr=0.28+rnd()*0.20;
+        const la=ang-spr*(0.8+rnd()*0.4), ra=ang+spr*(0.8+rnd()*0.4);
+        const lr=len*(0.52+rnd()*0.14);
+        branch(ex,ey,la,lr,             w*(0.55+rnd()*0.06),d-1);
+        branch(ex,ey,ra,lr*(0.9+rnd()*0.14),w*(0.52+rnd()*0.06),d-1);
+        if(d>1&&rnd()>0.48) branch(ex,ey,ang+(rnd()-0.5)*0.35,lr*0.55,w*0.38,d-2);
       };
 
-      // Trunk base flare — draw a few overlapping thick strokes at the very bottom
-      const baseAng=-PI/2+(rnd()-0.5)*0.10;
-      ctx.strokeStyle='#030115'; ctx.lineCap='round';
-      ctx.lineWidth=W*thick*1.8;
-      ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(tx+Math.cos(baseAng)*H*0.04,ty+Math.sin(baseAng)*H*0.04); ctx.stroke();
-      ctx.lineWidth=W*thick*1.3;
-      ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(tx+Math.cos(baseAng)*H*0.08,ty+Math.sin(baseAng)*H*0.08); ctx.stroke();
-
-      // Main tree from base
-      branch(tx,ty,baseAng,H*0.32,W*thick,5);
+      // Flared trunk base — two thick strokes before recursion
+      const ba=-PI/2+(rnd()-0.5)*0.12;
+      ctx.strokeStyle='#2a1248'; ctx.lineWidth=W*thick*2.0;
+      ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(tx+Math.cos(ba)*H*0.05,ty+Math.sin(ba)*H*0.05); ctx.stroke();
+      ctx.lineWidth=W*thick*1.4;
+      ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(tx+Math.cos(ba)*H*0.10,ty+Math.sin(ba)*H*0.10); ctx.stroke();
+      branch(tx,ty,ba,H*0.32,W*thick,5);
     };
 
-    // Four trees, leftmost large, tapering right — seeded so each looks different
-    drawDeadTree(W*0.05, H*0.230, 1337, 0.028);
-    drawDeadTree(W*0.17, H*0.230, 2741, 0.022);
-    drawDeadTree(W*0.29, H*0.230, 9182, 0.018);
-    drawDeadTree(W*0.41, H*0.230, 4523, 0.015);
-
-    // Subtle violet moonlit rim on a few prominent branches
-    ctx.strokeStyle='rgba(210,185,255,0.13)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(W*0.17,H*0.230); ctx.quadraticCurveTo(W*0.20,H*0.120,W*0.24,H*0.048); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(W*0.29,H*0.230); ctx.quadraticCurveTo(W*0.33,H*0.110,W*0.36,H*0.060); ctx.stroke();
+    drawDeadTree(W*0.05, H*0.230, 1337, 0.030);
+    drawDeadTree(W*0.17, H*0.230, 2741, 0.024);
+    drawDeadTree(W*0.29, H*0.230, 9182, 0.020);
+    drawDeadTree(W*0.41, H*0.230, 4523, 0.016);
   }
 
   ctx.restore(); // end backdrop clip
