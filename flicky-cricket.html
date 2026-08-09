@@ -17918,28 +17918,60 @@ function drawGraveyardScene() {
     drawBat(W*0.865, H*0.075, 3.5, 0.016);
     drawBat(W*0.770, H*0.016, 5.1, 0.015);
 
-    // ── DEAD TREES — left half of backdrop, big and gnarled ──
-    const drawDeadTree=(tx,ty,lean,ht,thick)=>{
-      ctx.strokeStyle='#030115'; ctx.lineCap='round';
-      const drawBranch=(x0,y0,dx,dy,w,depth)=>{
-        if(depth<0||w<0.5) return;
-        ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x0+dx,y0+dy); ctx.stroke();
-        const spread=0.40+depth*0.07;
-        drawBranch(x0+dx,y0+dy, dx*spread-dy*0.28,-dy*spread-dx*0.28, w*0.54,depth-1);
-        drawBranch(x0+dx,y0+dy, dx*spread+dy*0.28,-dy*spread+dx*0.28, w*0.52,depth-1);
-        if(depth>2) drawBranch(x0+dx,y0+dy,dx*0.6,-dy*0.6,w*0.38,depth-2);
+    // ── DEAD TREES — left half of backdrop, organic curved branching ──
+    const drawDeadTree=(tx,ty,seed,thick)=>{
+      ctx.lineCap='round';
+      // Deterministic per-tree pseudo-random (xorshift)
+      let _s=seed*73856093^1234567;
+      const rnd=()=>{ _s^=_s<<13; _s^=(_s>>>17); _s^=_s<<5; return((_s>>>0)/4294967296); };
+
+      const branch=(x0,y0,ang,len,w,d)=>{
+        if(d<0||w<0.45||len<3) return;
+        // Curved segment — control point offset perpendicular to direction
+        const curve=(rnd()-0.5)*len*0.28;
+        const na=ang+PI/2;
+        const qx=x0+Math.cos(ang)*len*0.55+Math.cos(na)*curve;
+        const qy=y0+Math.sin(ang)*len*0.55+Math.sin(na)*curve;
+        const ex=x0+Math.cos(ang)*len;
+        const ey=y0+Math.sin(ang)*len;
+        // Slightly brighter toward tips (thinner branches catch moonlight)
+        const moonlit=d<2?'rgba(4,2,22,0.85)':'#030115';
+        ctx.strokeStyle=moonlit; ctx.lineWidth=w;
+        ctx.beginPath(); ctx.moveTo(x0,y0); ctx.quadraticCurveTo(qx,qy,ex,ey); ctx.stroke();
+
+        // Irregular fork — not symmetric, angles vary per branch
+        const spr=0.26+rnd()*0.22;
+        const leftAng =ang - spr*(0.75+rnd()*0.50);
+        const rightAng=ang + spr*(0.75+rnd()*0.50);
+        const lenR=len*(0.50+rnd()*0.16);
+        branch(ex,ey,leftAng,  lenR,             w*(0.54+rnd()*0.08),d-1);
+        branch(ex,ey,rightAng, lenR*(0.88+rnd()*0.16), w*(0.50+rnd()*0.08),d-1);
+        // Occasional upward spur — gives the characteristic dead-tree silhouette
+        if(d>1&&rnd()>0.50) branch(ex,ey,ang+(rnd()-0.5)*0.30,lenR*0.60,w*0.36,d-2);
       };
-      drawBranch(tx,ty,W*lean*ht,-H*ht,W*thick,5);
+
+      // Trunk base flare — draw a few overlapping thick strokes at the very bottom
+      const baseAng=-PI/2+(rnd()-0.5)*0.10;
+      ctx.strokeStyle='#030115'; ctx.lineCap='round';
+      ctx.lineWidth=W*thick*1.8;
+      ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(tx+Math.cos(baseAng)*H*0.04,ty+Math.sin(baseAng)*H*0.04); ctx.stroke();
+      ctx.lineWidth=W*thick*1.3;
+      ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(tx+Math.cos(baseAng)*H*0.08,ty+Math.sin(baseAng)*H*0.08); ctx.stroke();
+
+      // Main tree from base
+      branch(tx,ty,baseAng,H*0.32,W*thick,5);
     };
-    // Four trees sprawling across the left half
-    drawDeadTree(W*0.06, H*0.230,  0.06, 0.36, 0.026);
-    drawDeadTree(W*0.18, H*0.230, -0.03, 0.32, 0.020);
-    drawDeadTree(W*0.30, H*0.230,  0.04, 0.30, 0.018);
-    drawDeadTree(W*0.42, H*0.230,  0.02, 0.26, 0.015);
-    // Violet moonlit edge catches on rightward-facing branches
-    ctx.strokeStyle='rgba(200,180,255,0.14)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(W*0.18,H*0.230); ctx.lineTo(W*0.22,H*0.050); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(W*0.30,H*0.230); ctx.lineTo(W*0.35,H*0.070); ctx.stroke();
+
+    // Four trees, leftmost large, tapering right — seeded so each looks different
+    drawDeadTree(W*0.05, H*0.230, 1337, 0.028);
+    drawDeadTree(W*0.17, H*0.230, 2741, 0.022);
+    drawDeadTree(W*0.29, H*0.230, 9182, 0.018);
+    drawDeadTree(W*0.41, H*0.230, 4523, 0.015);
+
+    // Subtle violet moonlit rim on a few prominent branches
+    ctx.strokeStyle='rgba(210,185,255,0.13)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(W*0.17,H*0.230); ctx.quadraticCurveTo(W*0.20,H*0.120,W*0.24,H*0.048); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W*0.29,H*0.230); ctx.quadraticCurveTo(W*0.33,H*0.110,W*0.36,H*0.060); ctx.stroke();
   }
 
   ctx.restore(); // end backdrop clip
