@@ -17969,274 +17969,339 @@ function drawGraveyardScene() {
   ctx.ellipse(CX,CY,W*FIELD_RX,H*FIELD_RY,0,0,PI*2,true);
   ctx.clip('evenodd');
 
-  // Dark soil ground — near-black with cold grey
+  // ── GROUND — dark blue-grey soil, visible but clearly night ──
   const groundG=ctx.createLinearGradient(0,wallY,0,H);
-  groundG.addColorStop(0,'#0c0c14');
-  groundG.addColorStop(0.35,'#111118');
-  groundG.addColorStop(1,'#0a0a10');
+  groundG.addColorStop(0,'#1c1e2a');
+  groundG.addColorStop(0.4,'#181a26');
+  groundG.addColorStop(1,'#141622');
   ctx.fillStyle=groundG; ctx.fillRect(0,wallY,W,H-wallY);
 
-  // ── DENSE GRAVEYARD — right outer zone ──
+  // ── DIRECTIONAL MOONLIGHT WASH — from upper-centre-left (moon position) ──
+  // Sweeps silver-blue light across the ground, brighter top-left fading to shadow bottom-right
+  const moonLightG=ctx.createLinearGradient(W*0.34,wallY,W*0.80,H);
+  moonLightG.addColorStop(0,'rgba(190,210,255,0.18)');
+  moonLightG.addColorStop(0.4,'rgba(160,185,240,0.10)');
+  moonLightG.addColorStop(1,'rgba(80,100,160,0.04)');
+  ctx.fillStyle=moonLightG; ctx.fillRect(0,wallY,W,H-wallY);
+
+  // ── TOMBSTONES — right outer zone, moonlit faces + deep shadows ──
   {
+    // Moon is upper-left (W*0.34, H*0.095) — so left face of stones is lit, right is shadow
     const drawStoneSlab=(sx,sy,sw,sh,angle,style)=>{
       ctx.save(); ctx.translate(sx,sy); ctx.rotate(angle);
-      // Shadow
-      ctx.fillStyle='rgba(0,0,0,0.55)';
-      ctx.fillRect(-sw/2+W*0.006, -sh+H*0.006, sw, sh);
-      // Stone body
-      const stoneG=ctx.createLinearGradient(-sw/2,-sh,sw/2,0);
-      const cols=style===0?['#2a2832','#1e1c2a','#16141e']:
-                 style===1?['#2e2428','#211a1e','#180e12']:
-                           ['#263028','#1a2420','#121a16'];
-      stoneG.addColorStop(0,cols[0]); stoneG.addColorStop(0.5,cols[1]); stoneG.addColorStop(1,cols[2]);
-      ctx.fillStyle=stoneG;
-      // Arch top
+
+      // Cast shadow on ground — falls right & down (away from moon at upper-left)
+      ctx.fillStyle='rgba(0,0,10,0.60)';
+      ctx.beginPath();
+      ctx.moveTo(-sw/2,0); ctx.lineTo(sw/2,0);
+      ctx.lineTo(sw/2+sw*0.8, sh*0.35); ctx.lineTo(-sw/2+sw*0.4, sh*0.35);
+      ctx.closePath(); ctx.fill();
+
+      // Stone body — base colour per style
+      const baseCol=style===0?'#3a3648':style===1?'#3e3040':'#323c3a';
+      const shadowCol=style===0?'#1a1628':style===1?'#1e1424':'#161e1a';
+      const litCol=style===0?'#5a5670':style===1?'#584258':'#4a5854';
+
+      // Shadow side (right face) — very dark
+      ctx.fillStyle=shadowCol;
       ctx.beginPath();
       ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,-sh*0.75);
       ctx.arc(0,-sh*0.75,sw/2,PI,0);
       ctx.lineTo(sw/2,0); ctx.closePath(); ctx.fill();
-      // Moonlit edge highlight
-      ctx.strokeStyle='rgba(160,170,200,0.18)'; ctx.lineWidth=1.5;
+
+      // Moonlit face — left half brighter
+      const stoneG=ctx.createLinearGradient(-sw/2,-sh,sw/2,0);
+      stoneG.addColorStop(0,litCol);
+      stoneG.addColorStop(0.45,baseCol);
+      stoneG.addColorStop(1,shadowCol);
+      ctx.fillStyle=stoneG;
       ctx.beginPath();
       ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,-sh*0.75);
       ctx.arc(0,-sh*0.75,sw/2,PI,0);
-      ctx.lineTo(sw/2,0); ctx.stroke();
-      // Inscription crack
-      ctx.strokeStyle='rgba(100,110,140,0.20)'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(-sw*0.22,-sh*0.38); ctx.lineTo(sw*0.10,-sh*0.52); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(sw*0.05,-sh*0.62); ctx.lineTo(-sw*0.08,-sh*0.72); ctx.stroke();
-      // Moss patches
-      ctx.fillStyle='rgba(28,55,28,0.50)';
-      ctx.beginPath(); ctx.ellipse(-sw*0.22,-sh*0.20,sw*0.12,H*0.008,-0.3,0,PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(sw*0.15,-sh*0.55,sw*0.08,H*0.006,0.4,0,PI*2); ctx.fill();
+      ctx.lineTo(sw/2,0); ctx.closePath(); ctx.fill();
+
+      // Bright silver rim on moon-facing left edge
+      ctx.strokeStyle='rgba(200,215,255,0.55)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,-sh*0.75);
+      ctx.arc(0,-sh*0.75,sw/2,PI,PI*0.5,true); ctx.stroke();
+
+      // Dark right-edge shadow line
+      ctx.strokeStyle='rgba(0,0,0,0.70)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(sw/2,0); ctx.lineTo(sw/2,-sh*0.75); ctx.stroke();
+
+      // Engraved text lines — faint on moonlit face
+      ctx.strokeStyle='rgba(100,110,150,0.35)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(-sw*0.28,-sh*0.40); ctx.lineTo(sw*0.28,-sh*0.40); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-sw*0.20,-sh*0.52); ctx.lineTo(sw*0.20,-sh*0.52); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-sw*0.16,-sh*0.64); ctx.lineTo(sw*0.16,-sh*0.64); ctx.stroke();
+
+      // Crack
+      ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(-sw*0.08,-sh*0.30); ctx.lineTo(sw*0.12,-sh*0.55); ctx.stroke();
+
+      // Moss — darker patches bottom corners
+      ctx.fillStyle='rgba(30,55,28,0.55)';
+      ctx.beginPath(); ctx.ellipse(-sw*0.30,-sh*0.08,sw*0.14,H*0.007,-0.3,0,PI*2); ctx.fill();
+
       ctx.restore();
     };
 
-    // Dense right-zone graveyard — rows of slabs
+    // Right zone — main graveyard
     [
-      [0.874, 0.330, W*0.038, W*0.056, -0.06, 0],
-      [0.942, 0.316, W*0.034, W*0.052,  0.07, 1],
-      [0.908, 0.350, W*0.042, W*0.062, -0.03, 2],
-      [0.960, 0.338, W*0.036, W*0.054,  0.09, 0],
-      [0.878, 0.404, W*0.040, W*0.060, -0.05, 1],
-      [0.952, 0.392, W*0.036, W*0.056,  0.06, 2],
-      [0.924, 0.424, W*0.044, W*0.066, -0.04, 0],
-      [0.870, 0.468, W*0.038, W*0.058, -0.08, 2],
-      [0.946, 0.456, W*0.032, W*0.050,  0.05, 1],
-      [0.918, 0.496, W*0.040, W*0.060, -0.03, 0],
-      [0.876, 0.534, W*0.036, W*0.054,  0.07, 1],
-      [0.950, 0.520, W*0.034, W*0.052, -0.06, 2],
-      [0.906, 0.560, W*0.042, W*0.064, -0.04, 0],
-      [0.868, 0.598, W*0.038, W*0.058,  0.08, 2],
-      [0.940, 0.584, W*0.036, W*0.056, -0.05, 1],
-      [0.922, 0.632, W*0.040, W*0.060,  0.04, 0],
+      [0.874, 0.330, W*0.038, W*0.058, -0.06, 0],
+      [0.942, 0.316, W*0.034, W*0.054,  0.07, 1],
+      [0.908, 0.352, W*0.042, W*0.064, -0.03, 2],
+      [0.960, 0.338, W*0.036, W*0.056,  0.09, 0],
+      [0.878, 0.406, W*0.040, W*0.062, -0.05, 1],
+      [0.952, 0.394, W*0.036, W*0.058,  0.06, 2],
+      [0.924, 0.426, W*0.044, W*0.068, -0.04, 0],
+      [0.870, 0.470, W*0.038, W*0.060, -0.08, 2],
+      [0.946, 0.458, W*0.032, W*0.052,  0.05, 1],
+      [0.918, 0.498, W*0.040, W*0.062, -0.03, 0],
+      [0.876, 0.536, W*0.036, W*0.056,  0.07, 1],
+      [0.950, 0.522, W*0.034, W*0.054, -0.06, 2],
+      [0.906, 0.562, W*0.042, W*0.066, -0.04, 0],
+      [0.868, 0.600, W*0.038, W*0.060,  0.08, 2],
+      [0.940, 0.586, W*0.036, W*0.058, -0.05, 1],
+      [0.922, 0.634, W*0.040, W*0.062,  0.04, 0],
     ].forEach(([fx,fy,sw,sh,a,s])=>drawStoneSlab(W*fx,H*fy,sw,sh,a,s));
 
-    // Some left-side graves too
+    // Left zone — a few graves
     [
-      [0.040, 0.420, W*0.034, W*0.052,  0.05, 1],
-      [0.066, 0.460, W*0.038, W*0.058, -0.04, 2],
-      [0.044, 0.504, W*0.036, W*0.056,  0.07, 0],
-      [0.068, 0.548, W*0.034, W*0.052, -0.05, 1],
+      [0.040, 0.420, W*0.034, W*0.054,  0.05, 1],
+      [0.066, 0.462, W*0.038, W*0.060, -0.04, 2],
+      [0.044, 0.506, W*0.036, W*0.058,  0.07, 0],
+      [0.068, 0.550, W*0.034, W*0.054, -0.05, 1],
     ].forEach(([fx,fy,sw,sh,a,s])=>drawStoneSlab(W*fx,H*fy,sw,sh,a,s));
 
-    // Simple cross markers
+    // Cross markers — moonlit left side, dark right
     const drawCross=(cx,cy,h,a)=>{
       ctx.save(); ctx.translate(cx,cy); ctx.rotate(a);
-      ctx.strokeStyle='#1e1828'; ctx.lineWidth=W*0.007; ctx.lineCap='round';
+      // Shadow side
+      ctx.strokeStyle='#0e0c18'; ctx.lineWidth=W*0.009; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(2,2); ctx.lineTo(2,-h+2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-h*0.36+2,-h*0.62+2); ctx.lineTo(h*0.36+2,-h*0.62+2); ctx.stroke();
+      // Lit face
+      ctx.strokeStyle='#6a6888'; ctx.lineWidth=W*0.008;
       ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-h); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-h*0.36,-h*0.62); ctx.lineTo(h*0.36,-h*0.62); ctx.stroke();
-      ctx.strokeStyle='rgba(120,110,160,0.25)'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(-1,-1); ctx.lineTo(-1,-h+1); ctx.stroke();
+      // Bright left edge
+      ctx.strokeStyle='rgba(180,195,240,0.50)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(-W*0.003,0); ctx.lineTo(-W*0.003,-h); ctx.stroke();
       ctx.restore();
     };
-    drawCross(W*0.036,H*0.360,H*0.062,-0.06);
-    drawCross(W*0.062,H*0.400,H*0.054, 0.08);
-    drawCross(W*0.896,H*0.660,H*0.060,-0.05);
-    drawCross(W*0.956,H*0.644,H*0.052, 0.06);
-    drawCross(W*0.930,H*0.700,H*0.056,-0.04);
+    drawCross(W*0.036,H*0.362,H*0.064,-0.06);
+    drawCross(W*0.062,H*0.402,H*0.056, 0.08);
+    drawCross(W*0.896,H*0.662,H*0.062,-0.05);
+    drawCross(W*0.956,H*0.646,H*0.054, 0.06);
+    drawCross(W*0.930,H*0.702,H*0.058,-0.04);
   }
 
-  // ── LARGE ABOVE-GROUND TOMB / SARCOPHAGUS — left zone ──
+  // ── ABOVE-GROUND TOMB — left zone, moonlit top ──
   {
-    const tx=W*0.060, ty=H*0.580, tw=W*0.088, th=H*0.062;
-    // Shadow
-    ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(tx-tw/2+W*0.008,ty-th+H*0.008,tw,th);
-    // Body
+    const tx=W*0.060, ty=H*0.580, tw=W*0.090, th=H*0.064;
+    // Cast shadow
+    ctx.fillStyle='rgba(0,0,10,0.55)';
+    ctx.beginPath(); ctx.moveTo(tx-tw/2,ty); ctx.lineTo(tx+tw/2,ty);
+    ctx.lineTo(tx+tw/2+tw*0.5,ty+H*0.022); ctx.lineTo(tx-tw/2+tw*0.2,ty+H*0.022);
+    ctx.closePath(); ctx.fill();
+    // Body — lit left face, shadow right
     const cg=ctx.createLinearGradient(tx-tw/2,ty-th,tx+tw/2,ty);
-    cg.addColorStop(0,'#262030'); cg.addColorStop(0.5,'#1a1624'); cg.addColorStop(1,'#100e18');
+    cg.addColorStop(0,'#4a4460'); cg.addColorStop(0.45,'#2e2840'); cg.addColorStop(1,'#181422');
     ctx.fillStyle=cg; ctx.fillRect(tx-tw/2,ty-th,tw,th);
-    // Lid (slightly wider)
-    ctx.fillStyle='#2e2838'; ctx.fillRect(tx-tw/2-W*0.006,ty-th-H*0.016,tw+W*0.012,H*0.020);
-    // Carved inscription panel
-    ctx.strokeStyle='rgba(140,130,170,0.22)'; ctx.lineWidth=1.5;
-    ctx.strokeRect(tx-tw*0.28,ty-th+H*0.012,tw*0.56,H*0.032);
-    // Moonlit top edge
-    ctx.strokeStyle='rgba(180,190,220,0.20)'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(tx-tw/2-W*0.006,ty-th-H*0.016); ctx.lineTo(tx+tw/2+W*0.006,ty-th-H*0.016); ctx.stroke();
+    // Lid — bright moonlit top
+    const lidG=ctx.createLinearGradient(tx-tw/2,ty-th-H*0.018,tx+tw/2,ty-th);
+    lidG.addColorStop(0,'#6a6480'); lidG.addColorStop(0.5,'#4a4460'); lidG.addColorStop(1,'#2a2438');
+    ctx.fillStyle=lidG; ctx.fillRect(tx-tw/2-W*0.006,ty-th-H*0.018,tw+W*0.012,H*0.022);
+    // Bright silver top-left rim catch
+    ctx.strokeStyle='rgba(210,220,255,0.60)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(tx-tw/2-W*0.006,ty-th-H*0.018); ctx.lineTo(tx+tw/2+W*0.006,ty-th-H*0.018); ctx.stroke();
+    // Carved panel
+    ctx.strokeStyle='rgba(160,155,200,0.30)'; ctx.lineWidth=1.5;
+    ctx.strokeRect(tx-tw*0.28,ty-th+H*0.012,tw*0.56,H*0.034);
     // Crack
-    ctx.strokeStyle='rgba(80,75,100,0.35)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(tx-tw*0.08,ty-th); ctx.lineTo(tx+tw*0.04,ty-th*0.40); ctx.stroke();
+    ctx.strokeStyle='rgba(0,0,0,0.50)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(tx-tw*0.08,ty-th); ctx.lineTo(tx+tw*0.05,ty-th*0.38); ctx.stroke();
   }
 
-  // ── CROW — perched on a grave ──
+  // ── CROW — perched on a grave, silhouetted against moonlight ──
   {
     const crx=W*0.934, cry=H*0.504-W*0.052;
-    const wingFlap=Math.sin(t*0.4)*0.04; // very slow, idle
-    ctx.fillStyle='#0a0810';
-    // Body
+    ctx.fillStyle='#141020';
     ctx.beginPath(); ctx.ellipse(crx,cry,W*0.016,H*0.014,0,0,PI*2); ctx.fill();
-    // Head
     ctx.beginPath(); ctx.arc(crx+W*0.014,cry-H*0.010,W*0.010,0,PI*2); ctx.fill();
-    // Beak
     ctx.beginPath(); ctx.moveTo(crx+W*0.024,cry-H*0.010); ctx.lineTo(crx+W*0.032,cry-H*0.012); ctx.lineTo(crx+W*0.024,cry-H*0.008); ctx.closePath(); ctx.fill();
-    // Eye glint
-    ctx.fillStyle='rgba(160,220,100,0.80)'; ctx.beginPath(); ctx.arc(crx+W*0.016,cry-H*0.012,W*0.003,0,PI*2); ctx.fill();
-    // Wings folded
-    ctx.fillStyle='#0a0810';
-    ctx.beginPath(); ctx.ellipse(crx-W*0.006,cry,W*0.022,H*0.008,wingFlap,0,PI*2); ctx.fill();
-    // Tail
+    // Moonlit left edge highlight on crow
+    ctx.strokeStyle='rgba(160,180,240,0.35)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(crx+W*0.014,cry-H*0.010,W*0.010,PI*0.8,PI*1.6); ctx.stroke();
+    // Eye — cold glint
+    ctx.fillStyle='rgba(200,230,255,0.90)'; ctx.beginPath(); ctx.arc(crx+W*0.016,cry-H*0.012,W*0.003,0,PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(crx-W*0.006,cry,W*0.022,H*0.008,Math.sin(t*0.4)*0.04,0,PI*2); ctx.fill();
     ctx.beginPath(); ctx.moveTo(crx-W*0.018,cry+H*0.002); ctx.lineTo(crx-W*0.034,cry+H*0.010); ctx.lineTo(crx-W*0.028,cry); ctx.closePath(); ctx.fill();
-    // Perch feet lines
-    ctx.strokeStyle='#0a0810'; ctx.lineWidth=1.5; ctx.lineCap='round';
+    ctx.strokeStyle='#141020'; ctx.lineWidth=1.5; ctx.lineCap='round';
     ctx.beginPath(); ctx.moveTo(crx,cry+H*0.012); ctx.lineTo(crx-W*0.006,cry+H*0.018); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(crx+W*0.008,cry+H*0.012); ctx.lineTo(crx+W*0.014,cry+H*0.018); ctx.stroke();
   }
 
-  // ── WANDERING GHOST — drifting across field ──
+  // ── GHOST — bright, glowing, very visible ──
   {
     const ghDrift=Math.sin(t*0.28)*W*0.045;
     const ghBob=Math.sin(t*0.60)*H*0.012;
-    const ghX=CX+W*0.12+ghDrift, ghY=H*0.660+ghBob;
-    const ghPulse=0.55+0.25*Math.sin(t*1.4);
-    // Outer glow
-    const ghG=ctx.createRadialGradient(ghX,ghY-H*0.030,0,ghX,ghY,H*0.090);
-    ghG.addColorStop(0,`rgba(160,200,255,${(ghPulse*0.55).toFixed(2)})`);
-    ghG.addColorStop(0.5,`rgba(100,150,240,${(ghPulse*0.22).toFixed(2)})`);
+    const ghX=CX+W*0.12+ghDrift, ghY=H*0.650+ghBob;
+    const ghPulse=0.70+0.30*Math.sin(t*1.4);
+    // Big outer glow pool on ground
+    const ghGround=ctx.createRadialGradient(ghX,ghY+H*0.020,0,ghX,ghY+H*0.020,W*0.085);
+    ghGround.addColorStop(0,'rgba(140,180,255,0.20)'); ghGround.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=ghGround; ctx.beginPath(); ctx.arc(ghX,ghY+H*0.020,W*0.085,0,PI*2); ctx.fill();
+    // Main glow
+    const ghG=ctx.createRadialGradient(ghX,ghY-H*0.020,0,ghX,ghY,H*0.100);
+    ghG.addColorStop(0,`rgba(200,220,255,${(ghPulse*0.65).toFixed(2)})`);
+    ghG.addColorStop(0.4,`rgba(140,170,255,${(ghPulse*0.28).toFixed(2)})`);
     ghG.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=ghG; ctx.fillRect(ghX-H*0.10,ghY-H*0.10,H*0.20,H*0.20);
-    // Ghost body
-    ctx.save(); ctx.globalAlpha=ghPulse*0.70;
-    ctx.fillStyle='rgba(190,210,255,0.88)';
+    ctx.fillStyle=ghG; ctx.fillRect(ghX-H*0.12,ghY-H*0.12,H*0.24,H*0.24);
+    // Ghost body — solid and bright
+    ctx.save(); ctx.globalAlpha=ghPulse*0.85;
+    ctx.fillStyle='rgba(220,235,255,0.95)';
     ctx.beginPath();
-    ctx.arc(ghX,ghY-H*0.036,W*0.026,PI,0);
-    ctx.lineTo(ghX+W*0.026,ghY+H*0.038);
-    ctx.quadraticCurveTo(ghX+W*0.018,ghY+H*0.030,ghX+W*0.009,ghY+H*0.044);
-    ctx.quadraticCurveTo(ghX,ghY+H*0.032,ghX-W*0.009,ghY+H*0.044);
-    ctx.quadraticCurveTo(ghX-W*0.018,ghY+H*0.030,ghX-W*0.026,ghY+H*0.038);
+    ctx.arc(ghX,ghY-H*0.036,W*0.028,PI,0);
+    ctx.lineTo(ghX+W*0.028,ghY+H*0.042);
+    ctx.quadraticCurveTo(ghX+W*0.019,ghY+H*0.032,ghX+W*0.009,ghY+H*0.048);
+    ctx.quadraticCurveTo(ghX,ghY+H*0.034,ghX-W*0.009,ghY+H*0.048);
+    ctx.quadraticCurveTo(ghX-W*0.019,ghY+H*0.032,ghX-W*0.028,ghY+H*0.042);
     ctx.closePath(); ctx.fill();
-    // Eyes
-    ctx.fillStyle='rgba(10,20,50,0.88)';
-    ctx.beginPath(); ctx.ellipse(ghX-W*0.010,ghY-H*0.042,W*0.007,H*0.010,0,0,PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(ghX+W*0.010,ghY-H*0.042,W*0.007,H*0.010,0,0,PI*2); ctx.fill();
+    ctx.fillStyle='rgba(10,20,60,0.90)';
+    ctx.beginPath(); ctx.ellipse(ghX-W*0.011,ghY-H*0.042,W*0.008,H*0.011,0,0,PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(ghX+W*0.011,ghY-H*0.042,W*0.008,H*0.011,0,0,PI*2); ctx.fill();
     ctx.restore();
   }
 
-  // ── PUMPKINS — scattered at base of graves ──
+  // ── PUMPKINS — glowing orange against the dark ground ──
   {
     const drawPumpkin=(px,py,r,flicker)=>{
-      const glow=ctx.createRadialGradient(px,py,0,px,py,r*2.8);
-      glow.addColorStop(0,`rgba(200,80,0,${(0.22*flicker).toFixed(2)})`);
+      // Big ground glow — now properly visible against lighter ground
+      const glow=ctx.createRadialGradient(px,py,0,px,py,r*4.0);
+      glow.addColorStop(0,`rgba(255,120,0,${(0.45*flicker).toFixed(2)})`);
+      glow.addColorStop(0.4,`rgba(200,70,0,${(0.20*flicker).toFixed(2)})`);
       glow.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(px,py,r*2.8,0,PI*2); ctx.fill();
-      ctx.fillStyle='#b03006';
+      ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(px,py,r*4.0,0,PI*2); ctx.fill();
+      // Shadow
+      ctx.fillStyle='rgba(0,0,0,0.40)';
+      ctx.beginPath(); ctx.ellipse(px+r*0.5,py+r*0.6,r*1.2,r*0.3,0,0,PI*2); ctx.fill();
+      // Moonlit top of pumpkin
+      ctx.fillStyle='#c83808';
       ctx.beginPath(); ctx.ellipse(px,py,r,r*1.08,0,0,PI*2); ctx.fill();
-      ctx.fillStyle='#8a2004';
+      ctx.fillStyle='#9a2c06';
       ctx.beginPath(); ctx.ellipse(px-r*0.28,py,r*0.28,r*1.08,0,0,PI*2); ctx.fill();
       ctx.beginPath(); ctx.ellipse(px+r*0.28,py,r*0.28,r*1.08,0,0,PI*2); ctx.fill();
-      // Carved eyes
-      ctx.fillStyle=`rgba(255,130,10,${(0.85*flicker).toFixed(2)})`;
-      ctx.beginPath(); ctx.moveTo(px-r*0.32,py-r*0.18); ctx.lineTo(px-r*0.20,py-r*0.36); ctx.lineTo(px-r*0.08,py-r*0.18); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(px+r*0.08,py-r*0.18); ctx.lineTo(px+r*0.20,py-r*0.36); ctx.lineTo(px+r*0.32,py-r*0.18); ctx.closePath(); ctx.fill();
+      // Moonlit highlight top-left
+      ctx.fillStyle='rgba(210,180,140,0.30)';
+      ctx.beginPath(); ctx.ellipse(px-r*0.20,py-r*0.50,r*0.40,r*0.25,-0.4,0,PI*2); ctx.fill();
+      // Glowing carved face
+      ctx.fillStyle=`rgba(255,150,20,${(0.90*flicker).toFixed(2)})`;
+      ctx.beginPath(); ctx.moveTo(px-r*0.32,py-r*0.18); ctx.lineTo(px-r*0.20,py-r*0.38); ctx.lineTo(px-r*0.08,py-r*0.18); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(px+r*0.08,py-r*0.18); ctx.lineTo(px+r*0.20,py-r*0.38); ctx.lineTo(px+r*0.32,py-r*0.18); ctx.closePath(); ctx.fill();
+      // Stem
+      ctx.strokeStyle='#3a2010'; ctx.lineWidth=W*0.005; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(px,py-r*1.08); ctx.lineTo(px-r*0.10,py-r*1.30); ctx.stroke();
     };
     const f1=0.78+0.22*Math.sin(t*6.2);
     const f2=0.72+0.28*Math.sin(t*5.4+1.8);
     const f3=0.80+0.20*Math.sin(t*7.1+0.9);
-    drawPumpkin(W*0.888, H*0.674, W*0.018, f1);
-    drawPumpkin(W*0.958, H*0.658, W*0.014, f2);
-    drawPumpkin(W*0.044, H*0.562, W*0.016, f3);
+    drawPumpkin(W*0.888, H*0.676, W*0.020, f1);
+    drawPumpkin(W*0.958, H*0.660, W*0.016, f2);
+    drawPumpkin(W*0.044, H*0.564, W*0.018, f3);
   }
 
-  // ── LANTERNS ON IRON POSTS — flanking field entrance area ──
+  // ── LANTERNS — large glowing pools lighting the ground ──
   {
-    const drawLantern=(lx,ly,ph)=>{
+    const drawLantern=(lx,ly,ph,dir)=>{
       const flk=0.75+0.25*Math.sin(t*5.2+ph)+0.10*Math.sin(t*3.0+ph*1.5);
+      const hx=lx+W*0.022*dir, hy=ly-H*0.074;
+      // Big ground glow pool — key change, actually lights the floor
+      const pool=ctx.createRadialGradient(hx,ly,0,hx,ly,W*0.095);
+      pool.addColorStop(0,`rgba(220,160,50,${(0.30*flk).toFixed(2)})`);
+      pool.addColorStop(0.5,`rgba(180,100,20,${(0.12*flk).toFixed(2)})`);
+      pool.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=pool; ctx.beginPath(); ctx.arc(hx,ly,W*0.095,0,PI*2); ctx.fill();
       // Post
-      ctx.strokeStyle='#1a1428'; ctx.lineWidth=W*0.006; ctx.lineCap='butt';
-      ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx,ly-H*0.080); ctx.stroke();
+      ctx.strokeStyle='#2a2038'; ctx.lineWidth=W*0.007; ctx.lineCap='butt';
+      ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx,ly-H*0.085); ctx.stroke();
       // Arm
-      ctx.beginPath(); ctx.moveTo(lx,ly-H*0.068); ctx.lineTo(lx+W*0.024,ly-H*0.072); ctx.stroke();
-      // Lantern box glow
-      const lg=ctx.createRadialGradient(lx+W*0.024,ly-H*0.080,0,lx+W*0.024,ly-H*0.080,W*0.040);
-      lg.addColorStop(0,`rgba(220,150,40,${(0.45*flk).toFixed(2)})`);
-      lg.addColorStop(0.5,`rgba(180,90,10,${(0.18*flk).toFixed(2)})`);
+      ctx.beginPath(); ctx.moveTo(lx,ly-H*0.072); ctx.lineTo(hx,hy); ctx.stroke();
+      // Lantern glow halo
+      const lg=ctx.createRadialGradient(hx,hy,0,hx,hy,W*0.055);
+      lg.addColorStop(0,`rgba(255,200,80,${(0.70*flk).toFixed(2)})`);
+      lg.addColorStop(0.35,`rgba(220,130,30,${(0.35*flk).toFixed(2)})`);
       lg.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=lg; ctx.fillRect(lx,ly-H*0.120,W*0.050,H*0.090);
-      // Lantern glass box
-      ctx.fillStyle=`rgba(200,130,30,${(0.80*flk).toFixed(2)})`;
-      ctx.fillRect(lx+W*0.014,ly-H*0.096,W*0.020,H*0.028);
-      ctx.strokeStyle='#1a1428'; ctx.lineWidth=1.5;
-      ctx.strokeRect(lx+W*0.014,ly-H*0.096,W*0.020,H*0.028);
+      ctx.fillStyle=lg; ctx.fillRect(hx-W*0.06,hy-H*0.07,W*0.12,H*0.10);
+      // Lantern box
+      ctx.fillStyle=`rgba(255,200,60,${(0.90*flk).toFixed(2)})`;
+      ctx.fillRect(hx-W*0.012,hy-H*0.028,W*0.024,H*0.030);
+      ctx.strokeStyle='#2a2038'; ctx.lineWidth=1.5;
+      ctx.strokeRect(hx-W*0.012,hy-H*0.028,W*0.024,H*0.030);
       // Cap
-      ctx.fillStyle='#1a1428';
-      ctx.beginPath(); ctx.moveTo(lx+W*0.010,ly-H*0.096); ctx.lineTo(lx+W*0.024,ly-H*0.108); ctx.lineTo(lx+W*0.038,ly-H*0.096); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#2a2038';
+      ctx.beginPath(); ctx.moveTo(hx-W*0.016,hy-H*0.028); ctx.lineTo(hx,hy-H*0.042); ctx.lineTo(hx+W*0.016,hy-H*0.028); ctx.closePath(); ctx.fill();
     };
-    drawLantern(W*0.028, H*0.755, 0.0);
-    drawLantern(W*0.028, H*0.820, 2.2);
-    drawLantern(W*0.960, H*0.760, 1.1);
-    drawLantern(W*0.960, H*0.826, 3.4);
+    drawLantern(W*0.025, H*0.760, 0.0,  1);
+    drawLantern(W*0.025, H*0.828, 2.2,  1);
+    drawLantern(W*0.965, H*0.764, 1.1, -1);
+    drawLantern(W*0.965, H*0.830, 3.4, -1);
   }
 
-  // ── WILL-O'-WISPS — drifting through graves ──
+  // ── WILL-O'-WISPS — bright glowing orbs, light surroundings ──
   [
-    {bx:0.896, by:0.440, sp:0.36, ph:0.0, dr:0.022, col:[100,200,255]},
-    {bx:0.950, by:0.510, sp:0.28, ph:2.3, dr:0.018, col:[140,220,255]},
-    {bx:0.878, by:0.570, sp:0.42, ph:4.1, dr:0.020, col:[80,180,240]},
-    {bx:0.040, by:0.480, sp:0.38, ph:1.6, dr:0.018, col:[120,200,255]},
+    {bx:0.896, by:0.440, sp:0.36, ph:0.0, dr:0.022, col:[140,220,255]},
+    {bx:0.950, by:0.510, sp:0.28, ph:2.3, dr:0.018, col:[160,235,255]},
+    {bx:0.878, by:0.570, sp:0.42, ph:4.1, dr:0.020, col:[120,200,255]},
+    {bx:0.040, by:0.480, sp:0.38, ph:1.6, dr:0.018, col:[140,215,255]},
   ].forEach(({bx,by,sp,ph,dr,col})=>{
     const wx=W*(bx+Math.sin(t*sp+ph)*dr+Math.sin(t*sp*0.6+ph+1.3)*dr*0.5);
     const wy=H*(by+Math.cos(t*sp*0.8+ph+0.7)*dr*0.4);
-    const pulse=0.60+0.40*Math.sin(t*3.2+ph);
+    const pulse=0.65+0.35*Math.sin(t*3.2+ph);
+    // Ground light pool
+    const gpool=ctx.createRadialGradient(wx,wy+H*0.015,0,wx,wy+H*0.015,W*0.060);
+    gpool.addColorStop(0,`rgba(${col[0]},${col[1]},${col[2]},${(0.22*pulse).toFixed(2)})`);
+    gpool.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=gpool; ctx.beginPath(); ctx.arc(wx,wy+H*0.015,W*0.060,0,PI*2); ctx.fill();
     // Outer glow
-    const wg=ctx.createRadialGradient(wx,wy,0,wx,wy,W*0.042);
-    wg.addColorStop(0,`rgba(${col[0]},${col[1]},${col[2]},${(0.55*pulse).toFixed(2)})`);
-    wg.addColorStop(0.4,`rgba(${col[0]},${col[1]},${col[2]},${(0.22*pulse).toFixed(2)})`);
+    const wg=ctx.createRadialGradient(wx,wy,0,wx,wy,W*0.050);
+    wg.addColorStop(0,`rgba(${col[0]},${col[1]},${col[2]},${(0.70*pulse).toFixed(2)})`);
+    wg.addColorStop(0.4,`rgba(${col[0]},${col[1]},${col[2]},${(0.30*pulse).toFixed(2)})`);
     wg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=wg; ctx.beginPath(); ctx.arc(wx,wy,W*0.042,0,PI*2); ctx.fill();
-    // Inner orb
-    ctx.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},${(0.75*pulse).toFixed(2)})`;
-    ctx.beginPath(); ctx.arc(wx,wy,W*0.014,0,PI*2); ctx.fill();
-    // Bright core
-    ctx.fillStyle=`rgba(220,240,255,${(0.90*pulse).toFixed(2)})`;
-    ctx.beginPath(); ctx.arc(wx,wy,W*0.006,0,PI*2); ctx.fill();
-    // Wispy tail
-    ctx.strokeStyle=`rgba(${col[0]},${col[1]},${col[2]},${(0.28*pulse).toFixed(2)})`;
-    ctx.lineWidth=W*0.008; ctx.lineCap='round';
-    ctx.beginPath();
-    ctx.moveTo(wx,wy);
-    ctx.quadraticCurveTo(wx+Math.sin(t*sp+ph+1)*W*0.022, wy+H*0.018, wx+Math.sin(t*sp+ph)*W*0.012, wy+H*0.032);
+    ctx.fillStyle=wg; ctx.beginPath(); ctx.arc(wx,wy,W*0.050,0,PI*2); ctx.fill();
+    // Bright core orb
+    ctx.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},${(0.90*pulse).toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(wx,wy,W*0.016,0,PI*2); ctx.fill();
+    ctx.fillStyle=`rgba(240,250,255,${(0.95*pulse).toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(wx,wy,W*0.007,0,PI*2); ctx.fill();
+    // Tail
+    ctx.strokeStyle=`rgba(${col[0]},${col[1]},${col[2]},${(0.35*pulse).toFixed(2)})`;
+    ctx.lineWidth=W*0.010; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(wx,wy);
+    ctx.quadraticCurveTo(wx+Math.sin(t*sp+ph+1)*W*0.024,wy+H*0.020,wx+Math.sin(t*sp+ph)*W*0.014,wy+H*0.036);
     ctx.stroke();
   });
 
-  // ── GROUND MIST — dense, pooling around graves ──
+  // ── GROUND MIST — softly glowing, visible against the darker ground ──
   {
     const dA=Math.sin(t*0.22)*0.012, dB=Math.sin(t*0.18+1.4)*0.010;
     [
-      [0.920+dA, 0.370, 0.090, 0.28],
-      [0.958-dB, 0.420, 0.072, 0.22],
-      [0.892+dA, 0.460, 0.096, 0.30],
-      [0.946+dB, 0.500, 0.068, 0.20],
-      [0.904-dA, 0.540, 0.088, 0.26],
-      [0.936+dA, 0.580, 0.070, 0.18],
-      [0.914-dB, 0.618, 0.076, 0.22],
-      [0.050+dA, 0.440, 0.056, 0.18],
-      [0.058-dB, 0.510, 0.060, 0.20],
-      [0.5+dA,   0.630, 0.120, 0.14],
-      [0.5-dB,   0.680, 0.130, 0.12],
+      [0.920+dA, 0.372, 0.088, 0.22],
+      [0.958-dB, 0.422, 0.070, 0.18],
+      [0.892+dA, 0.462, 0.094, 0.24],
+      [0.946+dB, 0.502, 0.066, 0.16],
+      [0.904-dA, 0.542, 0.086, 0.20],
+      [0.936+dA, 0.582, 0.068, 0.16],
+      [0.914-dB, 0.620, 0.074, 0.18],
+      [0.050+dA, 0.442, 0.054, 0.16],
+      [0.058-dB, 0.512, 0.058, 0.18],
+      [0.5+dA,   0.632, 0.115, 0.14],
+      [0.5-dB,   0.682, 0.125, 0.12],
     ].forEach(([cx,cy,rx,a])=>{
       const mg=ctx.createRadialGradient(W*cx,H*cy,0,W*cx,H*cy,W*rx);
-      mg.addColorStop(0,`rgba(160,175,210,${a})`);
-      mg.addColorStop(0.5,`rgba(120,140,190,${a*0.55})`);
+      mg.addColorStop(0,`rgba(180,195,230,${a})`);
+      mg.addColorStop(0.5,`rgba(140,160,210,${a*0.50})`);
       mg.addColorStop(1,'rgba(0,0,0,0)');
       ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(W*cx,H*cy,W*rx,0,PI*2); ctx.fill();
     });
