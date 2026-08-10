@@ -18376,74 +18376,153 @@ function drawGraveyardScene() {
   //  CELTIC CROSS — bottom-right
   // ══════════════════════════════════════════
   {
-    const cx = W*0.920, cy = H*0.910; // base of cross
-    const sh = H*0.130; // shaft height
-    const sw = W*0.018; // shaft width
-    const arm = W*0.036; // half arm-span
-    const ringR = W*0.030; // ring radius
-    const jy = cy - sh*0.68; // junction (centre of ring)
-    const stone = '#1e1a32';
-    const lit   = 'rgba(190,210,255,0.60)';
-    const moss  = 'rgba(40,120,60,0.25)';
+    const cx  = W*0.918;         // centre x
+    const gnd = H*0.916;         // ground / plinth base
+    const sw  = W*0.022;         // shaft half-width
+    const arm = W*0.048;         // arm half-span
+    const sh  = H*0.152;         // total height above plinth
+    const jy  = gnd - sh*0.64;   // ring / arm junction y
+    const ringR = W*0.038;        // ring outer radius
+    const ringInner = ringR*0.58; // ring inner radius
+    const lit  = 'rgba(200,220,255,0.65)';
+    const litF = 'rgba(200,220,255,0.28)';
+    const moss = 'rgba(50,130,65,0.30)';
+
+    // ── Stone gradient helpers ──
+    const stoneGrad=(x0,y0,x1,y1)=>{
+      const g=ctx.createLinearGradient(x0,y0,x1,y1);
+      g.addColorStop(0,'#2c2648'); g.addColorStop(0.40,'#1e1a36');
+      g.addColorStop(0.75,'#18162e'); g.addColorStop(1,'#100e22');
+      return g;
+    };
 
     // Ground shadow
-    ctx.fillStyle='rgba(0,0,0,0.40)';
-    ctx.beginPath(); ctx.ellipse(cx, cy+H*0.006, sw*2.2, H*0.010, 0, 0, PI*2); ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.45)';
+    ctx.beginPath(); ctx.ellipse(cx, gnd+H*0.008, arm*1.1, H*0.012, 0, 0, PI*2); ctx.fill();
 
-    // Base plinth
-    const pg=ctx.createLinearGradient(cx-sw*1.8, cy-H*0.018, cx+sw*1.8, cy);
-    pg.addColorStop(0,'#28223c'); pg.addColorStop(1,'#16122a');
-    ctx.fillStyle=pg; ctx.fillRect(cx-sw*1.8, cy-H*0.018, sw*3.6, H*0.018);
+    // ── Two-step plinth ──
+    // Lower step
+    ctx.fillStyle=stoneGrad(cx-sw*2.4,gnd-H*0.016,cx+sw*2.4,gnd);
+    ctx.fillRect(cx-sw*2.4, gnd-H*0.016, sw*4.8, H*0.016);
+    ctx.strokeStyle=lit; ctx.lineWidth=0.9;
+    ctx.strokeRect(cx-sw*2.4, gnd-H*0.016, sw*4.8, H*0.016);
+    // Upper step
+    ctx.fillStyle=stoneGrad(cx-sw*1.8,gnd-H*0.030,cx+sw*1.8,gnd-H*0.016);
+    ctx.fillRect(cx-sw*1.8, gnd-H*0.030, sw*3.6, H*0.014);
     ctx.strokeStyle=lit; ctx.lineWidth=0.8;
-    ctx.beginPath(); ctx.moveTo(cx-sw*1.8,cy-H*0.018); ctx.lineTo(cx+sw*1.8,cy-H*0.018); ctx.stroke();
+    ctx.strokeRect(cx-sw*1.8, gnd-H*0.030, sw*3.6, H*0.014);
 
-    // Shaft
-    const sg=ctx.createLinearGradient(cx-sw*0.5, cy-sh, cx+sw*0.5, cy);
-    sg.addColorStop(0,'#241e3a'); sg.addColorStop(0.5,'#1a1630'); sg.addColorStop(1,'#12102a');
-    ctx.fillStyle=sg; ctx.fillRect(cx-sw*0.5, cy-sh, sw, sh-H*0.018);
+    const plinthTop = gnd - H*0.030;
 
-    // Ring (annulus — outer filled, inner punched out with evenodd)
+    // ── Shaft (below arms) ──
+    ctx.fillStyle=stoneGrad(cx-sw,plinthTop,cx+sw,gnd);
+    ctx.fillRect(cx-sw, plinthTop, sw*2, jy+sw*0.5-plinthTop);
+
+    // ── Shaft (above ring to top) ──
+    const topY = gnd - sh;
+    ctx.fillStyle=stoneGrad(cx-sw,topY,cx+sw,jy);
+    ctx.fillRect(cx-sw, topY, sw*2, jy-ringR-topY);
+
+    // ── Cross arms ──
+    const armG=stoneGrad(cx-arm,jy-sw,cx+arm,jy+sw);
+    ctx.fillStyle=armG;
+    ctx.fillRect(cx-arm, jy-sw, arm*2, sw*2);
+
+    // ── Ring (annulus) ──
     ctx.save();
-    ctx.fillStyle=stone;
-    const rg=ctx.createRadialGradient(cx-ringR*0.3, jy-ringR*0.3, ringR*0.1, cx, jy, ringR*1.4);
-    rg.addColorStop(0,'#2e2848'); rg.addColorStop(0.6,'#1e1a34'); rg.addColorStop(1,'#12102a');
+    const rg=ctx.createRadialGradient(cx-ringR*0.25,jy-ringR*0.25,ringR*0.05,cx,jy,ringR*1.3);
+    rg.addColorStop(0,'#322c52'); rg.addColorStop(0.5,'#201c3a');
+    rg.addColorStop(0.85,'#16142c'); rg.addColorStop(1,'#0e0c1e');
     ctx.fillStyle=rg;
     ctx.beginPath();
-    ctx.arc(cx, jy, ringR, 0, PI*2);           // outer circle
-    ctx.arc(cx, jy, ringR*0.60, 0, PI*2, true); // inner hole (counter-clockwise)
+    ctx.arc(cx,jy,ringR,0,PI*2);
+    ctx.arc(cx,jy,ringInner,0,PI*2,true);
     ctx.fill('evenodd');
-    ctx.strokeStyle=lit; ctx.lineWidth=1.0;
-    ctx.beginPath(); ctx.arc(cx, jy, ringR, 0, PI*2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx, jy, ringR*0.60, 0, PI*2); ctx.stroke();
+    // Outer ring edge highlight (moonlit left + top)
+    ctx.strokeStyle=lit; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.arc(cx,jy,ringR,PI*0.5,PI*1.8); ctx.stroke();
+    ctx.strokeStyle=litF; ctx.lineWidth=1.0;
+    ctx.beginPath(); ctx.arc(cx,jy,ringR,PI*1.8,PI*0.5); ctx.stroke();
+    // Inner ring edge
+    ctx.strokeStyle='rgba(140,160,220,0.35)'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.arc(cx,jy,ringInner,0,PI*2); ctx.stroke();
     ctx.restore();
 
-    // Horizontal arms (drawn over shaft & ring)
-    const ag=ctx.createLinearGradient(cx-arm, jy-sw*0.5, cx+arm, jy+sw*0.5);
-    ag.addColorStop(0,'#12102a'); ag.addColorStop(0.35,'#241e3a'); ag.addColorStop(0.65,'#241e3a'); ag.addColorStop(1,'#12102a');
-    ctx.fillStyle=ag; ctx.fillRect(cx-arm, jy-sw*0.5, arm*2, sw);
+    // Re-draw cross arms on top of ring so they read solid
+    ctx.fillStyle=armG;
+    ctx.fillRect(cx-arm, jy-sw, arm*2, sw*2);
+    // Re-draw shaft segments on top
+    ctx.fillStyle=stoneGrad(cx-sw,topY,cx+sw,jy);
+    ctx.fillRect(cx-sw, topY, sw*2, jy-ringR-topY);
+    ctx.fillStyle=stoneGrad(cx-sw,jy,cx+sw,plinthTop);
+    ctx.fillRect(cx-sw, jy+ringR, sw*2, plinthTop-(jy+ringR));
 
-    // Top of cross (above ring)
-    ctx.fillStyle=sg; ctx.fillRect(cx-sw*0.5, cy-sh, sw, jy-ringR-(cy-sh));
+    // ── Moonlit left + top edges on shaft ──
+    ctx.strokeStyle=lit; ctx.lineWidth=1.1;
+    ctx.beginPath(); ctx.moveTo(cx-sw,topY); ctx.lineTo(cx-sw,jy-ringR); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx-sw,jy+ringR); ctx.lineTo(cx-sw,plinthTop); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx-sw,topY); ctx.lineTo(cx+sw,topY); ctx.stroke(); // top cap
+    // Arms
+    ctx.beginPath(); ctx.moveTo(cx-arm,jy-sw); ctx.lineTo(cx-arm,jy+sw); ctx.stroke(); // left tip
+    ctx.beginPath(); ctx.moveTo(cx-arm,jy-sw); ctx.lineTo(cx-sw,jy-sw); ctx.stroke();  // top-left arm
+    ctx.beginPath(); ctx.moveTo(cx+sw,jy-sw); ctx.lineTo(cx+arm,jy-sw); ctx.stroke();  // top-right arm
+    ctx.strokeStyle=litF;
+    ctx.beginPath(); ctx.moveTo(cx+arm,jy-sw); ctx.lineTo(cx+arm,jy+sw); ctx.stroke(); // right tip
 
-    // Moonlit edge highlights on shaft
-    ctx.strokeStyle=lit; ctx.lineWidth=0.8;
-    ctx.beginPath(); ctx.moveTo(cx-sw*0.5, cy-sh); ctx.lineTo(cx-sw*0.5, cy-H*0.018); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx-arm, jy-sw*0.5); ctx.lineTo(cx-arm, jy+sw*0.5); ctx.stroke();
+    // ── Knotwork engraving on shaft panel (below arms) ──
+    // Two interlaced S-curves suggesting a braid
+    ctx.save();
+    ctx.strokeStyle='rgba(160,180,240,0.30)'; ctx.lineWidth=1.2; ctx.lineCap='round';
+    const kx0=cx-sw*0.55, kx1=cx+sw*0.55;
+    const ky0=jy+ringR+H*0.008, ky1=plinthTop-H*0.006;
+    const km=(ky0+ky1)/2;
+    ctx.beginPath();
+    ctx.moveTo(kx0,ky0); ctx.bezierCurveTo(kx1,ky0,kx0,km,kx1,km);
+    ctx.bezierCurveTo(kx0,km,kx1,ky1,kx0,ky1); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(kx1,ky0); ctx.bezierCurveTo(kx0,ky0,kx1,km,kx0,km);
+    ctx.bezierCurveTo(kx1,km,kx0,ky1,kx1,ky1); ctx.stroke();
+    // horizontal rule lines top & bottom of panel
+    ctx.strokeStyle='rgba(160,180,240,0.20)'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.moveTo(kx0,ky0); ctx.lineTo(kx1,ky0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(kx0,ky1); ctx.lineTo(kx1,ky1); ctx.stroke();
+    ctx.restore();
 
-    // Arm tips highlight
-    ctx.beginPath(); ctx.moveTo(cx+arm, jy-sw*0.5); ctx.lineTo(cx+arm, jy+sw*0.5); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx-sw*0.5, cy-sh); ctx.lineTo(cx+sw*0.5, cy-sh); ctx.stroke();
-
-    // Moss / weathering patches
-    ctx.fillStyle=moss;
-    ctx.beginPath(); ctx.ellipse(cx-sw*0.1, cy-sh*0.25, sw*0.35, H*0.018, 0.3, 0, PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(cx+sw*0.2, cy-sh*0.55, sw*0.28, H*0.012, -0.2, 0, PI*2); ctx.fill();
-
-    // Faint engraved knotwork suggestion on shaft (two horizontal lines)
-    ctx.strokeStyle='rgba(140,160,220,0.22)'; ctx.lineWidth=0.8;
-    [0.30, 0.45].forEach(f=>{
-      ctx.beginPath(); ctx.moveTo(cx-sw*0.38, cy-sh*f); ctx.lineTo(cx+sw*0.38, cy-sh*f); ctx.stroke();
+    // ── Knotwork on arm panels (left and right of shaft) ──
+    ctx.save();
+    ctx.strokeStyle='rgba(160,180,240,0.25)'; ctx.lineWidth=0.9; ctx.lineCap='round';
+    [[-arm,-sw],[sw,arm]].forEach(([x0,x1])=>{
+      const ay0=jy-sw*0.55, ay1=jy+sw*0.55, amid=jy;
+      ctx.beginPath();
+      ctx.moveTo(cx+x0,ay0); ctx.quadraticCurveTo(cx+(x0+x1)*0.5,amid,cx+x1,ay0); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx+x0,ay1); ctx.quadraticCurveTo(cx+(x0+x1)*0.5,amid,cx+x1,ay1); ctx.stroke();
     });
+    ctx.restore();
+
+    // ── Ring knotwork — 4 small looped arcs in quarters ──
+    ctx.save();
+    ctx.strokeStyle='rgba(160,180,240,0.28)'; ctx.lineWidth=0.9;
+    const rm=(ringR+ringInner)*0.5;
+    [0,PI*0.5,PI,PI*1.5].forEach(a=>{
+      ctx.beginPath();
+      ctx.arc(cx,jy,rm,a+0.22,a+PI*0.5-0.22); ctx.stroke();
+    });
+    ctx.restore();
+
+    // ── Moss patches ──
+    ctx.fillStyle=moss;
+    ctx.beginPath(); ctx.ellipse(cx-sw*0.4, jy+ringR+H*0.028, sw*0.55,H*0.010,0.4,0,PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx+sw*0.2, topY+H*0.022, sw*0.40, H*0.008,-0.3,0,PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx-sw*0.6, jy-sw*0.2, W*0.005,W*0.005,0,0,PI*2); ctx.fill();
+
+    // ── Faint inscription on shaft face (below knotwork) ──
+    ctx.save();
+    ctx.fillStyle='rgba(170,190,240,0.28)';
+    ctx.font=`${W*0.012}px serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('✝', cx, (ky0+ky1)*0.5);
+    ctx.restore();
   }
 
   // ══════════════════════════════════════════
