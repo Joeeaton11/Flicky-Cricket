@@ -18753,10 +18753,10 @@ function drawCryptScene() {
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // 1. BASE — deep cold stone, no green
+  // 1. BASE — deep cold stone
   ctx.fillStyle='#06040e'; ctx.fillRect(0,0,W,H*0.23);
 
-  // Vaulted depth: sense of space receding behind the arch — cool violet-grey centre
+  // Vaulted depth — cool violet-grey centre fading to black
   const tunnelG=ctx.createRadialGradient(CX,H*0.08,W*0.02,CX,H*0.12,W*0.48);
   tunnelG.addColorStop(0,'rgba(52,40,82,0.88)');
   tunnelG.addColorStop(0.40,'rgba(28,20,52,0.75)');
@@ -18764,10 +18764,10 @@ function drawCryptScene() {
   tunnelG.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=tunnelG; ctx.fillRect(0,0,W,H*0.23);
 
-  // 2. FAR WALL — faint stone blocks in the far recesses, lit only by torchlight
+  // 2. FAR WALL — clearly visible stone blocks lit by lantern glow
   {
-    const fwY0=H*0.01, fwY1=H*0.19;
-    const bw=W*0.070, bh=H*0.050;
+    const fwY0=H*0.01, fwY1=H*0.195;
+    const bw=W*0.068, bh=H*0.048;
     ctx.save();
     ctx.beginPath();
     ctx.arc(CX,H*0.23,W*0.37,PI,0,false);
@@ -18778,120 +18778,224 @@ function drawCryptScene() {
       const off=(row%2)*bw*0.5;
       for(let col=-1;col*bw<W+bw;col++){
         const ox=col*bw+off;
-        const shade=0.22+0.12*Math.sin(row*2.8+col*2.1);
-        // Cool grey-stone — no green, slight warm tint near edges from torches
-        const distCentre=Math.abs(ox+bw/2-CX)/W;
-        const warmth=Math.floor(10*shade*distCentre);
-        ctx.fillStyle=`rgba(${Math.floor(38*shade)+warmth},${Math.floor(30*shade)},${Math.floor(52*shade)},0.22)`;
+        const shade=0.55+0.25*Math.sin(row*2.8+col*2.1);
+        // Warm tint near centre (lit by lanterns), cooler at edges
+        const distC=Math.max(0,1-Math.abs(ox+bw/2-CX)/(W*0.35));
+        const r=Math.floor((42+18*distC)*shade);
+        const g=Math.floor(32*shade);
+        const b=Math.floor((62+8*distC)*shade);
+        ctx.fillStyle=`rgba(${r},${g},${b},0.55)`;
         ctx.fillRect(ox+1,oy+1,bw-2,bh-2);
-        ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=0.7;
+        // Mortar
+        ctx.strokeStyle='rgba(0,0,0,0.50)'; ctx.lineWidth=0.8;
         ctx.strokeRect(ox+1,oy+1,bw-2,bh-2);
+        // Subtle highlight on top edge of each block
+        ctx.strokeStyle=`rgba(80,65,100,${(0.18*shade).toFixed(2)})`; ctx.lineWidth=0.6;
+        ctx.beginPath(); ctx.moveTo(ox+2,oy+1); ctx.lineTo(ox+bw-2,oy+1); ctx.stroke();
       }
     }
     ctx.restore();
   }
 
-  // 3. TORCH GLOW — warm amber wash bleeding up from the piers
+  // 3. TORCH GLOW — warm amber wash from piers bleeding into backdrop
   [[W*0.12,H*0.23],[W*0.88,H*0.23]].forEach(([gx,gy])=>{
-    const tg=ctx.createRadialGradient(gx,gy,0,gx,gy,W*0.46);
-    tg.addColorStop(0,'rgba(255,120,10,0.48)');
-    tg.addColorStop(0.25,'rgba(200,80,0,0.22)');
+    const tg=ctx.createRadialGradient(gx,gy,0,gx,gy,W*0.50);
+    tg.addColorStop(0,'rgba(255,120,10,0.52)');
+    tg.addColorStop(0.28,'rgba(200,80,0,0.24)');
     tg.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=tg; ctx.fillRect(0,0,W,H*0.23);
   });
 
-  // ── CRYPT CEILING — rough stone arch framing the backdrop ──
+  // ── CRYPT CEILING — vaulted stone arch ──
   {
-    ctx.fillStyle='#1a1630';
-    // Left stone pier
-    ctx.fillRect(0,0,W*0.120,H*0.23);
-    // Right stone pier
-    ctx.fillRect(W*0.880,0,W*0.120,H*0.23);
-    // Arch keystone blocks
-    ctx.fillStyle='#201c34';
     const archCX=CX, archCY=H*0.23, archR=W*0.370;
+
+    // 4. CEILING TEXTURE — vaulted ribbing above the arch
+    {
+      ctx.save();
+      // Clip to the spandrel areas (above arch, left and right of piers)
+      ctx.beginPath();
+      ctx.rect(0,0,W,H*0.23);
+      ctx.clip();
+      // Vault ribs radiating from arch springing points
+      const springL={x:CX-archR, y:archCY};
+      const springR={x:CX+archR, y:archCY};
+      ctx.strokeStyle='rgba(38,30,58,0.70)'; ctx.lineWidth=2.5;
+      // Left vault ribs
+      for(let i=0;i<5;i++){
+        const tx=W*(0.02+i*0.024), ty=0;
+        ctx.beginPath(); ctx.moveTo(springL.x,springL.y);
+        ctx.quadraticCurveTo(springL.x+W*0.04,springL.y-H*0.08, tx, ty);
+        ctx.stroke();
+      }
+      // Right vault ribs
+      for(let i=0;i<5;i++){
+        const tx=W*(0.98-i*0.024), ty=0;
+        ctx.beginPath(); ctx.moveTo(springR.x,springR.y);
+        ctx.quadraticCurveTo(springR.x-W*0.04,springR.y-H*0.08, tx, ty);
+        ctx.stroke();
+      }
+      // Rough ceiling stone texture — horizontal courses on the ceiling slab
+      ctx.strokeStyle='rgba(20,14,34,0.45)'; ctx.lineWidth=1;
+      for(let y=H*0.03;y<H*0.22;y+=H*0.036){
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W*0.120,y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(W*0.880,y); ctx.lineTo(W,y); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Stone piers with visible coursing
+    {
+      const drawPier=(x0,x1)=>{
+        // Base fill
+        const pg=ctx.createLinearGradient(x0,0,x1,0);
+        pg.addColorStop(0,x0===0?'#221c38':'#1c1830');
+        pg.addColorStop(0.5,'#2a2240');
+        pg.addColorStop(1,x0===0?'#1c1830':'#221c38');
+        ctx.fillStyle=pg; ctx.fillRect(x0,0,x1-x0,H*0.23);
+        // Stone courses
+        const bh=H*0.044, bw=(x1-x0);
+        for(let row=0;row*bh<H*0.23;row++){
+          const shade=0.75+0.25*Math.sin(row*1.9+x0*0.01);
+          ctx.strokeStyle=`rgba(0,0,0,${(0.45*shade).toFixed(2)})`; ctx.lineWidth=1;
+          ctx.strokeRect(x0+1,row*bh+1,bw-2,bh-2);
+          // Lit top edge
+          ctx.strokeStyle=`rgba(80,65,110,${(0.22*shade).toFixed(2)})`; ctx.lineWidth=0.7;
+          ctx.beginPath(); ctx.moveTo(x0+2,row*bh+1); ctx.lineTo(x1-2,row*bh+1); ctx.stroke();
+        }
+        // 5. WALL SCONCE BRACKET on each pier
+        const sx=x0===0?x1-W*0.008:x0+W*0.008, sy=H*0.155;
+        ctx.strokeStyle='#3a2c50'; ctx.lineWidth=W*0.006; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx+(x0===0?1:-1)*W*0.018,sy-H*0.014); ctx.stroke();
+        ctx.fillStyle='#2a1e40';
+        ctx.beginPath(); ctx.arc(sx+(x0===0?1:-1)*W*0.018,sy-H*0.014,W*0.007,0,PI*2); ctx.fill();
+      };
+      drawPier(0,W*0.120);
+      drawPier(W*0.880,W);
+    }
+
+    // Arch stone mass
+    ctx.fillStyle='#201c34';
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(0,0); ctx.lineTo(W,0); ctx.lineTo(W,H*0.23);
     ctx.arc(archCX,archCY,archR,0,PI,true);
     ctx.lineTo(0,H*0.23); ctx.closePath(); ctx.fill();
-    // Stone joint lines on arch soffit
-    ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=1.5;
+
+    // Voussoir block joints on arch soffit — visible wedge stones
+    ctx.strokeStyle='rgba(8,6,16,0.80)'; ctx.lineWidth=2;
     for(let i=1;i<=10;i++){
       const ang=PI+i/11*PI;
-      const r0=archR, r1=archR+W*0.044;
+      const r0=archR, r1=archR+W*0.052;
       ctx.beginPath();
       ctx.moveTo(archCX+r0*Math.cos(ang),archCY+r0*Math.sin(ang));
       ctx.lineTo(archCX+r1*Math.cos(ang),archCY+r1*Math.sin(ang));
       ctx.stroke();
     }
+    // Lit inner face of each voussoir
+    for(let i=0;i<11;i++){
+      const a0=PI+i/11*PI, a1=PI+(i+1)/11*PI;
+      const shade=0.55+0.30*Math.sin(i*1.3+0.8);
+      ctx.strokeStyle=`rgba(${Math.floor(55*shade)},${Math.floor(44*shade)},${Math.floor(75*shade)},0.70)`;
+      ctx.lineWidth=W*0.008;
+      ctx.beginPath(); ctx.arc(archCX,archCY,archR+W*0.004,a0,a1); ctx.stroke();
+    }
 
-    // Arch soffit shadow — darker underside, torchlight kissing the inner edge
-    ctx.strokeStyle='rgba(180,120,40,0.18)'; ctx.lineWidth=W*0.018;
-    ctx.beginPath(); ctx.arc(archCX,archCY,archR,PI,0,false); ctx.stroke();
-    ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=W*0.006;
-    ctx.beginPath(); ctx.arc(archCX,archCY,archR,PI,0,false); ctx.stroke();
+    // Keystone — carved skull centrepiece at arch crown
+    {
+      const kx=archCX, ky=archCY-archR-W*0.018;
+      // Keystone block
+      ctx.fillStyle='#2e2848';
+      ctx.beginPath();
+      ctx.moveTo(kx-W*0.028,ky+W*0.014);
+      ctx.lineTo(kx-W*0.020,ky-W*0.024);
+      ctx.lineTo(kx+W*0.020,ky-W*0.024);
+      ctx.lineTo(kx+W*0.028,ky+W*0.014);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.60)'; ctx.lineWidth=1.2; ctx.stroke();
+      // Carved skull relief
+      ctx.fillStyle='#4a4068';
+      ctx.beginPath(); ctx.ellipse(kx,ky-W*0.004,W*0.014,W*0.012,0,0,PI*2); ctx.fill();
+      ctx.fillStyle='rgba(0,0,0,0.70)';
+      ctx.beginPath(); ctx.ellipse(kx-W*0.006,ky-W*0.006,W*0.004,W*0.004,0,0,PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(kx+W*0.006,ky-W*0.006,W*0.004,W*0.004,0,0,PI*2); ctx.fill();
+      ctx.strokeStyle='rgba(60,50,80,0.70)'; ctx.lineWidth=0.8;
+      ctx.beginPath(); ctx.arc(kx,ky+W*0.005,W*0.007,0.2,PI-0.2); ctx.stroke();
+      // Torchlight catching the keystone
+      const klg=ctx.createRadialGradient(kx,ky,0,kx,ky,W*0.040);
+      klg.addColorStop(0,'rgba(200,130,30,0.20)');
+      klg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=klg; ctx.fillRect(kx-W*0.05,ky-W*0.05,W*0.10,W*0.10);
+    }
 
+    // Arch soffit shadow
+    ctx.strokeStyle='rgba(0,0,0,0.60)'; ctx.lineWidth=W*0.006;
+    ctx.beginPath(); ctx.arc(archCX,archCY,archR,PI,0,false); ctx.stroke();
+    // Torchlight kissing inner arch edge
+    ctx.strokeStyle='rgba(200,120,30,0.22)'; ctx.lineWidth=W*0.012;
+    ctx.beginPath(); ctx.arc(archCX,archCY,archR,PI,0,false); ctx.stroke();
     ctx.restore();
 
-    // Hanging roots & tendrils from ceiling
-    const rootSeeds=[[0.14,0.06,0.12],[0.28,0.02,0.09],[0.42,0.08,0.14],[0.55,0.01,0.10],[0.68,0.07,0.13],[0.80,0.03,0.08]];
-    rootSeeds.forEach(([rx,ry,len])=>{
-      ctx.strokeStyle='rgba(20,30,10,0.70)'; ctx.lineWidth=1.5; ctx.lineCap='round';
-      const sx=W*rx, sy=H*ry;
-      ctx.beginPath(); ctx.moveTo(sx,sy);
-      ctx.bezierCurveTo(sx+W*0.018,sy+H*len*0.4, sx-W*0.012,sy+H*len*0.7, sx+W*0.008,sy+H*len);
-      ctx.stroke();
-      ctx.lineWidth=0.8;
-      ctx.beginPath(); ctx.moveTo(sx+W*0.004,sy+H*len*0.5); ctx.lineTo(sx-W*0.028,sy+H*len*0.62); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(sx+W*0.006,sy+H*len*0.7); ctx.lineTo(sx+W*0.030,sy+H*len*0.80); ctx.stroke();
-    });
-
-
-    // 5. HANGING LANTERNS — iron chains with glowing lanterns suspended from ceiling
+    // 5. IMPROVED LANTERNS — proper iron cage with glass panels and realistic chain
     {
       const drawLantern=(lx,chainTop,chainLen,ph)=>{
-        const flk=0.80+0.20*Math.sin(t*5.2+ph);
-        const swing=Math.sin(t*0.8+ph)*W*0.006;
+        const flk=0.82+0.18*Math.sin(t*5.2+ph)+0.08*Math.sin(t*3.1+ph*1.4);
+        const swing=Math.sin(t*0.7+ph)*W*0.005;
         const lbx=lx+swing, lby=chainTop+chainLen;
-        // Chain links
-        ctx.strokeStyle='#2a2038'; ctx.lineWidth=1.5; ctx.lineCap='round';
-        const links=6;
-        for(let i=0;i<links;i++){
-          const ly0=chainTop+i*(chainLen/links);
-          const ly1=chainTop+(i+1)*(chainLen/links);
-          const swg=Math.sin(t*0.8+ph)*W*0.006*(i/links);
-          ctx.beginPath();
-          ctx.moveTo(lx+swg*((i-1)/links), ly0);
-          ctx.lineTo(lx+swg*(i/links), ly1);
-          ctx.stroke();
-        }
-        // Lantern body — iron cage
-        const lw=W*0.022, lh=H*0.036;
-        ctx.fillStyle='#18102a';
-        ctx.fillRect(lbx-lw/2, lby, lw, lh);
-        // Glow fill
-        ctx.fillStyle=`rgba(255,160,30,${(0.55*flk).toFixed(2)})`;
-        ctx.fillRect(lbx-lw/2+2, lby+2, lw-4, lh-4);
-        // Iron bars
-        ctx.strokeStyle='#2a1e3a'; ctx.lineWidth=1.5;
-        ctx.strokeRect(lbx-lw/2, lby, lw, lh);
-        ctx.beginPath(); ctx.moveTo(lbx,lby); ctx.lineTo(lbx,lby+lh); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(lbx-lw/2,lby+lh*0.5); ctx.lineTo(lbx+lw/2,lby+lh*0.5); ctx.stroke();
-        // Cap & base
-        ctx.fillStyle='#2a1e3a';
-        ctx.fillRect(lbx-lw/2-W*0.004, lby-H*0.005, lw+W*0.008, H*0.007);
-        ctx.fillRect(lbx-lw/2-W*0.003, lby+lh, lw+W*0.006, H*0.005);
-        // Outer glow
-        const lg=ctx.createRadialGradient(lbx,lby+lh*0.5,0,lbx,lby+lh*0.5,W*0.090);
-        lg.addColorStop(0,`rgba(255,140,20,${(0.45*flk).toFixed(2)})`);
-        lg.addColorStop(0.4,`rgba(200,80,0,${(0.18*flk).toFixed(2)})`);
+        const lw=W*0.028, lh=H*0.042;
+        // Outer glow first (behind everything)
+        const lg=ctx.createRadialGradient(lbx,lby+lh*0.5,0,lbx,lby+lh*0.5,W*0.110);
+        lg.addColorStop(0,`rgba(255,150,25,${(0.50*flk).toFixed(2)})`);
+        lg.addColorStop(0.35,`rgba(200,90,5,${(0.22*flk).toFixed(2)})`);
         lg.addColorStop(1,'rgba(0,0,0,0)');
-        ctx.fillStyle=lg; ctx.fillRect(lbx-W*0.10,lby-H*0.06,W*0.20,H*0.16);
+        ctx.fillStyle=lg; ctx.fillRect(lbx-W*0.12,lby-H*0.07,W*0.24,H*0.18);
+        // Chain — alternating oval links
+        const links=7;
+        for(let i=0;i<links;i++){
+          const f=i/links, f1=(i+1)/links;
+          const ly0=chainTop+f*chainLen, ly1=chainTop+f1*chainLen;
+          const swg=swing*(f);
+          ctx.strokeStyle='#3a2c54'; ctx.lineWidth=i%2===0?2:1.2;
+          ctx.beginPath(); ctx.moveTo(lx+swg,ly0); ctx.lineTo(lx+swing*(f1),ly1); ctx.stroke();
+        }
+        // Lantern cap (pyramid top)
+        ctx.fillStyle='#2e2248';
+        ctx.beginPath();
+        ctx.moveTo(lbx,lby-H*0.012);
+        ctx.lineTo(lbx-lw/2-W*0.004,lby);
+        ctx.lineTo(lbx+lw/2+W*0.004,lby);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle='#4a3860'; ctx.lineWidth=1; ctx.stroke();
+        // Lantern body — four glass panels separated by iron bars
+        // Glass panels (warm glow inside)
+        const glowC=`rgba(255,165,35,${(0.65*flk).toFixed(2)})`;
+        const panelW=(lw-W*0.005)/2;
+        // Left panel
+        ctx.fillStyle=glowC; ctx.fillRect(lbx-lw/2,lby,panelW,lh);
+        // Right panel
+        ctx.fillRect(lbx+W*0.0025,lby,panelW,lh);
+        // Iron frame bars
+        ctx.strokeStyle='#28203e'; ctx.lineWidth=2.5;
+        ctx.strokeRect(lbx-lw/2,lby,lw,lh);
+        // Vertical centre bar
+        ctx.beginPath(); ctx.moveTo(lbx,lby); ctx.lineTo(lbx,lby+lh); ctx.stroke();
+        // Horizontal mid bar
+        ctx.beginPath(); ctx.moveTo(lbx-lw/2,lby+lh*0.5); ctx.lineTo(lbx+lw/2,lby+lh*0.5); ctx.stroke();
+        // Corner finials
+        [[lbx-lw/2,lby],[lbx+lw/2,lby],[lbx-lw/2,lby+lh],[lbx+lw/2,lby+lh]].forEach(([fx,fy])=>{
+          ctx.fillStyle='#38284e'; ctx.beginPath(); ctx.arc(fx,fy,W*0.004,0,PI*2); ctx.fill();
+        });
+        // Base plate
+        ctx.fillStyle='#2e2248';
+        ctx.fillRect(lbx-lw/2-W*0.003,lby+lh,lw+W*0.006,H*0.006);
+        ctx.strokeStyle='#4a3860'; ctx.lineWidth=0.8; ctx.stroke();
+        // Candle flame visible through glass
+        ctx.fillStyle=`rgba(255,220,100,${(0.90*flk).toFixed(2)})`;
+        ctx.beginPath(); ctx.arc(lbx,lby+lh*0.38,W*0.005,0,PI*2); ctx.fill();
       };
-      drawLantern(CX, H*0.0, H*0.090, 0.0);          // centre
-      drawLantern(CX-W*0.22, H*0.0, H*0.065, 2.1);   // left
-      drawLantern(CX+W*0.22, H*0.0, H*0.065, 4.4);   // right
+      drawLantern(CX,       H*0.0, H*0.095, 0.0);
+      drawLantern(CX-W*0.22,H*0.0, H*0.068, 2.1);
+      drawLantern(CX+W*0.22,H*0.0, H*0.068, 4.4);
     }
 
     // Skull niches cut into left/right piers
