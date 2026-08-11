@@ -17990,41 +17990,69 @@ function drawGraveyardScene() {
 
   // ── Tombstone slab ──
   const drawStoneSlab=(sx,sy,sw,sh,angle,style)=>{
+    // sx,sy = base centre. sh = total height. sw = width.
     ctx.save(); ctx.translate(sx,sy); ctx.rotate(angle);
-    ctx.fillStyle='rgba(0,0,10,0.55)';
+
+    const baseCol  = style===0?'#5e5878':style===1?'#624e6e':'#526464';
+    const shadowCol= style===0?'#38324e':style===1?'#3e2e4a':'#303e3c';
+    const litCol   = style===0?'#908ca8':style===1?'#8e7a9e':'#7a9292';
+    const archR    = sw*0.50;   // semicircle radius = half-width
+    const bodyTop  = -sh + archR; // y where rect body meets arch
+
+    // Ground shadow
+    ctx.fillStyle='rgba(0,0,0,0.40)';
+    ctx.beginPath(); ctx.ellipse(sw*0.15,H*0.006,sw*0.52,H*0.009,0,0,PI*2); ctx.fill();
+
+    // Tombstone path: rect body + full semicircular arch
+    const tombPath=()=>{
+      ctx.beginPath();
+      ctx.moveTo(-sw/2,0);
+      ctx.lineTo(-sw/2,bodyTop);
+      ctx.arc(0,bodyTop,archR,PI,0);
+      ctx.lineTo(sw/2,0);
+      ctx.closePath();
+    };
+
+    // Fill with gradient
+    const sg=ctx.createLinearGradient(-sw*0.5,-sh,sw*0.4,0);
+    sg.addColorStop(0,litCol); sg.addColorStop(0.4,baseCol); sg.addColorStop(1,shadowCol);
+    tombPath(); ctx.fillStyle=sg; ctx.fill();
+
+    // Moonlit left + top edge
+    ctx.strokeStyle='rgba(215,228,255,0.82)'; ctx.lineWidth=1.8;
     ctx.beginPath();
-    ctx.moveTo(-sw/2,0); ctx.lineTo(sw/2,0);
-    ctx.lineTo(sw/2+sw*0.7,sh*0.30); ctx.lineTo(-sw/2+sw*0.3,sh*0.30);
-    ctx.closePath(); ctx.fill();
-    const baseCol=style===0?'#5c5672':style===1?'#60506a':'#506062';
-    const shadowCol=style===0?'#38324e':style===1?'#3c2e48':'#303c3a';
-    const litCol=style===0?'#8480a0':style===1?'#826e8e':'#708080';
-    ctx.fillStyle=shadowCol;
-    ctx.beginPath(); ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,-sh*0.75);
-    ctx.arc(0,-sh*0.75,sw/2,PI,0); ctx.lineTo(sw/2,0); ctx.closePath(); ctx.fill();
-    const sg=ctx.createLinearGradient(-sw/2,-sh,sw/2,0);
-    sg.addColorStop(0,litCol); sg.addColorStop(0.40,baseCol); sg.addColorStop(1,shadowCol);
-    ctx.fillStyle=sg;
-    ctx.beginPath(); ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,-sh*0.75);
-    ctx.arc(0,-sh*0.75,sw/2,PI,0); ctx.lineTo(sw/2,0); ctx.closePath(); ctx.fill();
-    // Bright moonlit left edge + top arc
-    ctx.strokeStyle='rgba(210,225,255,0.75)'; ctx.lineWidth=1.8;
-    ctx.beginPath(); ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,-sh*0.75);
-    ctx.arc(0,-sh*0.75,sw/2,PI,PI*0.5,true); ctx.stroke();
-    // Shadow right edge
-    ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(sw/2,0); ctx.lineTo(sw/2,-sh*0.75); ctx.stroke();
-    // Engraved lines (inscription suggestion)
-    ctx.strokeStyle='rgba(120,130,175,0.45)'; ctx.lineWidth=1;
-    [[0.38],[0.50],[0.62]].forEach(([fy])=>{
-      ctx.beginPath(); ctx.moveTo(-sw*0.30,-sh*fy); ctx.lineTo(sw*0.30,-sh*fy); ctx.stroke();
+    ctx.moveTo(-sw/2,0); ctx.lineTo(-sw/2,bodyTop);
+    ctx.arc(0,bodyTop,archR,PI,0,false);
+    ctx.stroke();
+    // Dark right edge
+    ctx.strokeStyle='rgba(0,0,0,0.60)'; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.moveTo(sw/2,0); ctx.lineTo(sw/2,bodyTop); ctx.stroke();
+
+    // Clip interior details
+    ctx.save(); tombPath(); ctx.clip();
+
+    // RIP engraved
+    ctx.fillStyle='rgba(20,18,42,0.72)';
+    ctx.font=`bold ${Math.round(sw*0.42)}px serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('RIP', 0, bodyTop*0.38);
+
+    // Decorative engraved lines below text
+    ctx.strokeStyle='rgba(80,90,135,0.40)'; ctx.lineWidth=0.8;
+    [-sh*0.52+archR, -sh*0.62+archR].forEach(lineY=>{
+      ctx.beginPath(); ctx.moveTo(-sw*0.30,lineY); ctx.lineTo(sw*0.30,lineY); ctx.stroke();
     });
-    // Crack
-    ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=0.8;
-    ctx.beginPath(); ctx.moveTo(-sw*0.06,-sh*0.22); ctx.lineTo(sw*0.12,-sh*0.50); ctx.stroke();
-    // Moss patch
-    ctx.fillStyle='rgba(45,110,50,0.45)';
-    ctx.beginPath(); ctx.ellipse(-sw*0.30,-sh*0.06,sw*0.16,H*0.007,-0.3,0,PI*2); ctx.fill();
+
+    // Hairline crack
+    ctx.strokeStyle='rgba(0,0,0,0.28)'; ctx.lineWidth=0.7;
+    ctx.beginPath(); ctx.moveTo(sw*0.06,-sh*0.18+archR); ctx.lineTo(-sw*0.07,-sh*0.44+archR); ctx.stroke();
+
+    ctx.restore(); // end clip
+
+    // Moss at base
+    ctx.fillStyle='rgba(45,110,50,0.42)';
+    ctx.beginPath(); ctx.ellipse(-sw*0.22,-sh*0.03,sw*0.18,H*0.006,-0.3,0,PI*2); ctx.fill();
+
     ctx.restore();
   };
 
