@@ -18753,22 +18753,58 @@ function drawCryptScene() {
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,W,H*0.23); ctx.clip();
 
-  // Dark stone base — deep but not pitch black
-  ctx.fillStyle='#060418'; ctx.fillRect(0,0,W,H*0.23);
+  // 1. BASE — dark stone tunnel receding into distance
+  ctx.fillStyle='#04020e'; ctx.fillRect(0,0,W,H*0.23);
 
-  // Green-rot glow from below — phosphorescent mould
-  const rotGlow=ctx.createRadialGradient(CX,H*0.23,0,CX,H*0.23,W*0.70);
-  rotGlow.addColorStop(0,'rgba(30,90,15,0.65)');
-  rotGlow.addColorStop(0.35,'rgba(15,55,8,0.35)');
-  rotGlow.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=rotGlow; ctx.fillRect(0,0,W,H*0.23);
+  // Tunnel depth: bright centre fading to black edges — sense of space beyond the arch
+  const tunnelG=ctx.createRadialGradient(CX,H*0.10,W*0.04,CX,H*0.10,W*0.52);
+  tunnelG.addColorStop(0,'rgba(38,28,70,0.92)');
+  tunnelG.addColorStop(0.35,'rgba(20,14,44,0.80)');
+  tunnelG.addColorStop(0.70,'rgba(8,5,20,0.70)');
+  tunnelG.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=tunnelG; ctx.fillRect(0,0,W,H*0.23);
 
-  // Warm torch glow left and right
-  [[W*0.18,H*0.20,'rgba(240,100,0,0.55)'],[W*0.82,H*0.20,'rgba(240,100,0,0.55)']].forEach(([gx,gy,c])=>{
-    const tg=ctx.createRadialGradient(gx,gy,0,gx,gy,W*0.36);
-    tg.addColorStop(0,c); tg.addColorStop(1,'rgba(0,0,0,0)');
+  // 2. FAR WALL — faint suggestion of rough stone blocks deep in the backdrop
+  {
+    const fwY0=H*0.01, fwY1=H*0.19;
+    const bw=W*0.072, bh=H*0.052;
+    ctx.save();
+    // Clip to arch opening only (inner ellipse approximation)
+    ctx.beginPath();
+    ctx.arc(CX,H*0.23,W*0.37,PI,0,false);
+    ctx.lineTo(W*0.88,0); ctx.lineTo(W*0.12,0); ctx.closePath();
+    ctx.clip();
+    for(let row=0;row*bh<fwY1-fwY0;row++){
+      const oy=fwY0+row*bh;
+      const off=(row%2)*bw*0.5;
+      for(let col=-1;col*bw<W+bw;col++){
+        const ox=col*bw+off;
+        const shade=0.28+0.14*Math.sin(row*3.1+col*2.3);
+        const alpha=0.18+0.08*shade;
+        ctx.fillStyle=`rgba(${Math.floor(40*shade)},${Math.floor(30*shade)},${Math.floor(65*shade)},${alpha.toFixed(2)})`;
+        ctx.fillRect(ox+1,oy+1,bw-2,bh-2);
+        ctx.strokeStyle='rgba(0,0,0,0.30)'; ctx.lineWidth=0.8;
+        ctx.strokeRect(ox+1,oy+1,bw-2,bh-2);
+      }
+    }
+    ctx.restore();
+  }
+
+  // 3. TORCH GLOW — warm orange wash bleeding up from wall torches into backdrop
+  [[W*0.12,H*0.23],[W*0.88,H*0.23]].forEach(([gx,gy])=>{
+    const tg=ctx.createRadialGradient(gx,gy,0,gx,gy,W*0.44);
+    tg.addColorStop(0,'rgba(255,110,0,0.55)');
+    tg.addColorStop(0.30,'rgba(200,70,0,0.28)');
+    tg.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=tg; ctx.fillRect(0,0,W,H*0.23);
   });
+
+  // Green-rot glow from below — phosphorescent mould rising through arch
+  const rotGlow=ctx.createRadialGradient(CX,H*0.23,0,CX,H*0.23,W*0.55);
+  rotGlow.addColorStop(0,'rgba(40,160,18,0.55)');
+  rotGlow.addColorStop(0.30,'rgba(20,90,10,0.28)');
+  rotGlow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=rotGlow; ctx.fillRect(0,0,W,H*0.23);
 
   // ── CRYPT CEILING — rough stone arch framing the backdrop ──
   {
@@ -18795,9 +18831,29 @@ function drawCryptScene() {
       ctx.lineTo(archCX+r1*Math.cos(ang),archCY+r1*Math.sin(ang));
       ctx.stroke();
     }
-    // Mossy arch inner edge glow
-    ctx.strokeStyle='rgba(30,100,12,0.55)'; ctx.lineWidth=W*0.014;
+
+    // 4. VIVID GREEN PHOSPHORESCENCE along arch soffit — multiple glowing veins
+    // Outer glow halo
+    ctx.strokeStyle='rgba(50,220,20,0.35)'; ctx.lineWidth=W*0.022;
     ctx.beginPath(); ctx.arc(archCX,archCY,archR,PI,0,false); ctx.stroke();
+    // Mid glow
+    ctx.strokeStyle='rgba(70,255,30,0.50)'; ctx.lineWidth=W*0.010;
+    ctx.beginPath(); ctx.arc(archCX,archCY,archR,PI,0,false); ctx.stroke();
+    // Bright inner edge
+    ctx.strokeStyle='rgba(140,255,80,0.85)'; ctx.lineWidth=W*0.003;
+    ctx.beginPath(); ctx.arc(archCX,archCY,archR,PI,0,false); ctx.stroke();
+    // Mould blobs at intervals on the arch
+    for(let i=1;i<=9;i++){
+      const ang=PI+i/10*PI;
+      const mx=archCX+archR*Math.cos(ang), my=archCY+archR*Math.sin(ang);
+      const pulse=0.55+0.45*Math.sin(t*1.6+i*1.1);
+      const mg=ctx.createRadialGradient(mx,my,0,mx,my,W*0.028);
+      mg.addColorStop(0,`rgba(100,255,50,${(0.70*pulse).toFixed(2)})`);
+      mg.addColorStop(0.5,`rgba(40,180,15,${(0.35*pulse).toFixed(2)})`);
+      mg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=mg; ctx.fillRect(mx-W*0.03,my-W*0.03,W*0.06,W*0.06);
+    }
+
     ctx.restore();
 
     // Hanging roots & tendrils from ceiling
@@ -18808,7 +18864,6 @@ function drawCryptScene() {
       ctx.beginPath(); ctx.moveTo(sx,sy);
       ctx.bezierCurveTo(sx+W*0.018,sy+H*len*0.4, sx-W*0.012,sy+H*len*0.7, sx+W*0.008,sy+H*len);
       ctx.stroke();
-      // Side tendrils
       ctx.lineWidth=0.8;
       ctx.beginPath(); ctx.moveTo(sx+W*0.004,sy+H*len*0.5); ctx.lineTo(sx-W*0.028,sy+H*len*0.62); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(sx+W*0.006,sy+H*len*0.7); ctx.lineTo(sx+W*0.030,sy+H*len*0.80); ctx.stroke();
@@ -18823,21 +18878,63 @@ function drawCryptScene() {
       ctx.beginPath(); ctx.moveTo(W*x1,H*y1); ctx.lineTo(W*x2,H*y2); ctx.stroke();
     });
 
+    // 5. HANGING LANTERNS — iron chains with glowing lanterns suspended from ceiling
+    {
+      const drawLantern=(lx,chainTop,chainLen,ph)=>{
+        const flk=0.80+0.20*Math.sin(t*5.2+ph);
+        const swing=Math.sin(t*0.8+ph)*W*0.006;
+        const lbx=lx+swing, lby=chainTop+chainLen;
+        // Chain links
+        ctx.strokeStyle='#2a2038'; ctx.lineWidth=1.5; ctx.lineCap='round';
+        const links=6;
+        for(let i=0;i<links;i++){
+          const ly0=chainTop+i*(chainLen/links);
+          const ly1=chainTop+(i+1)*(chainLen/links);
+          const swg=Math.sin(t*0.8+ph)*W*0.006*(i/links);
+          ctx.beginPath();
+          ctx.moveTo(lx+swg*((i-1)/links), ly0);
+          ctx.lineTo(lx+swg*(i/links), ly1);
+          ctx.stroke();
+        }
+        // Lantern body — iron cage
+        const lw=W*0.022, lh=H*0.036;
+        ctx.fillStyle='#18102a';
+        ctx.fillRect(lbx-lw/2, lby, lw, lh);
+        // Glow fill
+        ctx.fillStyle=`rgba(255,160,30,${(0.55*flk).toFixed(2)})`;
+        ctx.fillRect(lbx-lw/2+2, lby+2, lw-4, lh-4);
+        // Iron bars
+        ctx.strokeStyle='#2a1e3a'; ctx.lineWidth=1.5;
+        ctx.strokeRect(lbx-lw/2, lby, lw, lh);
+        ctx.beginPath(); ctx.moveTo(lbx,lby); ctx.lineTo(lbx,lby+lh); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(lbx-lw/2,lby+lh*0.5); ctx.lineTo(lbx+lw/2,lby+lh*0.5); ctx.stroke();
+        // Cap & base
+        ctx.fillStyle='#2a1e3a';
+        ctx.fillRect(lbx-lw/2-W*0.004, lby-H*0.005, lw+W*0.008, H*0.007);
+        ctx.fillRect(lbx-lw/2-W*0.003, lby+lh, lw+W*0.006, H*0.005);
+        // Outer glow
+        const lg=ctx.createRadialGradient(lbx,lby+lh*0.5,0,lbx,lby+lh*0.5,W*0.090);
+        lg.addColorStop(0,`rgba(255,140,20,${(0.45*flk).toFixed(2)})`);
+        lg.addColorStop(0.4,`rgba(200,80,0,${(0.18*flk).toFixed(2)})`);
+        lg.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=lg; ctx.fillRect(lbx-W*0.10,lby-H*0.06,W*0.20,H*0.16);
+      };
+      drawLantern(CX, H*0.0, H*0.090, 0.0);          // centre
+      drawLantern(CX-W*0.22, H*0.0, H*0.065, 2.1);   // left
+      drawLantern(CX+W*0.22, H*0.0, H*0.065, 4.4);   // right
+    }
+
     // Skull niches cut into left/right piers
     [[W*0.060,H*0.110],[W*0.940,H*0.110]].forEach(([nx,ny])=>{
-      // Niche arch
       ctx.fillStyle='#180e38';
       ctx.beginPath(); ctx.arc(nx,ny,W*0.036,PI,0); ctx.fillRect(nx-W*0.036,ny,W*0.072,H*0.070); ctx.fill();
-      // Skull
       ctx.fillStyle='#7a6e98';
       ctx.beginPath(); ctx.ellipse(nx,ny+H*0.018,W*0.020,H*0.018,0,0,PI*2); ctx.fill();
       ctx.fillStyle='#140e2a';
       ctx.beginPath(); ctx.ellipse(nx-W*0.008,ny+H*0.022,W*0.007,H*0.008,0,0,PI*2); ctx.fill();
       ctx.beginPath(); ctx.ellipse(nx+W*0.008,ny+H*0.022,W*0.007,H*0.008,0,0,PI*2); ctx.fill();
-      // Jaw
       ctx.strokeStyle='#38324a'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.arc(nx,ny+H*0.034,W*0.012,0.1,PI-0.1); ctx.stroke();
-      // Teeth
       for(let i=-1;i<=1;i++){
         ctx.fillStyle='#38324a';
         ctx.fillRect(nx+i*W*0.007-W*0.003,ny+H*0.034,W*0.006,H*0.008);
