@@ -18778,20 +18778,27 @@ function drawCryptScene() {
       const off=(row%2)*bw*0.5;
       for(let col=-1;col*bw<W+bw;col++){
         const ox=col*bw+off;
-        const shade=0.55+0.25*Math.sin(row*2.8+col*2.1);
-        // Warm tint near centre (lit by lanterns), cooler at edges
+        // More variation — some blocks darker (damp/stained), some lighter
+        const baseShade=0.55+0.28*Math.sin(row*2.8+col*2.1);
+        const stain=(((row*7+col*13)%5)===0)?0.62:1.0; // occasional dark stained block
+        const shade=baseShade*stain;
         const distC=Math.max(0,1-Math.abs(ox+bw/2-CX)/(W*0.35));
-        const r=Math.floor((42+18*distC)*shade);
-        const g=Math.floor(32*shade);
-        const b=Math.floor((62+8*distC)*shade);
-        ctx.fillStyle=`rgba(${r},${g},${b},0.55)`;
+        const r=Math.floor((42+20*distC)*shade);
+        const g=Math.floor(30*shade);
+        const b=Math.floor((62+10*distC)*shade);
+        ctx.fillStyle=`rgba(${r},${g},${b},0.62)`;
         ctx.fillRect(ox+1,oy+1,bw-2,bh-2);
-        // Mortar
-        ctx.strokeStyle='rgba(0,0,0,0.50)'; ctx.lineWidth=0.8;
+        // Mortar joints
+        ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=0.8;
         ctx.strokeRect(ox+1,oy+1,bw-2,bh-2);
-        // Subtle highlight on top edge of each block
-        ctx.strokeStyle=`rgba(80,65,100,${(0.18*shade).toFixed(2)})`; ctx.lineWidth=0.6;
+        // Highlight on top edge — lit by lanterns above
+        ctx.strokeStyle=`rgba(90,72,112,${(0.22*shade*distC).toFixed(2)})`; ctx.lineWidth=0.7;
         ctx.beginPath(); ctx.moveTo(ox+2,oy+1); ctx.lineTo(ox+bw-2,oy+1); ctx.stroke();
+        // Water stain streak on some blocks
+        if(((row*5+col*11)%7)===0){
+          ctx.fillStyle=`rgba(8,5,16,0.30)`;
+          ctx.fillRect(ox+bw*0.35,oy+1,bw*0.14,bh-2);
+        }
       }
     }
     ctx.restore();
@@ -18820,10 +18827,14 @@ function drawCryptScene() {
       // Vault ribs radiating from arch springing points
       const springL={x:CX-archR, y:archCY};
       const springR={x:CX+archR, y:archCY};
-      ctx.strokeStyle='rgba(38,30,58,0.70)'; ctx.lineWidth=2.5;
-      // Left vault ribs
+      // Left vault ribs — fade in from spring point, stronger near arch
       for(let i=0;i<5;i++){
         const tx=W*(0.02+i*0.024), ty=0;
+        const ribG=ctx.createLinearGradient(springL.x,springL.y,tx,ty);
+        ribG.addColorStop(0,'rgba(55,44,80,0.85)');
+        ribG.addColorStop(0.5,'rgba(42,33,64,0.55)');
+        ribG.addColorStop(1,'rgba(28,22,44,0.20)');
+        ctx.strokeStyle=ribG; ctx.lineWidth=2.2;
         ctx.beginPath(); ctx.moveTo(springL.x,springL.y);
         ctx.quadraticCurveTo(springL.x+W*0.04,springL.y-H*0.08, tx, ty);
         ctx.stroke();
@@ -18831,6 +18842,11 @@ function drawCryptScene() {
       // Right vault ribs
       for(let i=0;i<5;i++){
         const tx=W*(0.98-i*0.024), ty=0;
+        const ribG=ctx.createLinearGradient(springR.x,springR.y,tx,ty);
+        ribG.addColorStop(0,'rgba(55,44,80,0.85)');
+        ribG.addColorStop(0.5,'rgba(42,33,64,0.55)');
+        ribG.addColorStop(1,'rgba(28,22,44,0.20)');
+        ctx.strokeStyle=ribG; ctx.lineWidth=2.2;
         ctx.beginPath(); ctx.moveTo(springR.x,springR.y);
         ctx.quadraticCurveTo(springR.x-W*0.04,springR.y-H*0.08, tx, ty);
         ctx.stroke();
@@ -18872,6 +18888,15 @@ function drawCryptScene() {
       };
       drawPier(0,W*0.120);
       drawPier(W*0.880,W);
+      // Depth vignette — darken pier edges nearest the arch opening
+      const leftEdge=ctx.createLinearGradient(W*0.120,0,0,0);
+      leftEdge.addColorStop(0,'rgba(0,0,0,0.55)');
+      leftEdge.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=leftEdge; ctx.fillRect(0,0,W*0.120,H*0.23);
+      const rightEdge=ctx.createLinearGradient(W*0.880,0,W,0);
+      rightEdge.addColorStop(0,'rgba(0,0,0,0.55)');
+      rightEdge.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=rightEdge; ctx.fillRect(W*0.880,0,W*0.120,H*0.23);
     }
 
     // Arch stone mass
@@ -18901,31 +18926,45 @@ function drawCryptScene() {
       ctx.beginPath(); ctx.arc(archCX,archCY,archR+W*0.004,a0,a1); ctx.stroke();
     }
 
-    // Keystone — carved skull centrepiece at arch crown
+    // Keystone — carved skull centrepiece at arch crown, larger and clearer
     {
-      const kx=archCX, ky=archCY-archR-W*0.018;
-      // Keystone block
-      ctx.fillStyle='#2e2848';
-      ctx.beginPath();
-      ctx.moveTo(kx-W*0.028,ky+W*0.014);
-      ctx.lineTo(kx-W*0.020,ky-W*0.024);
-      ctx.lineTo(kx+W*0.020,ky-W*0.024);
-      ctx.lineTo(kx+W*0.028,ky+W*0.014);
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle='rgba(0,0,0,0.60)'; ctx.lineWidth=1.2; ctx.stroke();
-      // Carved skull relief
-      ctx.fillStyle='#4a4068';
-      ctx.beginPath(); ctx.ellipse(kx,ky-W*0.004,W*0.014,W*0.012,0,0,PI*2); ctx.fill();
-      ctx.fillStyle='rgba(0,0,0,0.70)';
-      ctx.beginPath(); ctx.ellipse(kx-W*0.006,ky-W*0.006,W*0.004,W*0.004,0,0,PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(kx+W*0.006,ky-W*0.006,W*0.004,W*0.004,0,0,PI*2); ctx.fill();
-      ctx.strokeStyle='rgba(60,50,80,0.70)'; ctx.lineWidth=0.8;
-      ctx.beginPath(); ctx.arc(kx,ky+W*0.005,W*0.007,0.2,PI-0.2); ctx.stroke();
-      // Torchlight catching the keystone
-      const klg=ctx.createRadialGradient(kx,ky,0,kx,ky,W*0.040);
-      klg.addColorStop(0,'rgba(200,130,30,0.20)');
+      const kx=archCX, ky=archCY-archR-W*0.022;
+      // Amber lantern glow hitting the keystone from above
+      const klg=ctx.createRadialGradient(kx,ky-W*0.01,0,kx,ky,W*0.065);
+      klg.addColorStop(0,'rgba(220,140,30,0.38)');
+      klg.addColorStop(0.5,'rgba(180,100,10,0.15)');
       klg.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=klg; ctx.fillRect(kx-W*0.05,ky-W*0.05,W*0.10,W*0.10);
+      ctx.fillStyle=klg; ctx.fillRect(kx-W*0.08,ky-W*0.08,W*0.16,W*0.12);
+      // Keystone block — wider wedge
+      ctx.fillStyle='#34304e';
+      ctx.beginPath();
+      ctx.moveTo(kx-W*0.036,ky+W*0.016);
+      ctx.lineTo(kx-W*0.026,ky-W*0.030);
+      ctx.lineTo(kx+W*0.026,ky-W*0.030);
+      ctx.lineTo(kx+W*0.036,ky+W*0.016);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.70)'; ctx.lineWidth=1.4; ctx.stroke();
+      // Lit top face of keystone
+      ctx.strokeStyle='rgba(130,100,160,0.40)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(kx-W*0.026,ky-W*0.030); ctx.lineTo(kx+W*0.026,ky-W*0.030); ctx.stroke();
+      // Skull cranium
+      ctx.fillStyle='#5a5278';
+      ctx.beginPath(); ctx.ellipse(kx,ky-W*0.006,W*0.018,W*0.016,0,0,PI*2); ctx.fill();
+      // Lit by lantern — subtle highlight on skull top
+      ctx.fillStyle='rgba(180,150,100,0.28)';
+      ctx.beginPath(); ctx.ellipse(kx-W*0.004,ky-W*0.013,W*0.009,W*0.007,-0.3,0,PI*2); ctx.fill();
+      // Eye sockets
+      ctx.fillStyle='rgba(0,0,0,0.80)';
+      ctx.beginPath(); ctx.ellipse(kx-W*0.007,ky-W*0.008,W*0.005,W*0.005,0,0,PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(kx+W*0.007,ky-W*0.008,W*0.005,W*0.005,0,0,PI*2); ctx.fill();
+      // Jaw line
+      ctx.strokeStyle='rgba(70,60,95,0.80)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(kx,ky+W*0.004,W*0.010,0.2,PI-0.2); ctx.stroke();
+      // Teeth
+      for(let i=-1;i<=1;i++){
+        ctx.fillStyle='rgba(75,65,100,0.70)';
+        ctx.fillRect(kx+i*W*0.007-W*0.003,ky+W*0.004,W*0.006,W*0.007);
+      }
     }
 
     // Arch soffit shadow
@@ -18966,14 +19005,20 @@ function drawCryptScene() {
         ctx.lineTo(lbx+lw/2+W*0.004,lby);
         ctx.closePath(); ctx.fill();
         ctx.strokeStyle='#4a3860'; ctx.lineWidth=1; ctx.stroke();
-        // Lantern body — four glass panels separated by iron bars
-        // Glass panels (warm glow inside)
-        const glowC=`rgba(255,165,35,${(0.65*flk).toFixed(2)})`;
+        // Lantern body — glass panels with soft inner radial glow
         const panelW=(lw-W*0.005)/2;
         // Left panel
-        ctx.fillStyle=glowC; ctx.fillRect(lbx-lw/2,lby,panelW,lh);
+        const lgL=ctx.createRadialGradient(lbx-lw*0.28,lby+lh*0.4,0,lbx-lw*0.28,lby+lh*0.4,lw*0.55);
+        lgL.addColorStop(0,`rgba(255,200,80,${(0.85*flk).toFixed(2)})`);
+        lgL.addColorStop(0.5,`rgba(255,140,20,${(0.55*flk).toFixed(2)})`);
+        lgL.addColorStop(1,`rgba(180,80,0,${(0.20*flk).toFixed(2)})`);
+        ctx.fillStyle=lgL; ctx.fillRect(lbx-lw/2,lby,panelW,lh);
         // Right panel
-        ctx.fillRect(lbx+W*0.0025,lby,panelW,lh);
+        const lgR=ctx.createRadialGradient(lbx+lw*0.28,lby+lh*0.4,0,lbx+lw*0.28,lby+lh*0.4,lw*0.55);
+        lgR.addColorStop(0,`rgba(255,200,80,${(0.85*flk).toFixed(2)})`);
+        lgR.addColorStop(0.5,`rgba(255,140,20,${(0.55*flk).toFixed(2)})`);
+        lgR.addColorStop(1,`rgba(180,80,0,${(0.20*flk).toFixed(2)})`);
+        ctx.fillStyle=lgR; ctx.fillRect(lbx+W*0.0025,lby,panelW,lh);
         // Iron frame bars
         ctx.strokeStyle='#28203e'; ctx.lineWidth=2.5;
         ctx.strokeRect(lbx-lw/2,lby,lw,lh);
