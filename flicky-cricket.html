@@ -18856,43 +18856,60 @@ function drawCryptScene() {
   tunnelG.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=tunnelG; ctx.fillRect(0,0,W,H*0.23);
 
-  // 2. FAR WALL — clearly visible stone blocks lit by lantern glow
+  // 2. FAR WALL — stone blocks with 3-D bevel lighting
   {
-    const fwY0=H*0.01, fwY1=H*0.195;
-    const bw=W*0.068, bh=H*0.048;
+    const fwY0=H*0.01, fwY1=H*0.21;
+    const bw=W*0.072, bh=H*0.052;
     ctx.save();
+    // Clip to arch opening only
     ctx.beginPath();
-    ctx.arc(CX,H*0.23,W*0.37,PI,0,false);
-    ctx.lineTo(W*0.88,0); ctx.lineTo(W*0.12,0); ctx.closePath();
+    ctx.arc(CX,H*0.23,W*0.28,PI,0,false);
+    ctx.lineTo(CX+W*0.28,0); ctx.lineTo(CX-W*0.28,0); ctx.closePath();
     ctx.clip();
     for(let row=0;row*bh<fwY1-fwY0;row++){
       const oy=fwY0+row*bh;
       const off=(row%2)*bw*0.5;
-      for(let col=-1;col*bw<W+bw;col++){
+      for(let col=-2;col*bw<W+bw;col++){
         const ox=col*bw+off;
-        // More variation — some blocks darker (damp/stained), some lighter
-        const baseShade=0.55+0.28*Math.sin(row*2.8+col*2.1);
-        const stain=(((row*7+col*13)%5)===0)?0.62:1.0; // occasional dark stained block
+        // Per-block tone variation — mix of roughness and distance from centre
+        const baseShade=0.48+0.30*Math.sin(row*3.1+col*2.4);
+        const stain=(((row*7+col*13)%5)===0)?0.58:1.0;
         const shade=baseShade*stain;
-        const distC=Math.max(0,1-Math.abs(ox+bw/2-CX)/(W*0.35));
-        const r=Math.floor((42+20*distC)*shade);
-        const g=Math.floor(30*shade);
-        const b=Math.floor((62+10*distC)*shade);
-        ctx.fillStyle=`rgba(${r},${g},${b},0.62)`;
-        ctx.fillRect(ox+1,oy+1,bw-2,bh-2);
-        // Mortar joints
-        ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=0.8;
+        const distC=Math.max(0,1-Math.abs(ox+bw/2-CX)/(W*0.26));
+        const rv=Math.floor((38+22*distC)*shade);
+        const gv=Math.floor(26*shade);
+        const bv=Math.floor((58+14*distC)*shade);
+        // Block face
+        ctx.fillStyle=`rgba(${rv},${gv},${bv},0.78)`;
+        ctx.fillRect(ox+2,oy+2,bw-4,bh-4);
+        // Mortar gap
+        ctx.strokeStyle='rgba(0,0,0,0.70)'; ctx.lineWidth=1.2;
         ctx.strokeRect(ox+1,oy+1,bw-2,bh-2);
-        // Highlight on top edge — lit by lanterns above
-        ctx.strokeStyle=`rgba(90,72,112,${(0.22*shade*distC).toFixed(2)})`; ctx.lineWidth=0.7;
-        ctx.beginPath(); ctx.moveTo(ox+2,oy+1); ctx.lineTo(ox+bw-2,oy+1); ctx.stroke();
-        // Water stain streak on some blocks
+        // Top bevel — torch light hitting the top face
+        ctx.fillStyle=`rgba(${Math.min(255,rv+55)},${Math.min(255,gv+30)},${Math.min(255,bv+60)},${(0.55*shade*distC).toFixed(2)})`;
+        ctx.fillRect(ox+2,oy+2,bw-4,3);
+        // Left bevel — slight side light
+        ctx.fillStyle=`rgba(${Math.min(255,rv+25)},${Math.min(255,gv+14)},${Math.min(255,bv+28)},${(0.30*shade).toFixed(2)})`;
+        ctx.fillRect(ox+2,oy+2,3,bh-4);
+        // Bottom shadow
+        ctx.fillStyle=`rgba(0,0,0,${(0.50*shade).toFixed(2)})`;
+        ctx.fillRect(ox+2,oy+bh-5,bw-4,3);
+        // Right shadow
+        ctx.fillStyle=`rgba(0,0,0,${(0.35*shade).toFixed(2)})`;
+        ctx.fillRect(ox+bw-5,oy+2,3,bh-4);
+        // Water stain streak
         if(((row*5+col*11)%7)===0){
-          ctx.fillStyle=`rgba(8,5,16,0.30)`;
-          ctx.fillRect(ox+bw*0.35,oy+1,bw*0.14,bh-2);
+          ctx.fillStyle='rgba(6,4,14,0.35)';
+          ctx.fillRect(ox+bw*0.38,oy+2,bw*0.12,bh-4);
         }
       }
     }
+    // Vignette to darken edges of the tunnel opening
+    const vigG=ctx.createRadialGradient(CX,H*0.10,W*0.05,CX,H*0.12,W*0.30);
+    vigG.addColorStop(0,'rgba(0,0,0,0)');
+    vigG.addColorStop(0.7,'rgba(0,0,0,0.12)');
+    vigG.addColorStop(1,'rgba(0,0,0,0.62)');
+    ctx.fillStyle=vigG; ctx.fillRect(0,0,W,H*0.23);
     ctx.restore();
   }
 
@@ -18907,7 +18924,7 @@ function drawCryptScene() {
 
   // ── CRYPT CEILING — vaulted stone arch ──
   {
-    const archCX=CX, archCY=H*0.23, archR=W*0.370;
+    const archCX=CX, archCY=H*0.23, archR=W*0.280;
 
     // 4. CEILING TEXTURE — vaulted ribbing above the arch
     {
