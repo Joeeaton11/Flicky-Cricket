@@ -18856,31 +18856,42 @@ function drawCryptScene() {
   tunnelG.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=tunnelG; ctx.fillRect(0,0,W,H*0.23);
 
-  // 2. FAR WALL — atmospheric depth gradient, hinting at stone blocks without grid clutter
+  // 2. FAR WALL — clearly visible stone blocks lit by lantern glow
   {
+    const fwY0=H*0.01, fwY1=H*0.195;
+    const bw=W*0.068, bh=H*0.048;
     ctx.save();
     ctx.beginPath();
     ctx.arc(CX,H*0.23,W*0.37,PI,0,false);
     ctx.lineTo(W*0.88,0); ctx.lineTo(W*0.12,0); ctx.closePath();
     ctx.clip();
-    // Depth gradient — darkest at edges and bottom of the opening, lighter centre
-    const fwG=ctx.createRadialGradient(CX,H*0.04,W*0.02,CX,H*0.14,W*0.40);
-    fwG.addColorStop(0,'rgba(58,44,88,0.95)');
-    fwG.addColorStop(0.4,'rgba(36,26,62,0.90)');
-    fwG.addColorStop(0.8,'rgba(16,10,32,0.92)');
-    fwG.addColorStop(1,'rgba(4,2,10,0.96)');
-    ctx.fillStyle=fwG; ctx.fillRect(0,0,W,H*0.23);
-    // A handful of subtle horizontal stone courses — just enough to read as masonry
-    const bh=H*0.045;
-    for(let row=0;row<5;row++){
-      const oy=row*bh;
-      const off=(row%2)*W*0.035;
-      // 2 or 3 block joints per row — not a full grid, just suggestion
-      [-W*0.12+off, W*0.04+off, W*0.18+off].forEach(ox=>{
-        const shade=0.55+0.22*Math.sin(row*2.1+ox*0.02);
-        ctx.strokeStyle=`rgba(0,0,0,${(0.45*shade).toFixed(2)})`; ctx.lineWidth=1;
-        ctx.strokeRect(CX+ox,oy+1,W*0.110-2,bh-2);
-      });
+    for(let row=0;row*bh<fwY1-fwY0;row++){
+      const oy=fwY0+row*bh;
+      const off=(row%2)*bw*0.5;
+      for(let col=-1;col*bw<W+bw;col++){
+        const ox=col*bw+off;
+        // More variation — some blocks darker (damp/stained), some lighter
+        const baseShade=0.55+0.28*Math.sin(row*2.8+col*2.1);
+        const stain=(((row*7+col*13)%5)===0)?0.62:1.0; // occasional dark stained block
+        const shade=baseShade*stain;
+        const distC=Math.max(0,1-Math.abs(ox+bw/2-CX)/(W*0.35));
+        const r=Math.floor((42+20*distC)*shade);
+        const g=Math.floor(30*shade);
+        const b=Math.floor((62+10*distC)*shade);
+        ctx.fillStyle=`rgba(${r},${g},${b},0.62)`;
+        ctx.fillRect(ox+1,oy+1,bw-2,bh-2);
+        // Mortar joints
+        ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=0.8;
+        ctx.strokeRect(ox+1,oy+1,bw-2,bh-2);
+        // Highlight on top edge — lit by lanterns above
+        ctx.strokeStyle=`rgba(90,72,112,${(0.22*shade*distC).toFixed(2)})`; ctx.lineWidth=0.7;
+        ctx.beginPath(); ctx.moveTo(ox+2,oy+1); ctx.lineTo(ox+bw-2,oy+1); ctx.stroke();
+        // Water stain streak on some blocks
+        if(((row*5+col*11)%7)===0){
+          ctx.fillStyle=`rgba(8,5,16,0.30)`;
+          ctx.fillRect(ox+bw*0.35,oy+1,bw*0.14,bh-2);
+        }
+      }
     }
     ctx.restore();
   }
@@ -18898,11 +18909,43 @@ function drawCryptScene() {
   {
     const archCX=CX, archCY=H*0.23, archR=W*0.370;
 
-    // 4. CEILING TEXTURE — subtle horizontal stone courses on pier ceilings only
+    // 4. CEILING TEXTURE — vaulted ribbing above the arch
     {
       ctx.save();
-      ctx.strokeStyle='rgba(12,8,22,0.50)'; ctx.lineWidth=1;
-      for(let y=H*0.03;y<H*0.22;y+=H*0.040){
+      // Clip to the spandrel areas (above arch, left and right of piers)
+      ctx.beginPath();
+      ctx.rect(0,0,W,H*0.23);
+      ctx.clip();
+      // Vault ribs radiating from arch springing points
+      const springL={x:CX-archR, y:archCY};
+      const springR={x:CX+archR, y:archCY};
+      // Left vault ribs — fade in from spring point, stronger near arch
+      for(let i=0;i<5;i++){
+        const tx=W*(0.02+i*0.024), ty=0;
+        const ribG=ctx.createLinearGradient(springL.x,springL.y,tx,ty);
+        ribG.addColorStop(0,'rgba(55,44,80,0.85)');
+        ribG.addColorStop(0.5,'rgba(42,33,64,0.55)');
+        ribG.addColorStop(1,'rgba(28,22,44,0.20)');
+        ctx.strokeStyle=ribG; ctx.lineWidth=2.2;
+        ctx.beginPath(); ctx.moveTo(springL.x,springL.y);
+        ctx.quadraticCurveTo(springL.x+W*0.04,springL.y-H*0.08, tx, ty);
+        ctx.stroke();
+      }
+      // Right vault ribs
+      for(let i=0;i<5;i++){
+        const tx=W*(0.98-i*0.024), ty=0;
+        const ribG=ctx.createLinearGradient(springR.x,springR.y,tx,ty);
+        ribG.addColorStop(0,'rgba(55,44,80,0.85)');
+        ribG.addColorStop(0.5,'rgba(42,33,64,0.55)');
+        ribG.addColorStop(1,'rgba(28,22,44,0.20)');
+        ctx.strokeStyle=ribG; ctx.lineWidth=2.2;
+        ctx.beginPath(); ctx.moveTo(springR.x,springR.y);
+        ctx.quadraticCurveTo(springR.x-W*0.04,springR.y-H*0.08, tx, ty);
+        ctx.stroke();
+      }
+      // Rough ceiling stone texture — horizontal courses on the ceiling slab
+      ctx.strokeStyle='rgba(20,14,34,0.45)'; ctx.lineWidth=1;
+      for(let y=H*0.03;y<H*0.22;y+=H*0.036){
         ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W*0.120,y); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(W*0.880,y); ctx.lineTo(W,y); ctx.stroke();
       }
@@ -19243,13 +19286,12 @@ function drawCryptScene() {
   ctx.ellipse(CX,CY,W*FIELD_RX,H*FIELD_RY,0,0,PI*2,true);
   ctx.clip('evenodd');
 
-  // Stone floor — dark at top (matches arch/pier colours) blending into floor
+  // Stone floor — brighter, readable
   const floorG=ctx.createLinearGradient(0,wallY,0,H);
-  floorG.addColorStop(0,'#1c1830');    // dark — matches arch pier edge
-  floorG.addColorStop(0.12,'#38324e');
+  floorG.addColorStop(0,'#48425e');
   floorG.addColorStop(0.4,'#3c3652');
   floorG.addColorStop(1,'#2e2a42');
-  ctx.fillStyle=floorG; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=floorG; ctx.fillRect(0,wallY,W,H-wallY);
 
   // ── TORCH AMBIENT GLOW — stronger wash of orange light across floor ──
   [[W*0.062,H*0.340],[W*0.062,H*0.520],[W*0.062,H*0.700],[W*0.938,H*0.340],[W*0.938,H*0.520],[W*0.938,H*0.700]].forEach(([tx,ty])=>{
