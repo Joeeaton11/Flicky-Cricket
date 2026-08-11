@@ -3146,7 +3146,7 @@ const TIME_OF_DAY = [
   { key:'fairground', skyTop:'#0d0828', skyBottom:'#c84020', grass:'#2a1e14', grassStripeLight:'rgba(255,180,60,0.04)', grassStripeDark:'rgba(0,0,0,0.20)', pitch:'#3a2a18', overlay:null, floodlights:true },
   { key:'circus_night', skyTop:'#040210', skyBottom:'#1a0828', grass:'#1a0e06', grassStripeLight:'rgba(255,160,40,0.05)', grassStripeDark:'rgba(0,0,0,0.22)', pitch:'#2a1a0a', overlay:null, floodlights:true },
   { key:'halloween', skyTop:'#070310', skyBottom:'#3a1a44', grass:'#26262c', grassStripeLight:'rgba(255,255,255,0.03)', grassStripeDark:'rgba(0,0,0,0.14)', pitch:'#4a4a4e', overlay:null, floodlights:false },
-  { key:'graveyard', skyTop:'#020108', skyBottom:'#1a0f2a', grass:'#141418', grassStripeLight:'rgba(255,255,255,0.02)', grassStripeDark:'rgba(0,0,0,0.20)', pitch:'#1e1e22', overlay:null, floodlights:false },
+  { key:'graveyard', skyTop:'#020108', skyBottom:'#1a0f2a', grass:'#161a16', grassStripeLight:'rgba(255,255,255,0.03)', grassStripeDark:'rgba(0,0,0,0.18)', pitch:'#1c201c', overlay:null, floodlights:false },
   { key:'crypt', skyTop:'#010006', skyBottom:'#0a0614', grass:'#100c14', grassStripeLight:'rgba(255,255,255,0.01)', grassStripeDark:'rgba(0,0,0,0.25)', pitch:'#161218', overlay:'rgba(0,0,10,0.10)', floodlights:false },
   { key:'reef', skyTop:'#2a98c8', skyBottom:'#062a48', grass:'#d4c080', grassStripeLight:'rgba(255,255,255,0.07)', grassStripeDark:'rgba(120,90,30,0.08)', pitch:'#d4c090', overlay:null, floodlights:false },
   { key:'desert', skyTop:'#d88c40', skyBottom:'#fde6b0', grass:'#d4a850', grassStripeLight:'rgba(255,240,180,0.06)', grassStripeDark:'rgba(120,80,20,0.08)', pitch:'#caa468', overlay:null, floodlights:false },
@@ -17792,6 +17792,42 @@ function drawGraveyardScene() {
       '#030a14', 0.40);
   }
 
+  // ── BATS — silhouettes flitting across the sky ──
+  {
+    const batData=[
+      {bx:0.55, by:0.065, sp:0.48, ph:0.0,  sz:1.0},
+      {bx:0.38, by:0.120, sp:0.34, ph:2.1,  sz:0.75},
+      {bx:0.72, by:0.090, sp:0.55, ph:4.4,  sz:0.85},
+    ];
+    batData.forEach(({bx,by,sp,ph,sz})=>{
+      const drift=Math.sin(t*sp+ph)*W*0.12;
+      const bob  =Math.sin(t*sp*1.3+ph)*H*0.012;
+      const wx=W*bx+drift, wy=H*by+bob;
+      const wingFlap=Math.sin(t*sp*6+ph);  // wing beat
+      const ww=W*0.022*sz, wh=H*0.010*sz;
+      ctx.fillStyle='rgba(4,2,12,0.92)';
+      ctx.save(); ctx.translate(wx,wy);
+      // Body
+      ctx.beginPath(); ctx.ellipse(0,0,ww*0.22,wh*0.55,0,0,PI*2); ctx.fill();
+      // Head
+      ctx.beginPath(); ctx.ellipse(0,-wh*0.65,ww*0.14,wh*0.30,0,0,PI*2); ctx.fill();
+      // Left wing — two arcs creating membrane shape
+      const lwa=wingFlap*0.35;
+      ctx.beginPath();
+      ctx.moveTo(0,-wh*0.1);
+      ctx.quadraticCurveTo(-ww*0.6,-wh*(0.4+lwa*0.8),-ww*1.0,-wh*(0.1-lwa*0.5));
+      ctx.quadraticCurveTo(-ww*0.5,wh*(0.3+lwa*0.4),0,wh*0.1);
+      ctx.fill();
+      // Right wing
+      ctx.beginPath();
+      ctx.moveTo(0,-wh*0.1);
+      ctx.quadraticCurveTo(ww*0.6,-wh*(0.4+lwa*0.8),ww*1.0,-wh*(0.1-lwa*0.5));
+      ctx.quadraticCurveTo(ww*0.5,wh*(0.3+lwa*0.4),0,wh*0.1);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+
   // ── GOTHIC CHURCH — clear silhouette with bright moonlit rim ──
   {
     // Key Y anchors (all within the ~H*0.11–H*0.23 visible strip):
@@ -18625,6 +18661,35 @@ function drawGraveyardScene() {
   //  NO-CLIP SECTION — drawn after ctx.restore
   // ══════════════════════════════════════════
 
+
+  // ── DEAD GRASS PATCHES — bare earth scuffs on the field ──
+  {
+    const patches=[
+      [0.38, 0.72, 0.052, 0.024, 0.3],
+      [0.62, 0.68, 0.044, 0.020, -0.2],
+      [0.50, 0.82, 0.060, 0.022, 0.1],
+      [0.28, 0.60, 0.036, 0.016, 0.5],
+      [0.72, 0.76, 0.040, 0.018, -0.4],
+    ];
+    patches.forEach(([px,py,rw,rh,ang])=>{
+      // Bare earth: dark brownish-grey
+      const pg=ctx.createRadialGradient(W*px,H*py,0,W*px,H*py,W*rw);
+      pg.addColorStop(0,'rgba(28,22,18,0.72)');
+      pg.addColorStop(0.6,'rgba(20,16,14,0.45)');
+      pg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=pg;
+      ctx.save(); ctx.translate(W*px,H*py); ctx.rotate(ang);
+      ctx.beginPath(); ctx.ellipse(0,0,W*rw,H*rh,0,0,PI*2); ctx.fill();
+      ctx.restore();
+      // Dead grass tufts around edge
+      ctx.strokeStyle='rgba(50,44,28,0.55)'; ctx.lineWidth=0.8; ctx.lineCap='round';
+      for(let i=0;i<6;i++){
+        const a=i/6*PI*2, r=W*rw*0.85;
+        const tx=W*px+Math.cos(a)*r, ty=H*py+Math.sin(a)*r*0.5;
+        ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(tx+Math.cos(a+0.4)*W*0.006,ty-H*0.008); ctx.stroke();
+      }
+    });
+  }
 
   // ── OVAL BOUNDARY — low weathered stone wall ──
   {
