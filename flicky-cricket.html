@@ -19079,34 +19079,85 @@ function drawCryptScene() {
     sfG.addColorStop(1,'#2e2a42');
     ctx.fillStyle=sfG; ctx.fillRect(0,0,W,H);
 
-    // Stone flag grid — large rectangular slabs
+    // Stone flag grid — aged, irregular slabs
     const fw=W*0.110, fh=H*0.072;
     for(let row=-1;row*fh<H;row++){
       const oy=row*fh;
       const off=(row%2)*fw*0.5;
       for(let col=-1;col*fw<W+fw;col++){
         const ox=col*fw+off;
-        const shade=0.80+0.20*Math.sin(row*2.1+col*1.7);
-        // Slight colour variation block to block — some warmer (torch), some cooler
+        const seed=row*31+col*17; // deterministic per-slab seed
+        const shade=0.78+0.22*Math.sin(row*2.1+col*1.7);
         const warm=0.12*Math.sin(row*1.3+col*2.9);
         const r=Math.floor((58+warm*20)*shade);
         const g=Math.floor(48*shade);
         const b=Math.floor((80+warm*10)*shade);
-        ctx.fillStyle=`rgba(${r},${g},${b},0.55)`;
+        ctx.fillStyle=`rgba(${r},${g},${b},0.60)`;
         ctx.fillRect(ox+1,oy+1,fw-2,fh-2);
-        // Grout lines
-        ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=1.2;
+
+        // Grout — wider, darker, more aged
+        ctx.strokeStyle='rgba(0,0,0,0.70)'; ctx.lineWidth=2;
         ctx.strokeRect(ox+0.5,oy+0.5,fw-1,fh-1);
-        // Worn highlight on leading edge
-        ctx.strokeStyle=`rgba(100,88,128,${(0.20*shade).toFixed(2)})`; ctx.lineWidth=0.7;
+
+        // Worn highlight on top edge (foot-traffic polish)
+        ctx.strokeStyle=`rgba(110,95,138,${(0.22*shade).toFixed(2)})`; ctx.lineWidth=0.8;
         ctx.beginPath(); ctx.moveTo(ox+2,oy+1); ctx.lineTo(ox+fw-2,oy+1); ctx.stroke();
-        // Occasional scuff/stain on a slab
-        if(((row*7+col*11)%9)===0){
-          ctx.fillStyle='rgba(0,0,0,0.18)';
-          ctx.fillRect(ox+fw*0.2,oy+fh*0.2,fw*0.3,fh*0.35);
+
+        // Surface wear — diagonal scratch marks from centuries of use
+        if((seed%5)===0){
+          ctx.strokeStyle=`rgba(20,15,35,0.35)`; ctx.lineWidth=0.6;
+          ctx.beginPath();
+          ctx.moveTo(ox+fw*0.15, oy+fh*0.22);
+          ctx.lineTo(ox+fw*0.55, oy+fh*0.68);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(ox+fw*0.38, oy+fh*0.15);
+          ctx.lineTo(ox+fw*0.72, oy+fh*0.55);
+          ctx.stroke();
+        }
+
+        // Dark damp staining — water seeping up through old stone
+        if((seed%4)===0){
+          const sx=ox+fw*(0.1+0.5*((seed*7)%11)/11);
+          const sy=oy+fh*(0.1+0.5*((seed*13)%11)/11);
+          const sr=fw*(0.15+0.15*((seed*3)%7)/7);
+          const stainG=ctx.createRadialGradient(sx,sy,0,sx,sy,sr);
+          stainG.addColorStop(0,'rgba(5,3,12,0.40)');
+          stainG.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=stainG; ctx.fillRect(ox,oy,fw,fh);
+        }
+
+        // Moss growing in grout — green tinge along edges of some slabs
+        if((seed%7)===0){
+          ctx.fillStyle='rgba(28,90,18,0.28)';
+          // top grout strip
+          ctx.fillRect(ox+2,oy+1,fw-4,fh*0.06);
+          // left grout strip
+          ctx.fillRect(ox+1,oy+2,fw*0.05,fh-4);
+        }
+
+        // Hairline crack across some slabs
+        if((seed%6)===0){
+          ctx.strokeStyle=`rgba(0,0,0,0.55)`; ctx.lineWidth=0.8;
+          const cx1=ox+fw*0.2, cy1=oy+fh*(0.2+0.2*((seed*11)%7)/7);
+          const cx2=ox+fw*0.85, cy2=oy+fh*(0.5+0.25*((seed*5)%7)/7);
+          const cmx=ox+fw*0.52+fw*0.1*Math.sin(seed), cmy=(cy1+cy2)/2+fh*0.1*Math.cos(seed);
+          ctx.beginPath(); ctx.moveTo(cx1,cy1); ctx.quadraticCurveTo(cmx,cmy,cx2,cy2); ctx.stroke();
+          // Lighter hairline alongside — worn open crack
+          ctx.strokeStyle=`rgba(80,68,105,0.30)`; ctx.lineWidth=0.5;
+          ctx.beginPath(); ctx.moveTo(cx1+0.5,cy1+0.5); ctx.quadraticCurveTo(cmx+0.5,cmy+0.5,cx2+0.5,cy2+0.5); ctx.stroke();
         }
       }
     }
+
+    // Moss pooling in low patches — larger organic blobs in the grout seams
+    [[0.35,0.52],[0.58,0.68],[0.44,0.78],[0.62,0.44],[0.50,0.60]].forEach(([fx,fy],i)=>{
+      const mg=ctx.createRadialGradient(W*fx,H*fy,0,W*fx,H*fy,W*0.038);
+      mg.addColorStop(0,'rgba(22,88,12,0.30)');
+      mg.addColorStop(0.6,'rgba(14,55,8,0.12)');
+      mg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=mg; ctx.fillRect(W*fx-W*0.05,H*fy-W*0.05,W*0.10,W*0.10);
+    });
 
     // Torch warmth pooling on the floor from the wall torches
     [[W*0.062,H*0.340],[W*0.062,H*0.520],[W*0.062,H*0.700],
