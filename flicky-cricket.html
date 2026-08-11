@@ -8112,71 +8112,95 @@ function drawField() {
 
   // pitch (trapezoid)
   if (tod.key === 'crypt') {
-    // Stone pitch — same flag treatment but worn smooth from foot traffic
-    const pitchPath = () => {
+    // ── GRAVE SLAB (flat tombstone replacing the pitch) ──
+    const CX = W/2;
+    const slabY = PITCH_TOP();
+    const slabH = PITCH_BOTTOM() - PITCH_TOP();
+    const slabW = PITCH_TOP_W() * 1.05; // slightly wider than pitch top
+    // rounded top corners to give tombstone silhouette lying flat
+    const r = slabW * 0.38; // large radius = pronounced rounded top
+    const slabX = CX - slabW/2;
+
+    const tombPath = () => {
       ctx.beginPath();
-      ctx.moveTo(W/2 - PITCH_TOP_W()/2, PITCH_TOP());
-      ctx.lineTo(W/2 + PITCH_TOP_W()/2, PITCH_TOP());
-      ctx.lineTo(W/2 + PITCH_BOTTOM_W()/2, PITCH_BOTTOM());
-      ctx.lineTo(W/2 - PITCH_BOTTOM_W()/2, PITCH_BOTTOM());
+      // top edge: arc for rounded tombstone top
+      ctx.arc(CX, slabY + r, r, Math.PI, 0); // semicircle top
+      // right side down to bottom corners
+      ctx.lineTo(slabX + slabW, slabY + slabH);
+      // bottom edge (flat)
+      ctx.lineTo(slabX, slabY + slabH);
       ctx.closePath();
     };
-    // Base stone fill
-    const pg = ctx.createLinearGradient(W/2, PITCH_TOP(), W/2, PITCH_BOTTOM());
-    pg.addColorStop(0, '#6a6488');
-    pg.addColorStop(0.5, '#5a5474');
-    pg.addColorStop(1, '#4e4868');
-    ctx.fillStyle = pg; pitchPath(); ctx.fill();
 
-    // Stone slab lines running across the pitch
-    const pitchH = PITCH_BOTTOM() - PITCH_TOP();
-    const slabCount = 7;
-    ctx.save(); pitchPath(); ctx.clip();
-    for (let i = 1; i < slabCount; i++) {
-      const fy = PITCH_TOP() + (pitchH * i / slabCount);
-      // Interpolate width at this y
-      const t2 = i / slabCount;
-      const slabW = PITCH_TOP_W() + (PITCH_BOTTOM_W() - PITCH_TOP_W()) * t2;
-      // Grout gap
-      ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 1.8;
-      ctx.beginPath(); ctx.moveTo(W/2 - slabW/2, fy); ctx.lineTo(W/2 + slabW/2, fy); ctx.stroke();
-      // Worn highlight above each joint
-      ctx.strokeStyle = 'rgba(120,110,150,0.30)'; ctx.lineWidth = 0.8;
-      ctx.beginPath(); ctx.moveTo(W/2 - slabW/2, fy - 1); ctx.lineTo(W/2 + slabW/2, fy - 1); ctx.stroke();
-    }
-    // Vertical centre crack — well-worn run-up groove
-    ctx.strokeStyle = 'rgba(0,0,0,0.40)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(W/2, PITCH_TOP()); ctx.lineTo(W/2, PITCH_BOTTOM()); ctx.stroke();
-    // Wear darkening in the centre — polished smooth by boots
-    const wearG = ctx.createLinearGradient(W/2, PITCH_TOP(), W/2, PITCH_BOTTOM());
-    wearG.addColorStop(0, 'rgba(0,0,0,0.22)');
-    wearG.addColorStop(0.5, 'rgba(0,0,0,0.08)');
-    wearG.addColorStop(1, 'rgba(0,0,0,0.22)');
-    ctx.fillStyle = wearG; ctx.fillRect(W/2 - PITCH_TOP_W()*0.22, PITCH_TOP(), PITCH_TOP_W()*0.44, pitchH);
-    ctx.restore();
+    ctx.save();
+    tombPath();
+    ctx.clip();
 
-    // Crease lines — carved stone grooves rather than painted white
-    const drawStoneCrease = (x1, y1, x2, y2) => {
-      // Dark groove
-      ctx.strokeStyle = 'rgba(20,16,36,0.85)'; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-      // Lighter worn edge — stone lip catching the torch light
-      ctx.strokeStyle = 'rgba(160,148,190,0.45)'; ctx.lineWidth = 0.9;
-      ctx.beginPath(); ctx.moveTo(x1, y1 - 1); ctx.lineTo(x2, y2 - 1); ctx.stroke();
-    };
-    drawStoneCrease(W/2 - PITCH_TOP_W()*0.4, PITCH_TOP()+8, W/2 + PITCH_TOP_W()*0.4, PITCH_TOP()+8);
-    drawStoneCrease(W/2 - PITCH_BOTTOM_W()*0.42, PITCH_BOTTOM()-4, W/2 + PITCH_BOTTOM_W()*0.42, PITCH_BOTTOM()-4);
-    // Guard marks — chipped notches in stone
-    ctx.strokeStyle = 'rgba(20,16,36,0.70)'; ctx.lineWidth = 1.5;
+    // Base stone fill — aged granite
+    const sg = ctx.createLinearGradient(CX, slabY, CX, slabY + slabH);
+    sg.addColorStop(0, '#7a7292');
+    sg.addColorStop(0.3, '#6a6280');
+    sg.addColorStop(0.7, '#5c5472');
+    sg.addColorStop(1, '#4e4864');
+    ctx.fillStyle = sg;
+    ctx.fillRect(slabX - 2, slabY - r, slabW + 4, slabH + r + 2);
+
+    // Edge bevel — lighter top/left, darker bottom/right
+    ctx.strokeStyle = 'rgba(160,148,190,0.55)'; ctx.lineWidth = 2;
+    tombPath(); ctx.stroke();
+
+    // Hairline cracks
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 0.8;
     ctx.beginPath();
-    ctx.moveTo(W/2, PITCH_TOP()+8); ctx.lineTo(W/2, PITCH_TOP()+13);
-    ctx.moveTo(W/2, PITCH_BOTTOM()-4); ctx.lineTo(W/2, PITCH_BOTTOM()-9);
+    ctx.moveTo(CX - slabW*0.15, slabY + slabH*0.2);
+    ctx.lineTo(CX - slabW*0.05, slabY + slabH*0.45);
+    ctx.lineTo(CX + slabW*0.08, slabY + slabH*0.52);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(CX + slabW*0.20, slabY + slabH*0.65);
+    ctx.lineTo(CX + slabW*0.10, slabY + slabH*0.80);
     ctx.stroke();
 
-    // Worn patches — dark scuff marks at each crease end
-    ctx.fillStyle = 'rgba(15,10,30,0.30)';
-    ctx.beginPath(); ctx.ellipse(W/2 - PITCH_TOP_W()*0.18, PITCH_TOP()+16, PITCH_TOP_W()*0.16, 7, 0.3, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(W/2 + PITCH_BOTTOM_W()*0.05, PITCH_BOTTOM()-18, PITCH_BOTTOM_W()*0.14, 9, -0.2, 0, Math.PI*2); ctx.fill();
+    // Moss blotches
+    ctx.fillStyle = 'rgba(50,80,40,0.28)';
+    ctx.beginPath(); ctx.ellipse(CX - slabW*0.22, slabY + slabH*0.82, slabW*0.12, slabH*0.04, 0.4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(CX + slabW*0.18, slabY + slabH*0.72, slabW*0.09, slabH*0.03, -0.3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(CX - slabW*0.05, slabY + slabH*0.15, slabW*0.07, slabH*0.025, 0.1, 0, Math.PI*2); ctx.fill();
+
+    ctx.restore();
+
+    // ── Carved R.I.P. text ──
+    const ripY = slabY + slabH * 0.48;
+    const fontSize = Math.round(slabW * 0.28);
+    ctx.save();
+    ctx.font = `bold ${fontSize}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Carved shadow (deeper)
+    ctx.fillStyle = 'rgba(10,6,20,0.80)';
+    ctx.fillText('R.I.P.', CX + 1.5, ripY + 2);
+    // Stone surface text (lighter, worn)
+    ctx.fillStyle = 'rgba(180,168,205,0.80)';
+    ctx.fillText('R.I.P.', CX, ripY);
+    ctx.restore();
+
+    // ── Decorative cross above text ──
+    const crossY = slabY + slabH * 0.22;
+    const crossW = slabW * 0.10;
+    const crossH = slabH * 0.10;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(10,6,20,0.70)'; ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(CX, crossY - crossH/2); ctx.lineTo(CX, crossY + crossH/2);
+    ctx.moveTo(CX - crossW/2, crossY - crossH*0.1); ctx.lineTo(CX + crossW/2, crossY - crossH*0.1);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(180,168,205,0.50)'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(CX - 1, crossY - crossH/2); ctx.lineTo(CX - 1, crossY + crossH/2);
+    ctx.moveTo(CX - crossW/2, crossY - crossH*0.1 - 1); ctx.lineTo(CX + crossW/2, crossY - crossH*0.1 - 1);
+    ctx.stroke();
+    ctx.restore();
+
   } else {
   ctx.fillStyle = tod.pitch;
   ctx.beginPath();
