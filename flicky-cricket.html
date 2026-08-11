@@ -3147,7 +3147,7 @@ const TIME_OF_DAY = [
   { key:'circus_night', skyTop:'#040210', skyBottom:'#1a0828', grass:'#1a0e06', grassStripeLight:'rgba(255,160,40,0.05)', grassStripeDark:'rgba(0,0,0,0.22)', pitch:'#2a1a0a', overlay:null, floodlights:true },
   { key:'halloween', skyTop:'#070310', skyBottom:'#3a1a44', grass:'#26262c', grassStripeLight:'rgba(255,255,255,0.03)', grassStripeDark:'rgba(0,0,0,0.14)', pitch:'#4a4a4e', overlay:null, floodlights:false },
   { key:'graveyard', skyTop:'#020108', skyBottom:'#1a0f2a', grass:'#161a16', grassStripeLight:'rgba(255,255,255,0.03)', grassStripeDark:'rgba(0,0,0,0.18)', pitch:'#1c201c', overlay:null, floodlights:false },
-  { key:'crypt', skyTop:'#060418', skyBottom:'#140c28', grass:'#2e2a42', grassStripeLight:'rgba(255,255,255,0.05)', grassStripeDark:'rgba(0,0,0,0.14)', pitch:'#3a3652', overlay:null, floodlights:false },
+  { key:'crypt', skyTop:'#060418', skyBottom:'#140c28', grass:'#2e2a42', grassStripeLight:'rgba(255,255,255,0.04)', grassStripeDark:'rgba(0,0,0,0.10)', pitch:'#5a5470', overlay:null, floodlights:false },
   { key:'reef', skyTop:'#2a98c8', skyBottom:'#062a48', grass:'#d4c080', grassStripeLight:'rgba(255,255,255,0.07)', grassStripeDark:'rgba(120,90,30,0.08)', pitch:'#d4c090', overlay:null, floodlights:false },
   { key:'desert', skyTop:'#d88c40', skyBottom:'#fde6b0', grass:'#d4a850', grassStripeLight:'rgba(255,240,180,0.06)', grassStripeDark:'rgba(120,80,20,0.08)', pitch:'#caa468', overlay:null, floodlights:false },
   { key:'christmas', skyTop:'#050d20', skyBottom:'#3a5a8a', grass:'#dbe9f5', grassStripeLight:'rgba(255,255,255,0.10)', grassStripeDark:'rgba(150,180,210,0.10)', pitch:'#eaf3fb', overlay:null, floodlights:false },
@@ -19062,6 +19062,62 @@ function drawCryptScene() {
   }
 
   ctx.restore(); // end backdrop clip
+
+  // ══════════════════════════════════════════
+  //  OVAL INTERIOR — stone flag floor (paint over grass)
+  // ══════════════════════════════════════════
+  {
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(CX,CY,W*FIELD_RX,H*FIELD_RY,0,0,PI*2);
+    ctx.clip();
+
+    // Base stone floor gradient — lighter toward centre (lit by lanterns above)
+    const sfG=ctx.createRadialGradient(CX,CY,W*0.05,CX,CY,W*FIELD_RX);
+    sfG.addColorStop(0,'#504a68');
+    sfG.addColorStop(0.5,'#3e3854');
+    sfG.addColorStop(1,'#2e2a42');
+    ctx.fillStyle=sfG; ctx.fillRect(0,0,W,H);
+
+    // Stone flag grid — large rectangular slabs
+    const fw=W*0.110, fh=H*0.072;
+    for(let row=-1;row*fh<H;row++){
+      const oy=row*fh;
+      const off=(row%2)*fw*0.5;
+      for(let col=-1;col*fw<W+fw;col++){
+        const ox=col*fw+off;
+        const shade=0.80+0.20*Math.sin(row*2.1+col*1.7);
+        // Slight colour variation block to block — some warmer (torch), some cooler
+        const warm=0.12*Math.sin(row*1.3+col*2.9);
+        const r=Math.floor((58+warm*20)*shade);
+        const g=Math.floor(48*shade);
+        const b=Math.floor((80+warm*10)*shade);
+        ctx.fillStyle=`rgba(${r},${g},${b},0.55)`;
+        ctx.fillRect(ox+1,oy+1,fw-2,fh-2);
+        // Grout lines
+        ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=1.2;
+        ctx.strokeRect(ox+0.5,oy+0.5,fw-1,fh-1);
+        // Worn highlight on leading edge
+        ctx.strokeStyle=`rgba(100,88,128,${(0.20*shade).toFixed(2)})`; ctx.lineWidth=0.7;
+        ctx.beginPath(); ctx.moveTo(ox+2,oy+1); ctx.lineTo(ox+fw-2,oy+1); ctx.stroke();
+        // Occasional scuff/stain on a slab
+        if(((row*7+col*11)%9)===0){
+          ctx.fillStyle='rgba(0,0,0,0.18)';
+          ctx.fillRect(ox+fw*0.2,oy+fh*0.2,fw*0.3,fh*0.35);
+        }
+      }
+    }
+
+    // Torch warmth pooling on the floor from the wall torches
+    [[W*0.062,H*0.340],[W*0.062,H*0.520],[W*0.062,H*0.700],
+     [W*0.938,H*0.340],[W*0.938,H*0.520],[W*0.938,H*0.700]].forEach(([tx,ty])=>{
+      const tg=ctx.createRadialGradient(tx,ty,0,tx,ty,W*0.40);
+      tg.addColorStop(0,'rgba(255,110,10,0.18)'); tg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=tg; ctx.fillRect(0,0,W,H);
+    });
+
+    ctx.restore();
+  }
 
   // ══════════════════════════════════════════
   //  OUTER ZONE
