@@ -33998,72 +33998,102 @@ function _showChestSummary() {
   chestCardPopup.classList.remove('visible', 'pop-in');
   chestCoinPopup.classList.remove('visible');
 
-  // Build summary HTML — currency rows + equipment rows with progress
+  // Determine highest rarity for background glow colour
+  const _rarityRank = { common:0, rare:1, epic:2, legendary:3 };
+  const _topRarity = _revealItems.filter(i => i.type === 'card').reduce((best, i) => {
+    return (_rarityRank[i.card.rarity] || 0) > (_rarityRank[best] || 0) ? i.card.rarity : best;
+  }, 'common');
+  const _glowColors = { common:'156,163,175', rare:'96,165,250', epic:'192,132,252', legendary:'251,191,36' };
+  const _bgGlow = _glowColors[_topRarity] || '156,163,175';
+
+  // Build rows
   const lines = _revealItems.map(item => {
     if (item.type === 'coins') return `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
-        background:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);">
-        <span style="font-size:24px;line-height:1;">🪙</span>
-        <span style="font-size:15px;font-weight:700;color:#f4d03f;letter-spacing:0.5px;">${item.amount} COINS</span>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;
+        background:rgba(255,255,255,0.05);border-radius:12px;border:1px solid rgba(255,255,255,0.09);">
+        <span style="font-size:26px;line-height:1;">🪙</span>
+        <span style="font-size:16px;font-weight:800;color:#f4d03f;letter-spacing:0.5px;">${item.amount} COINS</span>
       </div>`;
     if (item.type === 'gems') return `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
-        background:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08);">
-        <span style="font-size:24px;line-height:1;">💎</span>
-        <span style="font-size:15px;font-weight:700;color:#60d4ff;letter-spacing:0.5px;">${item.amount} GEMS</span>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;
+        background:rgba(255,255,255,0.05);border-radius:12px;border:1px solid rgba(255,255,255,0.09);">
+        <span style="font-size:26px;line-height:1;">💎</span>
+        <span style="font-size:16px;font-weight:800;color:#60d4ff;letter-spacing:0.5px;">${item.amount} GEMS</span>
       </div>`;
-    const rc = rarityColor(item.card.rarity);
-    const liveRef = EQUIP_SLOTS.map(s => EQUIPMENT[s].find(x => x.id === item.card.id)).find(Boolean);
-    const liveName = liveRef ? liveRef.name : (item.card.name || item.card.id);
+
+    const rc  = rarityColor(item.card.rarity);
+    const rgb = _glowColors[item.card.rarity] || '156,163,175';
+    const liveRef   = EQUIP_SLOTS.map(s => EQUIPMENT[s].find(x => x.id === item.card.id)).find(Boolean);
+    const liveName  = liveRef ? liveRef.name : (item.card.id);
     const liveEmoji = liveRef && liveRef.emoji ? liveRef.emoji : '⚡';
-    const borderAlpha = item.card.rarity === 'legendary' ? '0.5' : item.card.rarity === 'epic' ? '0.35' : '0.15';
-    const count = item.count || 1;
+    const count     = item.count || 1;
+    const slot      = _slotForItem(item.card.id);
 
-    // Progress info
-    const lvl      = itemLevels[item.card.id] || 0;
-    const maxLvl   = RARITY_MAX_LEVEL[item.card.rarity] || 5;
-    const cards    = itemCards[item.card.id] || 0;
-    const needed   = (liveRef && lvl > 0 && lvl < maxLvl) ? liveRef.cardsToLevel[lvl - 1] : (liveRef ? liveRef.cardsToLevel[0] : null);
-    const justUnlocked = lvl === 1 && count >= 1 && (cards - count) === 0; // first card ever = unlocked this chest
-    const justLevelUp  = liveRef && lvl > 1 && lvl < maxLvl && cards >= (needed || 999); // ready to level up
+    // Level & progress
+    const lvl    = itemLevels[item.card.id] || 0;
+    const maxLvl = RARITY_MAX_LEVEL[item.card.rarity] || 5;
+    const cards  = itemCards[item.card.id] || 0;
+    const needed = (liveRef && lvl > 0 && lvl < maxLvl) ? liveRef.cardsToLevel[lvl - 1] : null;
+    const justUnlocked = lvl === 1 && (cards - count) <= 0;
+    const upgradeReady = !justUnlocked && lvl > 0 && lvl < maxLvl && needed && cards >= needed;
+    const maxed        = lvl >= maxLvl;
 
+    // Pip display: filled/empty circles up to maxLvl (cap display at 8)
+    const pipMax = Math.min(maxLvl, 8);
+    const pips = Array.from({length: pipMax}, (_, i) =>
+      `<span style="font-size:7px;color:${i < lvl ? rc : 'rgba(255,255,255,0.18)'};">●</span>`
+    ).join('');
+
+    // Badge
     let badge = '';
-    if (justUnlocked) {
-      badge = `<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:#fff;background:#22c55e;border-radius:4px;padding:1px 5px;margin-left:4px;">NEW</span>`;
-    } else if (justLevelUp) {
-      badge = `<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:#fff;background:#f59e0b;border-radius:4px;padding:1px 5px;margin-left:4px;">UPGRADE READY</span>`;
-    } else if (lvl >= maxLvl) {
-      badge = `<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:#fff;background:#6366f1;border-radius:4px;padding:1px 5px;margin-left:4px;">MAX</span>`;
-    }
+    if (justUnlocked)  badge = `<span style="font-size:8px;font-weight:900;letter-spacing:1px;color:#000;background:#4ade80;border-radius:4px;padding:1px 6px;">UNLOCKED</span>`;
+    else if (upgradeReady) badge = `<span style="font-size:8px;font-weight:900;letter-spacing:1px;color:#000;background:#fbbf24;border-radius:4px;padding:1px 6px;">▲ UPGRADE</span>`;
+    else if (maxed)    badge = `<span style="font-size:8px;font-weight:900;letter-spacing:1px;color:#fff;background:linear-gradient(90deg,#7c3aed,#a855f7);border-radius:4px;padding:1px 6px;">MAX</span>`;
 
     // Progress bar
     let progressBar = '';
-    if (liveRef && lvl > 0 && lvl < maxLvl && needed) {
+    if (!justUnlocked && lvl > 0 && lvl < maxLvl && needed) {
       const pct = Math.min(1, cards / needed) * 100;
       progressBar = `
-        <div style="margin-top:5px;display:flex;align-items:center;gap:6px;">
-          <div style="flex:1;height:4px;background:rgba(255,255,255,0.12);border-radius:2px;overflow:hidden;">
-            <div style="width:${pct}%;height:100%;background:${rc};border-radius:2px;transition:width 0.3s;"></div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+          <div style="flex:1;height:3px;background:rgba(255,255,255,0.10);border-radius:2px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${rc};border-radius:2px;box-shadow:0 0 6px rgba(${rgb},0.8);"></div>
           </div>
-          <span style="font-size:10px;color:rgba(255,255,255,0.45);white-space:nowrap;">${cards}/${needed} for Lv${lvl+1}</span>
+          <span style="font-size:9px;color:rgba(255,255,255,0.4);white-space:nowrap;">${cards}/${needed}</span>
         </div>`;
-    } else if (liveRef && lvl >= maxLvl) {
-      progressBar = `<div style="margin-top:4px;font-size:10px;color:rgba(255,255,255,0.35);">Max level reached</div>`;
     }
 
+    // Rarity-tinted row background
+    const rowBg = item.card.rarity === 'legendary'
+      ? `linear-gradient(110deg,rgba(${rgb},0.18) 0%,rgba(${rgb},0.06) 100%)`
+      : item.card.rarity === 'epic'
+      ? `linear-gradient(110deg,rgba(${rgb},0.13) 0%,rgba(${rgb},0.04) 100%)`
+      : `rgba(255,255,255,0.04)`;
+    const borderCol = `rgba(${rgb},${item.card.rarity === 'legendary' ? 0.55 : item.card.rarity === 'epic' ? 0.35 : 0.14})`;
+
+    // Canvas ID for kit thumbnail
+    const canvasId = 'csThumb_' + item.card.id;
+
     return `
-      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:10px;
-        border:1px solid ${rc.replace(')',`,${borderAlpha})`).replace('rgb','rgba')};">
+      <div style="padding:10px 12px;background:${rowBg};border-radius:12px;border:1px solid ${borderCol};
+        box-shadow:0 2px 12px rgba(${rgb},${item.card.rarity === 'legendary' ? 0.15 : 0.05});">
         <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:26px;line-height:1;filter:drop-shadow(0 2px 6px ${rc}88);">${liveEmoji}</span>
-          <div style="flex:1;display:flex;flex-direction:column;gap:1px;">
-            <div style="display:flex;align-items:center;gap:0;">
-              <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:${rc};opacity:0.9;">${item.card.rarity.toUpperCase()}${count > 1 ? ' ×' + count : ''}</span>
+          <!-- Kit photo thumbnail -->
+          <div style="position:relative;width:44px;height:44px;flex-shrink:0;border-radius:8px;
+            background:rgba(0,0,0,0.3);border:1px solid rgba(${rgb},0.3);overflow:hidden;">
+            <canvas id="${canvasId}" width="44" height="44" style="width:44px;height:44px;display:block;"></canvas>
+            <span style="position:absolute;bottom:-1px;right:0px;font-size:14px;line-height:1;
+              filter:drop-shadow(0 1px 3px rgba(0,0,0,0.8));">${liveEmoji}</span>
+          </div>
+          <!-- Text -->
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:1px;flex-wrap:wrap;">
+              <span style="font-size:9px;font-weight:800;letter-spacing:2px;color:${rc};">${item.card.rarity.toUpperCase()}${count > 1 ? ' ×' + count : ''}</span>
               ${badge}
             </div>
-            <span style="font-size:15px;font-weight:700;color:#ffffff;letter-spacing:0.3px;">${liveName}</span>
+            <div style="font-size:14px;font-weight:800;color:#fff;letter-spacing:0.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${liveName}</div>
+            <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">${pips}</div>
           </div>
-          <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);">Lv${lvl}</span>
         </div>
         ${progressBar}
       </div>`;
@@ -34073,27 +34103,39 @@ function _showChestSummary() {
   if (!summaryEl) {
     summaryEl = document.createElement('div');
     summaryEl.id = 'chestSummaryPanel';
-    summaryEl.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;padding:24px;box-sizing:border-box;';
+    summaryEl.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;padding:20px;box-sizing:border-box;';
     chestRevealScreen.appendChild(summaryEl);
   }
   summaryEl.innerHTML = `
-    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(244,208,63,0.10) 0%,rgba(0,0,0,0.88) 65%);"></div>
-    <div style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;
-      background:rgba(255,255,255,0.10);border:1.5px solid rgba(255,255,255,0.20);
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 35%,rgba(${_bgGlow},0.18) 0%,rgba(0,0,0,0.92) 65%);"></div>
+    <div style="position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;
+      background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);
       display:flex;align-items:center;justify-content:center;
-      font-size:18px;color:rgba(255,255,255,0.6);cursor:pointer;z-index:11;
+      font-size:16px;color:rgba(255,255,255,0.55);cursor:pointer;z-index:11;
       font-family:Arial,sans-serif;line-height:1;" id="chestSummaryCloseX">✕</div>
-    <div style="position:relative;z-index:1;width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center;gap:0;">
-      <div style="font-family:'Arial Black',Arial,sans-serif;font-size:11px;letter-spacing:4px;
-        color:#f4d03f;margin-bottom:4px;text-shadow:0 0 18px rgba(244,208,63,0.6);">✦ YOU RECEIVED ✦</div>
-      <div style="width:80px;height:1px;background:linear-gradient(90deg,transparent,rgba(244,208,63,0.5),transparent);margin-bottom:16px;"></div>
-      <div style="width:100%;display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">${lines}</div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:1.5px;text-transform:uppercase;">Tap anywhere to close</div>
+    <div style="position:relative;z-index:1;width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;">
+      <div style="font-family:'Arial Black',Arial,sans-serif;font-size:10px;letter-spacing:5px;
+        color:#f4d03f;margin-bottom:4px;text-shadow:0 0 20px rgba(${_bgGlow},0.7);">✦ YOU RECEIVED ✦</div>
+      <div style="width:120px;height:1px;background:linear-gradient(90deg,transparent,rgba(${_bgGlow},0.6),transparent);margin-bottom:14px;"></div>
+      <div style="width:100%;display:flex;flex-direction:column;gap:7px;margin-bottom:16px;">${lines}</div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.2);letter-spacing:2px;text-transform:uppercase;">Tap anywhere to close</div>
     </div>
   `;
   summaryEl.style.display = 'flex';
   summaryEl.addEventListener('click', _closeChestAnim);
   document.getElementById('chestSummaryCloseX').addEventListener('click', e => { e.stopPropagation(); _closeChestAnim(); });
+
+  // Draw kit thumbnails into each canvas after DOM is live
+  requestAnimationFrame(() => {
+    _revealItems.forEach(item => {
+      if (item.type !== 'card') return;
+      const canvas = document.getElementById('csThumb_' + item.card.id);
+      if (!canvas) return;
+      const slot = _slotForItem(item.card.id);
+      const liveRef = EQUIP_SLOTS.map(s => EQUIPMENT[s].find(x => x.id === item.card.id)).find(Boolean);
+      if (slot && liveRef) drawEquipArt(canvas, slot, liveRef, true);
+    });
+  });
 
   document.getElementById('chestSkipBtn').style.display = 'none';
   document.getElementById('chestOpenDoneBtn').classList.add('visible');
