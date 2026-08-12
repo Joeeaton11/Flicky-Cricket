@@ -33998,7 +33998,7 @@ function _showChestSummary() {
   chestCardPopup.classList.remove('visible', 'pop-in');
   chestCoinPopup.classList.remove('visible');
 
-  // Build summary HTML — currency rows + equipment rows
+  // Build summary HTML — currency rows + equipment rows with progress
   const lines = _revealItems.map(item => {
     if (item.type === 'coins') return `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
@@ -34017,15 +34017,55 @@ function _showChestSummary() {
     const liveName = liveRef ? liveRef.name : (item.card.name || item.card.id);
     const liveEmoji = liveRef && liveRef.emoji ? liveRef.emoji : '⚡';
     const borderAlpha = item.card.rarity === 'legendary' ? '0.5' : item.card.rarity === 'epic' ? '0.35' : '0.15';
+    const count = item.count || 1;
+
+    // Progress info
+    const lvl      = itemLevels[item.card.id] || 0;
+    const maxLvl   = RARITY_MAX_LEVEL[item.card.rarity] || 5;
+    const cards    = itemCards[item.card.id] || 0;
+    const needed   = (liveRef && lvl > 0 && lvl < maxLvl) ? liveRef.cardsToLevel[lvl - 1] : (liveRef ? liveRef.cardsToLevel[0] : null);
+    const justUnlocked = lvl === 1 && count >= 1 && (cards - count) === 0; // first card ever = unlocked this chest
+    const justLevelUp  = liveRef && lvl > 1 && lvl < maxLvl && cards >= (needed || 999); // ready to level up
+
+    let badge = '';
+    if (justUnlocked) {
+      badge = `<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:#fff;background:#22c55e;border-radius:4px;padding:1px 5px;margin-left:4px;">NEW</span>`;
+    } else if (justLevelUp) {
+      badge = `<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:#fff;background:#f59e0b;border-radius:4px;padding:1px 5px;margin-left:4px;">UPGRADE READY</span>`;
+    } else if (lvl >= maxLvl) {
+      badge = `<span style="font-size:9px;font-weight:800;letter-spacing:1.5px;color:#fff;background:#6366f1;border-radius:4px;padding:1px 5px;margin-left:4px;">MAX</span>`;
+    }
+
+    // Progress bar
+    let progressBar = '';
+    if (liveRef && lvl > 0 && lvl < maxLvl && needed) {
+      const pct = Math.min(1, cards / needed) * 100;
+      progressBar = `
+        <div style="margin-top:5px;display:flex;align-items:center;gap:6px;">
+          <div style="flex:1;height:4px;background:rgba(255,255,255,0.12);border-radius:2px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${rc};border-radius:2px;transition:width 0.3s;"></div>
+          </div>
+          <span style="font-size:10px;color:rgba(255,255,255,0.45);white-space:nowrap;">${cards}/${needed} for Lv${lvl+1}</span>
+        </div>`;
+    } else if (liveRef && lvl >= maxLvl) {
+      progressBar = `<div style="margin-top:4px;font-size:10px;color:rgba(255,255,255,0.35);">Max level reached</div>`;
+    }
+
     return `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
-        background:rgba(255,255,255,0.04);border-radius:10px;
+      <div style="padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:10px;
         border:1px solid ${rc.replace(')',`,${borderAlpha})`).replace('rgb','rgba')};">
-        <span style="font-size:26px;line-height:1;filter:drop-shadow(0 2px 6px ${rc}88);">${liveEmoji}</span>
-        <div style="display:flex;flex-direction:column;gap:1px;">
-          <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:${rc};opacity:0.9;">${item.card.rarity.toUpperCase()}${item.count > 1 ? ' ×' + item.count : ''}</span>
-          <span style="font-size:15px;font-weight:700;color:#ffffff;letter-spacing:0.3px;">${liveName}</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:26px;line-height:1;filter:drop-shadow(0 2px 6px ${rc}88);">${liveEmoji}</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:1px;">
+            <div style="display:flex;align-items:center;gap:0;">
+              <span style="font-size:10px;font-weight:700;letter-spacing:2px;color:${rc};opacity:0.9;">${item.card.rarity.toUpperCase()}${count > 1 ? ' ×' + count : ''}</span>
+              ${badge}
+            </div>
+            <span style="font-size:15px;font-weight:700;color:#ffffff;letter-spacing:0.3px;">${liveName}</span>
+          </div>
+          <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);">Lv${lvl}</span>
         </div>
+        ${progressBar}
       </div>`;
   }).join('');
 
