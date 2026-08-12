@@ -34074,12 +34074,16 @@ function _showChestSummary() {
     // Canvas ID for kit thumbnail
     const canvasId = 'csThumb_' + item.card.id;
 
+    const isLegendary = item.card.rarity === 'legendary';
+    const isEpic      = item.card.rarity === 'epic';
+    const shimmerClass = isLegendary ? 'cs-shimmer-legendary' : isEpic ? 'cs-shimmer-epic' : '';
+
     return `
-      <div style="padding:10px 12px;background:${rowBg};border-radius:12px;border:1px solid ${borderCol};
-        box-shadow:0 2px 12px rgba(${rgb},${item.card.rarity === 'legendary' ? 0.15 : 0.05});">
+      <div class="cs-row-anim ${shimmerClass}" style="padding:10px 12px;background:${rowBg};border-radius:12px;border:1px solid ${borderCol};
+        box-shadow:0 2px 16px rgba(${rgb},${isLegendary ? 0.22 : isEpic ? 0.12 : 0.05});position:relative;overflow:hidden;">
         <div style="display:flex;align-items:center;gap:10px;">
           <!-- Left: personality emoji -->
-          <span style="font-size:32px;line-height:1;flex-shrink:0;filter:drop-shadow(0 2px 6px rgba(${rgb},0.6));">${liveEmoji}</span>
+          <span style="font-size:38px;line-height:1;flex-shrink:0;filter:drop-shadow(0 2px 10px rgba(${rgb},0.75));">${liveEmoji}</span>
           <!-- Middle: name + rarity + pips -->
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:4px;margin-bottom:1px;flex-wrap:wrap;">
@@ -34099,34 +34103,78 @@ function _showChestSummary() {
       </div>`;
   }).join('');
 
+  // Chest display name
+  const _chestCfg = CHEST_TYPES[_chestOpenType] || {};
+  const _chestLabel = (_chestCfg.name || _chestOpenType || 'CHEST').toUpperCase() + ' CHEST';
+
   let summaryEl = document.getElementById('chestSummaryPanel');
   if (!summaryEl) {
     summaryEl = document.createElement('div');
     summaryEl.id = 'chestSummaryPanel';
-    summaryEl.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;padding:20px;box-sizing:border-box;';
+    summaryEl.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;padding:20px;box-sizing:border-box;overflow:hidden;';
     chestRevealScreen.appendChild(summaryEl);
   }
+
   summaryEl.innerHTML = `
-    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 35%,rgba(${_bgGlow},0.18) 0%,rgba(0,0,0,0.92) 65%);"></div>
+    <style>
+      @keyframes csRowIn {
+        from { opacity:0; transform:translateY(18px); }
+        to   { opacity:1; transform:translateY(0); }
+      }
+      @keyframes csShimmerLeg {
+        0%   { background-position: -200% center; }
+        100% { background-position:  200% center; }
+      }
+      @keyframes csShimmerEpic {
+        0%   { background-position: -200% center; }
+        100% { background-position:  200% center; }
+      }
+      .cs-row-anim {
+        opacity:0;
+        animation: csRowIn 0.38s cubic-bezier(0.22,1,0.36,1) forwards;
+      }
+      .cs-shimmer-legendary::after {
+        content:''; position:absolute; inset:0; border-radius:12px; pointer-events:none;
+        background: linear-gradient(105deg, transparent 40%, rgba(251,191,36,0.25) 50%, transparent 60%);
+        background-size: 200% 100%;
+        animation: csShimmerLeg 2.2s linear infinite;
+      }
+      .cs-shimmer-epic::after {
+        content:''; position:absolute; inset:0; border-radius:12px; pointer-events:none;
+        background: linear-gradient(105deg, transparent 40%, rgba(192,132,252,0.2) 50%, transparent 60%);
+        background-size: 200% 100%;
+        animation: csShimmerEpic 2.8s linear infinite;
+      }
+    </style>
+    <!-- Background glow -->
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 35%,rgba(${_bgGlow},0.20) 0%,rgba(0,0,0,0.93) 65%);"></div>
+    <!-- Particle canvas for epic/legendary -->
+    <canvas id="csSummaryParticles" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;"></canvas>
+    <!-- Close button -->
     <div style="position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;
       background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);
       display:flex;align-items:center;justify-content:center;
       font-size:16px;color:rgba(255,255,255,0.55);cursor:pointer;z-index:11;
       font-family:Arial,sans-serif;line-height:1;" id="chestSummaryCloseX">✕</div>
+    <!-- Content -->
     <div style="position:relative;z-index:1;width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;">
-      <div style="font-family:'Arial Black',Arial,sans-serif;font-size:10px;letter-spacing:5px;
-        color:#f4d03f;margin-bottom:4px;text-shadow:0 0 20px rgba(${_bgGlow},0.7);">✦ YOU RECEIVED ✦</div>
-      <div style="width:120px;height:1px;background:linear-gradient(90deg,transparent,rgba(${_bgGlow},0.6),transparent);margin-bottom:14px;"></div>
-      <div style="width:100%;display:flex;flex-direction:column;gap:7px;margin-bottom:28px;">${lines}</div>
+      <div style="font-size:9px;letter-spacing:3px;color:rgba(${_bgGlow},0.6);margin-bottom:2px;font-family:'Arial Black',Arial,sans-serif;">${_chestLabel}</div>
+      <div style="font-family:'Arial Black',Arial,sans-serif;font-size:11px;letter-spacing:5px;
+        color:#f4d03f;margin-bottom:5px;text-shadow:0 0 22px rgba(${_bgGlow},0.8);">✦ YOU RECEIVED ✦</div>
+      <div style="width:140px;height:1px;background:linear-gradient(90deg,transparent,rgba(${_bgGlow},0.7),transparent);margin-bottom:16px;"></div>
+      <div style="width:100%;display:flex;flex-direction:column;gap:8px;margin-bottom:28px;">${lines}</div>
     </div>
     <div style="position:absolute;bottom:24px;left:0;right:0;text-align:center;
       font-size:9px;color:rgba(255,255,255,0.18);letter-spacing:2px;text-transform:uppercase;z-index:1;">— tap anywhere to close —</div>
-    <div style="display:none">
-    </div>
   `;
   summaryEl.style.display = 'flex';
   summaryEl.addEventListener('click', _closeChestAnim);
   document.getElementById('chestSummaryCloseX').addEventListener('click', e => { e.stopPropagation(); _closeChestAnim(); });
+
+  // Stagger row entrance animations
+  summaryEl.querySelectorAll('.cs-row-anim').forEach((el, i) => {
+    el.style.animationDelay = (i * 90 + 80) + 'ms';
+  });
 
   // Draw kit thumbnails into each canvas after DOM is live
   requestAnimationFrame(() => {
@@ -34138,6 +34186,48 @@ function _showChestSummary() {
       const liveRef = EQUIP_SLOTS.map(s => EQUIPMENT[s].find(x => x.id === item.card.id)).find(Boolean);
       if (slot && liveRef) drawEquipArt(canvas, slot, liveRef, true);
     });
+
+    // Floating particles for epic/legendary pulls
+    const hasEpicPlus = _revealItems.some(i => i.type === 'card' && (i.card.rarity === 'epic' || i.card.rarity === 'legendary'));
+    if (hasEpicPlus) {
+      const pc = document.getElementById('csSummaryParticles');
+      if (!pc) return;
+      pc.width  = pc.offsetWidth  || 390;
+      pc.height = pc.offsetHeight || 844;
+      const ctx = pc.getContext('2d');
+      const ptcls = Array.from({length: 28}, () => ({
+        x: Math.random() * pc.width,
+        y: Math.random() * pc.height,
+        r: 1 + Math.random() * 2,
+        vy: -(0.3 + Math.random() * 0.5),
+        vx: (Math.random() - 0.5) * 0.3,
+        alpha: 0.3 + Math.random() * 0.5,
+        color: `rgba(${_bgGlow},`
+      }));
+      let _ptclFrame;
+      const _drawPtcl = () => {
+        if (!document.getElementById('csSummaryParticles')) return;
+        ctx.clearRect(0, 0, pc.width, pc.height);
+        ptcls.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+          ctx.fillStyle = p.color + p.alpha + ')';
+          ctx.fill();
+          p.y += p.vy; p.x += p.vx;
+          p.alpha -= 0.002;
+          if (p.y < -10 || p.alpha <= 0) {
+            p.y = pc.height + 5;
+            p.x = Math.random() * pc.width;
+            p.alpha = 0.3 + Math.random() * 0.5;
+          }
+        });
+        _ptclFrame = requestAnimationFrame(_drawPtcl);
+      };
+      _ptclFrame = requestAnimationFrame(_drawPtcl);
+      // Stop particles when panel closes
+      const _stopPtcl = () => { cancelAnimationFrame(_ptclFrame); };
+      summaryEl.addEventListener('click', _stopPtcl, { once: true });
+    }
   });
 
   document.getElementById('chestSkipBtn').style.display = 'none';
