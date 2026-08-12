@@ -593,6 +593,82 @@
     box-shadow:0 1px 4px rgba(0,0,0,0.5);
   }
   .kitBagArtWrap { position:relative; }
+  .kitBagInfoBtn {
+    position:absolute; top:4px; left:4px;
+    width:18px; height:18px; border-radius:50%;
+    background:rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.25);
+    color:rgba(255,255,255,0.8); font-size:11px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; line-height:1; z-index:2;
+    font-family: Georgia, serif;
+    transition: background 0.15s;
+  }
+  .kitBagInfoBtn:active { background:rgba(255,255,255,0.2); }
+
+  /* Item info popup */
+  #kitItemInfoPopup {
+    position:fixed; inset:0; z-index:9999;
+    display:flex; align-items:flex-end; justify-content:center;
+    background:rgba(0,0,0,0); transition:background 0.22s;
+  }
+  #kitItemInfoPopup.visible { background:rgba(0,0,0,0.65); }
+  #kitItemInfoPopupInner {
+    width:100%; max-width:420px;
+    background:#1e1b2e; border-radius:20px 20px 0 0;
+    padding:20px 18px 32px;
+    transform:translateY(100%); transition:transform 0.28s cubic-bezier(.22,1,.36,1);
+    box-shadow:0 -4px 32px rgba(0,0,0,0.6);
+    position:relative;
+  }
+  #kitItemInfoPopup.visible #kitItemInfoPopupInner { transform:translateY(0); }
+  #kitItemInfoPopupClose {
+    position:absolute; top:14px; right:16px;
+    font-size:18px; color:rgba(255,255,255,0.4);
+    cursor:pointer; line-height:1; padding:4px;
+  }
+  #kitItemInfoHeader {
+    display:flex; align-items:center; gap:12px; margin-bottom:12px;
+  }
+  #kitItemInfoArt { flex-shrink:0; }
+  #kitItemInfoArt canvas { width:54px; height:54px; border-radius:10px; }
+  #kitItemInfoTitle { flex:1; min-width:0; }
+  #kitItemInfoName {
+    font-family:'Arial Black',Arial,sans-serif;
+    font-size:15px; font-weight:900; color:#fff; letter-spacing:0.5px;
+  }
+  #kitItemInfoRarity {
+    font-size:11px; font-weight:700; letter-spacing:1px; margin-top:2px;
+  }
+  #kitItemInfoSlot {
+    font-size:10px; color:rgba(255,255,255,0.4); margin-top:2px; letter-spacing:0.5px;
+  }
+  #kitItemInfoDesc {
+    font-size:13px; color:rgba(255,255,255,0.75); line-height:1.5;
+    margin-bottom:14px; font-style:italic;
+  }
+  #kitItemInfoStats { display:flex; flex-direction:column; gap:6px; }
+  .kitItemStatRow { display:flex; align-items:center; gap:8px; }
+  .kitItemStatIcon { font-size:14px; width:20px; text-align:center; }
+  .kitItemStatLabel {
+    font-size:10px; font-weight:700; color:rgba(255,255,255,0.55);
+    letter-spacing:0.8px; width:36px; flex-shrink:0;
+  }
+  .kitItemStatBar {
+    flex:1; height:5px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;
+  }
+  .kitItemStatBarFill { height:100%; border-radius:3px; transition:width 0.3s; }
+  .kitItemStatValue {
+    font-size:10px; font-weight:700; color:rgba(255,255,255,0.7);
+    width:28px; text-align:right; flex-shrink:0;
+  }
+  .kitItemStatDesc {
+    font-size:9px; color:rgba(255,255,255,0.35); margin-top:1px;
+    grid-column:2/-1; padding-left:28px;
+  }
+  #kitItemInfoStatsDivider {
+    font-size:9px; font-weight:700; letter-spacing:1.5px;
+    color:rgba(255,255,255,0.25); margin-bottom:4px; text-transform:uppercase;
+  }
   .kitBagChangeBtn {
     font-family:'Arial Black',Arial,sans-serif; font-size:8px; font-weight:900;
     padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.2);
@@ -5668,6 +5744,67 @@ function showStatInfoPopup(key) {
   pop.addEventListener('click', e => { if (e.target === pop) close(); });
 }
 
+function showKitItemInfoPopup(item, slot) {
+  let existing = document.getElementById('kitItemInfoPopup');
+  if (existing) existing.remove();
+
+  const rc = rarityColor(item.rarity);
+  const level = itemLevels[item.id] || 0;
+
+  const pop = document.createElement('div');
+  pop.id = 'kitItemInfoPopup';
+
+  // Build stat rows HTML
+  const statKeys = Object.keys(item.stats);
+  const statRowsHTML = statKeys.map(k => {
+    const si = STAT_INFO[k] || {};
+    const val = item.stats[k];
+    const barPct = Math.round(val);
+    // colour: green > 60, amber 35-60, red < 35
+    const barColor = val >= 60 ? '#22c55e' : val >= 35 ? '#f59e0b' : '#ef4444';
+    return `
+      <div class="kitItemStatRow">
+        <div class="kitItemStatIcon">${si.icon || '•'}</div>
+        <div class="kitItemStatLabel">${si.short || k.toUpperCase()}</div>
+        <div class="kitItemStatBar"><div class="kitItemStatBarFill" style="width:${barPct}%;background:${barColor}"></div></div>
+        <div class="kitItemStatValue">${val}</div>
+      </div>
+      <div class="kitItemStatDesc">${si.desc || ''}</div>`;
+  }).join('');
+
+  const slotLabel = slot ? slot.toUpperCase() : '';
+
+  pop.innerHTML = `
+    <div id="kitItemInfoPopupInner">
+      <div id="kitItemInfoPopupClose">✕</div>
+      <div id="kitItemInfoHeader">
+        <div id="kitItemInfoArt"><canvas id="kitItemInfoCanvas" width="108" height="108"></canvas></div>
+        <div id="kitItemInfoTitle">
+          <div id="kitItemInfoName">${item.name}</div>
+          <div id="kitItemInfoRarity" style="color:${rc}">${item.rarity.toUpperCase()}</div>
+          <div id="kitItemInfoSlot">${slotLabel} · ${level >= 1 ? 'LV ' + level : 'LOCKED'}</div>
+        </div>
+      </div>
+      <div id="kitItemInfoDesc">"${item.desc}"</div>
+      <div id="kitItemInfoStatsDivider">Stats</div>
+      <div id="kitItemInfoStats">${statRowsHTML}</div>
+    </div>`;
+
+  document.body.appendChild(pop);
+  requestAnimationFrame(() => pop.classList.add('visible'));
+
+  // Draw art into the mini canvas
+  const artCanvas = pop.querySelector('#kitItemInfoCanvas');
+  if (artCanvas && slot) requestAnimationFrame(() => drawEquipArt(artCanvas, slot, item, level >= 1));
+
+  const close = () => {
+    pop.classList.remove('visible');
+    setTimeout(() => pop.remove(), 280);
+  };
+  pop.querySelector('#kitItemInfoPopupClose').addEventListener('click', close);
+  pop.addEventListener('click', e => { if (e.target === pop) close(); });
+}
+
 function rarityColor(rarity) {
   return { common:'#9ca3af', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b' }[rarity] || '#fff';
 }
@@ -6235,6 +6372,18 @@ function renderKitBagTab(container) {
     lvlBadge.style.setProperty('--rc', rc);
     lvlBadge.textContent = level >= 1 ? 'LV ' + level : 'LOCKED';
     artWrap.appendChild(lvlBadge);
+
+    // Info button
+    const infoBtn = document.createElement('div');
+    infoBtn.className = 'kitBagInfoBtn';
+    infoBtn.textContent = 'i';
+    infoBtn.title = 'About this item';
+    infoBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      hapticTap();
+      showKitItemInfoPopup(item, key);
+    });
+    artWrap.appendChild(infoBtn);
 
     // right: change button
     const changeBtn = document.createElement('button');
