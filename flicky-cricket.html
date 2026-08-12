@@ -949,15 +949,15 @@
     background:radial-gradient(ellipse at 50% 0%,var(--mc-beam,rgba(80,220,120,0.18)) 0%,transparent 70%);
     pointer-events:none;
   }
-  #milestoneBatsmanCanvas {
-    display:block; margin:0 auto;
-    width:180px; height:210px;
-    filter:drop-shadow(0 6px 18px var(--mc-shadow,rgba(80,220,120,0.4)));
-    animation:batswingIn 0.5s cubic-bezier(.22,1.4,.55,1) 0.15s both;
+  #milestoneEmoji {
+    font-size:clamp(72px,22vw,100px); line-height:1;
+    margin-bottom:4px;
+    animation:milestoneEmojiBounce 0.55s cubic-bezier(.22,1.5,.55,1) 0.1s both;
+    filter:drop-shadow(0 6px 18px var(--mc-shadow,rgba(80,220,120,0.5)));
   }
-  @keyframes batswingIn {
-    from { transform:translateY(30px) rotate(-12deg); opacity:0; }
-    to   { transform:translateY(0)    rotate(0deg);   opacity:1; }
+  @keyframes milestoneEmojiBounce {
+    from { transform:scale(0.3) translateY(20px) rotate(-15deg); opacity:0; }
+    to   { transform:scale(1)   translateY(0)    rotate(0deg);   opacity:1; }
   }
   #milestoneScoreRow {
     display:flex; align-items:baseline; justify-content:center; gap:8px;
@@ -1810,7 +1810,7 @@
 <!-- Milestone Celebration Overlay -->
 <div id="milestoneOverlay" class="hidden">
   <div id="milestoneCard">
-    <canvas id="milestoneBatsmanCanvas" width="220" height="260"></canvas>
+    <div id="milestoneEmoji"></div>
     <div id="milestoneScoreRow">
       <div id="milestoneScore">50</div>
       <div id="milestoneLabel">RUNS</div>
@@ -7901,41 +7901,44 @@ function drawMilestoneBatsman(canvas, score) {
   });
 }
 
+const MILESTONE_EMOJIS = ['🕺','💪','🫡','🤩','🥳','🤷‍♂️','🙌','🤜','🎉','😤','👊','🏆'];
+
 function showMilestonePause(score, onContinue) {
-  const overlay  = document.getElementById('milestoneOverlay');
-  const scoreEl  = document.getElementById('milestoneScore');
-  const badgeEl  = document.getElementById('milestoneBadge');
-  const card     = document.getElementById('milestoneCard');
-  const canvas   = document.getElementById('milestoneBatsmanCanvas');
+  const overlay   = document.getElementById('milestoneOverlay');
+  const scoreEl   = document.getElementById('milestoneScore');
+  const badgeEl   = document.getElementById('milestoneBadge');
+  const card      = document.getElementById('milestoneCard');
+  const emojiEl   = document.getElementById('milestoneEmoji');
 
   scoreEl.textContent = score;
 
   const isCentury = score >= 100;
   const isDouble  = score >= 200;
 
-  // Theme colours per milestone level
-  const mc      = isCentury ? '#f4c430' : '#50dc78';
-  const mcGlow  = isCentury ? 'rgba(244,196,48,0.28)' : 'rgba(80,220,120,0.25)';
-  const mcGlow2 = isCentury ? 'rgba(244,196,48,0.9)'  : 'rgba(80,220,120,0.8)';
-  const mcBeam  = isCentury ? 'rgba(244,196,48,0.16)' : 'rgba(80,220,120,0.15)';
-  const mcShad  = isCentury ? 'rgba(244,196,48,0.45)' : 'rgba(80,220,120,0.4)';
-  const mcBorder = isCentury ? 'rgba(244,196,48,0.6)' : 'rgba(80,220,120,0.55)';
+  // Pick a random emoji each time
+  emojiEl.textContent = MILESTONE_EMOJIS[Math.floor(Math.random() * MILESTONE_EMOJIS.length)];
 
-  card.style.setProperty('--mc',       mcBorder);
-  card.style.setProperty('--mc-glow',  mcGlow);
-  card.style.setProperty('--mc-glow2', mcGlow2);
-  card.style.setProperty('--mc-beam',  mcBeam);
-  card.style.setProperty('--mc-shadow',mcShad);
-  card.style.setProperty('--mc-text',  mc);
+  // Theme colours
+  const mc       = isCentury ? '#f4c430' : '#50dc78';
+  const mcGlow   = isCentury ? 'rgba(244,196,48,0.28)' : 'rgba(80,220,120,0.25)';
+  const mcGlow2  = isCentury ? 'rgba(244,196,48,0.9)'  : 'rgba(80,220,120,0.8)';
+  const mcBeam   = isCentury ? 'rgba(244,196,48,0.16)' : 'rgba(80,220,120,0.15)';
+  const mcShad   = isCentury ? 'rgba(244,196,48,0.45)' : 'rgba(80,220,120,0.4)';
+  const mcBorder = isCentury ? 'rgba(244,196,48,0.6)'  : 'rgba(80,220,120,0.55)';
+
+  card.style.setProperty('--mc',        mcBorder);
+  card.style.setProperty('--mc-glow',   mcGlow);
+  card.style.setProperty('--mc-glow2',  mcGlow2);
+  card.style.setProperty('--mc-beam',   mcBeam);
+  card.style.setProperty('--mc-shadow', mcShad);
+  card.style.setProperty('--mc-text',   mc);
 
   badgeEl.textContent = isDouble ? '🌟 DOUBLE CENTURY' : isCentury ? '💯 CENTURY' : '⭐ HALF CENTURY';
 
-  // Restart card animation
-  card.style.animation = 'none';
-  requestAnimationFrame(() => { card.style.animation = ''; });
-
-  // Draw canvas batsman
-  drawMilestoneBatsman(canvas, score);
+  // Restart card + emoji animations
+  card.style.animation  = 'none';
+  emojiEl.style.animation = 'none';
+  requestAnimationFrame(() => { card.style.animation = ''; emojiEl.style.animation = ''; });
 
   overlay.classList.remove('hidden');
   _milestoneCallback = () => {
