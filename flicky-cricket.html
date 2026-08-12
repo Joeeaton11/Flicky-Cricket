@@ -5962,80 +5962,22 @@ function drawEquipArt(canvas, slot, item, owned) {
   ctx2.lineCap = 'round'; ctx2.lineJoin = 'round';
 
   if (slot === 'bat') {
-    // Cricket bat diagonal — handle top-left, blade toe bottom-right
-    // Rotate 40° so blade is clearly wide and handle is narrow
-    ctx2.translate(cx, cy); ctx2.rotate(0.70); ctx2.translate(-cx, -cy);
-
-    // Bat drawn vertically along centre: handle at top, blade at bottom
-    const hw  = sz * 0.048;  // handle half-width
-    const bw  = sz * 0.155;  // blade half-width
-    const htop = cy - sz*0.44; // top of handle (knob end)
-    const hbot = cy - sz*0.10; // bottom of handle / top of shoulder
-    const btop = cy - sz*0.05; // start of blade body
-    const bbot = cy + sz*0.44; // toe of blade
-
-    // Drop shadow
-    ctx2.fillStyle = 'rgba(0,0,0,0.12)';
-    ctx2.beginPath(); ctx2.ellipse(cx+sz*0.03, bbot+sz*0.025, bw*0.7, sz*0.025, 0, 0, Math.PI*2); ctx2.fill();
-
-    // Blade face
-    const grad = ctx2.createLinearGradient(cx-bw, 0, cx+bw, 0);
-    grad.addColorStop(0,    shadeColor(col,-45));
-    grad.addColorStop(0.10, shadeColor(col,-15));
-    grad.addColorStop(0.30, lightenColor(col,40));
-    grad.addColorStop(0.55, lightenColor(col,18));
-    grad.addColorStop(0.82, col);
-    grad.addColorStop(1,    shadeColor(col,-35));
-    ctx2.fillStyle = grad;
-    ctx2.beginPath();
-    // Shoulder taper: handle width → blade width
-    ctx2.moveTo(cx - hw, hbot);
-    ctx2.bezierCurveTo(cx-hw, hbot+sz*0.06, cx-bw, btop-sz*0.02, cx-bw, btop);
-    // Left side down to toe
-    ctx2.lineTo(cx - bw*0.85, bbot);
-    // Rounded toe
-    ctx2.quadraticCurveTo(cx, bbot + sz*0.04, cx + bw*0.85, bbot);
-    // Right side up to shoulder
-    ctx2.lineTo(cx + bw, btop);
-    ctx2.bezierCurveTo(cx+bw, btop-sz*0.02, cx+hw, hbot+sz*0.06, cx+hw, hbot);
-    ctx2.closePath(); ctx2.fill();
-
-    // Spine ridge
-    ctx2.strokeStyle = shadeColor(col,-55); ctx2.lineWidth = sz*0.028; ctx2.lineCap='round';
-    ctx2.beginPath(); ctx2.moveTo(cx, btop+sz*0.02); ctx2.lineTo(cx, bbot-sz*0.04); ctx2.stroke();
-
-    // Edge bevels
-    ctx2.lineWidth = sz*0.008; ctx2.strokeStyle = lightenColor(col,55);
-    ctx2.beginPath(); ctx2.moveTo(cx-bw+sz*0.01, btop+sz*0.02); ctx2.lineTo(cx-bw*0.87+sz*0.01, bbot-sz*0.02); ctx2.stroke();
-    ctx2.beginPath(); ctx2.moveTo(cx+bw-sz*0.01, btop+sz*0.02); ctx2.lineTo(cx+bw*0.87-sz*0.01, bbot-sz*0.02); ctx2.stroke();
-
-    // Face shine
-    const sh = ctx2.createLinearGradient(cx-bw*0.75, btop, cx-bw*0.05, bbot);
-    sh.addColorStop(0,'rgba(255,255,255,0.30)'); sh.addColorStop(1,'rgba(255,255,255,0)');
-    ctx2.fillStyle = sh;
-    ctx2.beginPath();
-    ctx2.moveTo(cx-bw+sz*0.01, btop+sz*0.02); ctx2.lineTo(cx-sz*0.02, btop+sz*0.02);
-    ctx2.lineTo(cx-sz*0.02, bbot-sz*0.06); ctx2.lineTo(cx-bw*0.87+sz*0.01, bbot-sz*0.04);
-    ctx2.closePath(); ctx2.fill();
-
-    // Handle — dark wood
-    const hg = ctx2.createLinearGradient(cx-hw,0,cx+hw,0);
-    hg.addColorStop(0,'#1a0c04'); hg.addColorStop(0.3,'#8b5e3c'); hg.addColorStop(0.7,'#7a4f30'); hg.addColorStop(1,'#1a0c04');
-    ctx2.fillStyle = hg;
-    ctx2.beginPath(); ctx2.roundRect(cx-hw, htop+sz*0.03, hw*2, hbot-htop-sz*0.03, hw); ctx2.fill();
-    // Grip bands
-    ctx2.strokeStyle = 'rgba(40,20,0,0.50)'; ctx2.lineWidth = sz*0.016;
-    for(let i=0;i<5;i++){
-      const yy = htop + sz*0.06 + i*(hbot-htop-sz*0.06)*0.22;
-      ctx2.beginPath(); ctx2.moveTo(cx-hw+1,yy); ctx2.lineTo(cx+hw-1,yy); ctx2.stroke();
-    }
-    // Knob
-    ctx2.fillStyle = shadeColor(col,-55);
-    ctx2.beginPath(); ctx2.ellipse(cx, htop+sz*0.025, hw*1.7, sz*0.026, 0, 0, Math.PI*2); ctx2.fill();
-
-    // brand badge on blade face (in rotated frame)
-    _drawBadge(ctx2, sz, cx, cy+sz*0.12, sz*0.16, item.id);
-
+    // Draw real bat photo rotated 45°
+    const drawRealBat = () => {
+      ctx2.save();
+      ctx2.translate(cx, cy);
+      ctx2.rotate(Math.PI / 4);
+      // Fit bat image: it's tall and narrow (101:600 ratio)
+      const bH = sz * 0.88, bW = bH * (101/600);
+      ctx2.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx2.shadowBlur = sz * 0.08;
+      ctx2.shadowOffsetX = sz * 0.02;
+      ctx2.shadowOffsetY = sz * 0.02;
+      ctx2.drawImage(_batIconImg, -bW/2, -bH/2, bW, bH);
+      ctx2.restore();
+    };
+    if (window._batIconImg) { drawRealBat(); }
+    else { const img = new Image(); img.src = BAT_ICON_IMG; img.onload = () => { window._batIconImg = img; drawRealBat(); }; }
   } else if (slot === 'gloves') {
     // single glove, centred, larger
     const gx = cx - sz*0.02, gy = cy + sz*0.08;
@@ -34299,20 +34241,19 @@ function _drawItemCardArt(canvas, card, rc, rbg) {
 
   // Huge icon
   const slot = _slotForItem(card.id);
-  if (slot === 'bat' && typeof BAT_ICON_IMG !== 'undefined') {
-    const batImg = new Image();
-    batImg.src = BAT_ICON_IMG;
+  if (slot === 'bat') {
     const drawBat = () => {
       const bH = H * 0.55, bW = bH * (101/600);
       ctx.save();
       ctx.translate(W/2, H * 0.44);
       ctx.rotate(Math.PI / 4);
       ctx.shadowColor = rc; ctx.shadowBlur = 28;
-      ctx.drawImage(batImg, -bW/2, -bH/2, bW, bH);
+      ctx.drawImage(window._batIconImg, -bW/2, -bH/2, bW, bH);
       ctx.shadowBlur = 0;
       ctx.restore();
     };
-    if (batImg.complete) drawBat(); else batImg.onload = drawBat;
+    if (window._batIconImg) { drawBat(); }
+    else { const img = new Image(); img.src = BAT_ICON_IMG; img.onload = () => { window._batIconImg = img; drawBat(); }; }
   } else {
     ctx.font = '86px Arial';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
