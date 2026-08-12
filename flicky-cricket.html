@@ -3184,7 +3184,7 @@ function openChestRewards(typeName) {
     if (candidates.length === 0) continue;
     const picked = candidates[Math.floor(Math.random() * candidates.length)];
     itemCards[picked.id] = (itemCards[picked.id] || 0) + 1;
-    rewards.cards.push({ id: picked.id, name: picked.name, rarity: picked.rarity });
+    rewards.cards.push({ id: picked.id, rarity: picked.rarity });
     // unlock item immediately on first card received
     if (itemLevels[picked.id] === 0) {
       itemLevels[picked.id] = 1;
@@ -33993,7 +33993,10 @@ function _showChestSummary() {
     if (item.type === 'coins') return `<div class="csRow">🪙 <span>${item.amount} COINS</span></div>`;
     if (item.type === 'gems')  return `<div class="csRow">💎 <span>${item.amount} GEMS</span></div>`;
     const rc = rarityColor(item.card.rarity);
-    return `<div class="csRow"><span style="color:${rc}">${item.card.rarity.toUpperCase()}</span> · ${item.card.name}${item.count > 1 ? ' ×' + item.count : ''}</div>`;
+    const liveRef = EQUIP_SLOTS.map(s => EQUIPMENT[s].find(x => x.id === item.card.id)).find(Boolean);
+    const liveName = liveRef ? liveRef.name : (item.card.name || item.card.id);
+    const liveEmoji = liveRef && liveRef.emoji ? liveRef.emoji + ' ' : '';
+    return `<div class="csRow"><span style="color:${rc}">${item.card.rarity.toUpperCase()}</span> · ${liveEmoji}${liveName}${item.count > 1 ? ' ×' + item.count : ''}</div>`;
   }).join('');
 
   let summaryEl = document.getElementById('chestSummaryPanel');
@@ -34056,6 +34059,8 @@ function _showCardPopup(c, count) {
   const slot    = _slotForItem(c.id);
   const itemRef = EQUIP_SLOTS.map(s => EQUIPMENT[s].find(x => x.id === c.id)).find(Boolean);
   const curLvl  = itemLevels[c.id] || 0;
+  // Always resolve name live from EQUIPMENT (never trust stored snapshot)
+  if (itemRef) c = Object.assign({}, c, { name: itemRef.name, emoji: itemRef.emoji });
   const maxLvl  = RARITY_MAX_LEVEL[c.rarity] || 5;
   const needed  = (itemRef && curLvl > 0 && curLvl < maxLvl) ? itemRef.cardsToLevel[curLvl - 1] : null;
   const haveCards = itemCards[c.id] || 0;
