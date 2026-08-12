@@ -2019,6 +2019,7 @@ function loadCareerStats() {
     matchesWon: 0,
     bestScore: 0,
     totalCoinsEarned: 0,
+    fastestTo: {},   // { "50": 12, "100": 28, ... } balls taken to reach each milestone
   };
   try {
     const saved = JSON.parse(localStorage.getItem('flickyCareer') || '{}');
@@ -5406,6 +5407,22 @@ function renderStatsScreen() {
     careerStatsList.appendChild(row);
   });
 
+  // Fastest balls to each milestone
+  const fastestHeader = document.createElement('div');
+  fastestHeader.style.cssText = 'color:#f4d03f;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:18px 0 8px;text-align:center;opacity:0.85;';
+  fastestHeader.textContent = '⚡ Fastest to Milestone (balls)';
+  careerStatsList.appendChild(fastestHeader);
+
+  const fastMilestones = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500];
+  const ft = career.fastestTo || {};
+  fastMilestones.forEach(m => {
+    const best = ft[String(m)];
+    const row = document.createElement('div');
+    row.className = 'statRow';
+    row.innerHTML = `<span>${m} runs</span><span style="color:${best !== undefined ? '#50dc78' : '#555'}">${best !== undefined ? best + ' balls' : '—'}</span>`;
+    careerStatsList.appendChild(row);
+  });
+
   achievementsList.innerHTML = '';
   ACHIEVEMENTS.forEach(a => {
     const unlocked = unlockedAchievements.includes(a.key);
@@ -7671,7 +7688,7 @@ function animateHit(angle, distance, callback, targetDist) {
 
 function checkMilestone(prev, next) {
   const effectiveTgt = window._leagueTargetFloor ? Math.max(target, window._leagueTargetFloor) : target;
-  const milestones = [50, 100, 150, 200, 250, 300];
+  const milestones = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500];
 
   // Approaching warnings — 5 runs away
   const approachPoints = [...milestones, effectiveTgt];
@@ -7682,9 +7699,17 @@ function checkMilestone(prev, next) {
     }
   }
 
-  // Hit milestone — return the milestone value so caller can show pause screen
+  // Hit milestone — record fastest balls, return value so caller shows pause screen
   for (const m of milestones) {
     if (prev < m && next >= m) {
+      // Record fastest balls to this milestone in career stats
+      const key = String(m);
+      if (!career.fastestTo) career.fastestTo = {};
+      const prev_best = career.fastestTo[key];
+      if (prev_best === undefined || ballsBowled < prev_best) {
+        career.fastestTo[key] = ballsBowled;
+        saveCareerStats();
+      }
       triggerMilestone(m);
       return m;
     }
