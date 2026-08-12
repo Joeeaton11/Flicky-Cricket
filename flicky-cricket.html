@@ -34170,28 +34170,46 @@ function _drawItemCardArt(canvas, card, rc, rbg) {
   ctx.fillStyle = spot;
   ctx.fillRect(0, 0, W, H);
 
-  // Huge icon
+  // Kit photo — blurred & glowing with rarity colour
   const slot = _slotForItem(card.id);
-  if (slot === 'bat') {
-    const drawBat = () => {
-      const bH = H * 0.55, bW = bH * (101/600);
-      ctx.save();
-      ctx.translate(W/2, H * 0.44);
-      ctx.rotate(Math.PI / 4);
-      ctx.shadowColor = rc; ctx.shadowBlur = 28;
-      ctx.drawImage(window._batIconImg, -bW/2, -bH/2, bW, bH);
-      ctx.shadowBlur = 0;
-      ctx.restore();
-    };
-    if (window._batIconImg) { drawBat(); }
-    else { const img = new Image(); img.src = BAT_ICON_IMG; img.onload = () => { window._batIconImg = img; drawBat(); }; }
-  } else {
-    ctx.font = '86px Arial';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const _cardImgSrcs   = { bat: BAT_ICON_IMG, gloves: GLOVES_ICON_IMG, pads: PADS_ICON_IMG, helmet: HELMET_ICON_IMG, shoes: SHOES_ICON_IMG };
+  const _cardCacheKeys = { bat: '_batIconImg', gloves: '_glovesIconImg', pads: '_padsIconImg', helmet: '_helmetIconImg', shoes: '_shoesIconImg' };
+  const cacheKey = _cardCacheKeys[slot];
+  const imgSrc   = _cardImgSrcs[slot];
+
+  const drawKitCardPhoto = () => {
+    const img = window[cacheKey];
+    const aspect = img.naturalWidth / img.naturalHeight;
+    const maxH = H * 0.58, maxW = W * 0.72;
+    let dW, dH;
+    if (slot === 'bat') {
+      // bat is rotated so treat differently
+      dH = maxH; dW = dH * (101/600);
+    } else if (aspect >= 1) {
+      dW = maxW; dH = dW / aspect;
+    } else {
+      dH = maxH; dW = dH * aspect;
+    }
+    ctx.save();
+    ctx.translate(W/2, H * 0.40);
+    if (slot === 'bat') ctx.rotate(Math.PI / 4);
+    // Blur + rarity glow
+    ctx.filter = 'blur(5px)';
     ctx.shadowColor = rc;
-    ctx.shadowBlur  = 28;
-    ctx.fillText(_slotIcon(slot), W/2, H * 0.44);
-    ctx.shadowBlur  = 0;
+    ctx.shadowBlur  = 36;
+    ctx.globalAlpha = 0.82;
+    ctx.drawImage(img, -dW/2, -dH/2, dW, dH);
+    // Second pass sharper for colour pop
+    ctx.filter = 'blur(2px)';
+    ctx.shadowBlur = 18;
+    ctx.globalAlpha = 0.55;
+    ctx.drawImage(img, -dW/2, -dH/2, dW, dH);
+    ctx.restore();
+  };
+
+  if (cacheKey && imgSrc) {
+    if (window[cacheKey]) { drawKitCardPhoto(); }
+    else { const img = new Image(); img.src = imgSrc; img.onload = () => { window[cacheKey] = img; drawKitCardPhoto(); }; }
   }
 
   // Horizontal divider line
