@@ -174,6 +174,11 @@
     backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
   }
   #bottomNav.hidden { display:none !important; }
+  @keyframes kitArrowBob {
+    0%,100% { transform:translateX(-50%) translateY(0); opacity:1; }
+    50%      { transform:translateX(-50%) translateY(-5px); opacity:0.6; }
+  }
+  #kitUpgradeArrow { color:#4ade80; text-shadow:0 0 8px rgba(74,222,128,0.8); }
   .navBtn {
     font-family:'Arial Black',Arial,sans-serif; font-size:9px; font-weight:900;
     letter-spacing:0.8px; padding:10px 2px 8px;
@@ -1683,7 +1688,7 @@
      PINNED BOTTOM NAV BAR
      ═══════════════════════════════════════════════ -->
 <div id="bottomNav" class="hidden">
-  <button id="customiseBtn" class="navBtn"><span class="bIcon">🎒</span>KIT</button>
+  <button id="customiseBtn" class="navBtn" style="position:relative;"><span class="bIcon">🎒</span>KIT<span id="kitUpgradeArrow" style="display:none;position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:13px;animation:kitArrowBob 0.9s ease-in-out infinite;pointer-events:none;">▲</span></button>
   <button id="chestsMenuBtn" class="navBtn"><span class="bIcon">📦</span>CHESTS<div id="menuChestBadge" class="menuNavBadge"></div></button>
   <button id="leagueBtn" class="navBtn"><span class="bIcon">🏆</span>LEAGUE</button>
   <button id="statsBtn" class="navBtn"><span class="bIcon">📊</span>STATS</button>
@@ -2011,7 +2016,7 @@ let runs = 0;
 let ballsBowled = 0;
 let best = parseInt(localStorage.getItem('flickyBest') || '0');
 hudBest.textContent = 'BEST: ' + best; if(menuBestVal) menuBestVal.textContent = best;
-requestAnimationFrame(() => { drawMenuLogo(); updateMenuHUD(); showNav(''); });
+requestAnimationFrame(() => { drawMenuLogo(); updateMenuHUD(); showNav(''); updateKitUpgradeArrow(); });
 
 // ---------- CAREER STATS & COINS ----------
 // 1 coin earned per run scored, persisted as a running total.
@@ -3911,11 +3916,49 @@ startBtn.addEventListener('click', () => {
   showNav('league');
 });
 
+function _hasKitUpgradeAvailable() {
+  // Check all owned items for: new unlocks not yet seen, or upgrade ready
+  const seenKey = 'flickyKitUpgradeSeen';
+  const seen = JSON.parse(localStorage.getItem(seenKey) || '{}');
+  return EQUIP_SLOTS.some(slot => EQUIPMENT[slot].some(item => {
+    const lvl   = itemLevels[item.id] || 0;
+    if (lvl === 0) return false; // not owned
+    const maxLvl = RARITY_MAX_LEVEL[item.rarity] || 5;
+    const cards  = itemCards[item.id] || 0;
+    const needed = lvl < maxLvl ? item.cardsToLevel[lvl - 1] : null;
+    const upgradeReady = needed && cards >= needed;
+    const isNew = lvl === 1 && cards <= item.cardsToLevel[0];
+    if ((upgradeReady || isNew) && !seen[item.id]) return true;
+    return false;
+  }));
+}
+
+function updateKitUpgradeArrow() {
+  const arrow = document.getElementById('kitUpgradeArrow');
+  if (!arrow) return;
+  arrow.style.display = _hasKitUpgradeAvailable() ? 'block' : 'none';
+}
+
+function _markKitUpgradesSeen() {
+  const seen = {};
+  EQUIP_SLOTS.forEach(slot => EQUIPMENT[slot].forEach(item => {
+    const lvl   = itemLevels[item.id] || 0;
+    if (lvl === 0) return;
+    const maxLvl = RARITY_MAX_LEVEL[item.rarity] || 5;
+    const cards  = itemCards[item.id] || 0;
+    const needed = lvl < maxLvl ? item.cardsToLevel[lvl - 1] : null;
+    if ((needed && cards >= needed) || lvl === 1) seen[item.id] = true;
+  }));
+  localStorage.setItem('flickyKitUpgradeSeen', JSON.stringify(seen));
+  updateKitUpgradeArrow();
+}
+
 customiseBtn.addEventListener('click', () => {
   closeAllScreens();
   customiseScreen.classList.remove('hidden');
   openEquipTab('kit');
   updateEquipTopBar();
+  _markKitUpgradesSeen();
   showNav('kit');
 });
 
@@ -34501,6 +34544,7 @@ function _closeChestAnim() {
   if (_chestAnimFrame) { cancelAnimationFrame(_chestAnimFrame); _chestAnimFrame = null; }
   _chestOpenPhase = 'idle';
   if (_chestOpenAfterCallback) { _chestOpenAfterCallback(); _chestOpenAfterCallback = null; }
+  updateKitUpgradeArrow();
 }
 
 </script>
