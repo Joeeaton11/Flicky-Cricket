@@ -1,601 +1,469 @@
-<title>Flicky Cricket — Pixel Art</title>
-<meta name="viewport" content="width=390, initial-scale=1">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Pixel Carnival - Flicky Cricket</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-:root { --bg: #080010; }
+* { margin:0; padding:0; box-sizing:border-box; }
 body {
-  background: var(--bg);
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 100vh;
-  font-family: monospace;
+  background:#000;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  font-family:'Courier New',monospace;
 }
-canvas#main {
-  display: block;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  width: 388px;
-  height: 844px;
+#wrap { position:relative; display:inline-block; }
+canvas#display {
+  display:block;
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+}
+#label {
+  color:#f0c030;
+  font-size:11px;
+  letter-spacing:0.15em;
+  text-align:center;
+  margin-top:8px;
+  text-transform:uppercase;
+  opacity:0.7;
 }
 </style>
-<canvas id="main"></canvas>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="display"></canvas>
+</div>
+<p id="label">Flicky Cricket · Carnival Ground · Night Match</p>
+
 <script>
-// ─── SETUP ─────────────────────────────────────────────────────────────────
-const S = 4;                   // scale: 1 game-px = 4 screen-px
-const GW = 97, GH = 211;      // game-pixel grid
+// ═══════════════════════════════════════════════════════════════════════════
+//  PIXEL CARNIVAL  —  90×60 game grid, P=6 → 540×360 display
+//  Palette: 14 named colours, every pixel placed with intent
+// ═══════════════════════════════════════════════════════════════════════════
 
-const mc = document.getElementById('main');
-mc.width = GW * S; mc.height = GH * S;
-const ctx = mc.getContext('2d');
-ctx.imageSmoothingEnabled = false;
+const P  = 6;   // screen pixels per game pixel
+const GW = 90;  // game grid width
+const GH = 60;  // game grid height
 
-const oc = document.createElement('canvas');
-oc.width = GW; oc.height = GH;
-const g = oc.getContext('2d');
-g.imageSmoothingEnabled = false;
+const display = document.getElementById('display');
+display.width  = GW * P;
+display.height = GH * P;
+const CTX = display.getContext('2d');
+CTX.imageSmoothingEnabled = false;
 
-// ─── PRIMITIVES ─────────────────────────────────────────────────────────────
-const $ = (x,y,c,w=1,h=1) => { g.fillStyle=c; g.fillRect(~~x,~~y,~~w||1,~~h||1); };
-const $r = (x,y,w,h,c) => { g.fillStyle=c; g.fillRect(~~x,~~y,~~w,~~h); };
-
-function $L(x0,y0,x1,y1,c) {
-  x0=~~x0;y0=~~y0;x1=~~x1;y1=~~y1;
-  const dx=Math.abs(x1-x0),dy=Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;
-  let e=dx-dy;
-  for(let i=0;i<300;i++){
-    $(x0,y0,c);
-    if(x0===x1&&y0===y1)break;
-    const e2=2*e;
-    if(e2>-dy){e-=dy;x0+=sx;}
-    if(e2<dx){e+=dx;y0+=sy;}
-  }
-}
-
-function $C(cx,cy,r,c) {
-  cx=~~cx;cy=~~cy;
-  for(let y=-r;y<=r;y++) for(let x=-r;x<=r;x++)
-    if(x*x+y*y<=r*r) $(cx+x,cy+y,c);
-}
-
-function $Ring(cx,cy,r1,r2,c) {
-  cx=~~cx;cy=~~cy;
-  for(let y=-r2;y<=r2;y++) for(let x=-r2;x<=r2;x++){
-    const d2=x*x+y*y;
-    if(d2>=r1*r1&&d2<=r2*r2) $(cx+x,cy+y,c);
-  }
-}
-
-function $Oval(cx,cy,rx,ry,c) {
-  cx=~~cx;cy=~~cy;
-  for(let y=cy-ry;y<=cy+ry;y++) for(let x=cx-rx;x<=cx+rx;x++){
-    const dx=(x-cx)/rx,dy=(y-cy)/ry;
-    if(dx*dx+dy*dy<=1) $(x,y,c);
-  }
-}
+// Off-screen pixel buffer (1-to-1 game pixels)
+const buf = document.createElement('canvas');
+buf.width = GW;  buf.height = GH;
+const g = buf.getContext('2d');
 
 // ─── PALETTE ────────────────────────────────────────────────────────────────
-const K={
-  s0:'#110224',s1:'#260840',s2:'#440e5a',s3:'#6e1a6a',s4:'#9e2878',s5:'#cc3a8a',s6:'#e05098',
-  cream:'#e2daba',tRed:'#c41c10',tDark:'#8c1008',tGold:'#d8a408',tGoldD:'#a07008',
-  wallRed:'#a40c08',
-  saw:'#b88828',sawD:'#7c5820',sawL:'#cca040',
-  gr:'#3e6e18',grL:'#4e8224',grD:'#2e5810',
-  pitch:'#c4a038',pitchD:'#9c7a20',
-  wh:'#f8f4e0',blk:'#080010',
-  br:'#522c08',brD:'#281408',
-  lR:'#ff2828',lY:'#ffea00',lG:'#22ee22',lB:'#2244ff',lP:'#cc22cc',lO:'#ff8800',
-  hudBg:'#0c0820',hudBl:'#102848',hudRd:'#3a0808',
-  coinG:'#eec020',
-  ballSkin:'#f0d8b0',
-  kitBl:'#1a3e7c',kitWh:'#e8e8e8',
+const C = {
+  // Night sky gradient (4 bands)
+  S0: '#04020e',  // near-black (top)
+  S1: '#150840',  // deep indigo
+  S2: '#431068',  // vivid violet
+  S3: '#7a1245',  // crimson-magenta (horizon)
+  // Tent
+  TR: '#cc1e1e',  // carnival red
+  TC: '#f0e8cc',  // warm cream
+  TD: '#881212',  // tent shadow/dark red
+  // Ground
+  GG: '#267022',  // grass
+  GL: '#39a835',  // grass light stripe
+  SD: '#6e4a12',  // sawdust brown
+  SD2:'#4e340c',  // sawdust dark
+  PT: '#c4b06a',  // pitch (compressed earth)
+  // Accents & lights
+  WH: '#ffffff',
+  GD: '#f0c030',  // gold
+  GD2:'#c09820',  // dark gold
+  TL: '#28bab0',  // teal
+  OR: '#e06018',  // orange
+  PK: '#d83898',  // pink
+  BL: '#3880dc',  // blue
+  // Outline
+  OL: '#06030e',  // near-black outline
+  // Moon
+  MN: '#f8f0d8',  // moon face
+  MN2:'#d8c8a8',  // moon shadow
 };
-const LCOLS=[K.lR,K.lY,K.lG,K.lB,K.lP,K.lO];
-const CCOLS=[K.lR,K.lY,K.lB,K.lG,K.lP,K.lO,K.lR,K.lG];
 
-// ─── CONSTANTS ──────────────────────────────────────────────────────────────
-const PEAKS=[{x:18,y:9},{x:48,y:3},{x:78,y:9}];
-const EAVE=44,WALL=47;
-const ZONES=[{pk:PEAKS[0],l:0,r:33},{pk:PEAKS[1],l:33,r:63},{pk:PEAKS[2],l:63,r:GW}];
-const FCX=~~(GW/2),FCY=~~(GH*0.60),FRX=~~(GW*0.46),FRY=~~(GH*0.37);
+// ─── PRIMITIVES ─────────────────────────────────────────────────────────────
+const px_ = (x,y,col) => {
+  if(x<0||x>=GW||y<0||y>=GH) return;
+  g.fillStyle = col;
+  g.fillRect(x|0, y|0, 1, 1);
+};
+const blk = (x,y,w,h,col) => { g.fillStyle=col; g.fillRect(x|0,y|0,w|0,h|0); };
+const hln = (x1,x2,y,col) => { for(let x=x1|0;x<=(x2|0);x++) px_(x,y,col); };
 
-// Stable randomish star positions
-const STARS=[[8,2],[17,5],[27,1],[39,6],[51,3],[60,5],[70,2],[82,4],[90,1],
-             [13,10],[34,11],[58,8],[79,10],[22,13],[65,9],[44,7],[88,12]];
-
-// Confetti particles
-const CONF=Array.from({length:24},(_,i)=>({
-  x:(i*137+31)%GW, phase:i*0.19, col:LCOLS[i%6]
-}));
-
-// ─── DRAW SKY ───────────────────────────────────────────────────────────────
-function drawSky(){
-  const bands=[[0,4,K.s0],[5,10,K.s1],[11,16,K.s2],[17,23,K.s3],[24,31,K.s4],[32,40,K.s5],[41,47,K.s6]];
-  bands.forEach(([y0,y1,c])=>$r(0,y0,GW,y1-y0+1,c));
+function bline(x1,y1,x2,y2,col) {
+  x1|=0; y1|=0; x2|=0; y2|=0;
+  const dx=Math.abs(x2-x1), dy=Math.abs(y2-y1);
+  const sx=x1<x2?1:-1, sy=y1<y2?1:-1;
+  let e=dx-dy;
+  for(;;) {
+    px_(x1,y1,col);
+    if(x1===x2&&y1===y2) break;
+    const e2=e<<1;
+    if(e2>-dy){e-=dy;x1+=sx;}
+    if(e2< dx){e+=dx;y1+=sy;}
+  }
 }
 
-// ─── STARS ──────────────────────────────────────────────────────────────────
-function drawStars(t){
-  STARS.forEach(([sx,sy])=>{
-    const on=Math.sin(t*1.9+sx*0.77)>0.25;
-    $(sx,sy,on?'#fff8c8':'#6040a0');
-    if(on&&Math.sin(t*2.3+sx)>0.6) $(sx-1,sy,'rgba(255,248,150,0.4)');
-  });
+function fillCirc(cx,cy,r,col) {
+  for(let y=-r;y<=r;y++) for(let x=-r;x<=r;x++)
+    if(x*x+y*y<=r*r) px_(cx+x,cy+y,col);
 }
 
-// ─── TENT ───────────────────────────────────────────────────────────────────
-function drawTent(t){
-  // Cream base fill
-  $r(0,0,GW,WALL+1,K.cream);
+function circle(cx,cy,r,col) {
+  // Midpoint circle, no gaps
+  let x=r, y=0, e=1-r;
+  while(x>=y) {
+    px_(cx+x,cy+y,col); px_(cx-x,cy+y,col);
+    px_(cx+x,cy-y,col); px_(cx-x,cy-y,col);
+    px_(cx+y,cy+x,col); px_(cx-y,cy+x,col);
+    px_(cx+y,cy-x,col); px_(cx-y,cy-x,col);
+    y++;
+    if(e<=0) { e+=2*y+1; }
+    else { x--; e+=2*(y-x)+1; }
+  }
+}
 
-  // Red stripes radiating from each peak zone
-  const N=14;
-  ZONES.forEach(({pk,l,r})=>{
-    for(let i=0;i<N;i++){
-      if(i%2!==0) continue;
-      const x1=l+(i/N)*(r-l), x2=l+((i+1)/N)*(r-l);
-      for(let y=pk.y;y<=EAVE;y++){
-        const tt=(y-pk.y)/(EAVE-pk.y);
-        const lx=~~(pk.x+(x1-pk.x)*tt);
-        const rx=Math.ceil(pk.x+(x2-pk.x)*tt);
-        if(rx>lx) $r(Math.max(l,lx),y,Math.min(r,rx)-Math.max(l,lx),1,K.tRed);
+function fillEllip(cx,cy,rx,ry,col) {
+  const rx2=rx*rx, ry2=ry*ry;
+  for(let y=-ry;y<=ry;y++) for(let x=-rx;x<=rx;x++)
+    if(x*x*ry2+y*y*rx2<=rx2*ry2) px_(cx+x,cy+y,col);
+}
+
+// ─── SCENE LAYERS ───────────────────────────────────────────────────────────
+
+// 1. NIGHT SKY  (y 0–35, dithered gradient)
+function drawSky() {
+  // Four solid bands
+  blk(0,  0, GW, 10, C.S0);
+  blk(0, 10, GW, 10, C.S1);
+  blk(0, 20, GW, 10, C.S2);
+  blk(0, 30, GW,  6, C.S3);
+
+  // Checkerboard dithering at each band boundary (1 row each side)
+  const bounds = [
+    {y:9,  a:C.S0, b:C.S1},
+    {y:19, a:C.S1, b:C.S2},
+    {y:29, a:C.S2, b:C.S3},
+  ];
+  for(const {y,a,b} of bounds) {
+    for(let x=0;x<GW;x++) {
+      px_(x, y,   x%2===0 ? a : b);
+      px_(x, y+1, x%2===0 ? b : a);
+    }
+  }
+}
+
+// 2. MOON (static, top-right sky area)
+function drawMoon() {
+  const mx=72, my=9, mr=6;
+  // Glow halo (1-pixel feather)
+  circle(mx,my,mr+2,'#3a2040');
+  circle(mx,my,mr+1,'#6a3060');
+  // Moon face
+  fillCirc(mx,my,mr,C.MN);
+  // Shadow crescent (occlusion from left)
+  for(let y=-mr;y<=mr;y++) for(let x=-mr;x<=0;x++)
+    if(x*x+y*y<=mr*mr && (x+2)*(x+2)+y*y<=mr*mr)
+      px_(mx+x,my+y,C.MN2);
+  // Outline
+  circle(mx,my,mr,C.OL);
+}
+
+// 3. STARS  (twinkling, avoid moon and tent area)
+const STAR_POS = [
+  [ 3, 2],[10, 1],[17, 3],[25, 1],[35, 3],[44, 1],[54, 3],[63, 2],
+  [ 6, 7],[13, 6],[22, 8],[31, 7],[41, 6],[51, 8],[60, 7],[68, 8],
+  [ 1,13],[10,14],[19,12],[28,14],[38,12],[47,13],[57,14],[66,12],
+  [ 4,18],[14,17],[23,19],[33,18],[43,17],[52,18],[62,19],
+  [ 2,24],[11,23],[21,25],[30,24],[40,23],[50,25],[59,24],
+];
+
+function drawStars(t) {
+  for(const [sx,sy] of STAR_POS) {
+    const tw = (Math.sin(t*0.0018 + sx*1.71 + sy*2.33) + 1) * 0.5;
+    if(tw > 0.20) {
+      px_(sx,sy, C.WH);
+      if(tw > 0.72) {
+        // 4-point sparkle cross
+        px_(sx-1,sy, C.GD);
+        px_(sx+1,sy, C.GD);
+        px_(sx,sy-1, C.GD);
+        px_(sx,sy+1, C.GD);
       }
     }
-    // Shading on right half of each zone (depth)
-    for(let y=pk.y;y<=EAVE;y++){
-      const tt=(y-pk.y)/(EAVE-pk.y);
-      const mid=~~(pk.x+((l+r)/2-pk.x)*tt);
-      const rightEdge=~~(pk.x+(r-pk.x)*tt);
-      // Subtle darkening on right faces
-      for(let x=mid;x<=rightEdge;x++){
-        const depth=(x-mid)/(rightEdge-mid+1)*0.3;
-        // Only darken every 3rd pixel for dither effect
-        if((x+y)%3===0) $(x,y,'rgba(0,0,0,0.25)');
+  }
+}
+
+// 4. GROUND (elliptical cricket field)
+function drawGround() {
+  // Outer sawdust ring
+  fillEllip(45,52,42,10,C.SD2);
+  fillEllip(45,52,40, 9,C.SD);
+  // Grass oval with mowing stripes
+  const GCXY={cx:45,cy:52,rx:35,ry:7};
+  for(let y=45;y<=59;y++) {
+    for(let x=10;x<=80;x++) {
+      const dx=(x-GCXY.cx)/GCXY.rx, dy=(y-GCXY.cy)/GCXY.ry;
+      if(dx*dx+dy*dy<=1.0) {
+        const stripe=Math.floor((y-45)/2)%2;
+        px_(x,y, stripe===0 ? C.GL : C.GG);
       }
     }
-  });
-
-  // Tent wall (dark red)
-  $r(0,EAVE,GW,WALL-EAVE+1,K.wallRed);
-  $r(0,EAVE,GW,1,K.tGold); // eave gold trim
-
-  // Diamond decorations on wall
-  for(let i=0;i<10;i++){
-    const dx=~~(GW*(i+0.5)/10),dy=EAVE+2;
-    $(dx,dy,K.tGold);             // top
-    $(dx-1,dy+1,K.tGold);$(dx+1,dy+1,K.tGold); // mid
-    $(dx,dy+2,K.tGold);           // bottom
   }
-
-  // Grand entrance arch (centre)
-  const ex=48,ey=WALL;
-  $C(ex,ey+1,5,K.blk);
-  // Voussoir colours
-  for(let i=0;i<=8;i++){
-    const a=Math.PI+i/8*Math.PI;
-    const ax=~~(ex+Math.cos(a)*6.5),ay=~~(ey+1+Math.sin(a)*5);
-    $(ax,ay,i%2===0?K.tRed:K.cream);
-  }
-  // Arch bulb lights
-  for(let i=0;i<=8;i++){
-    const a=Math.PI+i/8*Math.PI;
-    const ax=~~(ex+Math.cos(a)*8),ay=~~(ey+1+Math.sin(a)*6.5);
-    const on=Math.sin(t*3.2+i*0.7)>0;
-    $(ax,ay,on?K.lY:K.tGoldD);
-    if(on) $(ax,ay-1,'#ffffff');
-  }
-  // ROLL UP! banner
-  $r(ex-11,ey-9,23,5,K.blk);
-  $r(ex-11,ey-9,23,1,K.tGold);
-  $r(ex-11,ey-5,23,1,K.tGold);
-  g.fillStyle=K.lY; g.font='bold 3px monospace'; g.textAlign='center';
-  g.fillText('ROLL UP!',ex,ey-5);
-  g.textAlign='left';
-
-  // Peak flags (waving)
-  PEAKS.forEach((p,pi)=>{
-    const ph=pi===1?7:5;
-    $r(p.x,p.y-ph,1,ph,K.br);
-    const w=Math.sin(t*2.8+pi*1.3)>0?0:1;
-    $r(p.x+1,p.y-ph+w,4,1,K.tRed);
-    $r(p.x+2,p.y-ph+1+w,3,1,K.cream);
-    $r(p.x+1,p.y-ph+2+w,2,1,K.tRed);
-    $(p.x,p.y-ph,K.tGold);
-  });
-}
-
-// ─── STRING LIGHTS ──────────────────────────────────────────────────────────
-function drawStringLights(t){
-  [[0,37,GW,37,48,43],[0,32,GW,32,48,39]].forEach(([x1,y1,x2,y2,mx,my],li)=>{
-    let px0=x1,py0=y1;
-    const N=16;
-    for(let i=1;i<=N;i++){
-      const bf=i/N;
-      const bx=~~((1-bf)*(1-bf)*x1+2*(1-bf)*bf*mx+bf*bf*x2);
-      const by=~~((1-bf)*(1-bf)*y1+2*(1-bf)*bf*my+bf*bf*y2);
-      $L(px0,py0,bx,by,K.brD);
-      // Bulb
-      const col=LCOLS[(i+li*5)%6];
-      const on=Math.sin(t*3.8+i*1.1+li*2)>0;
-      $(bx,by,on?col:'#220e04');
-      if(on){ $(bx,by-1,'#fffff0'); }
-      px0=bx;py0=by;
-    }
-  });
-}
-
-// ─── FERRIS WHEEL ───────────────────────────────────────────────────────────
-const FW={cx:13,cy:26,r:10};
-function drawFerrisWheel(t){
-  const {cx,cy,r}=FW;
-  const rot=t*0.24;
-  // A-frame legs
-  $L(cx-9,WALL+1,cx,cy+r,K.brD);
-  $L(cx+9,WALL+1,cx,cy+r,K.brD);
-  $L(cx-7,WALL-2,cx+7,WALL-2,K.brD);
-  // Shadow under wheel
-  $Oval(cx,WALL+1,8,2,'rgba(0,0,0,0.25)');
-
-  // Spokes (8, rotating)
-  const ir=~~(r*0.54);
-  for(let s=0;s<8;s++){
-    const a=rot+s*Math.PI/4;
-    const ix=~~(cx+Math.cos(a)*ir),iy=~~(cy+Math.sin(a)*ir);
-    const ox=~~(cx+Math.cos(a)*(r-1)),oy=~~(cy+Math.sin(a)*(r-1));
-    $L(cx,cy,ix,iy,K.tGoldD);
-    $L(ix,iy,ox,oy,K.tGold);
-  }
-  // Outer rim
-  $Ring(cx,cy,r-1,r+1,K.tGold);
-  // Inner ring
-  $Ring(cx,cy,ir-1,ir+1,K.tGoldD);
-
-  // Rim lights (16 alternating)
-  for(let b=0;b<16;b++){
-    const a=rot*0.55+b/16*Math.PI*2;
-    const bx=~~(cx+Math.cos(a)*r),by=~~(cy+Math.sin(a)*r);
-    const on=Math.sin(t*4.5+b*0.9)>0;
-    $(bx,by,on?LCOLS[b%6]:K.brD);
-    if(on) $(bx,by-1,'rgba(255,255,200,0.7)');
-  }
-
-  // Gondola cars at spoke tips
-  CCOLS.forEach((col,s)=>{
-    const a=rot+s*Math.PI/4;
-    const gx=~~(cx+Math.cos(a)*r),gy=~~(cy+Math.sin(a)*r);
-    $r(gx-1,gy,3,2,col);
-    $(gx,gy,K.wh); // window
-    $(gx-1,gy,'rgba(255,255,255,0.25)'); // highlight
-  });
-
-  // Hub
-  $C(cx,cy,2,K.brD);
-  $C(cx,cy,1,K.tGold);
-  $(cx,cy,'#fff8c0'); // hub shine
-}
-
-// ─── CAROUSEL ───────────────────────────────────────────────────────────────
-function drawCarousel(t){
-  const cx=83,cy=35,rot=t*0.55;
-  // Support pole
-  $L(cx,WALL+1,cx,cy+3,K.br);
-  // Platform
-  $Oval(cx,cy+3,7,2,K.br);
-  $Oval(cx,cy+2,6,1,K.tGoldD);
-  // Canopy (triangle cone)
-  for(let y=cy-9;y<=cy;y++){
-    const tt=(y-(cy-9))/9,hw=~~(tt*7);
-    const stripe=~~(((y-cy+9)*3))%6;
-    $r(cx-hw,y,hw*2+1,1,stripe<3?K.tRed:K.cream);
-  }
-  // Scallop edge
-  for(let i=0;i<6;i++){
-    const sx=cx-6+i*2;
-    $(sx,cy,i%2===0?K.lY:K.tRed);
-    $(sx,cy+1,i%2===0?K.lY:K.tRed);
-  }
-  // Center spire
-  $(cx,cy-9,K.tGold);$(cx,cy-10,K.lY);
-  // Horses + poles (4)
-  [K.lR,K.lY,K.lB,K.lG].forEach((col,h)=>{
-    const ha=rot+h*Math.PI/2;
-    const hx=~~(cx+Math.cos(ha)*4),hy=~~(cy+Math.sin(ha)*1.5);
-    $L(hx,cy-7,hx,cy+2,K.tGold);
-    const bob=~~(Math.sin(t*2.8+h)*1.5);
-    // Horse body
-    $r(hx-2,hy-2+bob,4,2,col);
-    $(hx+2,hy-3+bob,col); // head
-    $(hx+2,hy-4+bob,'#b09040'); // mane
-    // Light on top
-    $(hx,cy-7,K.lY);
-  });
-  // Rim lights
-  for(let b=0;b<8;b++){
-    const a=rot*0.3+b/8*Math.PI*2;
-    const lx=~~(cx+Math.cos(a)*5),ly=~~(cy+Math.sin(a)*1.5);
-    const on=Math.sin(t*3+b*0.8)>0;
-    $(lx,ly+1,on?LCOLS[b%6]:K.brD);
-  }
-}
-
-// ─── TICKET BOOTH (left) ────────────────────────────────────────────────────
-function drawTicketBooth(){
-  const tx=8,ty=52,bw=13,bh=18;
-  // Shadow
-  $Oval(tx,ty+1,7,2,'rgba(0,0,0,0.3)');
-  // Body with red/cream stripes
-  for(let i=0;i<6;i++){
-    const sx=~~(tx-bw/2+i/6*bw);
-    const sw=~~(bw/6)+1;
-    $r(sx,ty-bh,sw,bh,i%2===0?K.tRed:K.cream);
-  }
-  // Awning
-  $r(tx-7,ty-bh-3,15,4,K.tRed);
-  // Scallop awning bottom
-  for(let i=0;i<5;i++){
-    const sx=tx-6+i*3;
-    $(sx,ty-bh,i%2===0?K.tRed:K.cream);
-    $(sx,ty-bh+1,i%2===0?K.tRed:K.cream);
-  }
-  // Window (dark)
-  $r(tx-4,ty-bh+4,9,6,K.blk);
-  // Person silhouette in window
-  $C(tx,ty-bh+6,2,'#f0d8a8');
-  $r(tx-2,ty-bh+8,5,2,K.kitBl);
-  // Counter
-  $r(tx-5,ty-bh+10,11,2,K.br);
-  // TICKETS sign
-  $r(tx-5,ty-bh+1,11,2,K.tGold);
-  g.fillStyle=K.blk; g.font='bold 2px monospace'; g.textAlign='center';
-  g.fillText('TICKETS',tx,ty-bh+3);
-  g.textAlign='left';
-  // Wheels
-  $C(tx-4,ty+1,3,K.brD);$C(tx+4,ty+1,3,K.brD);
-  $C(tx-4,ty+1,2,K.br);$C(tx+4,ty+1,2,K.br);
-  $(tx-4,ty+1,K.tGoldD);$(tx+4,ty+1,K.tGoldD);
-}
-
-// ─── BALLOON SELLER (right) ─────────────────────────────────────────────────
-function drawBalloonSeller(t){
-  const bsx=88,bsy=52;
-  // Legs
-  $r(bsx-1,bsy-6,2,6,'#2c3040');
-  // Body
-  $r(bsx-2,bsy-13,5,7,'#a03020');
-  // Head
-  $C(bsx,bsy-15,2,'#f0d8a8');
-  // Hat
-  $r(bsx-2,bsy-19,5,2,K.tRed);
-  $r(bsx-1,bsy-21,3,3,K.tRed);
-  // Arm holding strings
-  $r(bsx+2,bsy-12,1,5,'#f0d8a8');
-  // Balloon strings
-  const bcols=[K.lR,K.lY,K.lB,K.lG,K.lP,K.lO];
-  for(let b=0;b<6;b++){
-    const sway=Math.sin(t*1.3+b*0.8)*1.5;
-    const bx=~~(bsx+3+b*1.5+sway),by=~~(bsy-14-b*1.5);
-    $L(bsx+3,bsy-12,bx,by,K.brD);
-    $C(bx,by-3,2,bcols[b]);
-    $(bx,by-4,'rgba(255,255,255,0.5)'); // shine
-  }
-}
-
-// ─── OUTER GROUND ───────────────────────────────────────────────────────────
-function drawGround(){
-  $r(0,48,GW,GH-48,K.saw);
-  // Sawdust texture flecks
-  for(let i=0;i<35;i++){
-    const fx=(i*137+13)%GW,fy=50+(i*83+7)%90;
-    $(fx,fy,K.sawL);
-    if(i%3===0) $(fx+1,fy,K.sawL);
-  }
-}
-
-// ─── OVAL GRASS FIELD ───────────────────────────────────────────────────────
-function drawOval(){
-  for(let y=FCY-FRY;y<=FCY+FRY;y++){
-    for(let x=FCX-FRX;x<=FCX+FRX;x++){
-      const dx=(x-FCX)/FRX,dy=(y-FCY)/FRY;
-      const d=dx*dx+dy*dy;
-      if(d>1) continue;
-      // Mowing stripes
-      const stripe=~~((y-(FCY-FRY))/4)%2;
-      $(x,y,stripe?K.gr:K.grL);
-      // Field boundary ring
-      if(d>0.95) $(x,y,K.grD);
-    }
-  }
-}
-
-// ─── PITCH ──────────────────────────────────────────────────────────────────
-function drawPitch(){
-  const px0=FCX-3,py0=FCY-28,pw=7,ph=56;
-  $r(px0,py0,pw,ph,K.pitch);
-  // Worn centre
-  $r(px0+1,py0+18,pw-2,20,K.pitchD);
+  // Cricket pitch (compressed earth)
+  blk(40,48,10,7,C.PT);
   // Crease lines
-  $r(px0-1,py0+8,pw+2,1,K.wh);
-  $r(px0-1,py0+ph-9,pw+2,1,K.wh);
-  // Stumps
-  for(let s=0;s<3;s++){
-    const sx=px0+2+s;
-    $r(sx,py0+3,1,5,K.wh);
-    $(sx,py0+2,K.lY); // bail
-    $r(sx,py0+ph-8,1,5,K.wh);
-    $(sx,py0+ph-9,K.lY);
+  hln(40,49,48,C.WH);
+  hln(40,49,54,C.WH);
+  // Stumps — near end
+  for(const sx of [42,45,48]) {
+    bline(sx,45,sx,48,C.WH);
+    px_(sx,45,C.GD);  // bail highlight
+  }
+  hln(41,49,45,'#c0a820');
+  // Stumps — far end
+  for(const sx of [42,45,48]) {
+    bline(sx,54,sx,57,C.WH);
+    px_(sx,54,C.GD);
+  }
+  hln(41,49,54,'#c0a820');
+}
+
+// 5. BIG TOP TENT (right side, 3 peaks)
+//    Peaks: (63,24), (75,15), (88,24)
+//    Base: y=36  Flanks: x=55..89
+function drawTent() {
+  const BASE = 36;
+
+  // ── Left peak section: apex(63,24), base x 55..71 ──
+  for(let y=24;y<=BASE;y++) {
+    const t_ = (y-24)/(BASE-24);
+    const xl = Math.round(63 - 8*t_);  // 63→55
+    const xr = Math.round(63 + 8*t_);  // 63→71
+    for(let x=xl;x<=xr;x++) {
+      const s = Math.floor((x+y*0.5)/3)%2;
+      px_(x,y, s===0 ? C.TR : C.TC);
+    }
+  }
+  // Outline left peak
+  bline(63,24, 55,BASE, C.OL);
+  bline(63,24, 71,BASE, C.OL);
+
+  // ── Center peak section: apex(75,15), base x 65..89 ──
+  for(let y=15;y<=BASE;y++) {
+    const t_ = (y-15)/(BASE-15);
+    const xl = Math.round(75 - 10*t_);  // 75→65
+    const xr = Math.round(75 + 14*t_);  // 75→89
+    for(let x=xl;x<=xr;x++) {
+      // Skip if already painted by left peak (left peak has priority)
+      const s = Math.floor((x-y*0.4)/3)%2;
+      px_(x,y, s===0 ? C.TR : C.TC);
+    }
+  }
+  // Outline center peak (on top)
+  bline(75,15, 65,BASE, C.OL);
+  bline(75,15, 89,BASE, C.OL);
+  // Right edge (screen boundary)
+  bline(89,BASE, 89,15, C.OL);
+
+  // Redraw left outline on top (center peak overwrote it)
+  bline(63,24, 55,BASE, C.OL);
+
+  // Peak finials (gold balls)
+  fillCirc(63,23,2,C.GD);
+  circle(63,23,2,C.GD2);
+  px_(63,23,C.WH);
+
+  fillCirc(75,14,2,C.GD);
+  circle(75,14,2,C.GD2);
+  px_(75,14,C.WH);
+
+  // Horizontal scallop trim at base of each peak
+  for(let x=55;x<=89;x+=4) {
+    fillCirc(x+2, BASE+2, 2, C.TD);
+    circle(x+2, BASE+2, 2, C.OL);
+    const col=[C.TR,C.TC,C.GD,C.TR][Math.floor((x-55)/4)%4];
+    px_(x+2,BASE+1,col);
+  }
+
+  // Bunting rope across tent front
+  const BUNTS=[C.TR,C.GD,C.TL,C.PK,C.OR,C.BL,C.WH,C.TR,C.GD,C.TL,C.PK,C.OR];
+  for(let i=0;i<12;i++) {
+    const bx=55+i*3;
+    const by=BASE-3 + Math.round(Math.sin(i*0.85+1)*1.5);
+    if(bx>89) break;
+    blk(bx,by,2,3,BUNTS[i]);
+    px_(bx,by,C.OL); px_(bx+1,by,C.OL);
+    if(i>0) {
+      const pbx=55+(i-1)*3, pby=BASE-3+Math.round(Math.sin((i-1)*0.85+1)*1.5);
+      bline(pbx+1,pby,bx,by,'#504050');
+    }
   }
 }
 
-// ─── BATSMAN ────────────────────────────────────────────────────────────────
-function drawBatsman(){
-  const bx=FCX,by=FCY+6;
-  // Shadow
-  $Oval(bx,by+7,3,1,K.grD);
-  // Pads
-  $r(bx-1,by+2,1,5,K.wh);$r(bx+1,by+2,1,5,K.wh);
-  // Legs
-  $r(bx-1,by+6,1,1,K.ballSkin);$r(bx+1,by+6,1,1,K.ballSkin);
-  // Body (blue kit)
-  $r(bx-1,by-2,3,4,K.kitBl);
-  // Side arm
-  $r(bx+2,by-1,2,3,K.kitBl);
-  // Bat (angled, brown)
-  $r(bx+3,by-4,2,1,K.pitch);
-  $r(bx+4,by-3,2,1,K.pitch);
-  $r(bx+4,by-2,2,4,K.pitch);
-  $r(bx+3,by+2,1,1,K.pitchD);
-  // Head + face
-  $r(bx-1,by-5,3,3,K.ballSkin);
-  // Helmet
-  $r(bx-1,by-6,3,1,K.kitBl);
-  $r(bx-2,by-5,1,2,K.kitBl); // side
-  // Gloves
-  $r(bx+2,by-1,1,1,K.wh);
-  $(bx+3,by-1,K.wh);
-  // White stripes on kit
-  $(bx,by-2,'#4a70cc');$(bx,by-1,'#4a70cc');
+// 6. FERRIS WHEEL (left side, the HERO element)
+//    Center: (20,26), Radius: 11
+function drawFerrisWheel(t) {
+  const fx=20, fy=26, fr=11;
+  const ang = t * 0.0018; // rotation angle
+
+  // A-frame support structure
+  bline(fx,fy+fr,  fx-9,36, C.OL);
+  bline(fx,fy+fr,  fx+9,36, C.OL);
+  bline(fx-9,36,   fx+9,36, C.OL);
+  // Cross brace
+  bline(fx-6,33,   fx+6,33, C.OL);
+  bline(fx-7,34,   fx-6,33, C.OL);
+  bline(fx+7,34,   fx+6,33, C.OL);
+  // Center axle post
+  bline(fx,fy+fr-1, fx,36, C.OL);
+
+  // Hub (drawn first, under spokes)
+  fillCirc(fx,fy,3,'#484860');
+  circle(fx,fy,3,C.OL);
+
+  // 8 spokes
+  for(let i=0;i<8;i++) {
+    const a = ang + i*Math.PI/4;
+    const sx = Math.round(fx + (fr-2)*Math.cos(a));
+    const sy = Math.round(fy + (fr-2)*Math.sin(a));
+    bline(fx,fy, sx,sy, '#707090');
+  }
+
+  // Outer rim — two rings for thickness
+  circle(fx,fy,fr,  C.OL);
+  circle(fx,fy,fr-1,'#505068');
+
+  // 16 coloured rim lights (rotate with wheel)
+  const LCOL=[C.GD,C.TR,C.TL,C.PK,C.OR,C.BL,C.WH,C.GD, C.TR,C.TL,C.PK,C.OR,C.BL,C.WH,C.GD,C.TR];
+  for(let i=0;i<16;i++) {
+    const a = ang + i*Math.PI/8;
+    const lx=Math.round(fx + fr*Math.cos(a));
+    const ly=Math.round(fy + fr*Math.sin(a));
+    px_(lx,ly,LCOL[i]);
+    // Twinkle: brighter alternate lights
+    if(i%2===0) {
+      const tw=(Math.sin(t*0.004+i)+1)*0.5;
+      if(tw>0.5) px_(lx,ly,C.WH);
+    }
+  }
+
+  // Hub centre cap
+  fillCirc(fx,fy,2,'#909098');
+  px_(fx,fy,C.WH);
+
+  // 8 gondolas at spoke tips (coloured capsules)
+  const GCOL=[C.TL,C.OR,C.PK,C.BL,C.TL,C.OR,C.PK,C.BL];
+  for(let i=0;i<8;i++) {
+    const a = ang + i*Math.PI/4;
+    const gx=Math.round(fx + (fr+1)*Math.cos(a));
+    const gy=Math.round(fy + (fr+1)*Math.sin(a));
+    // Gondola body (3×4 capsule, hangs down from rim)
+    // Gravity offset — gondola bottom always points down
+    const hangA = Math.PI/2; // fixed downward
+    fillCirc(gx,gy,2,GCOL[i]);
+    blk(gx-1,gy,3,2,GCOL[i]);
+    px_(gx,gy+2,C.OL);
+    // Window highlight
+    px_(gx-1,gy-1,C.WH);
+    // Outline
+    circle(gx,gy,2,C.OL);
+  }
 }
 
-// ─── BUNTING ────────────────────────────────────────────────────────────────
-const BPOLES=[10,24,38,58,72,86];
-function drawBunting(t){
-  BPOLES.forEach(bpx=>{
-    // Only draw where outside oval
-    for(let y=48;y<=64;y++){
-      const dx=(bpx-FCX)/FRX,dy=(y-FCY)/FRY;
-      if(dx*dx+dy*dy>=1) $(bpx,y,K.br);
-    }
-    const dx=(bpx-FCX)/FRX,dy=(64-FCY)/FRY;
-    if(dx*dx+dy*dy>=1) $C(bpx,64,1,K.brD);
-  });
-  // Flag strings between poles
-  for(let p=0;p<BPOLES.length-1;p++){
-    const x1=BPOLES[p],x2=BPOLES[p+1];
-    for(let f=0;f<5;f++){
-      const ft=f/4;
-      const bfx=~~(x1+(x2-x1)*ft);
-      const bfy=~~(64-(64-57)*Math.sin(ft*Math.PI));
-      const dx=(bfx-FCX)/FRX,dy=(bfy-FCY)/FRY;
-      if(dx*dx+dy*dy>=1){
-        $L(bfx,64,bfx,bfy,K.brD);
-        const col=LCOLS[(p*2+f)%6];
-        $(bfx,bfy,col);
-        $(bfx-1,bfy+1,col);$(bfx,bfy+1,col);$(bfx+1,bfy+1,col);
-        $(bfx,bfy+2,col);
+// 7. STRING LIGHTS  (catenary across sky, animated pulse)
+function drawStringLights(t) {
+  const LCOL=[C.GD,C.TR,C.TL,C.PK,C.OR,C.BL,C.WH,C.GD,C.TR,C.TL,C.PK,C.OR,C.BL,C.WH,C.GD];
+  // Catenary: y offset = sag * sin(x/GW * π)
+  const sag=3;
+  let prevX=0, prevY=2+sag;
+  for(let x=0;x<=GW;x++) {
+    const y=Math.round(2 + sag*Math.sin((x/(GW-1))*Math.PI));
+    // String
+    if(x>0) bline(prevX,prevY, x,y, '#383038');
+    prevX=x; prevY=y;
+  }
+  // Bulbs every 5 pixels
+  for(let i=0;i<=(GW/5);i++) {
+    const bx=i*5;
+    const by=Math.round(2 + sag*Math.sin((bx/(GW-1))*Math.PI));
+    const col=LCOL[i%LCOL.length];
+    const tw=(Math.sin(t*0.003+i*1.3)+1)*0.5;
+    px_(bx,by,col);
+    if(tw>0.45) {
+      px_(bx,by-1,col);  // bright bulb = 2 pixels tall
+      // Glow halo (cross)
+      if(tw>0.75) {
+        px_(bx-1,by,col); px_(bx+1,by,col);
       }
     }
   }
 }
 
-// ─── CONFETTI ───────────────────────────────────────────────────────────────
-function drawConfetti(t){
-  CONF.forEach(c=>{
-    const phase=(t*0.14+c.phase)%1;
-    const cy2=~~(50+phase*100);
-    const cx2=~~(c.x+Math.sin(t*0.9+c.phase*5)*4);
-    if(cx2<0||cx2>=GW||cy2<50) return;
-    const dx=(cx2-FCX)/FRX,dy=(cy2-FCY)/FRY;
-    if(dx*dx+dy*dy>=1) $(cx2,cy2,c.col);
-  });
+// 8. SHOOTING STAR (occasional, animated)
+function drawShootingStar(t) {
+  // Fires every ~8s, lasts 1s
+  const cycle=8000;
+  const phase=t%cycle;
+  if(phase>1200) return;
+  const prog=phase/1200;
+  const sx=Math.round(60+prog*20);
+  const sy=Math.round(4+prog*8);
+  px_(sx,sy,C.WH);
+  // Tail
+  for(let i=1;i<=5;i++) {
+    const ta=i/5;
+    const tx_=Math.round(sx-i*2);
+    const ty_=Math.round(sy-i);
+    if(tx_>=0&&ty_>=0) {
+      const brightness=1-ta;
+      if(brightness>0.6) px_(tx_,ty_,C.GD);
+      else if(brightness>0.3) px_(tx_,ty_,'#805030');
+    }
+  }
 }
 
-// ─── HUD ────────────────────────────────────────────────────────────────────
-function drawHUD(){
-  $r(0,0,GW,8,K.hudBg);
-  $r(0,8,GW,1,K.tGold);
-
-  // Score
-  $r(1,1,26,7,K.hudBl);
-  $r(1,1,26,1,'#2060c0');
-  g.fillStyle='#7090cc'; g.font='bold 3px monospace'; g.textAlign='left';
-  g.fillText('SCORE',3,5);
-  g.fillStyle=K.wh; g.font='bold 4px monospace';
-  g.fillText('0',18,8);
-
-  // Target
-  $r(35,1,26,7,K.hudRd);
-  $r(35,1,26,1,'#aa2020');
-  g.fillStyle='#cc7070'; g.font='bold 3px monospace';
-  g.fillText('TARGET',37,5);
-  g.fillStyle=K.lY; g.font='bold 4px monospace';
-  g.fillText('60',51,8);
-
-  // Best
-  $r(72,1,24,7,'#281808');
-  $r(72,1,24,1,K.tGoldD);
-  g.fillStyle=K.tGold; g.font='bold 3px monospace';
-  g.fillText('BEST',74,5);
-  g.fillStyle=K.wh; g.font='bold 4px monospace';
-  g.fillText('0',86,8);
-}
-
-// ─── NAV BAR ────────────────────────────────────────────────────────────────
-function drawNav(){
-  const ny=GH-13;
-  $r(0,ny,GW,13,K.hudBg);
-  $r(0,ny,GW,1,K.tGold);
-  const items=[['KIT','🎒'],['CHESTS','📦'],['LEAGUE','🏆'],['STATS','📊']];
-  items.forEach(([name],i)=>{
-    const ix=~~(GW*i/4)+1,iw=~~(GW/4)-2;
-    const active=i===2;
-    $r(ix,ny+1,iw,11,active?'#1c1038':'#0c0c1c');
-    if(active){$r(ix,ny+1,iw,1,K.tGold); $r(ix,ny+11,iw,1,K.tGold);}
-    g.fillStyle=active?K.lY:'#6666aa';
-    g.font=`bold ${active?4:3}px monospace`;
-    g.textAlign='center';
-    g.fillText(name,ix+iw/2,ny+(active?8:7));
-  });
-  g.textAlign='left';
-}
-
-// ─── SCANLINE + VIGNETTE (on main canvas) ───────────────────────────────────
-function postProcess(){
-  // CRT scanlines
-  ctx.fillStyle='rgba(0,0,0,0.10)';
-  for(let y=0;y<mc.height;y+=2) ctx.fillRect(0,y,mc.width,1);
-  // Vignette
-  const vg=ctx.createRadialGradient(mc.width/2,mc.height/2,mc.height*0.25,mc.width/2,mc.height/2,mc.height*0.75);
-  vg.addColorStop(0,'rgba(0,0,0,0)');
-  vg.addColorStop(1,'rgba(0,0,0,0.55)');
-  ctx.fillStyle=vg;
-  ctx.fillRect(0,0,mc.width,mc.height);
-  // Subtle colour aberration on edges (pixel art flair)
-  ctx.globalCompositeOperation='screen';
-  ctx.fillStyle='rgba(80,0,0,0.03)';
-  ctx.fillRect(0,0,4,mc.height);
-  ctx.fillStyle='rgba(0,0,80,0.03)';
-  ctx.fillRect(mc.width-4,0,4,mc.height);
-  ctx.globalCompositeOperation='source-over';
-}
-
-// ─── MAIN LOOP ──────────────────────────────────────────────────────────────
-function frame(ts){
-  const t=ts/1000;
+// ─── MAIN RENDER LOOP ────────────────────────────────────────────────────────
+function render(t) {
+  // ── pixel canvas ──
   g.clearRect(0,0,GW,GH);
 
   drawSky();
+  drawMoon();
   drawStars(t);
-  drawTent(t);
-  drawStringLights(t);
-  drawFerrisWheel(t);
-  drawCarousel(t);
-  drawTicketBooth();
-  drawBalloonSeller(t);
+  drawShootingStar(t);
   drawGround();
-  drawOval();
-  drawPitch();
-  drawBunting(t);
-  drawConfetti(t);
-  drawBatsman();
-  drawNav();
-  drawHUD();  // drawn last = on top of everything
+  drawTent();
+  drawFerrisWheel(t);
+  drawStringLights(t);
 
-  // Blit to main canvas at 4× (pixelated)
-  ctx.clearRect(0,0,mc.width,mc.height);
-  ctx.drawImage(oc,0,0,mc.width,mc.height);
+  // ── scale up to display ──
+  CTX.drawImage(buf, 0, 0, GW*P, GH*P);
 
-  postProcess();
-  requestAnimationFrame(frame);
+  // ── CRT post-process ──
+  // Scanlines
+  CTX.fillStyle='rgba(0,0,0,0.09)';
+  for(let y=0;y<GH*P;y+=2) CTX.fillRect(0,y,GW*P,1);
+
+  // Vignette
+  const vg=CTX.createRadialGradient(GW*P/2,GH*P/2,GH*P*0.25, GW*P/2,GH*P/2,GH*P*0.85);
+  vg.addColorStop(0,'rgba(0,0,0,0)');
+  vg.addColorStop(1,'rgba(0,0,0,0.5)');
+  CTX.fillStyle=vg;
+  CTX.fillRect(0,0,GW*P,GH*P);
+
+  requestAnimationFrame(render);
 }
-requestAnimationFrame(frame);
+
+requestAnimationFrame(render);
 </script>
+</body>
+</html>
