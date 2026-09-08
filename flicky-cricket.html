@@ -2,6 +2,9 @@
 <html>
 <head>
 <meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Flicky Cricket</title>
 <style id="embedded-fonts">
@@ -11934,7 +11937,9 @@ function drawSceneScoreboard() {
   // When a scene background image is active, shift the panel down to align
   // with the artwork's painted frame (it sits ~3% from top with Dynamic Island clearance).
   const _hasBg = _SCENE_IMAGES[key] && _SCENE_IMAGES[key].complete && _SCENE_IMAGES[key].naturalWidth > 0;
-  const bW  = W * 0.84;
+  // When the painted wooden frame is visible, widen the scoreboard geometry to match it.
+  // The Village Green artwork's wooden frame spans ~92% of screen width.
+  const bW  = _hasBg ? W * 0.92 : W * 0.84;
   const bH  = H * 0.086;
   const bX  = (W - bW) / 2;
   const bY  = _hasBg ? H * 0.044 : H * 0.008;
@@ -12012,7 +12017,7 @@ function drawSceneScoreboard() {
   // Helper: draw glowing number (extra readable when scene bg image is active)
   function _glowNum(text, x, y, sz, valCol, glowCol) {
     ctx.save();
-    ctx.font = `900 ${sz}px ${sbTheme.font}`;
+    ctx.font = _flipFont ? `900 ${sz * 1.15}px ${_flipFont}` : `900 ${sz}px ${sbTheme.font}`;
     if (_hasBg) {
       // Hard dark outline first so text pops on any background
       ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineWidth = sz * 0.12;
@@ -12028,7 +12033,7 @@ function drawSceneScoreboard() {
   // Helper: draw small label with letter-spacing simulation
   function _label(text, x, y, col) {
     ctx.save();
-    ctx.font = `700 ${labelSz}px ${sbTheme.font}`;
+    ctx.font = _flipFont ? `700 ${labelSz}px ${_flipFont}` : `700 ${labelSz}px ${sbTheme.font}`;
     ctx.fillStyle = col;
     ctx.letterSpacing = '2px';
     ctx.fillText(text, x, y);
@@ -12039,12 +12044,13 @@ function drawSceneScoreboard() {
   // Custom labels per scene
   const [runsLbl, tgtLbl] = BOARD_LABELS[key] || ['RUNS', 'TARGET'];
 
-  // Scene-specific x-centres: Village Green wooden scoreboard has a centre divider at ~49% of
-  // the board width and a golden personal-best box on the far right, so the dark panel sections
-  // are not symmetric halves. Left (RUNS) section centre ≈ 22% of bW; right (TARGET) section
-  // centre ≈ 65% of bW (before the golden box). These overrides apply only to this scene.
-  const _runsX = (key === 'day' && _hasBg) ? bX + bW * 0.22 : bX + bW * 0.25;
-  const _tgtX  = (key === 'day' && _hasBg) ? bX + bW * 0.65 : bX + bW * 0.75;
+  // Scene-specific x-centres for Village Green: the wooden frame is asymmetric —
+  // 5 dark flip panels on the left, 4 on the right, golden best-score box far right.
+  // Left section centre ≈ 24% of (wider) bW; right section centre ≈ 64% of bW.
+  const _runsX = (key === 'day' && _hasBg) ? bX + bW * 0.24 : bX + bW * 0.25;
+  const _tgtX  = (key === 'day' && _hasBg) ? bX + bW * 0.63 : bX + bW * 0.75;
+  // Flip-board font: tall, narrow, mechanical — applied only to Village Green numbers
+  const _flipFont = (key === 'day' && _hasBg) ? '\'Bebas Neue\', Impact, \'Arial Narrow\', sans-serif' : null;
 
   // RUNS
   _label(runsLbl, _runsX, bY+bH*0.295, runsLabelCol);
