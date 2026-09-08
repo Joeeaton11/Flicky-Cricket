@@ -3600,6 +3600,14 @@ function setupFielders() {
   });
 }
 
+// Wicket keeper positioning
+// pos: 0 = standing back (fast bowler), 1 = standing up (spinner / pressure)
+const wk = {
+  pos: 0.2,       // fraction along range (0=back, 1=up)
+  _upBtn: null,   // hit-rect for ▲ button (set each draw)
+  _downBtn: null, // hit-rect for ▼ button
+};
+
 // track recent shot angles to detect if the player favours a direction
 let shotHistory = [];
 const SHOT_HISTORY_LEN = 5;
@@ -3811,6 +3819,23 @@ let touchRipple = null; // {x, y, life, maxLife}
 
 canvas.addEventListener('pointerdown', e => {
   if (state !== 'ready' && state !== 'ballcoming') return;
+
+  // Check keeper ▲/▼ buttons first (only active in ready state)
+  if (state === 'ready') {
+    const px = e.clientX, py = e.clientY;
+    const _inBtn = (btn) => btn && px >= btn.x && px <= btn.x + btn.w && py >= btn.y && py <= btn.y + btn.h;
+    if (_inBtn(wk._upBtn)) {
+      wk.pos = Math.min(1, wk.pos + 0.25);
+      haptic(15);
+      return; // consume tap — don't start a flick
+    }
+    if (_inBtn(wk._downBtn)) {
+      wk.pos = Math.max(0, wk.pos - 0.25);
+      haptic(15);
+      return;
+    }
+  }
+
   touchStart = { x: e.clientX, y: e.clientY, t: performance.now() };
   currentTouchPos = { x: e.clientX, y: e.clientY };
   touchRipple = { x: e.clientX, y: e.clientY, life: 18, maxLife: 18 };
@@ -8619,8 +8644,11 @@ function drawField() {
     };
     const _sf = [...fielders].sort((a,b)=>a.y-b.y);
     _sf.forEach(f => {
-      if (_inOval(f.x, f.y)) drawFielder(f.x, f.y, f.chasing, f.diving && f.reached, f.stridePhase || 0);
+      if (_inOval(f.x, f.y) && f.name !== 'keeper') drawFielder(f.x, f.y, f.chasing, f.diving && f.reached, f.stridePhase || 0);
     });
+
+    // Wicket keeper (dedicated draw with range indicator)
+    drawWicketKeeper();
 
     // Scoreboard + energy bar overlay
     drawSceneScoreboard();
@@ -8843,8 +8871,11 @@ function drawField() {
   // fielders (sorted so ones higher on screen draw first - simple depth)
   const sorted = [...fielders].sort((a,b)=>a.y-b.y);
   sorted.forEach(f => {
-    if (f.y < H*0.97 && f.y > H*0.03) drawFielder(f.x, f.y, f.chasing, f.diving && f.reached, f.stridePhase || 0);
+    if (f.y < H*0.97 && f.y > H*0.03 && f.name !== 'keeper') drawFielder(f.x, f.y, f.chasing, f.diving && f.reached, f.stridePhase || 0);
   });
+
+  // Wicket keeper (dedicated draw with range indicator)
+  drawWicketKeeper();
 
   // floodlights (evening/night) - simple corner light cones
   if (tod.floodlights) {
@@ -32785,6 +32816,74 @@ function drawFielder(x,y,chasing,diving,stridePhase) {
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.beginPath(); ctx.ellipse(x-1*s, y-17.5+yOff, 0.9*s, 0.5*s, 0, 0, Math.PI*2); ctx.fill();
   }
+}
+
+function drawWicketKeeper() {
+  const _bg = _SCENE_IMAGES[currentTimeOfDay && currentTimeOfDay.key];
+  const _hasBg = _bg && _bg.complete && _bg.naturalWidth > 0;
+
+  // Range limits: "up" (standing close) and "back" (standing far)
+  const upY   = _hasBg ? H * 0.656 : PITCH_BOTTOM() + 12;
+  const downY = _hasBg ? H * 0.714 : PITCH_BOTTOM() + 54;
+  // Keeper sits slightly off-side of centre (traditional 1st slip channel)
+  const kx    = W / 2 + W * 0.038;
+  const ky    = upY + (1 - wk.pos) * (downY - upY);
+
+  ctx.save();
+
+  // === Range track ===
+  ctx.strokeStyle = 'rgba(255,255,255,0.38)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([3, 5]);
+  ctx.beginPath();
+  ctx.moveTo(kx, upY - 4);
+  ctx.lineTo(kx, downY + 4);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // End-of-range tick marks
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 1.5;
+  [upY - 4, downY + 4].forEach(ty => {
+    ctx.beginPath(); ctx.moveTo(kx - 5, ty); ctx.lineTo(kx + 5, ty); ctx.stroke();
+  });
+
+  // Range labels
+  ctx.font = '7px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.fillText('UP',   kx + 7, upY - 1);
+  ctx.fillText('BACK', kx + 7, downY + 6);
+
+  // === Keeper figure (reuse fielder draw) ===
+  drawFielder(kx, ky, false, false, 0);
+
+  // === ▲ / ▼ controls — only when between deliveries ===
+  if (state === 'ready') {
+    const btnW = 22, btnH = 14, btnR = 3;
+
+    // Up button (move closer to stumps)
+    const upBtnY = upY - 20;
+    ctx.fillStyle = wk.pos >= 1 ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.18)';
+    ctx.beginPath(); ctx.roundRect(kx - btnW / 2, upBtnY, btnW, btnH, btnR); ctx.fill();
+    ctx.fillStyle = wk.pos >= 1 ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.80)';
+    ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('▲', kx, upBtnY + 10);
+    wk._upBtn = { x: kx - btnW / 2, y: upBtnY, w: btnW, h: btnH };
+
+    // Down button (move further back)
+    const dnBtnY = downY + 8;
+    ctx.fillStyle = wk.pos <= 0 ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.18)';
+    ctx.beginPath(); ctx.roundRect(kx - btnW / 2, dnBtnY, btnW, btnH, btnR); ctx.fill();
+    ctx.fillStyle = wk.pos <= 0 ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.80)';
+    ctx.fillText('▼', kx, dnBtnY + 10);
+    wk._downBtn = { x: kx - btnW / 2, y: dnBtnY, w: btnW, h: btnH };
+  } else {
+    wk._upBtn = null;
+    wk._downBtn = null;
+  }
+
+  ctx.restore();
 }
 
 function drawBatsman() {
