@@ -8578,8 +8578,10 @@ function drawField() {
   //    Only the pitch, crease and game elements are drawn on top.
   const _sceneBg = _SCENE_IMAGES[tod.key];
   if (_sceneBg && _sceneBg.complete && _sceneBg.naturalWidth > 0) {
+    // Full background image — baked-in sky, grass, outfield, boundary, stands
     ctx.drawImage(_sceneBg, 0, 0, W, H);
-    // draw pitch + crease on top of the background
+
+    // Pitch + crease (interactive geometry on top of baked art)
     ctx.fillStyle = tod.pitch;
     ctx.beginPath();
     ctx.moveTo(W/2 - PITCH_TOP_W()/2, PITCH_TOP());
@@ -8599,6 +8601,20 @@ function drawField() {
     ctx.moveTo(W/2, PITCH_TOP()+8); ctx.lineTo(W/2, PITCH_TOP()+12);
     ctx.moveTo(W/2, PITCH_BOTTOM()-4); ctx.lineTo(W/2, PITCH_BOTTOM()-8);
     ctx.stroke();
+
+    // Stumps
+    drawStumps(W/2, PITCH_TOP(), PITCH_TOP_W()*0.45);
+    drawStumps(W/2, PITCH_BOTTOM(), PITCH_BOTTOM_W()*0.32);
+
+    // Umpire
+    drawUmpire(W/2, PITCH_TOP()-10);
+
+    // Fielders (depth-sorted)
+    const _sf = [...fielders].sort((a,b)=>a.y-b.y);
+    _sf.forEach(f => {
+      if (f.y < H*0.97 && f.y > H*0.03) drawFielder(f.x, f.y, f.chasing, f.diving && f.reached, f.stridePhase || 0);
+    });
+
     return;
   }
 
@@ -11918,7 +11934,7 @@ function drawSceneScoreboard() {
   const bW  = W * 0.84;
   const bH  = H * 0.086;
   const bX  = (W - bW) / 2;
-  const bY  = _hasBg ? H * 0.032 : H * 0.008;
+  const bY  = _hasBg ? H * 0.044 : H * 0.008;
   const br  = bH * 0.32;
 
   const displayTarget = Math.max(target, window._leagueTargetFloor || 0);
@@ -11990,11 +12006,16 @@ function drawSceneScoreboard() {
   const runsSz  = Math.max(20, bH * 0.60);
   const tgtSz   = Math.max(16, bH * 0.50);
 
-  // Helper: draw glowing number
+  // Helper: draw glowing number (extra readable when scene bg image is active)
   function _glowNum(text, x, y, sz, valCol, glowCol) {
     ctx.save();
     ctx.font = `900 ${sz}px ${sbTheme.font}`;
-    ctx.shadowColor = glowCol; ctx.shadowBlur = 20;
+    if (_hasBg) {
+      // Hard dark outline first so text pops on any background
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineWidth = sz * 0.12;
+      ctx.lineJoin = 'round'; ctx.strokeText(text, x, y);
+    }
+    ctx.shadowColor = glowCol; ctx.shadowBlur = _hasBg ? 10 : 20;
     ctx.fillStyle = glowCol; ctx.fillText(text, x, y);
     ctx.shadowBlur = 0;
     ctx.fillStyle = valCol; ctx.fillText(text, x, y);
