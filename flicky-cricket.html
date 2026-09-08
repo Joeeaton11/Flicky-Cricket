@@ -8581,38 +8581,35 @@ function drawField() {
     // Full background image — baked-in sky, grass, outfield, boundary, stands
     ctx.drawImage(_sceneBg, 0, 0, W, H);
 
-    // The image provides the scenic backdrop only (sky, grass, pavilion, outfield).
-    // All gameplay elements — pitch fill, crease lines, stumps, umpire — are drawn
-    // by code on top, exactly as in the non-image path.
-    // Pitch fill (the brown strip)
-    ctx.fillStyle = currentTimeOfDay.pitch;
-    ctx.beginPath();
-    ctx.moveTo(W/2 - PITCH_TOP_W()/2,    PITCH_TOP());
-    ctx.lineTo(W/2 + PITCH_TOP_W()/2,    PITCH_TOP());
-    ctx.lineTo(W/2 + PITCH_BOTTOM_W()/2, PITCH_BOTTOM());
-    ctx.lineTo(W/2 - PITCH_BOTTOM_W()/2, PITCH_BOTTOM());
-    ctx.closePath(); ctx.fill();
+    // The image provides full scenic backdrop including the pitch texture.
+    // We draw only gameplay elements: stumps, creases, umpire — positioned
+    // to align with the painted pitch in the background image.
+    // Top of image pitch ≈ H*0.44, bottom ≈ H*0.715 (measured from image).
+    const _bgPT  = H * 0.44;   // top stumps y
+    const _bgPB  = H * 0.715;  // bottom stumps y (batsman end)
+    const _bgTW  = W * 0.09;   // pitch width at top (perspective)
+    const _bgBW  = W * 0.13;   // pitch width at bottom
 
-    // Crease lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.90)'; ctx.lineWidth = 2;
+    // Crease lines only — no pitch fill (image already has it)
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(W/2 - PITCH_TOP_W()*0.4, PITCH_TOP()+8);
-    ctx.lineTo(W/2 + PITCH_TOP_W()*0.4, PITCH_TOP()+8); ctx.stroke();
+    ctx.moveTo(W/2 - _bgTW*0.4, _bgPT+6);
+    ctx.lineTo(W/2 + _bgTW*0.4, _bgPT+6); ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(W/2 - PITCH_BOTTOM_W()*0.42, PITCH_BOTTOM()-4);
-    ctx.lineTo(W/2 + PITCH_BOTTOM_W()*0.42, PITCH_BOTTOM()-4); ctx.stroke();
+    ctx.moveTo(W/2 - _bgBW*0.42, _bgPB-5);
+    ctx.lineTo(W/2 + _bgBW*0.42, _bgPB-5); ctx.stroke();
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(W/2, PITCH_TOP()+8);    ctx.lineTo(W/2, PITCH_TOP()+12);
-    ctx.moveTo(W/2, PITCH_BOTTOM()-4); ctx.lineTo(W/2, PITCH_BOTTOM()-8);
+    ctx.moveTo(W/2, _bgPT+6);  ctx.lineTo(W/2, _bgPT+11);
+    ctx.moveTo(W/2, _bgPB-5);  ctx.lineTo(W/2, _bgPB-10);
     ctx.stroke();
 
-    // Stumps (both ends)
-    drawStumps(W/2, PITCH_TOP(),    PITCH_TOP_W()*0.45);
-    drawStumps(W/2, PITCH_BOTTOM(), PITCH_BOTTOM_W()*0.32);
+    // Stumps (both ends of image pitch)
+    drawStumps(W/2, _bgPT, _bgTW * 0.45);
+    drawStumps(W/2, _bgPB, _bgBW * 0.32);
 
-    // Umpire
-    drawUmpire(W/2, PITCH_TOP()-10);
+    // Umpire — just above top stumps
+    drawUmpire(W/2, _bgPT - 12);
 
     // Fielders (depth-sorted)
     const _sf = [...fielders].sort((a,b)=>a.y-b.y);
@@ -12067,12 +12064,11 @@ function drawSceneScoreboard() {
 
   ctx.textAlign = 'left';
 
-  // Energy bar — sits just below the wooden frame when bg image is active,
-  // using the same bX/bW so it spans exactly the frame width.
-  const ebY = bY + bH + H * 0.005;
-  const ebH = Math.max(3, H * 0.006);
+  // Energy bar — sits near the bottom edge INSIDE the wooden frame
+  const ebH = Math.max(4, H * 0.007);
   const ebR = ebH / 2;
-  const ebInset = _hasBg ? bW * 0.05 : 0;
+  const ebInset = _hasBg ? bW * 0.055 : 0;
+  const ebY = _hasBg ? bY + bH - ebH - H * 0.006 : bY + bH + H * 0.005;
   const pct = Math.max(0, Math.min(1, energy / MAX_ENERGY));
   const barColor = pct > 0.6 ? '#39ff6a' : pct > ENERGY_LOW_THRESHOLD / MAX_ENERGY ? '#f4d03f' : '#e74c3c';
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
