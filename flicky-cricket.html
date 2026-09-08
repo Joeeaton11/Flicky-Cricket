@@ -2,9 +2,6 @@
 <html>
 <head>
 <meta charset="utf-8">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Flicky Cricket</title>
 <style id="embedded-fonts">
@@ -8584,15 +8581,10 @@ function drawField() {
     // Full background image — baked-in sky, grass, outfield, boundary, stands
     ctx.drawImage(_sceneBg, 0, 0, W, H);
 
-    // Pitch + crease (interactive geometry on top of baked art)
-    ctx.fillStyle = tod.pitch;
-    ctx.beginPath();
-    ctx.moveTo(W/2 - PITCH_TOP_W()/2, PITCH_TOP());
-    ctx.lineTo(W/2 + PITCH_TOP_W()/2, PITCH_TOP());
-    ctx.lineTo(W/2 + PITCH_BOTTOM_W()/2, PITCH_BOTTOM());
-    ctx.lineTo(W/2 - PITCH_BOTTOM_W()/2, PITCH_BOTTOM());
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    // The background image already has the pitch baked in — do NOT redraw the
+    // pitch fill or we get two pitches. Only draw the interactive crease lines
+    // and stumps on top.
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(W/2 - PITCH_TOP_W()*0.4, PITCH_TOP()+8);
     ctx.lineTo(W/2 + PITCH_TOP_W()*0.4, PITCH_TOP()+8); ctx.stroke();
@@ -12049,10 +12041,9 @@ function drawSceneScoreboard() {
   // Left section centre ≈ 21% of bW; right section centre ≈ 61% of bW.
   const _runsX = (key === 'day' && _hasBg) ? bX + bW * 0.21 : bX + bW * 0.25;
   const _tgtX  = (key === 'day' && _hasBg) ? bX + bW * 0.61 : bX + bW * 0.75;
-  // Flip-board font: Oswald 700 — tall, narrow, heavy, classic stadium-board look.
-  // Weight must match what the font actually ships (700); using 900 on a font that
-  // lacks that weight causes canvas to silently render nothing.
-  const _flipFont = (key === 'day' && _hasBg) ? "Oswald, Impact, 'Arial Narrow', sans-serif" : null;
+  // Flip-board font: Impact is the classic stadium scoreboard face — built into every
+  // OS, loads instantly (no async Google Fonts race), tall and heavy.
+  const _flipFont = (key === 'day' && _hasBg) ? "Impact, 'Arial Narrow', sans-serif" : null;
 
   // RUNS
   _label(runsLbl, _runsX, bY+bH*0.295, runsLabelCol);
@@ -12066,19 +12057,21 @@ function drawSceneScoreboard() {
 
   ctx.textAlign = 'left';
 
-  // Energy bar — slightly thicker, rounded ends
-  const ebY = bY + bH + H * 0.004;
+  // Energy bar — when scene bg image is active, tuck bar inside the bottom of the
+  // wooden frame (inset so it sits in the dark strip). Otherwise float just below.
+  const ebInset = _hasBg ? bW * 0.04 : 0;
+  const ebY = _hasBg ? bY + bH - H * 0.012 : bY + bH + H * 0.004;
   const ebH = Math.max(3, H * 0.007);
   const ebR = ebH / 2;
   const pct = Math.max(0, Math.min(1, energy / MAX_ENERGY));
   const barColor = pct > 0.6 ? '#39ff6a' : pct > ENERGY_LOW_THRESHOLD / MAX_ENERGY ? '#f4d03f' : '#e74c3c';
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.beginPath(); ctx.roundRect(bX, ebY, bW, ebH, ebR); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(bX + ebInset, ebY, bW - ebInset*2, ebH, ebR); ctx.fill();
   if (pct > 0.01) {
     ctx.save();
     ctx.shadowColor = barColor; ctx.shadowBlur = 8;
     ctx.fillStyle = barColor;
-    ctx.beginPath(); ctx.roundRect(bX, ebY, bW*pct, ebH, ebR); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(bX + ebInset, ebY, (bW - ebInset*2)*pct, ebH, ebR); ctx.fill();
     ctx.restore();
   }
 }
