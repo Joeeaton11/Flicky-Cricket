@@ -12043,25 +12043,99 @@ function drawSceneScoreboard() {
   const _tgtX   = _hasBg ? bX + bW * 0.737 : bX + bW * 0.75;
   const _flipFont = (key === 'day' && _hasBg) ? "Impact, 'Arial Narrow', sans-serif" : null;
 
-  // RUNS — clipped to left box
-  ctx.save();
   if (_hasBg) {
-    ctx.beginPath(); ctx.rect(bX, bY, _leftBoxW, bH); ctx.clip();
-  }
-  _label(runsLbl, _runsX, bY+bH*0.295, runsLabelCol);
-  _glowNum(String(runs), _runsX, bY+bH*0.875, runsSz, runsValCol, runsLabelCol.replace(/[\d.]+\)$/, '0.6)'));
-  ctx.restore();
+    // === 8-digit box layout (painted wooden frame) ===
+    // Score: [thou][hund][tens][sing] | Target: [hund][tens][sing][--]
+    // Pixel-measured: left panel x=43..183 (140px), right panel x=206..346 (140px), gap=23px
+    const _colGap = 6;
+    const _lPanW  = bW * 0.463;   // ≈140px
+    const _rPanX  = bX + bW * 0.537; // ≈206px
+    const _rPanW  = bW * 0.463;
+    const _lColW  = (_lPanW - _colGap * 3) / 4;
+    const _rColW  = (_rPanW - _colGap * 3) / 4;
 
-  // TARGET — clipped to right box, urgent colour when close
-  const urgentCol  = runsLeft <= 10 ? '#ff3333' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
-  const urgentGlow = runsLeft <= 10 ? 'rgba(255,40,40,0.6)' : runsLeft <= 30 ? 'rgba(255,210,0,0.5)' : tgtLabelCol.replace(/[\d.]+\)$/, '0.5)');
-  ctx.save();
-  if (_hasBg) {
+    // Extract digits
+    const rThou = Math.floor(runs / 1000) % 10;
+    const rHund = Math.floor(runs / 100)  % 10;
+    const rTens = Math.floor(runs / 10)   % 10;
+    const rSing = runs % 10;
+
+    const tHund = Math.floor(displayTarget / 100) % 10;
+    const tTens = Math.floor(displayTarget / 10)  % 10;
+    const tSing = displayTarget % 10;
+
+    const urgentCol  = runsLeft <= 10 ? '#ff3333' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
+    const urgentGlow = runsLeft <= 10 ? 'rgba(255,40,40,0.6)' : runsLeft <= 30 ? 'rgba(255,210,0,0.5)' : tgtLabelCol.replace(/[\d.]+\)$/, '0.5)');
+
+    // Score digits: leading zeros dimmed
+    const scoreDigs = [
+      { d: rThou, dim: runs < 1000 },
+      { d: rHund, dim: runs < 100  },
+      { d: rTens, dim: runs < 10   },
+      { d: rSing, dim: false        },
+    ];
+    // Target digits: blank slot 4
+    const targetDigs = [
+      { d: tHund, dim: displayTarget < 100, col: urgentCol, glow: urgentGlow },
+      { d: tTens, dim: displayTarget < 10,  col: urgentCol, glow: urgentGlow },
+      { d: tSing, dim: false,               col: urgentCol, glow: urgentGlow },
+      { d: null,  dim: true,                col: urgentCol, glow: urgentGlow }, // blank
+    ];
+
+    const _digSz = Math.max(16, bH * 0.72);
+    ctx.textAlign = 'center';
+
+    // Draw score boxes
+    scoreDigs.forEach((sd, i) => {
+      const bx = bX + (_lColW + _colGap) * i;
+      const bcx = bx + _lColW / 2;
+      // Slot background
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath(); ctx.roundRect(bx, bY + bH*0.08, _lColW, bH*0.84, 2); ctx.fill();
+      if (sd.d !== null) {
+        const alpha = sd.dim ? 0.28 : 1;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        _glowNum(String(sd.d), bcx, bY + bH * 0.82, _digSz, runsValCol, runsLabelCol.replace(/[\d.]+\)$/, '0.55)'));
+        ctx.restore();
+      }
+    });
+
+    // Draw target boxes
+    targetDigs.forEach((td, i) => {
+      const bx = _rPanX + (_rColW + _colGap) * i;
+      const bcx = bx + _rColW / 2;
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath(); ctx.roundRect(bx, bY + bH*0.08, _rColW, bH*0.84, 2); ctx.fill();
+      if (td.d !== null) {
+        const alpha = td.dim ? 0.28 : 1;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        _glowNum(String(td.d), bcx, bY + bH * 0.82, _digSz, td.col, td.glow);
+        ctx.restore();
+      }
+    });
+
+    ctx.textAlign = 'left';
+
+  } else {
+    // === Standard (no background) — label + full number ===
+    // RUNS — clipped to left box
+    ctx.save();
+    ctx.beginPath(); ctx.rect(bX, bY, _leftBoxW, bH); ctx.clip();
+    _label(runsLbl, _runsX, bY+bH*0.295, runsLabelCol);
+    _glowNum(String(runs), _runsX, bY+bH*0.875, runsSz, runsValCol, runsLabelCol.replace(/[\d.]+\)$/, '0.6)'));
+    ctx.restore();
+
+    // TARGET — clipped to right box, urgent colour when close
+    const urgentCol  = runsLeft <= 10 ? '#ff3333' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
+    const urgentGlow = runsLeft <= 10 ? 'rgba(255,40,40,0.6)' : runsLeft <= 30 ? 'rgba(255,210,0,0.5)' : tgtLabelCol.replace(/[\d.]+\)$/, '0.5)');
+    ctx.save();
     ctx.beginPath(); ctx.rect(_dividerX, bY, _rightBoxW, bH); ctx.clip();
+    _label(tgtLbl, _tgtX, bY+bH*0.295, tgtLabelCol);
+    _glowNum(String(displayTarget), _tgtX, bY+bH*0.875, tgtSz, urgentCol, urgentGlow);
+    ctx.restore();
   }
-  _label(tgtLbl, _tgtX, bY+bH*0.295, tgtLabelCol);
-  _glowNum(String(displayTarget), _tgtX, bY+bH*0.875, tgtSz, urgentCol, urgentGlow);
-  ctx.restore();
 
   ctx.textAlign = 'left';
 
