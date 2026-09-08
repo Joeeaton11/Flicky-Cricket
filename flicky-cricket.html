@@ -8581,40 +8581,46 @@ function drawField() {
     // Full background image — baked-in sky, grass, outfield, boundary, stands
     ctx.drawImage(_sceneBg, 0, 0, W, H);
 
-    // The image provides full scenic backdrop including the pitch texture.
-    // We draw only gameplay elements: stumps, creases, umpire — positioned
-    // to align with the painted pitch in the background image.
-    // Top of image pitch ≈ H*0.44, bottom ≈ H*0.715 (measured from image).
-    const _bgPT  = H * 0.44;   // top stumps y
-    const _bgPB  = H * 0.715;  // bottom stumps y (batsman end)
-    const _bgTW  = W * 0.09;   // pitch width at top (perspective)
-    const _bgBW  = W * 0.13;   // pitch width at bottom
+    // Gameplay elements overlaid on the scenic backdrop.
+    // Pitch coordinates from blueprint: top = 50%, bottom = 66.5%
+    const _bgPT  = H * 0.50;   // top stumps (far/bowler end)
+    const _bgPB  = H * 0.665;  // bottom stumps (batsman end)
+    const _bgTW  = W * 0.082;  // pitch width at top end (perspective)
+    const _bgBW  = W * 0.118;  // pitch width at bottom end
 
-    // Crease lines only — no pitch fill (image already has it)
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
+    // Crease lines at each end — no pitch fill (image already has it)
+    ctx.strokeStyle = 'rgba(255,255,255,0.88)'; ctx.lineWidth = 2;
+    // Far (top) crease
     ctx.beginPath();
-    ctx.moveTo(W/2 - _bgTW*0.4, _bgPT+6);
-    ctx.lineTo(W/2 + _bgTW*0.4, _bgPT+6); ctx.stroke();
+    ctx.moveTo(W/2 - _bgTW*0.5, _bgPT+5);
+    ctx.lineTo(W/2 + _bgTW*0.5, _bgPT+5); ctx.stroke();
+    // Near (bottom) crease
     ctx.beginPath();
-    ctx.moveTo(W/2 - _bgBW*0.42, _bgPB-5);
-    ctx.lineTo(W/2 + _bgBW*0.42, _bgPB-5); ctx.stroke();
+    ctx.moveTo(W/2 - _bgBW*0.5, _bgPB-5);
+    ctx.lineTo(W/2 + _bgBW*0.5, _bgPB-5); ctx.stroke();
+    // Centre popping-crease marks
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(W/2, _bgPT+6);  ctx.lineTo(W/2, _bgPT+11);
+    ctx.moveTo(W/2, _bgPT+5);  ctx.lineTo(W/2, _bgPT+10);
     ctx.moveTo(W/2, _bgPB-5);  ctx.lineTo(W/2, _bgPB-10);
     ctx.stroke();
 
-    // Stumps (both ends of image pitch)
-    drawStumps(W/2, _bgPT, _bgTW * 0.45);
-    drawStumps(W/2, _bgPB, _bgBW * 0.32);
+    // Stumps at each end of the pitch
+    drawStumps(W/2, _bgPT, _bgTW * 0.55);
+    drawStumps(W/2, _bgPB, _bgBW * 0.40);
 
-    // Umpire — just above top stumps
-    drawUmpire(W/2, _bgPT - 12);
+    // Umpire — standing behind the top stumps
+    drawUmpire(W/2, _bgPT - 14);
 
-    // Fielders (depth-sorted)
+    // Fielders (depth-sorted, clipped to oval boundary)
+    const _ovalCX = W/2, _ovalCY = H*FIELD_CY, _ovalRX = W*FIELD_RX, _ovalRY = H*FIELD_RY;
+    const _inOval = (x,y) => {
+      const dx=(x-_ovalCX)/_ovalRX, dy=(y-_ovalCY)/_ovalRY;
+      return dx*dx+dy*dy <= 1;
+    };
     const _sf = [...fielders].sort((a,b)=>a.y-b.y);
     _sf.forEach(f => {
-      if (f.y < H*0.97 && f.y > H*0.03) drawFielder(f.x, f.y, f.chasing, f.diving && f.reached, f.stridePhase || 0);
+      if (_inOval(f.x, f.y)) drawFielder(f.x, f.y, f.chasing, f.diving && f.reached, f.stridePhase || 0);
     });
 
     // Scoreboard + energy bar overlay
@@ -11941,7 +11947,7 @@ function drawSceneScoreboard() {
   const bW  = _hasBg ? W * 0.92 : W * 0.84;
   const bH  = H * 0.086;
   const bX  = (W - bW) / 2;
-  const bY  = _hasBg ? H * 0.044 : H * 0.008;
+  const bY  = _hasBg ? H * 0.052 : H * 0.008;
   const br  = bH * 0.32;
 
   const displayTarget = Math.max(target, window._leagueTargetFloor || 0);
@@ -12043,32 +12049,42 @@ function drawSceneScoreboard() {
   // Custom labels per scene
   const [runsLbl, tgtLbl] = BOARD_LABELS[key] || ['RUNS', 'TARGET'];
 
-  // Scene-specific x-centres for Village Green: the wooden frame is asymmetric —
-  // 5 dark flip panels on the left, 4 on the right, golden best-score box far right.
-  // Left section centre ≈ 21% of bW; right section centre ≈ 61% of bW.
-  const _runsX = (key === 'day' && _hasBg) ? bX + bW * 0.21 : bX + bW * 0.25;
-  const _tgtX  = (key === 'day' && _hasBg) ? bX + bW * 0.61 : bX + bW * 0.75;
-  // Flip-board font: Impact is the classic stadium scoreboard face — built into every
-  // OS, loads instantly (no async Google Fonts race), tall and heavy.
+  // Scene-specific x-centres for Village Green wooden frame:
+  // Left section (RUNS): centre of left 47% of frame
+  // Right section (TARGET): centre of middle 38% (47%→85%), golden BEST box is far 15%
+  const _runsBoxW = bW * 0.46;
+  const _tgtBoxW  = bW * 0.38;
+  const _runsX = (key === 'day' && _hasBg) ? bX + _runsBoxW * 0.5  : bX + bW * 0.25;
+  const _tgtX  = (key === 'day' && _hasBg) ? bX + bW * 0.47 + _tgtBoxW * 0.5 : bX + bW * 0.75;
   const _flipFont = (key === 'day' && _hasBg) ? "Impact, 'Arial Narrow', sans-serif" : null;
 
-  // RUNS
+  // RUNS — clipped to its box
+  ctx.save();
+  if (key === 'day' && _hasBg) {
+    ctx.beginPath(); ctx.rect(bX, bY, _runsBoxW, bH); ctx.clip();
+  }
   _label(runsLbl, _runsX, bY+bH*0.295, runsLabelCol);
   _glowNum(String(runs), _runsX, bY+bH*0.875, runsSz, runsValCol, runsLabelCol.replace(/[\d.]+\)$/, '0.6)'));
+  ctx.restore();
 
-  // TARGET — urgent colour when close
-  const urgentCol = runsLeft <= 10 ? '#ff3333' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
+  // TARGET — clipped to its box, urgent colour when close
+  const urgentCol  = runsLeft <= 10 ? '#ff3333' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
   const urgentGlow = runsLeft <= 10 ? 'rgba(255,40,40,0.6)' : runsLeft <= 30 ? 'rgba(255,210,0,0.5)' : tgtLabelCol.replace(/[\d.]+\)$/, '0.5)');
+  ctx.save();
+  if (key === 'day' && _hasBg) {
+    ctx.beginPath(); ctx.rect(bX + bW * 0.47, bY, _tgtBoxW, bH); ctx.clip();
+  }
   _label(tgtLbl, _tgtX, bY+bH*0.295, tgtLabelCol);
   _glowNum(String(displayTarget), _tgtX, bY+bH*0.875, tgtSz, urgentCol, urgentGlow);
+  ctx.restore();
 
   ctx.textAlign = 'left';
 
-  // Energy bar — sits near the bottom edge INSIDE the wooden frame
-  const ebH = Math.max(4, H * 0.007);
+  // Energy bar — thin horizontal strip immediately below the scoreboard frame
+  const ebH = Math.max(6, H * 0.009);
   const ebR = ebH / 2;
-  const ebInset = _hasBg ? bW * 0.055 : 0;
-  const ebY = _hasBg ? bY + bH - ebH - H * 0.006 : bY + bH + H * 0.005;
+  const ebInset = 0;
+  const ebY = bY + bH + (_hasBg ? H * 0.002 : H * 0.005);
   const pct = Math.max(0, Math.min(1, energy / MAX_ENERGY));
   const barColor = pct > 0.6 ? '#39ff6a' : pct > ENERGY_LOW_THRESHOLD / MAX_ENERGY ? '#f4d03f' : '#e74c3c';
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
