@@ -8582,35 +8582,34 @@ function drawField() {
     ctx.drawImage(_sceneBg, 0, 0, W, H);
 
     // Gameplay elements overlaid on the scenic backdrop.
-    // Pitch coordinates from blueprint: top = 50%, bottom = 66.5%
-    const _bgPT  = H * 0.50;   // top stumps (far/bowler end)
-    const _bgPB  = H * 0.665;  // bottom stumps (batsman end)
-    const _bgTW  = W * 0.082;  // pitch width at top end (perspective)
-    const _bgBW  = W * 0.118;  // pitch width at bottom end
+    // Positions tuned to align with the painted pitch in the background image:
+    //   top (bowler) end  ≈ H × 0.47
+    //   bottom (bat) end  ≈ H × 0.635  (batsman override → H × 0.625, just above)
+    const _bgPT  = H * 0.47;   // top stumps / far crease
+    const _bgPB  = H * 0.638;  // bottom stumps / near crease
+    const _bgTW  = W * 0.078;  // pitch width at top (narrower — perspective)
+    const _bgBW  = W * 0.110;  // pitch width at bottom (wider)
 
-    // Crease lines at each end — no pitch fill (image already has it)
+    // Crease lines — white, no pitch fill (image provides it)
     ctx.strokeStyle = 'rgba(255,255,255,0.88)'; ctx.lineWidth = 2;
-    // Far (top) crease
     ctx.beginPath();
-    ctx.moveTo(W/2 - _bgTW*0.5, _bgPT+5);
-    ctx.lineTo(W/2 + _bgTW*0.5, _bgPT+5); ctx.stroke();
-    // Near (bottom) crease
+    ctx.moveTo(W/2 - _bgTW*0.55, _bgPT+4);
+    ctx.lineTo(W/2 + _bgTW*0.55, _bgPT+4); ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(W/2 - _bgBW*0.5, _bgPB-5);
-    ctx.lineTo(W/2 + _bgBW*0.5, _bgPB-5); ctx.stroke();
-    // Centre popping-crease marks
+    ctx.moveTo(W/2 - _bgBW*0.55, _bgPB-4);
+    ctx.lineTo(W/2 + _bgBW*0.55, _bgPB-4); ctx.stroke();
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(W/2, _bgPT+5);  ctx.lineTo(W/2, _bgPT+10);
-    ctx.moveTo(W/2, _bgPB-5);  ctx.lineTo(W/2, _bgPB-10);
+    ctx.moveTo(W/2, _bgPT+4);  ctx.lineTo(W/2, _bgPT+9);
+    ctx.moveTo(W/2, _bgPB-4);  ctx.lineTo(W/2, _bgPB-9);
     ctx.stroke();
 
-    // Stumps at each end of the pitch
+    // Stumps at each end
     drawStumps(W/2, _bgPT, _bgTW * 0.55);
     drawStumps(W/2, _bgPB, _bgBW * 0.40);
 
-    // Umpire — standing behind the top stumps
-    drawUmpire(W/2, _bgPT - 14);
+    // Umpire behind top stumps
+    drawUmpire(W/2, _bgPT - 12);
 
     // Fielders (depth-sorted, clipped to oval boundary)
     const _ovalCX = W/2, _ovalCY = H*FIELD_CY, _ovalRX = W*FIELD_RX, _ovalRY = H*FIELD_RY;
@@ -11945,7 +11944,9 @@ function drawSceneScoreboard() {
   // When the painted wooden frame is visible, widen the scoreboard geometry to match it.
   // The Village Green artwork's wooden frame spans ~92% of screen width.
   const bW  = _hasBg ? W * 0.92 : W * 0.84;
-  const bH  = H * 0.086;
+  // When bg image is active the wooden frame spans H*0.052..H*0.094 (blueprint).
+  // Use that exact height so scoreboard content and energy bar stay inside the frame.
+  const bH  = _hasBg ? H * 0.042 : H * 0.086;
   const bX  = (W - bW) / 2;
   const bY  = _hasBg ? H * 0.052 : H * 0.008;
   const br  = bH * 0.32;
@@ -12015,9 +12016,9 @@ function drawSceneScoreboard() {
 
   ctx.textAlign = 'center';
 
-  const labelSz = Math.max(7, bH * 0.20);
-  const runsSz  = Math.max(20, bH * 0.60);
-  const tgtSz   = Math.max(16, bH * 0.50);
+  const labelSz = _hasBg ? Math.max(8, bH * 0.28)  : Math.max(7, bH * 0.20);
+  const runsSz  = _hasBg ? Math.max(18, bH * 0.75) : Math.max(20, bH * 0.60);
+  const tgtSz   = _hasBg ? Math.max(15, bH * 0.65) : Math.max(16, bH * 0.50);
 
   // Helper: draw glowing number (extra readable when scene bg image is active)
   function _glowNum(text, x, y, sz, valCol, glowCol) {
@@ -12080,11 +12081,12 @@ function drawSceneScoreboard() {
 
   ctx.textAlign = 'left';
 
-  // Energy bar — thin horizontal strip immediately below the scoreboard frame
-  const ebH = Math.max(6, H * 0.009);
+  // Energy bar — thin horizontal strip inside the wooden frame's energy slot.
+  // Blueprint: energy slot is H*0.094..H*0.101. For no-bg scenes sit just below the panel.
+  const ebH = Math.max(5, H * 0.007);
   const ebR = ebH / 2;
   const ebInset = 0;
-  const ebY = bY + bH + (_hasBg ? H * 0.002 : H * 0.005);
+  const ebY = _hasBg ? H * 0.094 : bY + bH + H * 0.005;
   const pct = Math.max(0, Math.min(1, energy / MAX_ENERGY));
   const barColor = pct > 0.6 ? '#39ff6a' : pct > ENERGY_LOW_THRESHOLD / MAX_ENERGY ? '#f4d03f' : '#e74c3c';
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
@@ -32728,7 +32730,11 @@ function drawFielder(x,y,chasing,diving,stridePhase) {
 
 function drawBatsman() {
   const bx = W/2;
-  const by = PITCH_BOTTOM() - 4;
+  // For scenes with a background image the pitch is painted at different coords;
+  // override the batsman y so he sits correctly on the image's pitch bottom.
+  const _bsBg = _SCENE_IMAGES[currentTimeOfDay && currentTimeOfDay.key];
+  const _bsHasBg = _bsBg && _bsBg.complete && _bsBg.naturalWidth > 0;
+  const by = _bsHasBg ? H * 0.625 : PITCH_BOTTOM() - 4;
   const s = 0.78;
 
   const hat = CUSTOM_CATEGORIES[0].colors[playerCustom.hat];
