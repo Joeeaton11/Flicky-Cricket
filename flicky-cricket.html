@@ -12032,30 +12032,32 @@ function drawSceneScoreboard() {
   // Custom labels per scene
   const [runsLbl, tgtLbl] = BOARD_LABELS[key] || ['RUNS', 'TARGET'];
 
-  // Scene-specific x-centres for Village Green wooden frame:
-  // Left section (RUNS): centre of left 47% of frame
-  // Right section (TARGET): centre of middle 38% (47%→85%), golden BEST box is far 15%
-  const _runsBoxW = bW * 0.46;
-  const _tgtBoxW  = bW * 0.38;
-  const _runsX = (key === 'day' && _hasBg) ? bX + _runsBoxW * 0.5  : bX + bW * 0.25;
-  const _tgtX  = (key === 'day' && _hasBg) ? bX + bW * 0.47 + _tgtBoxW * 0.5 : bX + bW * 0.75;
+  // Pixel-measured box centres within the wooden frame (bX = frame left edge):
+  // Left box:  x=43..192 in a 390px canvas → centre x=117 → offset from bX = 117-44 = 73px → bW*0.237
+  // Right box: x=197..345 → centre x=271 → offset from bX = 271-44 = 227px → bW*0.737
+  // Each box is ~149px wide = bW*0.484; divider at centre (bW*0.487 from bX)
+  const _leftBoxW  = bW * 0.484;
+  const _rightBoxW = bW * 0.484;
+  const _dividerX  = bX + bW * 0.487;
+  const _runsX  = _hasBg ? bX + bW * 0.237 : bX + bW * 0.25;
+  const _tgtX   = _hasBg ? bX + bW * 0.737 : bX + bW * 0.75;
   const _flipFont = (key === 'day' && _hasBg) ? "Impact, 'Arial Narrow', sans-serif" : null;
 
-  // RUNS — clipped to its box
+  // RUNS — clipped to left box
   ctx.save();
-  if (key === 'day' && _hasBg) {
-    ctx.beginPath(); ctx.rect(bX, bY, _runsBoxW, bH); ctx.clip();
+  if (_hasBg) {
+    ctx.beginPath(); ctx.rect(bX, bY, _leftBoxW, bH); ctx.clip();
   }
   _label(runsLbl, _runsX, bY+bH*0.295, runsLabelCol);
   _glowNum(String(runs), _runsX, bY+bH*0.875, runsSz, runsValCol, runsLabelCol.replace(/[\d.]+\)$/, '0.6)'));
   ctx.restore();
 
-  // TARGET — clipped to its box, urgent colour when close
+  // TARGET — clipped to right box, urgent colour when close
   const urgentCol  = runsLeft <= 10 ? '#ff3333' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
   const urgentGlow = runsLeft <= 10 ? 'rgba(255,40,40,0.6)' : runsLeft <= 30 ? 'rgba(255,210,0,0.5)' : tgtLabelCol.replace(/[\d.]+\)$/, '0.5)');
   ctx.save();
-  if (key === 'day' && _hasBg) {
-    ctx.beginPath(); ctx.rect(bX + bW * 0.47, bY, _tgtBoxW, bH); ctx.clip();
+  if (_hasBg) {
+    ctx.beginPath(); ctx.rect(_dividerX, bY, _rightBoxW, bH); ctx.clip();
   }
   _label(tgtLbl, _tgtX, bY+bH*0.295, tgtLabelCol);
   _glowNum(String(displayTarget), _tgtX, bY+bH*0.875, tgtSz, urgentCol, urgentGlow);
