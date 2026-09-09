@@ -8636,8 +8636,8 @@ function drawField() {
     ctx.stroke();
 
     // Stumps at each end
-    drawStumps(W/2, _bgPT, _bgTW * 0.55);
-    drawStumps(W/2, _bgPB, _bgBW * 0.40);
+    drawStumps(W/2, _bgPT, 14);   // far (bowl end) — small perspective
+    drawStumps(W/2, _bgPB, 26);   // near (bat end) — larger perspective
 
     // Umpire behind top stumps (above far crease at H*0.472)
     drawUmpire(W/2, H * 0.45);
@@ -8862,10 +8862,10 @@ function drawField() {
   ctx.fill();
   }
 
-  // stumps at top (bowler's end)
-  drawStumps(W/2, PITCH_TOP(), PITCH_TOP_W()*0.45);
-  // stumps at bottom (batsman's end)
-  drawStumps(W/2, PITCH_BOTTOM(), PITCH_BOTTOM_W()*0.32);
+  // stumps at top (bowler's end) — small, far away
+  drawStumps(W/2, PITCH_TOP(), 14);
+  // stumps at bottom (batsman's end) — larger, closer to viewer
+  drawStumps(W/2, PITCH_BOTTOM(), 26);
 
   // umpire stands behind the bowler's stumps, offset to the off side so
   // they don't overlap the stumps/bails
@@ -11961,9 +11961,9 @@ function drawSceneScoreboard() {
   // When a scene background image is active, shift the panel down to align
   // with the artwork's painted frame (it sits ~3% from top with Dynamic Island clearance).
   const _hasBg = _SCENE_IMAGES[key] && _SCENE_IMAGES[key].complete && _SCENE_IMAGES[key].naturalWidth > 0;
-  // Hide/show the HTML best-score badge depending on whether the canvas draws it instead
+  // Canvas always draws the BEST pill — hide the HTML badge in all cases
   const _hudEl = document.getElementById('hud');
-  if (_hudEl) _hudEl.style.display = _hasBg ? 'none' : '';
+  if (_hudEl) _hudEl.style.display = 'none';
   // When the painted wooden frame is visible, widen the scoreboard geometry to match it.
   // Pixel-measured from the actual background image at 390x844:
   //   Content area: y=65..110 → 7.7%..13.0% of H
@@ -11977,9 +11977,10 @@ function drawSceneScoreboard() {
   const runsLeft = Math.max(0, displayTarget - runs);
   const sbTheme = getStadiumTextTheme();
 
-  // When a scene background image is active, skip drawing the panel body —
-  // the image's painted frame shows through and numbers float on top.
-  if (!_hasBg) {
+  // For scenes with a painted background image, draw the panel body so numbers
+  // float over the image frame. Standard scenes handle their own board body in
+  // the else branch below (using fixed 300px geometry).
+  if (_hasBg) {
     // Outer glow around the whole panel
     ctx.save();
     ctx.shadowColor = border; ctx.shadowBlur = 18;
@@ -11994,47 +11995,13 @@ function drawSceneScoreboard() {
     ctx.beginPath(); ctx.roundRect(bX, bY, bW, bH, br); ctx.fill();
     ctx.restore();
 
-    // Board body gradient
-    const boardGrad = ctx.createLinearGradient(bX, bY, bX, bY+bH);
-    boardGrad.addColorStop(0, bg0); boardGrad.addColorStop(1, bg1);
-    ctx.fillStyle = boardGrad;
-    ctx.beginPath(); ctx.roundRect(bX, bY, bW, bH, br); ctx.fill();
-
-    // Left half tint
+    // Centre divider — subtle glow line
     ctx.save();
-    ctx.beginPath(); ctx.roundRect(bX, bY, bW/2, bH, [br,0,0,br]); ctx.clip();
-    ctx.fillStyle = leftTint; ctx.fillRect(bX, bY, bW/2, bH);
-    ctx.restore();
-
-    // Right half tint
-    ctx.save();
-    ctx.beginPath(); ctx.roundRect(bX+bW/2, bY, bW/2, bH, [0,br,br,0]); ctx.clip();
-    ctx.fillStyle = rightTint; ctx.fillRect(bX+bW/2, bY, bW/2, bH);
-    ctx.restore();
-
-    // Glass shine — top-edge highlight
-    ctx.save();
-    ctx.beginPath(); ctx.roundRect(bX, bY, bW, bH*0.48, [br,br,0,0]); ctx.clip();
-    const shineGrad = ctx.createLinearGradient(bX, bY, bX, bY+bH*0.48);
-    shineGrad.addColorStop(0, 'rgba(255,255,255,0.10)');
-    shineGrad.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = shineGrad; ctx.fillRect(bX, bY, bW, bH*0.48);
-    ctx.restore();
-
-    // Border with glow
-    ctx.save();
-    ctx.shadowColor = border; ctx.shadowBlur = 8;
-    ctx.strokeStyle = border; ctx.lineWidth = 1.8;
-    ctx.beginPath(); ctx.roundRect(bX+0.9, bY+0.9, bW-1.8, bH-1.8, br); ctx.stroke();
+    ctx.shadowColor = border; ctx.shadowBlur = 6;
+    ctx.fillStyle = border.replace(')', ',0.35)').replace('rgb(','rgba(') || 'rgba(255,255,255,0.18)';
+    ctx.fillRect(bX+bW/2-0.75, bY+bH*0.10, 1.5, bH*0.80);
     ctx.restore();
   }
-
-  // Centre divider — subtle glow line
-  ctx.save();
-  ctx.shadowColor = border; ctx.shadowBlur = 6;
-  ctx.fillStyle = border.replace(')', ',0.35)').replace('rgb(','rgba(') || 'rgba(255,255,255,0.18)';
-  ctx.fillRect(bX+bW/2-0.75, bY+bH*0.10, 1.5, bH*0.80);
-  ctx.restore();
 
   ctx.textAlign = 'center';
 
@@ -12177,43 +12144,165 @@ function drawSceneScoreboard() {
     ctx.restore();
 
   } else {
-    // === Standard (no background) — label + full number ===
-    // RUNS — clipped to left box
+    // === Standard (no background) — digit-box layout matching debug design ===
+    // Fixed 300px wide, positioned just below 59px notch safe area
+    const _sbX = (W - 300) / 2;  // = 45
+    const _sbY = 64;
+    const _sbW = 300;
+    const _sbH = H * 0.064;
+    const _sbPad = 4;
+    const _hdrH = 11;
+    const _ebH2 = 7;
+    const _digitH = _sbH - _hdrH - _ebH2 - _sbPad * 2 - 2;
+
+    // Section split: score left (58%), gap, target right
+    const _gapW = 12;
+    const _scoreW = _sbW * 0.58;
+    const _targW  = _sbW - _scoreW - _gapW;
+    const _divX1  = _sbX + _scoreW + _gapW;
+
+    // Outer frame with scene-themed border
+    ctx.fillStyle = 'rgba(0,18,12,0.92)';
+    ctx.beginPath(); ctx.roundRect(_sbX, _sbY, _sbW, _sbH, 4); ctx.fill();
     ctx.save();
-    ctx.beginPath(); ctx.rect(bX, bY, _leftBoxW, bH); ctx.clip();
-    _label(runsLbl, _runsX, bY+bH*0.295, runsLabelCol);
-    _glowNum(String(runs), _runsX, bY+bH*0.875, runsSz, runsValCol, runsLabelCol.replace(/[\d.]+\)$/, '0.6)'));
+    ctx.shadowColor = border; ctx.shadowBlur = 10;
+    ctx.strokeStyle = border; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(_sbX, _sbY, _sbW, _sbH, 4); ctx.stroke();
     ctx.restore();
 
-    // TARGET — clipped to right box, urgent colour when close
-    const urgentCol  = runsLeft <= 10 ? '#ff3333' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
-    const urgentGlow = runsLeft <= 10 ? 'rgba(255,40,40,0.6)' : runsLeft <= 30 ? 'rgba(255,210,0,0.5)' : tgtLabelCol.replace(/[\d.]+\)$/, '0.5)');
+    // Internal divider
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(_divX1 - _gapW/2, _sbY + 4);
+    ctx.lineTo(_divX1 - _gapW/2, _sbY + _sbH - 4);
+    ctx.stroke();
+
+    // Section tints
     ctx.save();
-    ctx.beginPath(); ctx.rect(_dividerX, bY, _rightBoxW, bH); ctx.clip();
-    _label(tgtLbl, _tgtX, bY+bH*0.295, tgtLabelCol);
-    _glowNum(String(displayTarget), _tgtX, bY+bH*0.875, tgtSz, urgentCol, urgentGlow);
+    ctx.beginPath(); ctx.roundRect(_sbX+1, _sbY+1, _scoreW-1, _sbH-2, [4,0,0,4]); ctx.clip();
+    ctx.fillStyle = leftTint; ctx.fillRect(_sbX+1, _sbY+1, _scoreW-1, _sbH-2);
     ctx.restore();
+    ctx.save();
+    ctx.beginPath(); ctx.roundRect(_divX1, _sbY+1, _targW-1, _sbH-2, [0,4,4,0]); ctx.clip();
+    ctx.fillStyle = rightTint; ctx.fillRect(_divX1, _sbY+1, _targW-1, _sbH-2);
+    ctx.restore();
+
+    // SCORE label — centred, scene colour
+    ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+    ctx.fillStyle = runsLabelCol;
+    ctx.fillText(runsLbl, _sbX + _scoreW/2, _sbY + _hdrH - 1);
+
+    // Score digit boxes (4 digits: thousands, hundreds, tens, singles)
+    const rThou = Math.floor(runs / 1000) % 10;
+    const rHund = Math.floor(runs / 100)  % 10;
+    const rTens = Math.floor(runs / 10)   % 10;
+    const rSing = runs % 10;
+    const scoreDigs = [
+      { d: rThou, dim: runs < 1000 },
+      { d: rHund, dim: runs < 100  },
+      { d: rTens, dim: runs < 10   },
+      { d: rSing, dim: false       },
+    ];
+    const _sBoxGap = 4;
+    const _sBoxW = (_scoreW - _sbPad*2 - _sBoxGap*3) / 4;
+    const _sBoxY = _sbY + _hdrH + 2;
+    const _sBorder = runsLabelCol.replace(/[\d.]+\)$/, '0.70)');
+    scoreDigs.forEach((sd, i) => {
+      const bx = _sbX + _sbPad + i * (_sBoxW + _sBoxGap);
+      ctx.globalAlpha = sd.dim ? 0.28 : 1;
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(bx, _sBoxY, _sBoxW, _digitH);
+      ctx.strokeStyle = _sBorder; ctx.lineWidth = 1.5; ctx.strokeRect(bx, _sBoxY, _sBoxW, _digitH);
+      ctx.fillStyle = runsValCol; ctx.font = 'bold 16px monospace'; ctx.textAlign = 'center';
+      ctx.fillText(String(sd.d), bx + _sBoxW/2, _sBoxY + _digitH * 0.78);
+    });
+    ctx.globalAlpha = 1;
+
+    // TARGET label — centred, scene colour
+    ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+    ctx.fillStyle = tgtLabelCol;
+    ctx.fillText(tgtLbl, _divX1 + _targW/2, _sbY + _hdrH - 1);
+
+    // Target digit boxes (3 digits), urgent colour when close
+    const urgentCol  = runsLeft <= 10 ? '#ff3333' : runsLeft <= 30 ? '#f4d03f' : tgtValCol;
+    const urgentBrd  = runsLeft <= 10 ? 'rgba(255,50,50,0.70)' : tgtLabelCol.replace(/[\d.]+\)$/, '0.70)');
+    const tHund = Math.floor(displayTarget / 100) % 10;
+    const tTens = Math.floor(displayTarget / 10)  % 10;
+    const tSing = displayTarget % 10;
+    const targetDigs = [
+      { d: tHund, dim: displayTarget < 100 },
+      { d: tTens, dim: displayTarget < 10  },
+      { d: tSing, dim: false               },
+    ];
+    const _tBoxGap = 4;
+    const _tBoxW = (_targW - _sbPad*2 - _tBoxGap*2) / 3;
+    targetDigs.forEach((td, i) => {
+      const bx = _divX1 + _sbPad + i * (_tBoxW + _tBoxGap);
+      ctx.globalAlpha = td.dim ? 0.28 : 1;
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(bx, _sBoxY, _tBoxW, _digitH);
+      ctx.strokeStyle = urgentBrd; ctx.lineWidth = 1.5; ctx.strokeRect(bx, _sBoxY, _tBoxW, _digitH);
+      ctx.fillStyle = urgentCol; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+      ctx.fillText(String(td.d), bx + _tBoxW/2, _sBoxY + _digitH * 0.78);
+    });
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+
+    // Energy bar — inside scoreboard, equally spaced at the bottom
+    const _pct = Math.max(0, Math.min(1, energy / MAX_ENERGY));
+    const _barColor = _pct > 0.6 ? '#39ff6a' : _pct > ENERGY_LOW_THRESHOLD / MAX_ENERGY ? '#f4d03f' : '#e74c3c';
+    const _ebY2 = _sbY + _sbH - _ebH2 - 4;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(_sbX+4, _ebY2, _sbW-8, _ebH2);
+    if (_pct > 0.01) {
+      ctx.save();
+      ctx.shadowColor = _barColor; ctx.shadowBlur = 6;
+      ctx.fillStyle = _barColor;
+      ctx.fillRect(_sbX+4, _ebY2, (_sbW-8)*_pct, _ebH2);
+      ctx.restore();
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.strokeRect(_sbX+4, _ebY2, _sbW-8, _ebH2);
+
+    // BEST pill — anchored in art zone just below boundary rope
+    const _bndRY = H * 0.340, _bndCY = H * 0.600;
+    const _bpW = 130, _bpH = 26;
+    const _bpX = W/2 - _bpW/2, _bpY = _bndCY + _bndRY + 14;
+    ctx.fillStyle = 'rgba(30,22,0,0.88)';
+    ctx.beginPath(); ctx.roundRect(_bpX, _bpY, _bpW, _bpH, 4); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,200,0,0.55)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(_bpX, _bpY, _bpW, _bpH, 4); ctx.stroke();
+    const _bpMidY = _bpY + _bpH / 2;
+    ctx.font = '13px monospace'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText('🏆', _bpX + 8, _bpMidY + 5);
+    ctx.fillStyle = 'rgba(255,200,0,0.85)'; ctx.font = 'bold 8px monospace';
+    ctx.fillText('BEST', _bpX + 26, _bpMidY + 3);
+    ctx.strokeStyle = 'rgba(255,200,0,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(_bpX + _bpW*0.52, _bpY+4); ctx.lineTo(_bpX + _bpW*0.52, _bpY+_bpH-4); ctx.stroke();
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 15px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(String(best), _bpX + _bpW*0.76, _bpMidY + 6);
+    ctx.textAlign = 'left';
   }
 
   ctx.textAlign = 'left';
 
-  // Energy bar — pixel-measured slot in wooden frame: x=43..345 (W*0.775), y≈H*0.101
-  // For standard scenes: just below the pill board.
-  const ebH = _hasBg ? Math.max(8, H * 0.011) : Math.max(5, H * 0.007);
-  const ebR = ebH / 2;
-  const ebW = _hasBg ? W * 0.792 : bW;
-  const ebX = _hasBg ? (W - ebW) / 2 : bX;
-  const ebY = _hasBg ? H * 0.148 : bY + bH + H * 0.005;
-  const pct = Math.max(0, Math.min(1, energy / MAX_ENERGY));
-  const barColor = pct > 0.6 ? '#39ff6a' : pct > ENERGY_LOW_THRESHOLD / MAX_ENERGY ? '#f4d03f' : '#e74c3c';
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.beginPath(); ctx.roundRect(ebX, ebY, ebW, ebH, ebR); ctx.fill();
-  if (pct > 0.01) {
-    ctx.save();
-    ctx.shadowColor = barColor; ctx.shadowBlur = 8;
-    ctx.fillStyle = barColor;
-    ctx.beginPath(); ctx.roundRect(ebX, ebY, ebW*pct, ebH, ebR); ctx.fill();
-    ctx.restore();
+  // Energy bar — for scene-background (painted frame) scenes only.
+  // Standard scenes now include the energy bar inside the scoreboard above.
+  if (_hasBg) {
+    const ebH = Math.max(8, H * 0.011);
+    const ebR = ebH / 2;
+    const ebW = W * 0.792;
+    const ebX = (W - ebW) / 2;
+    const ebY = H * 0.148;
+    const pct = Math.max(0, Math.min(1, energy / MAX_ENERGY));
+    const barColor = pct > 0.6 ? '#39ff6a' : pct > ENERGY_LOW_THRESHOLD / MAX_ENERGY ? '#f4d03f' : '#e74c3c';
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath(); ctx.roundRect(ebX, ebY, ebW, ebH, ebR); ctx.fill();
+    if (pct > 0.01) {
+      ctx.save();
+      ctx.shadowColor = barColor; ctx.shadowBlur = 8;
+      ctx.fillStyle = barColor;
+      ctx.beginPath(); ctx.roundRect(ebX, ebY, ebW*pct, ebH, ebR); ctx.fill();
+      ctx.restore();
+    }
   }
 }
 
