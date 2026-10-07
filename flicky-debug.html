@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Flicky Cricket Debug</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #111; display: flex; flex-direction: column; align-items: center; min-height: 100vh; font-family: monospace; color: #eee; }
+h1 { padding: 10px; font-size: 14px; color: #8f8; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<h1>🏏 Flicky Cricket — Scene Debug (no bg)</h1>
+<canvas id="c" width="390" height="844"></canvas>
+<script>
+const W = 390, H = 844;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// Background
+ctx.fillStyle = '#2a2a2a';
+ctx.fillRect(0, 0, W, H);
+
+// === SAFE AREA OVERLAYS ===
+// Top: Dynamic Island / notch zone (~59px)
+ctx.fillStyle = 'rgba(255,0,80,0.12)';
+ctx.fillRect(0, 0, W, 59);
+ctx.strokeStyle = 'rgba(255,0,80,0.7)'; ctx.lineWidth = 1.5;
+ctx.setLineDash([6,3]);
+ctx.beginPath(); ctx.moveTo(0, 59); ctx.lineTo(W, 59); ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillStyle = 'rgba(255,0,80,0.8)'; ctx.font = 'bold 8px monospace'; ctx.textAlign = 'left';
+ctx.fillText('▲ NOTCH / DYNAMIC ISLAND (59px)', 4, 53);
+
+// Bottom: Home indicator zone (~34px)
+ctx.fillStyle = 'rgba(255,0,80,0.12)';
+ctx.fillRect(0, H - 34, W, 34);
+ctx.strokeStyle = 'rgba(255,0,80,0.7)'; ctx.lineWidth = 1.5;
+ctx.setLineDash([6,3]);
+ctx.beginPath(); ctx.moveTo(0, H - 34); ctx.lineTo(W, H - 34); ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillStyle = 'rgba(255,0,80,0.8)'; ctx.font = 'bold 8px monospace'; ctx.textAlign = 'left';
+ctx.fillText('▼ HOME INDICATOR (34px)', 4, H - 20);
+
+// === ART ZONE — crowd / stands / props fill full screen up to the oval ===
+// Drawn early so it sits behind everything else
+// We'll draw it properly after the boundary ellipse is defined below
+
+// === PERCENTAGE RULER ===
+ctx.font = '9px monospace';
+for (let pct = 0; pct <= 100; pct += 5) {
+  const y = H * pct / 100;
+  ctx.strokeStyle = pct % 10 === 0 ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = pct % 10 === 0 ? 1 : 0.5;
+  ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  if (pct % 10 === 0) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(1, y-11, 28, 12);
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillText(pct+'%', 3, y-1);
+  }
+}
+
+// === PITCH BOX & CREASE LINES ===
+const pitchT = H * 0.495, pitchB = H * 0.670;
+const pitchTW = W * 0.078, pitchBW = W * 0.118;
+
+ctx.save();
+ctx.beginPath();
+ctx.moveTo(W/2 - pitchTW/2, pitchT);
+ctx.lineTo(W/2 + pitchTW/2, pitchT);
+ctx.lineTo(W/2 + pitchBW/2, pitchB);
+ctx.lineTo(W/2 - pitchBW/2, pitchB);
+ctx.closePath();
+ctx.fillStyle = 'rgba(210,175,100,0.25)';
+ctx.fill();
+ctx.strokeStyle = 'rgba(210,175,100,0.8)';
+ctx.lineWidth = 1.5;
+ctx.stroke();
+
+// Bowling creases
+ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
+ctx.beginPath(); ctx.moveTo(W/2 - pitchTW*0.75, pitchT+4); ctx.lineTo(W/2 + pitchTW*0.75, pitchT+4); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(W/2 - pitchBW*0.75, pitchB-4); ctx.lineTo(W/2 + pitchBW*0.75, pitchB-4); ctx.stroke();
+
+// Popping creases
+const popOff = (pitchB - pitchT) * 0.09;
+const popTW = pitchTW + (pitchBW - pitchTW) * 0.09;
+const popBW = pitchBW * 0.92;
+ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.5;
+ctx.setLineDash([6,3]);
+ctx.beginPath(); ctx.moveTo(W/2 - popTW*0.75, pitchT+4+popOff); ctx.lineTo(W/2 + popTW*0.75, pitchT+4+popOff); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(W/2 - popBW*0.75, pitchB-4-popOff); ctx.lineTo(W/2 + popBW*0.75, pitchB-4-popOff); ctx.stroke();
+ctx.setLineDash([]);
+
+
+ctx.textAlign = 'left';
+ctx.restore();
+
+// === BOUNDARY + ART ZONE ===
+const bndCX = W/2, bndCY = H*0.600, bndRX = W*0.475, bndRY = H*0.340;
+
+// Art zone: everything OUTSIDE the oval — crowd, stands, props fill this
+ctx.save();
+ctx.beginPath();
+ctx.rect(0, 0, W, H);           // full screen
+ctx.ellipse(bndCX, bndCY, bndRX + 22, bndRY + 22, 0, 0, Math.PI*2);  // cut out with 22px gap
+ctx.clip('evenodd');             // clip = outside the oval only
+// Zone fill
+ctx.fillStyle = 'rgba(80,40,10,0.28)';
+ctx.fillRect(0, 0, W, H);
+// Zone hatching suggestion
+ctx.strokeStyle = 'rgba(255,180,60,0.12)'; ctx.lineWidth = 1;
+for (let y = -W; y < H + W; y += 18) {
+  ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y + W*0.5); ctx.stroke();
+}
+// Label in the corners of the art zone
+ctx.fillStyle = 'rgba(255,180,60,0.7)'; ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center';
+ctx.fillText('◀ CROWD / STANDS / PROPS ▶', W/2, 40);
+ctx.fillText('◀ CROWD / STANDS / PROPS ▶', W/2, H - 15);
+ctx.restore();
+
+// Boundary rope — the hard inner edge of the art zone
+ctx.save();
+ctx.strokeStyle = 'rgba(255,255,100,0.85)'; ctx.lineWidth = 2.5;
+ctx.setLineDash([8,4]);
+ctx.beginPath(); ctx.ellipse(bndCX, bndCY, bndRX, bndRY, 0, 0, Math.PI*2); ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillStyle = 'rgba(255,255,100,0.85)'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'left';
+ctx.fillText('BOUNDARY ROPE', bndCX - bndRX + 4, bndCY - bndRY - 5);
+// Shadow overlap note
+ctx.fillStyle = 'rgba(255,255,100,0.45)'; ctx.font = '7px monospace'; ctx.textAlign = 'left';
+ctx.fillText('(shadows only cross this line)', bndCX - bndRX + 4, bndCY - bndRY + 6);
+ctx.restore();
+
+// === 30-YARD CIRCLE ===
+const c30CX = W/2, c30RX = W*0.245, c30RY = H*0.195, c30CY = H*0.390 + c30RY;
+ctx.save();
+ctx.strokeStyle = 'rgba(100,220,255,0.7)'; ctx.lineWidth = 1.5;
+ctx.setLineDash([5,5]);
+ctx.beginPath(); ctx.ellipse(c30CX, c30CY, c30RX, c30RY, 0, 0, Math.PI*2); ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillStyle = 'rgba(100,220,255,0.8)'; ctx.font = 'bold 9px monospace';
+ctx.fillText('30-YD', c30CX - c30RX + 2, c30CY - c30RY - 4);
+ctx.restore();
+
+// === SCOREBOARD — full width, score + target only ===
+const sbX = 45, sbY = 64;  // just below 59px notch safe area
+const sbW = W - 90, sbH = H*0.064;
+const sbPad = 4;
+const hdrH = 10;
+const ebH2 = 7;
+const digitH = sbH - hdrH - ebH2 - sbPad * 2 - 2;
+
+// Section split — score left, gap in middle, target right
+const gapW = 12;  // visible gap between score and target sections
+const scoreW = sbW * 0.58;
+const targW  = sbW - scoreW - gapW;
+const divX1  = sbX + scoreW + gapW;
+
+// Single outer frame
+ctx.fillStyle = 'rgba(0,18,12,0.92)';
+ctx.fillRect(sbX, sbY, sbW, sbH);
+ctx.strokeStyle = 'rgba(180,255,200,0.45)';
+ctx.lineWidth = 1.5;
+ctx.strokeRect(sbX, sbY, sbW, sbH);
+
+// Internal divider with gap feel — thicker separator line
+ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 3;
+ctx.beginPath(); ctx.moveTo(divX1 - gapW/2, sbY+4); ctx.lineTo(divX1 - gapW/2, sbY+sbH-4); ctx.stroke();
+
+// Subtle section tints
+ctx.fillStyle = 'rgba(0,255,180,0.04)'; ctx.fillRect(sbX+1, sbY+1, scoreW-1, sbH-2);
+ctx.fillStyle = 'rgba(255,60,60,0.04)'; ctx.fillRect(divX1, sbY+1, targW-1, sbH-2);
+
+// SCORE label — centred over digit panels
+ctx.fillStyle = '#00ffcc'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+ctx.fillText('SCORE', sbX + scoreW/2, sbY + hdrH - 1);
+
+// 4 score digit boxes
+const scoreVals = ['0', '1', '4', '7'];
+const sBoxGap = 4;
+const sBoxW = (scoreW - sbPad*2 - sBoxGap*3) / 4;
+const sBoxY = sbY + hdrH + 2;
+scoreVals.forEach((v, i) => {
+  const bx = sbX + sbPad + i*(sBoxW + sBoxGap);
+  ctx.fillStyle = 'rgba(0,255,200,0.18)'; ctx.fillRect(bx, sBoxY, sBoxW, digitH);
+  ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 1.5; ctx.strokeRect(bx, sBoxY, sBoxW, digitH);
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px monospace'; ctx.textAlign = 'center';
+  ctx.fillText(v, bx + sBoxW/2, sBoxY + digitH*0.78);
+});
+
+// TARGET label — centred over digit panels
+ctx.fillStyle = '#ff6666'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+ctx.fillText('TARGET', divX1 + targW/2, sbY + hdrH - 1);
+
+const targVals = ['1', '5', '0'];
+const tBoxGap = 4;
+const tBoxW = (targW - sbPad*2 - tBoxGap*2) / 3;
+const tBoxY = sBoxY;
+targVals.forEach((v, i) => {
+  const bx = divX1 + sbPad + i*(tBoxW + tBoxGap);
+  ctx.fillStyle = 'rgba(255,60,60,0.18)'; ctx.fillRect(bx, tBoxY, tBoxW, digitH);
+  ctx.strokeStyle = '#ff4444'; ctx.lineWidth = 1.5; ctx.strokeRect(bx, tBoxY, tBoxW, digitH);
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+  ctx.fillText(v, bx + tBoxW/2, tBoxY + digitH*0.78);
+});
+
+// ENERGY BAR — full width across entire scoreboard
+const ebY2 = sbY + sbH - ebH2 - 4;
+ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(sbX+4, ebY2, sbW-8, ebH2);
+ctx.fillStyle = 'rgba(255,145,0,0.85)'; ctx.fillRect(sbX+4, ebY2, (sbW-8)*0.75, ebH2);
+ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 1; ctx.strokeRect(sbX+4, ebY2, sbW-8, ebH2);
+ctx.fillStyle = '#ffaa00'; ctx.font = 'bold 7px monospace'; ctx.textAlign = 'left';
+ctx.fillText('⚡ ENERGY', sbX+7, ebY2 + ebH2*0.78);
+ctx.textAlign = 'right';
+ctx.fillText('75%', sbX+sbW-6, ebY2 + ebH2*0.78);
+
+// === BEST SCORE — anchored in art zone at bottom of boundary ===
+const bpW = 130, bpH = 26;
+// Sit in the art zone just below the boundary rope
+const bpX = W/2 - bpW/2, bpY = bndCY + bndRY + 14;
+
+ctx.fillStyle = 'rgba(30,22,0,0.88)';
+ctx.fillRect(bpX, bpY, bpW, bpH);
+ctx.strokeStyle = 'rgba(255,200,0,0.55)';
+ctx.lineWidth = 1.5;
+ctx.strokeRect(bpX, bpY, bpW, bpH);
+
+const bpMidY = bpY + bpH/2;
+
+// Trophy + BEST label — vertically centred
+ctx.font = '13px monospace'; ctx.textAlign = 'left';
+ctx.fillText('🏆', bpX + 8, bpMidY + 5);
+ctx.fillStyle = 'rgba(255,200,0,0.85)'; ctx.font = 'bold 8px monospace';
+ctx.fillText('BEST', bpX + 26, bpMidY + 3);
+
+// Divider
+ctx.strokeStyle = 'rgba(255,200,0,0.25)'; ctx.lineWidth = 1;
+ctx.beginPath(); ctx.moveTo(bpX + bpW*0.52, bpY+4); ctx.lineTo(bpX + bpW*0.52, bpY+bpH-4); ctx.stroke();
+
+// Score — vertically centred
+ctx.fillStyle = '#ffd700'; ctx.font = 'bold 15px monospace'; ctx.textAlign = 'center';
+ctx.fillText('247', bpX + bpW*0.76, bpMidY + 6);
+
+ctx.globalAlpha = 1; ctx.textAlign = 'left';
+
+// === UMPIRE (slightly left of centre) ===
+const umpX = W/2, umpY = H*0.468;
+ctx.beginPath(); ctx.arc(umpX, umpY, 12, 0, Math.PI*2);
+ctx.fillStyle = 'rgba(0,255,0,0.4)'; ctx.fill();
+ctx.strokeStyle = '#0f0'; ctx.lineWidth = 2; ctx.stroke();
+ctx.fillStyle = '#0f0'; ctx.font = 'bold 9px monospace';
+ctx.fillText('UMP', umpX-10, umpY+22);
+
+// === SQUARE LEG UMPIRE ===
+const slX = W/2 - W*0.22, slY = H*0.652;
+ctx.beginPath(); ctx.arc(slX, slY, 9, 0, Math.PI*2);
+ctx.fillStyle = 'rgba(0,200,100,0.35)'; ctx.fill();
+ctx.strokeStyle = '#0c6'; ctx.lineWidth = 1.5; ctx.stroke();
+ctx.fillStyle = '#0c6'; ctx.font = 'bold 8px monospace';
+ctx.fillText('SQ LEG', slX-14, slY+18);
+
+// === FAR STUMPS (bowl end) — smaller, perspective ===
+const _bgPT = H*0.495, _bgTW = W*0.078;
+(function drawFarStumps() {
+  const cx = W/2, base = _bgPT + 2;
+  const sh = 12;           // stump height (short — far away)
+  const sw = 1.5;          // stump width
+  const gap = 4;           // gap between stumps
+  const stumpColor = '#e8d5a0';
+  const bailColor  = '#c8b060';
+  // 3 stump positions: leg, middle, off
+  const xs = [cx - gap, cx, cx + gap];
+  // Stump bodies
+  xs.forEach(x => {
+    ctx.fillStyle = stumpColor;
+    ctx.fillRect(x - sw/2, base - sh, sw, sh);
+    // Slight shadow edge
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(x + sw/2 - 1, base - sh + 2, 1, sh - 2);
+  });
+  // Bails — two small bars sitting in the grooves at the top
+  ctx.fillStyle = bailColor;
+  ctx.fillRect(xs[0] - sw/2, base - sh - 2, xs[1] - xs[0] + sw, 2);  // leg bail
+  ctx.fillRect(xs[1] - sw/2, base - sh - 2, xs[2] - xs[1] + sw, 2);  // off bail
+  // Ground line
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(xs[0]-4, base); ctx.lineTo(xs[2]+4, base); ctx.stroke();
+  // Label
+  ctx.fillStyle = '#aad4ff'; ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center';
+  ctx.fillText('BOWL END', cx, base - sh - 7);
+})();
+
+// === NEAR STUMPS (bat end) — larger, closer to viewer ===
+const _bgPB = H*0.670, _bgBW = W*0.118;
+(function drawNearStumps() {
+  const cx = W/2, base = _bgPB - 2;
+  const sh = 22;           // taller — closer
+  const sw = 2;
+  const gap = 6;
+  const stumpColor = '#eedfa8';
+  const bailColor  = '#c8a840';
+  const xs = [cx - gap, cx, cx + gap];
+  // Stump bodies
+  xs.forEach(x => {
+    ctx.fillStyle = stumpColor;
+    ctx.fillRect(x - sw/2, base - sh, sw, sh);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(x + sw/2 - 1, base - sh + 3, 1, sh - 3);
+  });
+  // Bails
+  ctx.fillStyle = bailColor;
+  ctx.fillRect(xs[0] - sw/2, base - sh - 3, xs[1] - xs[0] + sw, 3);
+  ctx.fillRect(xs[1] - sw/2, base - sh - 3, xs[2] - xs[1] + sw, 3);
+  // Ground line
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(xs[0]-5, base); ctx.lineTo(xs[2]+5, base); ctx.stroke();
+  // Label
+  ctx.fillStyle = '#ffaaaa'; ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center';
+  ctx.fillText('BAT END', cx, base - sh - 8);
+})();
+
+// === BATSMAN — stands just in front of the crease ===
+const bsX = W/2, bsY = H*0.638;
+ctx.beginPath(); ctx.arc(bsX, bsY, 14, 0, Math.PI*2);
+ctx.fillStyle='rgba(255,220,0,0.4)'; ctx.fill();
+ctx.strokeStyle='#ff0'; ctx.lineWidth=2; ctx.stroke();
+ctx.beginPath(); ctx.moveTo(bsX,bsY+14); ctx.lineTo(bsX,bsY+35); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(bsX-12,bsY+22); ctx.lineTo(bsX+12,bsY+22); ctx.stroke();
+ctx.fillStyle='#ff0'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+ctx.fillText('BATSMAN', bsX, bsY+50); ctx.textAlign='left';
+
+// === RELEASE & STRIKE ZONE ===
+const FIELD_CY=0.600, FIELD_RY=0.340;
+const releaseY = H*(FIELD_CY - FIELD_RY*0.42) + 6;
+const strikeY  = H*FIELD_CY + 10;
+
+ctx.strokeStyle='rgba(255,120,0,0.9)'; ctx.lineWidth=2;
+ctx.beginPath(); ctx.arc(W/2, releaseY, 8, 0, Math.PI*2); ctx.stroke();
+ctx.fillStyle='rgba(255,120,0,0.3)'; ctx.fill();
+ctx.beginPath(); ctx.moveTo(W/2-14,releaseY); ctx.lineTo(W/2+14,releaseY); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(W/2,releaseY-14); ctx.lineTo(W/2,releaseY+14); ctx.stroke();
+ctx.fillStyle='rgba(255,120,0,0.9)'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+ctx.fillText('RELEASE', W/2, releaseY-16); ctx.textAlign='left';
+
+ctx.strokeStyle='rgba(255,60,60,0.9)'; ctx.lineWidth=2;
+ctx.beginPath(); ctx.arc(W/2, strikeY, 10, 0, Math.PI*2); ctx.stroke();
+ctx.fillStyle='rgba(255,60,60,0.2)'; ctx.fill();
+ctx.beginPath(); ctx.moveTo(W/2-16,strikeY); ctx.lineTo(W/2+16,strikeY); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(W/2,strikeY-16); ctx.lineTo(W/2,strikeY+16); ctx.stroke();
+ctx.fillStyle='rgba(255,60,60,0.9)'; ctx.font='bold 9px monospace'; ctx.textAlign='center';
+ctx.fillText('STRIKE ZONE', W/2, strikeY+24); ctx.textAlign='left';
+
+// === WICKET KEEPER RANGE — slightly off side of centre ===
+const wkX=W/2 + 8, wkUpY=H*0.680, wkDnY=H*0.725;
+ctx.save();
+ctx.strokeStyle='rgba(180,100,255,0.7)'; ctx.lineWidth=2;
+ctx.setLineDash([4,5]);
+ctx.beginPath(); ctx.moveTo(wkX,wkUpY-6); ctx.lineTo(wkX,wkDnY+6); ctx.stroke();
+ctx.setLineDash([]);
+[wkUpY-6, wkDnY+6].forEach(ty => {
+  ctx.beginPath(); ctx.moveTo(wkX-7,ty); ctx.lineTo(wkX+7,ty); ctx.stroke();
+});
+for (let i=0; i<5; i++) {
+  const t=i/(5-1), ky=wkUpY+(1-t)*(wkDnY-wkUpY);
+  ctx.beginPath(); ctx.arc(wkX, ky, i===1?7:4, 0, Math.PI*2);
+  ctx.fillStyle=i===1?'rgba(180,100,255,0.7)':'rgba(180,100,255,0.35)'; ctx.fill();
+  ctx.strokeStyle='rgba(180,100,255,0.9)'; ctx.lineWidth=1; ctx.stroke();
+}
+ctx.fillStyle='rgba(180,100,255,0.9)'; ctx.font='bold 9px monospace';
+ctx.fillText('WK', wkX+10, wkUpY-4);
+ctx.restore();
+
+
+
+// === COORD LABELS (top left) ===
+const coords = [
+  'SB:  y=' + sbY + 'px',
+  'EB:  inside SB',
+  'UMP: y=' + Math.round(umpY) + 'px',
+  'FarS:y=' + Math.round(_bgPT) + 'px',
+  'NrS: y=' + Math.round(_bgPB) + 'px',
+  'BAT: y=' + Math.round(bsY) + 'px',
+  'WKup:y=' + Math.round(wkUpY) + 'px',
+  'WKdn:y=' + Math.round(wkDnY) + 'px',
+  'Bnd: y=' + Math.round(bndCY) + 'px',
+  'BEST:y=' + Math.round(bpY) + 'px',
+  'SqLg:y=' + Math.round(slY) + 'px',
+];
+ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.fillRect(2, 60, 84, coords.length*13 + 6);
+ctx.fillStyle='#cfc'; ctx.font='7.5px monospace';
+coords.forEach((l,i) => ctx.fillText(l, 4, 72+i*13));
+</script>
+</body>
+</html>
