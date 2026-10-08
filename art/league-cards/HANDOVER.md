@@ -13,10 +13,10 @@ We are rebuilding every league card on the league-select screen as an **animated
 - SAL (bushveld with Table Mountain on the horizon; gold king-protea Rainbow Cup)
 - BCL (Bengal river village at dawn: Sundarbans tiger, rickshaw, saris, paddy and mustard; the Tiger Shield)
 - NZCL (Lake Tekapo afternoon: Aoraki, pōhutukawa, tree ferns, kiwi, kea, tūī, jet boat; the Silver Fern on a kōwhaiwhai plinth)
+- Buccaneer Cup (file `pirate.html`, key `pirate`: treasure cove at sunset; an overflowing oak treasure chest *is* the trophy, plaque on its front; galleon firing broadsides and one cricket ball that clips the stumps — "HOWZAT!" from the parrot)
 
 **Next, in order:**
-- Buccaneer Cup
-- then Tier 4 onwards: PCL, Witches' Ashes, Frontier Cup, and so on
+- Tier 4 onwards: PCL, Witches' Ashes, Frontier Cup, and so on
 
 Each league's name, subtitle, cup name, stats and colours live in `THEMED_LEAGUES` in `flicky-cricket.html`. Read the entry before designing.
 
@@ -43,6 +43,13 @@ Each league's name, subtitle, cup name, stats and colours live in `THEMED_LEAGUE
 - **Clock can start just below zero in the game.** Every card now clamps `t` to ≥ 0 in `frame()` (a negative `%` gave a negative arc radius). Keep that line in new cards.
 - **Make it scream the country.** NZCL's first pass (Alps, lupins, pines, sheep) read as Switzerland. Iconic native plants, animals and local details (tree ferns, pōhutukawa, kiwi, a bach with the flag) fixed it. Don't let any one element overpower the scene.
 - **Respect cultural art.** Don't use tā moko (Māori tattoo); use kōwhaiwhai-style scrollwork instead. Same care for any sacred or personal motif.
+- **The award can be the object itself.** For the Buccaneer Cup the trophy is just a big treasure chest with its plaque on the front, no plinth. Box-shaped awards must **not** sway or spin (Joe: the sway "didn't work").
+- **Treasure must be detailed, not a blanket of colour.** Hundreds of individually shaded coins (rim, face, milled ring, a few silver, some on edge) over a warm gold bed, heaped right to the rim with coins tipping over a visible edge. Treasures (crown, goblet, ingots) need real metal shading.
+- **Keep the left feature simple.** A cartoon skull island and a busy fort/wreck/waterfall headland were both rejected; a plain dark cave (empty, with a tiny campfire) worked.
+- **Ships: hide the hull below the waterline**, or it reads as a bowl sitting on the sea. A galleon reads by its outline: long hull, high stern castle, forecastle, triangular lateen mizzen.
+- **Effects must look organic, not formulaic.** Cannon fire went from neat round puffs to seeded per-shot variety: uneven timing, ragged flash and sparks, puffs with their own burst/drag/life drifting downwind, ragged splashes. Don't fire the moment the card appears; let wrapped smoke from the previous loop show only on later loops.
+- **Palms: full, layered crowns.** Thin comb fronds looked cheap; dense drooping leaflets, back fronds darker, a gold rim light, ringed trunks, coconuts and dead fronds look right. Static palms can be drawn once into the back layer.
+- **Cache heavy static props.** The chest (hundreds of coins) is drawn once to an offscreen canvas; only its twinkles and glints redraw each frame. Clear the cache in `paintBase()` so it repaints after fonts load.
 - **Offer options when Joe is unsure.** For a cup or flag, render 3 stills side by side in one artifact page and let him pick.
 
 ## How a card file works
