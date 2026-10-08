@@ -9,9 +9,9 @@ We are rebuilding every league card on the league-select screen as an **animated
 - ECL, ACL, Desert League
 - LCL (formerly Asian Classics; its file is `asian.html`, key `asian`)
 - ICL
+- CCL (the Pitons over a Caribbean bay; steel-pan Calypso Cup)
 
 **Next, in order:**
-- CCL (Caribbean)
 - SAL (South Africa)
 - BCL (Bangladesh, the Tiger Cup; placeholder art for now)
 - NZCL (New Zealand, the Silver Fern Cup; placeholder art for now)
@@ -33,6 +33,8 @@ Each league's name, subtitle, cup name, stats and colours live in `THEMED_LEAGUE
 - **Don't over-fill.** Joe called out too many kites. Fewer, bigger, readable elements beat lots of tiny ones. Remember the card shows at about 340px wide on a phone.
 - **Clouds:** soft sprite clouds, never cartoon circles.
 - **Avoid restricted national emblems.** For example, India's Ashoka lion capital. Flags are fine when drawn correctly.
+- **No real team or board logos** (e.g. the West Indies cricket flag is Cricket West Indies' emblem). Use an original flag in the right colours instead; for CCL that's maroon with gold CCL over sea-and-sand stripes.
+- **Offer options when Joe is unsure.** For a cup or flag, render 3 stills side by side in one artifact page and let him pick.
 
 ## How a card file works
 
