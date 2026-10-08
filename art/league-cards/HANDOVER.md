@@ -12,9 +12,9 @@ We are rebuilding every league card on the league-select screen as an **animated
 - CCL (the Pitons over a Caribbean bay; steel-pan Calypso Cup)
 - SAL (bushveld with Table Mountain on the horizon; gold king-protea Rainbow Cup)
 - BCL (Bengal river village at dawn: Sundarbans tiger, rickshaw, saris, paddy and mustard; the Tiger Shield)
+- NZCL (Lake Tekapo afternoon: Aoraki, pōhutukawa, tree ferns, kiwi, kea, tūī, jet boat; the Silver Fern on a kōwhaiwhai plinth)
 
 **Next, in order:**
-- NZCL (New Zealand, the Silver Fern Cup; placeholder art for now)
 - Buccaneer Cup
 - then Tier 4 onwards: PCL, Witches' Ashes, Frontier Cup, and so on
 
@@ -40,7 +40,9 @@ Each league's name, subtitle, cup name, stats and colours live in `THEMED_LEAGUE
 - **Trophies were starting to feel samey** by BCL. A flat award (plate, shield, roundel) is a good alternative: it **sways** side to side on a stand rather than spinning, so it never goes side-on. Any glint or sheen on it must be driven by the sway angle, not its own timer, or it looks out of sync.
 - **Animals should look like animals.** Joe called out a cartoon tiger face, stick legs and missing stripes. Build creatures as proper silhouettes (shoulders, haunches, jointed legs, a real head) and draw them large in a test harness first.
 - **Keep moving props in view.** Anything that only crosses a small visible gap needs its loop timed around that gap. Stagger headline moments so two never play at once.
-- **Clock can start just below zero in the game.** Clamp `t` to ≥ 0 in `frame()`; a negative `%` gave a negative arc radius.
+- **Clock can start just below zero in the game.** Every card now clamps `t` to ≥ 0 in `frame()` (a negative `%` gave a negative arc radius). Keep that line in new cards.
+- **Make it scream the country.** NZCL's first pass (Alps, lupins, pines, sheep) read as Switzerland. Iconic native plants, animals and local details (tree ferns, pōhutukawa, kiwi, a bach with the flag) fixed it. Don't let any one element overpower the scene.
+- **Respect cultural art.** Don't use tā moko (Māori tattoo); use kōwhaiwhai-style scrollwork instead. Same care for any sacred or personal motif.
 - **Offer options when Joe is unsure.** For a cup or flag, render 3 stills side by side in one artifact page and let him pick.
 
 ## How a card file works
