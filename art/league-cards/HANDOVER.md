@@ -11,9 +11,9 @@ We are rebuilding every league card on the league-select screen as an **animated
 - ICL
 - CCL (the Pitons over a Caribbean bay; steel-pan Calypso Cup)
 - SAL (bushveld with Table Mountain on the horizon; gold king-protea Rainbow Cup)
+- BCL (Bengal river village at dawn: Sundarbans tiger, rickshaw, saris, paddy and mustard; the Tiger Shield)
 
 **Next, in order:**
-- BCL (Bangladesh, the Tiger Cup; placeholder art for now)
 - NZCL (New Zealand, the Silver Fern Cup; placeholder art for now)
 - Buccaneer Cup
 - then Tier 4 onwards: PCL, Witches' Ashes, Frontier Cup, and so on
@@ -37,6 +37,10 @@ Each league's name, subtitle, cup name, stats and colours live in `THEMED_LEAGUE
 - **Vibrant and alive, not grey or hazy.** SAL took many rounds: a stormy palette "pushed him towards depression", golden-hour haze read as flat, and too many animals felt congested. What landed: bright saturated daylight, a clear winding river, colour in the foreground (daisy carpet), and three clear animal "stars" with space around each.
 - **Clouds:** faint and wispy, kept out of the way; no flat-bottomed puffs.
 - **Bird wings must flap, not flip:** both wings rise and fall together; never swing a wing through the body.
+- **Trophies were starting to feel samey** by BCL. A flat award (plate, shield, roundel) is a good alternative: it **sways** side to side on a stand rather than spinning, so it never goes side-on. Any glint or sheen on it must be driven by the sway angle, not its own timer, or it looks out of sync.
+- **Animals should look like animals.** Joe called out a cartoon tiger face, stick legs and missing stripes. Build creatures as proper silhouettes (shoulders, haunches, jointed legs, a real head) and draw them large in a test harness first.
+- **Keep moving props in view.** Anything that only crosses a small visible gap needs its loop timed around that gap. Stagger headline moments so two never play at once.
+- **Clock can start just below zero in the game.** Clamp `t` to ≥ 0 in `frame()`; a negative `%` gave a negative arc radius.
 - **Offer options when Joe is unsure.** For a cup or flag, render 3 stills side by side in one artifact page and let him pick.
 
 ## How a card file works
