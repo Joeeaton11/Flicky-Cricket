@@ -1,0 +1,869 @@
+<title>Fairground Cup</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700&family=Barlow:wght@500;600&display=swap');
+/* Layout: same league card shell as Gully Cup, Floodlit Series and Coastal Cup — fairground scene canvas over a stats grid */
+:root {
+  color-scheme: dark;
+  --page: #070810;
+  --card: #0c0f1c;
+  --ink: #ffffff;
+  --muted: rgba(255,255,255,0.36);
+  --tier: #f09040;
+  --gold: #f0c030;
+  --fair: #ffaae8;
+  --silver: #b8c8d8;
+  --display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--page);
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 32px 16px;
+}
+.card {
+  width: min(540px, 100%);
+  background: var(--card);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08),
+    0 20px 60px rgba(0,0,0,0.70),
+    0 60px 120px rgba(0,0,0,0.40);
+}
+.art { position: relative; line-height: 0; }
+canvas { display: block; width: 100%; height: auto; background: #5a2c7a; }
+.ovl {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 70px 18px 16px;
+  background: linear-gradient(to bottom,
+    rgba(12,15,28,0)    0%,
+    rgba(12,15,28,0.52) 30%,
+    rgba(12,15,28,0.92) 62%,
+    rgba(12,15,28,1)   100%);
+  pointer-events: none;
+}
+.pip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--display);
+  font-weight: 700; font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--tier); margin-bottom: 8px;
+}
+.pip::before {
+  content: ''; display: block; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--tier); box-shadow: 0 0 8px var(--tier);
+}
+.nm {
+  font-family: var(--display); font-weight: 900;
+  font-size: 38px; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1;
+  color: var(--ink); text-shadow: 0 2px 24px rgba(0,0,0,1); margin-bottom: 5px;
+}
+.sub {
+  font-family: var(--display); font-weight: 600;
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted);
+}
+.info {
+  padding: 13px 16px 17px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: grid; grid-template-columns: 1fr 1fr; gap: 7px;
+}
+.stat {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 9px 13px;
+}
+.lbl { display:block; font-family:var(--display); font-weight:700; font-size:9px; letter-spacing:0.22em; text-transform:uppercase; color:rgba(255,255,255,0.26); margin-bottom:4px; }
+.val { font-family:var(--display); font-weight:800; font-size:15px; letter-spacing:0.02em; line-height:1; font-variant-numeric: tabular-nums; }
+.cw { color:rgba(255,255,255,0.82); }
+.cy { color:var(--gold); }
+.cf { color:var(--fair); }
+.cs { color:var(--silver); }
+</style>
+
+<div class="card">
+  <div class="art">
+    <canvas id="c" width="620" height="355" aria-label="A fairground at twilight: a striped big top, a turning Ferris wheel, hook-a-duck and candy-floss stalls under festoon lights, a coconut shy and a test-your-strength machine, and the Fairground Cup, a gold cup with a spiralling candy-stripe band, chasing marquee bulbs and a carousel-canopy lid, turning slowly on a red circus drum beside candy-striped stumps"></canvas>
+    <div class="ovl">
+      <div class="pip">Tier 1 · Grassroots</div>
+      <div class="nm">Fairground Cup</div>
+      <div class="sub">Carnival &amp; Circus · 4 Grounds · Roll Up!</div>
+    </div>
+  </div>
+  <div class="info">
+    <div class="stat"><span class="lbl">Entry Cost</span><span class="val cw">300 coins</span></div>
+    <div class="stat"><span class="lbl">Win Reward</span><span class="val cy">+350</span></div>
+    <div class="stat"><span class="lbl">Unlock</span><span class="val cf">28 Trophies</span></div>
+    <div class="stat"><span class="lbl">Prize</span><span class="val cs">Silver Chest</span></div>
+  </div>
+</div>
+
+<script>
+const PI = Math.PI;
+const SHOW = 22;                                   // shared schedule for the "moments", seconds
+const TURN_SECONDS = 11.3;                         // one full turn of the cup
+// Moments on the shared schedule (seconds into SHOW), spread so something is always just starting:
+// coconut knocked off 2.0–5.0 · high striker rings the bell 6.0–8.0 · a balloon floats away 8.6–16.0 ·
+// firework shows 3.0–8.4 and 12.4–17.8 · the wheel's lights flash together 15.0–16.6 · bell again 17.2–19.2
+const COCONUT = [2.0, 5.0], DINGS = [[6.0, 8.0], [17.2, 19.2]], BALLOON = [8.6, 16.0], FW_SHOWS = [[3.0, 8.4], [12.4, 17.8]], WHEEL_FLASH = [15.0, 16.6];
+const BALLOONS = [0.262, 0.700];
+const SLING = [[1.0, 7.0], [11.6, 17.6]];          // slingshot launches                 // balloon stand (x, base)
+const CART = [0.805, 0.712];                     // popcorn cart (x, base)
+const FONT = (wt, px) => `${wt} ${px}px 'Barlow Condensed', 'Arial Narrow', sans-serif`;
+const win = (m, [a, b]) => { const f = (m - a) / (b - a); return f > 0 && f < 1 ? f : -1; };
+const BULB = ['#ffe080', '#ff6a8a', '#7ae0ff', '#a8ff8a', '#ffb050'];
+
+// Layout shared by the still scene and the animation
+const GROUND = 0.525;
+const WHEEL = [0.800, 0.285, 0.190];               // Ferris wheel centre x, y, radius (in H)
+const SHY = { x0: -0.01, x1: 0.225, base: 0.715 }; // coconut shy
+const STRIKER = [0.895, 0.715, 0.275];             // high striker x, base, top
+const STUMPS = [0.700, 0.705];
+
+// ════════ STILL SCENE — a fairground at twilight, lights just coming on ════════
+// part: 'back' (sky, trees, big top), 'mid' (stalls, ground), 'front' (coconut shy, high striker, stumps)
+function draw(ctxReal, W, H, part) {
+  let ctx;
+  const use = (layer) => { ctx = layer === part ? ctxReal : SCRATCH; };
+  let seed = 41;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+  const glow = (x, y, r, col) => {
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.restore();
+  };
+  const bulbRow = (pts, r) => pts.forEach(([x, y], k) => { ctx.fillStyle = BULB[k % BULB.length]; ctx.beginPath(); ctx.arc(x, y, r, 0, PI * 2); ctx.fill(); glow(x, y, r * 4, 'rgba(255,220,150,0.25)'); });
+
+  use('back');
+  // ── Twilight sky: violet overhead, rose and peach at the horizon ──
+  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.50);
+  sky.addColorStop(0, '#24184e'); sky.addColorStop(0.40, '#5a2c7a'); sky.addColorStop(0.72, '#c4508a'); sky.addColorStop(1, '#ffa884');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H * 0.56);
+  for (let i = 0; i < 50; i++) { const x = rnd() * W, y = rnd() * H * 0.20, a = 0.25 + rnd() * 0.5; ctx.fillStyle = `rgba(255,240,255,${a.toFixed(2)})`; ctx.fillRect(x, y, 1, 1); }
+  glow(W * 0.60, H * 0.12, W * 0.025, 'rgba(255,250,230,0.7)'); ctx.fillStyle = '#fffaf0'; ctx.beginPath(); ctx.arc(W * 0.60, H * 0.12, 1.6, 0, PI * 2); ctx.fill();   // the evening star
+  // Soft streaks of lit cloud low down
+  [[0.15, 0.38, 0.20], [0.55, 0.41, 0.25], [0.88, 0.36, 0.16]].forEach(([fx, fy, fw]) => {
+    const g = ctx.createLinearGradient(W * (fx - fw), 0, W * (fx + fw), 0);
+    g.addColorStop(0, 'rgba(255,170,150,0)'); g.addColorStop(0.5, 'rgba(255,170,150,0.35)'); g.addColorStop(1, 'rgba(255,170,150,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(W * fx, H * fy, W * fw, H * 0.008, 0, 0, PI * 2); ctx.fill();
+  });
+  // Tree line along the horizon
+  ctx.fillStyle = '#3a2048';
+  ctx.fillRect(0, H * 0.475, W, H * 0.06);
+  for (let x = -4; x <= W + 8; x += 7 + rnd() * 6) { const r = H * (0.014 + rnd() * 0.016); ctx.beginPath(); ctx.arc(x, H * 0.478 - r * 0.4, r, 0, PI * 2); ctx.fill(); }   // rounded treetops
+  ctx.fillStyle = 'rgba(255,150,140,0.10)'; ctx.fillRect(0, H * 0.455, W, H * 0.02);
+
+  use('mid');
+  // ── Ground: trodden grass, a straw-strewn walkway, warm pools of light ──
+  {
+    const top = H * GROUND;
+    const gg = ctx.createLinearGradient(0, top, 0, H);
+    gg.addColorStop(0, '#4a4a5e'); gg.addColorStop(0.15, '#3a5244'); gg.addColorStop(1, '#22362a');
+    ctx.fillStyle = gg; ctx.fillRect(0, top, W, H - top);
+    // Straw-strewn walkway with soft edges
+    { const wg = ctx.createLinearGradient(W * 0.25, 0, W * 0.75, 0);
+      wg.addColorStop(0, 'rgba(220,180,110,0)'); wg.addColorStop(0.25, 'rgba(220,180,110,0.30)'); wg.addColorStop(0.75, 'rgba(220,180,110,0.30)'); wg.addColorStop(1, 'rgba(220,180,110,0)');
+      ctx.fillStyle = wg; ctx.beginPath(); ctx.moveTo(W * 0.40, top); ctx.lineTo(W * 0.60, top); ctx.lineTo(W * 0.85, H); ctx.lineTo(W * 0.15, H); ctx.closePath(); ctx.fill(); }
+    // Tufts of grass
+    for (let i = 0; i < 120; i++) { const x = rnd() * W, y = top + H * 0.01 + rnd() * (H - top); ctx.strokeStyle = `rgba(${rnd() < 0.5 ? '110,160,110' : '70,110,80'},0.55)`; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 1, y - 2.5); ctx.moveTo(x + 1, y); ctx.lineTo(x + 2, y - 2.2); ctx.stroke(); }
+    for (let i = 0; i < 160; i++) { const y = top + rnd() * (H - top), x = rnd() * W; ctx.fillStyle = rnd() < 0.5 ? 'rgba(230,200,130,0.30)' : 'rgba(120,150,120,0.25)'; ctx.fillRect(x, y, 2 + rnd() * 3, 0.7); }
+    [[0.180, 0.56, 0.12], [0.30, 0.60, 0.07], [0.634, 0.60, 0.07], [0.80, 0.58, 0.10]].forEach(([fx, fy, fw]) => {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const pg = ctx.createRadialGradient(W * fx, H * fy, 0, W * fx, H * fy, W * fw);
+      pg.addColorStop(0, 'rgba(255,190,120,0.30)'); pg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.translate(0, H * fy); ctx.scale(1, 0.30); ctx.translate(0, -H * fy); ctx.fillStyle = pg; ctx.fillRect(W * (fx - fw), H * fy - W * fw, W * fw * 2, W * fw * 2); ctx.restore();
+    });
+  }
+  // ── The big top on the left: red-and-white stripes, a lit entrance, bulbs along the eaves ──
+  {
+    const cx = W * 0.180, base = H * 0.530, wallTop = H * 0.430, peak = H * 0.215, hw = W * 0.140, ew = W * 0.128;
+    // Walls
+    for (let k = 0; k < 14; k++) { const x0 = cx - hw + 2 * hw * k / 14; ctx.fillStyle = k % 2 ? '#f6ece6' : '#d8323e'; ctx.fillRect(x0, wallTop, 2 * hw / 14 + 0.5, base - wallTop); }
+    ctx.fillStyle = 'rgba(40,10,40,0.35)'; ctx.fillRect(cx - hw, wallTop, hw * 0.5, base - wallTop);
+    // Roof: curved cone of stripes
+    for (let k = 0; k < 16; k++) {
+      const u0 = k / 16, u1 = (k + 1) / 16, x0 = cx - ew + 2 * ew * u0, x1 = cx - ew + 2 * ew * u1;
+      ctx.fillStyle = k % 2 ? '#f6ece6' : '#d8323e';
+      ctx.beginPath(); ctx.moveTo(x0, wallTop); ctx.quadraticCurveTo((x0 + cx) / 2, (wallTop + peak) / 2 + H * 0.03, cx, peak); ctx.quadraticCurveTo((x1 + cx) / 2, (wallTop + peak) / 2 + H * 0.03, x1, wallTop); ctx.closePath(); ctx.fill();
+    }
+    const rs = ctx.createLinearGradient(cx - ew, 0, cx + ew, 0);
+    rs.addColorStop(0, 'rgba(40,10,50,0.45)'); rs.addColorStop(0.55, 'rgba(255,220,200,0.05)'); rs.addColorStop(1, 'rgba(40,10,50,0.25)');
+    ctx.fillStyle = rs; ctx.beginPath(); ctx.moveTo(cx - ew, wallTop); ctx.quadraticCurveTo(cx - ew * 0.5, (wallTop + peak) / 2 + H * 0.03, cx, peak); ctx.quadraticCurveTo(cx + ew * 0.5, (wallTop + peak) / 2 + H * 0.03, cx + ew, wallTop); ctx.closePath(); ctx.fill();
+    // Scalloped valance along the eaves
+    for (let k = 0; k < 18; k++) { const x = cx - ew + 2 * ew * (k + 0.5) / 18; ctx.fillStyle = k % 2 ? '#f0c040' : '#2a5ab0'; ctx.beginPath(); ctx.arc(x, wallTop, ew / 18, 0, PI); ctx.fill(); }
+    bulbRow(Array.from({ length: 15 }, (_, k) => [cx - ew + 2 * ew * (k + 0.5) / 15, wallTop + 1]), 1.3);
+    // Lit entrance with the flaps tied back
+    const ex = cx + hw * 0.05, ew2 = W * 0.040;
+    const eg = ctx.createLinearGradient(0, base - H * 0.070, 0, base); eg.addColorStop(0, '#ffe2a0'); eg.addColorStop(1, '#ff9a50');
+    ctx.fillStyle = eg; ctx.beginPath(); ctx.moveTo(ex - ew2, base); ctx.lineTo(ex - ew2 * 0.35, base - H * 0.075); ctx.lineTo(ex + ew2 * 0.35, base - H * 0.075); ctx.lineTo(ex + ew2, base); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#a81e2a'; ctx.beginPath(); ctx.moveTo(ex - ew2, base); ctx.lineTo(ex - ew2 * 0.35, base - H * 0.075); ctx.lineTo(ex - ew2 * 1.2, base); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(ex + ew2, base); ctx.lineTo(ex + ew2 * 0.35, base - H * 0.075); ctx.lineTo(ex + ew2 * 1.2, base); ctx.closePath(); ctx.fill();
+    glow(ex, base - H * 0.03, W * 0.07, 'rgba(255,190,110,0.35)');
+    // Peak pole (its flag flutters in the animation)
+    ctx.strokeStyle = '#d8c8a8'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(cx, peak); ctx.lineTo(cx, peak - H * 0.040); ctx.stroke();
+    // Pennant bunting from the peak down to the ground either side
+    [[-1, -0.02, 0.50], [1, 0.33, 0.52]].forEach(([sd, ex, ey]) => {
+      const x0 = cx, y0 = peak - H * 0.010, x1 = W * ex, y1 = H * ey, n = 13;
+      ctx.strokeStyle = 'rgba(240,220,220,0.55)'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2, (y0 + y1) / 2 + H * 0.03, x1, y1); ctx.stroke();
+      for (let k = 1; k < n; k++) { const u = k / n, x = (1 - u) * (1 - u) * x0 + 2 * u * (1 - u) * (x0 + x1) / 2 + u * u * x1, y = (1 - u) * (1 - u) * y0 + 2 * u * (1 - u) * ((y0 + y1) / 2 + H * 0.03) + u * u * y1;
+        ctx.fillStyle = BULB[k % BULB.length]; ctx.beginPath(); ctx.moveTo(x - 2.2, y); ctx.lineTo(x + 2.2, y); ctx.lineTo(x, y + 4.5); ctx.closePath(); ctx.fill(); }
+    });
+    // Guy ropes
+    ctx.strokeStyle = 'rgba(220,200,180,0.35)'; ctx.lineWidth = 0.6;
+    [[-1.15, 0.12], [1.15, 0.12], [-1.05, 0.30], [1.05, 0.30]].forEach(([dx, f]) => { ctx.beginPath(); ctx.moveTo(cx + ew * dx * 0.88, wallTop + (base - wallTop) * f); ctx.lineTo(cx + ew * dx * 1.05, base + 2); ctx.stroke(); });
+  }
+
+  // ── Two little stalls in the middle distance ──
+  const stall = (x0, x1, base, label, canopy, goods) => {
+    const w = x1 - x0, h = H * 0.070;
+    ctx.fillStyle = '#2a1a2a'; ctx.fillRect(x0, base - h, w, h);
+    const lg = ctx.createLinearGradient(0, base - h, 0, base); lg.addColorStop(0, '#ffe2a8'); lg.addColorStop(1, '#ffa860');
+    ctx.fillStyle = lg; ctx.fillRect(x0 + 2, base - h + H * 0.022, w - 4, h - H * 0.040);
+    goods(x0 + 2, base - h + H * 0.022, w - 4, h - H * 0.040);
+    ctx.fillStyle = '#5a2a3a'; ctx.fillRect(x0 - 1, base - H * 0.018, w + 2, H * 0.018);          // counter
+    for (let k = 0; k < 8; k++) { ctx.fillStyle = k % 2 ? '#ffffff' : canopy; ctx.beginPath(); ctx.moveTo(x0 - 2 + (w + 4) * k / 8, base - h); ctx.lineTo(x0 - 2 + (w + 4) * (k + 1) / 8, base - h); ctx.lineTo(x0 - 2 + (w + 4) * (k + 0.5) / 8, base - h + H * 0.016); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = canopy; ctx.fillRect(x0 - 3, base - h - H * 0.022, w + 6, H * 0.022);
+    ctx.fillStyle = '#ffffff'; ctx.font = FONT(800, H * 0.016); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, (x0 + x1) / 2, base - h - H * 0.011, w);
+    glow((x0 + x1) / 2, base - h * 0.5, w * 0.8, 'rgba(255,190,110,0.22)');
+  };
+  stall(W * 0.255, W * 0.365, H * 0.600, 'HOOK-A-DUCK', '#2a8ad8', (x, y, w, h) => { for (let k = 0; k < 6; k++) { ctx.fillStyle = '#ffd030'; ctx.beginPath(); ctx.arc(x + 5 + k * (w - 10) / 5, y + h * 0.75, 2.2, 0, PI * 2); ctx.fill(); ctx.fillStyle = '#ff7a20'; ctx.fillRect(x + 6.5 + k * (w - 10) / 5, y + h * 0.70, 1.6, 1); } });
+  // Dodgems: a low striped roof on poles, the cars hidden behind the stalls (sparks crackle in the animation)
+  { const x0 = W * 0.705, x1 = W * 0.835, roof = H * 0.505;
+    ctx.fillStyle = '#2a1a3a'; ctx.fillRect(x0, roof, x1 - x0, H * 0.055);
+    ctx.fillStyle = 'rgba(120,200,255,0.35)'; ctx.fillRect(x0 + 2, roof + H * 0.012, x1 - x0 - 4, H * 0.040);
+    for (let k = 0; k < 9; k++) { ctx.fillStyle = k % 2 ? '#ffd030' : '#2a5ab0'; ctx.fillRect(x0 - 2 + (x1 - x0 + 4) * k / 9, roof - H * 0.016, (x1 - x0 + 4) / 9 + 0.5, H * 0.016); }
+    ctx.fillStyle = '#e83a4a'; ctx.fillRect(x0 + (x1 - x0) * 0.30, roof - H * 0.034, (x1 - x0) * 0.40, H * 0.018);
+    ctx.fillStyle = '#ffffff'; ctx.font = FONT(900, H * 0.014); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('DODGEMS', (x0 + x1) / 2, roof - H * 0.025, (x1 - x0) * 0.38);
+    ctx.strokeStyle = 'rgba(180,180,200,0.6)'; ctx.lineWidth = 0.4; for (let k = 0; k < 7; k++) { ctx.beginPath(); ctx.moveTo(x0 + (x1 - x0) * k / 6, roof + 1); ctx.lineTo(x0 + (x1 - x0) * k / 6, roof + H * 0.012); ctx.stroke(); }
+    glow((x0 + x1) / 2, roof + H * 0.03, W * 0.07, 'rgba(120,190,255,0.20)'); }
+  stall(W * 0.588, W * 0.680, H * 0.600, 'CANDY FLOSS', '#e8508a', (x, y, w, h) => { for (let k = 0; k < 5; k++) { ctx.fillStyle = k % 2 ? '#ffb8e0' : '#a8e0ff'; ctx.beginPath(); ctx.arc(x + 6 + k * (w - 12) / 4, y + h * 0.40, 3.5, 0, PI * 2); ctx.fill(); ctx.fillStyle = '#f2f2f2'; ctx.fillRect(x + 5.5 + k * (w - 12) / 4, y + h * 0.40, 1, h * 0.5); } });
+
+  use('front');
+  // ════════ FRONT LAYER — coconut shy, high striker, candy-striped stumps ════════
+  // Coconut shy on the left (the second coconut is drawn in the animation so it can be knocked off)
+  {
+    const x0 = W * SHY.x0, x1 = W * SHY.x1, base = H * SHY.base, top = H * 0.495;
+    ctx.fillStyle = 'rgba(10,5,20,0.45)'; ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, base + 2, (x1 - x0) * 0.55, H * 0.012, 0, 0, PI * 2); ctx.fill();
+    // Back curtain, lit from above
+    const cg = ctx.createLinearGradient(0, top, 0, base); cg.addColorStop(0, '#8a1a2a'); cg.addColorStop(1, '#3a0a18');
+    ctx.fillStyle = cg; ctx.fillRect(x0, top + H * 0.03, x1 - x0, base - top - H * 0.03);
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'; for (let k = 0; k < 12; k++) ctx.fillRect(x0 + (x1 - x0) * k / 12, top + H * 0.03, 1.5, base - top);
+    // Posts with cups; coconuts on all but the second
+    const posts = [0.16, 0.38, 0.60, 0.82];
+    posts.forEach((f, i) => {
+      const px = x0 + (x1 - x0) * f, py = H * 0.615;
+      ctx.fillStyle = '#d8c8a8'; ctx.fillRect(px - 1.2, py, 2.4, H * 0.665 - py);
+      ctx.fillStyle = '#c8a848'; ctx.beginPath(); ctx.moveTo(px - 4, py); ctx.lineTo(px + 4, py); ctx.lineTo(px + 2.5, py + 4); ctx.lineTo(px - 2.5, py + 4); ctx.closePath(); ctx.fill();
+      if (i !== 1) {
+        const r = H * 0.017;
+        const ng = ctx.createRadialGradient(px - r * 0.3, py - r - r * 0.3, 0, px, py - r, r); ng.addColorStop(0, '#9a6a3a'); ng.addColorStop(1, '#4a2a12');
+        ctx.fillStyle = ng; ctx.beginPath(); ctx.arc(px, py - r + 1, r, 0, PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(200,160,110,0.45)'; ctx.lineWidth = 0.5; for (let k = 0; k < 6; k++) { const a = rnd() * PI * 2; ctx.beginPath(); ctx.moveTo(px + Math.cos(a) * r * 0.5, py - r + 1 + Math.sin(a) * r * 0.5); ctx.lineTo(px + Math.cos(a) * r * 1.05, py - r + 1 + Math.sin(a) * r * 1.05); ctx.stroke(); }
+      }
+    });
+    // Counter with a bucket of balls
+    ctx.fillStyle = '#e8b830'; ctx.fillRect(x0, H * 0.662, x1 - x0, H * 0.016);
+    ctx.fillStyle = '#c8303a'; ctx.fillRect(x0, H * 0.678, x1 - x0, base - H * 0.678);
+    for (let k = 0; k < 6; k++) { ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(x0 + (x1 - x0) * (k + 0.5) / 6, H * 0.697, 2.2, 0, PI * 2); ctx.fill(); }
+    { const bx = x0 + (x1 - x0) * 0.86, by = H * 0.662; ctx.fillStyle = '#8a8a96'; ctx.beginPath(); ctx.moveTo(bx - 7, by); ctx.lineTo(bx - 5.5, by - 10); ctx.lineTo(bx + 5.5, by - 10); ctx.lineTo(bx + 7, by); ctx.closePath(); ctx.fill();
+      ['#c82a2a', '#f2f2f2', '#c82a2a'].forEach((c, k) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(bx - 3.5 + k * 3.5, by - 11, 2.4, 0, PI * 2); ctx.fill(); }); }
+    // Posts and the striped awning with its sign
+    ctx.fillStyle = '#e8e0d0'; ctx.fillRect(x0 + 2, top, 3, base - top); ctx.fillRect(x1 - 5, top, 3, base - top);
+    for (let k = 0; k < 10; k++) { ctx.fillStyle = k % 2 ? '#ffe040' : '#e83a3a'; ctx.beginPath(); ctx.moveTo(x0 - 3 + (x1 - x0 + 6) * k / 10, top + H * 0.030); ctx.lineTo(x0 - 3 + (x1 - x0 + 6) * (k + 1) / 10, top + H * 0.030); ctx.lineTo(x0 - 3 + (x1 - x0 + 6) * (k + 0.5) / 10, top + H * 0.052); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = '#1a2a6a'; ctx.fillRect(x0 - 3, top, x1 - x0 + 6, H * 0.032);
+    ctx.fillStyle = '#ffe040'; ctx.font = FONT(900, H * 0.024); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('COCONUT SHY', (x0 + x1) / 2 + W * 0.01, top + H * 0.017, (x1 - x0) * 0.8);
+    ctx.fillStyle = '#ffffff'; ctx.font = FONT(800, H * 0.014); ctx.fillText('3 BALLS £1', (x0 + x1) / 2 + W * 0.01, H * 0.6705, (x1 - x0) * 0.5);
+  }
+  // High striker on the right (the puck and bell are animated)
+  {
+    const x = W * STRIKER[0], base = H * STRIKER[1], top = H * STRIKER[2], pw = W * 0.020;
+    ctx.fillStyle = 'rgba(10,5,20,0.45)'; ctx.beginPath(); ctx.ellipse(x, base + 2, W * 0.05, H * 0.010, 0, 0, PI * 2); ctx.fill();
+    const bg = ctx.createLinearGradient(x - pw / 2, 0, x + pw / 2, 0); bg.addColorStop(0, '#8a1a2a'); bg.addColorStop(0.5, '#e83a4a'); bg.addColorStop(1, '#8a1a2a');
+    ctx.fillStyle = bg; ctx.fillRect(x - pw / 2, top, pw, base - top - H * 0.02);
+    ctx.fillStyle = '#2a1a1a'; ctx.fillRect(x - 1.2, top + 6, 2.4, base - top - H * 0.03);            // the puck's track
+    ctx.fillStyle = '#ffe040'; ctx.font = FONT(900, H * 0.012); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ['HERO', 'STRONG', 'GOOD', 'WEAK'].forEach((s, k) => { const y = top + (base - top) * (0.15 + k * 0.20); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(x - pw / 2, y - 3.5, pw, 7); ctx.fillStyle = '#ffe040'; ctx.fillText(s, x, y + 0.3, pw * 0.95); });
+    for (let k = 0; k < 14; k++) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(x - pw / 2, top + 6 + k * (base - top - H * 0.03) / 14, 3, 0.8); }
+    // Bell bracket and base with the target pad; a mallet leaning on it
+    ctx.fillStyle = '#c8a040'; ctx.fillRect(x - pw * 0.7, top - 3, pw * 1.4, 3);
+    ctx.fillStyle = '#2a1a2a'; ctx.fillRect(x - W * 0.030, base - H * 0.022, W * 0.060, H * 0.022);
+    ctx.fillStyle = '#e8e0d0'; ctx.beginPath(); ctx.ellipse(x - W * 0.016, base - H * 0.022, W * 0.010, 2, 0, 0, PI * 2); ctx.fill();
+    ctx.strokeStyle = '#a8784a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + W * 0.034, base); ctx.lineTo(x + W * 0.020, base - H * 0.085); ctx.stroke();
+    ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x + W * 0.010, base - H * 0.095, W * 0.022, H * 0.016);
+    // Sign
+    ctx.fillStyle = '#1a2a6a'; ctx.fillRect(x - W * 0.050, base - H * 0.070, W * 0.034, H * 0.040);
+    ctx.fillStyle = '#ffe040'; ctx.font = FONT(900, H * 0.012); ctx.fillText('TEST YOUR', x - W * 0.033, base - H * 0.058, W * 0.03); ctx.fillText('STRENGTH', x - W * 0.033, base - H * 0.042, W * 0.03);
+  }
+  // Balloon stand (the balloons bob in the animation): a striped pole in a weighted base
+  { const x = W * BALLOONS[0], base = H * BALLOONS[1];
+    ctx.fillStyle = 'rgba(10,5,20,0.45)'; ctx.beginPath(); ctx.ellipse(x, base + 2, W * 0.022, H * 0.008, 0, 0, PI * 2); ctx.fill();
+    ctx.fillStyle = '#2a5ab0'; ctx.beginPath(); ctx.ellipse(x, base - 2, W * 0.016, H * 0.010, 0, 0, PI * 2); ctx.fill(); ctx.fillRect(x - W * 0.016, base - H * 0.022, W * 0.032, H * 0.018);
+    ctx.fillStyle = '#f2f2f2'; ctx.fillRect(x - 1.3, H * 0.520, 2.6, base - H * 0.540);
+    ctx.fillStyle = '#e02a3a'; for (let y = H * 0.525; y < base - H * 0.025; y += 6) ctx.fillRect(x - 1.3, y, 2.6, 2.5); }
+  // Popcorn cart on the right: striped canopy, glass box of popcorn, big wheels
+  { const x = W * CART[0], base = H * CART[1], w = W * 0.075, h = H * 0.060;
+    ctx.fillStyle = 'rgba(10,5,20,0.45)'; ctx.beginPath(); ctx.ellipse(x, base + 2, w * 0.7, H * 0.010, 0, 0, PI * 2); ctx.fill();
+    ctx.fillStyle = '#c8202e'; ctx.fillRect(x - w / 2, base - h * 0.75, w, h * 0.55);
+    ctx.fillStyle = '#ffe080'; ctx.font = FONT(900, H * 0.018); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('POPCORN', x, base - h * 0.47, w * 0.9);
+    const gx0 = x - w * 0.42, gw = w * 0.84, gy0 = base - h * 1.55, gh = h * 0.80;     // glass box
+    ctx.fillStyle = 'rgba(255,240,200,0.25)'; ctx.fillRect(gx0, gy0, gw, gh);
+    const pg = ctx.createLinearGradient(0, gy0 + gh * 0.4, 0, gy0 + gh); pg.addColorStop(0, '#fff6d8'); pg.addColorStop(1, '#f2d888');
+    ctx.fillStyle = pg; ctx.beginPath(); ctx.moveTo(gx0, gy0 + gh); for (let k = 0; k <= 12; k++) ctx.lineTo(gx0 + gw * k / 12, gy0 + gh * (0.45 + 0.08 * Math.sin(k * 2.1))); ctx.lineTo(gx0 + gw, gy0 + gh); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#d8b040'; ctx.lineWidth = 1.2; ctx.strokeRect(gx0, gy0, gw, gh);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(gx0 + 2, gy0 + 2, 1.5, gh - 4);
+    for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? '#ffffff' : '#e02a3a'; ctx.beginPath(); ctx.moveTo(x - w * 0.55 + w * 1.1 * k / 6, gy0 - 2); ctx.lineTo(x - w * 0.55 + w * 1.1 * (k + 1) / 6, gy0 - 2); ctx.lineTo(x + (k < 3 ? -w * 0.05 : w * 0.05), gy0 - H * 0.032); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = '#f0c040'; ctx.beginPath(); ctx.arc(x, gy0 - H * 0.034, 2.2, 0, PI * 2); ctx.fill();
+    [-0.32, 0.32].forEach(o => { ctx.fillStyle = '#1a1a24'; ctx.beginPath(); ctx.arc(x + w * o, base - H * 0.014, H * 0.016, 0, PI * 2); ctx.fill(); ctx.strokeStyle = '#f0c040'; ctx.lineWidth = 0.8; for (let k = 0; k < 6; k++) { const a = k * PI / 3; ctx.beginPath(); ctx.moveTo(x + w * o, base - H * 0.014); ctx.lineTo(x + w * o + Math.cos(a) * H * 0.014, base - H * 0.014 + Math.sin(a) * H * 0.014); ctx.stroke(); } });
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const lg = ctx.createRadialGradient(x, gy0 + gh / 2, 0, x, gy0 + gh / 2, w); lg.addColorStop(0, 'rgba(255,220,150,0.30)'); lg.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = lg; ctx.fillRect(x - w, gy0 - w / 2, w * 2, w * 1.5); ctx.restore(); }
+  // Candy-striped stumps
+  {
+    const sx = W * STUMPS[0], base = H * STUMPS[1];
+    ctx.fillStyle = 'rgba(10,5,20,0.45)'; ctx.beginPath(); ctx.ellipse(sx, base + 3, W * 0.034, H * 0.010, 0, 0, PI * 2); ctx.fill();
+    [-1, 0, 1].forEach((k) => {
+      const x = sx + k * W * 0.0135, h = H * 0.150, r = W * 0.0058;
+      ctx.fillStyle = '#f6f0ea'; ctx.fillRect(x - r, base - h, r * 2, h);
+      ctx.save(); ctx.beginPath(); ctx.rect(x - r, base - h, r * 2, h); ctx.clip();
+      ctx.fillStyle = '#e8303e'; for (let y = base - h - 10; y < base; y += 9) { ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y - 5); ctx.lineTo(x + r, y - 1); ctx.lineTo(x - r, y + 4); ctx.closePath(); ctx.fill(); }
+      const sg = ctx.createLinearGradient(x - r, 0, x + r, 0); sg.addColorStop(0, 'rgba(0,0,0,0.25)'); sg.addColorStop(0.5, 'rgba(255,255,255,0.15)'); sg.addColorStop(1, 'rgba(0,0,0,0.30)');
+      ctx.fillStyle = sg; ctx.fillRect(x - r, base - h, r * 2, h); ctx.restore();
+      ctx.fillStyle = '#f0c040'; ctx.beginPath(); ctx.ellipse(x, base - h, r, r * 0.5, 0, 0, PI * 2); ctx.fill();
+    });
+    ctx.fillStyle = '#f0c040'; ctx.fillRect(sx - W * 0.0195, base - H * 0.153, W * 0.018, 2.2); ctx.fillRect(sx + W * 0.0015, base - H * 0.153, W * 0.018, 2.2);
+  }
+}
+
+// Twilight haze low down and a vignette
+function drawAtmos(ctx, W, H) {
+  const haze = ctx.createLinearGradient(0, H * 0.40, 0, H * 0.56);
+  haze.addColorStop(0, 'rgba(255,170,160,0)'); haze.addColorStop(1, 'rgba(255,170,160,0.10)');
+  ctx.fillStyle = haze; ctx.fillRect(0, H * 0.40, W, H * 0.16);
+  const vig = ctx.createRadialGradient(W * 0.5, H * 0.42, W * 0.25, W * 0.5, H * 0.42, W * 0.85);
+  vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(0.75, 'rgba(20,0,30,0.08)'); vig.addColorStop(1, 'rgba(20,0,30,0.32)');
+  ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
+}
+
+// ════════ THE FAIRGROUND CUP — gold, candy-striped, crowned with a carousel canopy, on a circus drum ════════
+// The striped enamel spirals like a barber's pole as it turns; marquee bulbs chase round the shoulder;
+// the canopy lid's stripes and scalloped valance turn with it. Gold C-scroll handles.
+function drawTrophy(ctx, W, H, phi, t) {
+  const tx = W * 0.5, tb = H * 0.705, S = H * 0.390, K = 1.58, TILT = 0.10;
+  const P = (r, y, a) => [tx + r * Math.sin(a), y + r * Math.cos(a) * TILT];
+  const gold = (x0, x1) => {
+    const g = ctx.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0, '#5a3a0a'); g.addColorStop(0.18, '#f6d070'); g.addColorStop(0.35, '#fff2b8');
+    g.addColorStop(0.55, '#d8a030'); g.addColorStop(0.78, '#8a5a12'); g.addColorStop(0.9, '#c8902a'); g.addColorStop(1, '#4a2a06');
+    return g;
+  };
+  const chase = Math.floor(t * 5);
+  ctx.save(); ctx.translate(tx, tb); ctx.scale(K, K); ctx.translate(-tx, -tb);
+  // Soft shadow pooled under the drum
+  ctx.fillStyle = 'rgba(10,5,20,0.45)'; ctx.beginPath(); ctx.ellipse(tx, tb + 2, W * 0.090, H * 0.016, 0, 0, PI * 2); ctx.fill();
+
+  // ── Circus drum pedestal: red with gold bands, stars and a row of bulbs ──
+  const pR = W * 0.072, dH = S * 0.19, dTop = tb - dH, eR = pR * TILT * 1.6;
+  const dg = ctx.createLinearGradient(tx - pR, 0, tx + pR, 0);
+  dg.addColorStop(0, '#4a0a14'); dg.addColorStop(0.25, '#b81e2e'); dg.addColorStop(0.45, '#ff5a6a'); dg.addColorStop(0.65, '#c82434'); dg.addColorStop(1, '#4a0a14');
+  ctx.fillStyle = dg; ctx.beginPath(); ctx.moveTo(tx - pR, dTop); ctx.lineTo(tx - pR, tb); ctx.ellipse(tx, tb, pR, eR, 0, PI, 0, true); ctx.lineTo(tx + pR, dTop); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#d02838'; ctx.beginPath(); ctx.ellipse(tx, dTop, pR, eR, 0, 0, PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.beginPath(); ctx.ellipse(tx - pR * 0.2, dTop - eR * 0.2, pR * 0.6, eR * 0.5, 0, 0, PI * 2); ctx.fill();
+  ctx.strokeStyle = gold(tx - pR, tx + pR); ctx.lineWidth = 2.6;
+  ctx.beginPath(); ctx.ellipse(tx, dTop, pR, eR, 0, 0, PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(tx, tb - 2, pR, eR, 0, 0, PI); ctx.stroke();
+  ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(tx, dTop + dH * 0.22, pR, eR, 0, 0, PI); ctx.stroke();
+  // Name in gold across the front, stars either side
+  ctx.fillStyle = '#ffe080'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  { const bw = pR * 1.62, bh = dH * 0.34, by = dTop + dH * 0.36, sag = dH * 0.06;
+    const ribbon = (off) => { ctx.beginPath(); ctx.moveTo(tx - bw / 2 - 6, by + off); ctx.lineTo(tx - bw / 2, by + bh / 2 + off); ctx.lineTo(tx - bw / 2 - 6, by + bh + off);
+      ctx.quadraticCurveTo(tx, by + bh + sag + off, tx + bw / 2 + 6, by + bh + off); ctx.lineTo(tx + bw / 2, by + bh / 2 + off); ctx.lineTo(tx + bw / 2 + 6, by + off); ctx.quadraticCurveTo(tx, by + sag + off, tx - bw / 2 - 6, by + off); ctx.closePath(); };
+    ribbon(1.2); ctx.fillStyle = 'rgba(20,0,10,0.5)'; ctx.fill();
+    ribbon(0); ctx.fillStyle = '#1a2a6a'; ctx.fill(); ctx.strokeStyle = gold(tx - bw / 2, tx + bw / 2); ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.font = FONT(900, bh * 0.66); ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#3a1a00'; ctx.lineWidth = 2; ctx.strokeText('FAIRGROUND CUP', tx, by + bh * 0.52 + sag * 0.5, bw * 0.92);
+    ctx.fillStyle = '#ffe070'; ctx.fillText('FAIRGROUND CUP', tx, by + bh * 0.52 + sag * 0.5, bw * 0.92);
+    ctx.font = FONT(900, dH * 0.12); ctx.strokeText('★  ROLL UP!  ★', tx, by + bh + sag + dH * 0.10, pR); ctx.fillStyle = '#fff2c0'; ctx.fillText('★  ROLL UP!  ★', tx, by + bh + sag + dH * 0.10, pR); }
+  // Marquee bulbs round the top band, chasing
+  for (let k = 0; k < 13; k++) {
+    const a = -PI / 2 + PI * (k + 0.5) / 13, [x, y] = P(pR * 0.98, dTop + dH * 0.11, a);
+    const on = (k + chase) % 3 === 0;
+    ctx.fillStyle = on ? '#fff6c0' : '#c89a40'; ctx.beginPath(); ctx.arc(x, y, 1.4, 0, PI * 2); ctx.fill();
+    if (on) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 0, x, y, 5); g.addColorStop(0, 'rgba(255,230,150,0.7)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - 5, y - 5, 10, 10); ctx.restore(); }
+  }
+
+  // ── Foot and stem ──
+  const footY = dTop - eR * 0.3, footW = W * 0.034;
+  ctx.fillStyle = gold(tx - footW, tx + footW);
+  ctx.beginPath(); ctx.ellipse(tx, footY, footW, S * 0.015, 0, 0, PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(tx - footW, footY); ctx.quadraticCurveTo(tx - footW * 0.6, footY - S * 0.030, tx - footW * 0.18, footY - S * 0.042);
+  ctx.lineTo(tx + footW * 0.18, footY - S * 0.042); ctx.quadraticCurveTo(tx + footW * 0.6, footY - S * 0.030, tx + footW, footY); ctx.closePath(); ctx.fill();
+  const stemTop = footY - S * 0.120;
+  ctx.fillRect(tx - footW * 0.16, stemTop, footW * 0.32, footY - S * 0.04 - stemTop);
+  ctx.beginPath(); ctx.ellipse(tx, footY - S * 0.080, footW * 0.42, S * 0.016, 0, 0, PI * 2); ctx.fill();
+
+  // ── The bowl: gold, with a candy-stripe enamel band that spirals as it turns ──
+  const cw = W * 0.062, yb = stemTop;
+  const prof = [[0.30, 0.000], [0.65, 0.040], [0.92, 0.110], [1.02, 0.190], [0.98, 0.255], [1.04, 0.290]].map(([r, h]) => [r * cw, yb - h * S]);
+  const lipY = prof[prof.length - 1][1], lipR = prof[prof.length - 1][0];
+  const rAt = (y) => { for (let k = 0; k < prof.length - 1; k++) { const [r0, y0] = prof[k], [r1, y1] = prof[k + 1]; if (y <= y0 && y >= y1) return r0 + (r1 - r0) * (y0 - y) / (y0 - y1); } return cw; };
+  const bowlPath = () => { ctx.beginPath(); prof.forEach(([r, y], k) => k ? ctx.lineTo(tx - r, y) : ctx.moveTo(tx - r, y)); for (let k = prof.length - 1; k >= 0; k--) ctx.lineTo(tx + prof[k][0], prof[k][1]); ctx.closePath(); };
+  // Gold C-scroll handles
+  const hy1 = yb - S * 0.055, hy2 = yb - S * 0.235;
+  function scroll(a) {
+    const pts = [];
+    for (let k = 0; k <= 24; k++) { const u = k / 24, y = hy1 + (hy2 - hy1) * u, r = rAt(y) * 0.98 + cw * 0.36 * Math.sin(PI * Math.min(1, u * 1.1)); pts.push(P(r, y, a)); }
+    const c = Math.cos(a);
+    ctx.lineCap = 'round';
+    // An inward curl at the top, in the same 3D frame so it turns with the handle
+    const [rTop, yTop] = [rAt(hy2) * 0.98, hy2];
+    for (let k = 1; k <= 14; k++) { const th = k / 14 * PI * 1.6, rr = cw * 0.10 * (1 - k / 22); pts.push(P(rTop + cw * 0.10 - rr * Math.cos(th), yTop - rr * Math.sin(th) - cw * 0.02, a)); }
+    const line = () => { ctx.beginPath(); pts.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); };
+    ctx.strokeStyle = c < 0 ? '#6a4410' : '#4a2a06'; ctx.lineWidth = 4.8; line(); ctx.stroke();
+    ctx.strokeStyle = c < 0 ? '#b88a3a' : '#e8b850'; ctx.lineWidth = 3.2; line(); ctx.stroke();
+    ctx.strokeStyle = c < 0 ? 'rgba(255,230,160,0.35)' : 'rgba(255,245,200,0.8)'; ctx.lineWidth = 1.0; line(); ctx.stroke();
+    // Gold balls where the handle meets the bowl
+    [pts[0], P(rAt(hy2) * 0.99, hy2, a)].forEach(([x, y]) => { const g = ctx.createRadialGradient(x - 1, y - 1, 0, x, y, 3.2); g.addColorStop(0, '#fff6c0'); g.addColorStop(0.5, '#e0a830'); g.addColorStop(1, '#6a4008'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 3, 0, PI * 2); ctx.fill(); });
+  }
+  const handles = [phi + PI / 2, phi - PI / 2];
+  handles.filter(a => Math.cos(a) < 0).forEach(scroll);
+  ctx.fillStyle = gold(tx - lipR, tx + lipR); bowlPath(); ctx.fill();
+  // Spiral candy stripes
+  {
+    const ya = yb - S * 0.060, yc = yb - S * 0.220, NSEG = 10, NS = 10, twist = 2.4;
+    const ys = Array.from({ length: NSEG + 1 }, (_, j) => ya + (yc - ya) * j / NSEG);
+    ctx.save(); bowlPath(); ctx.clip();
+    // White enamel base band
+    ctx.beginPath();
+    ys.forEach((y, j) => { const [x] = P(rAt(y), y, -PI / 2); j ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    for (let k = 0; k <= 24; k++) { const a = -PI / 2 + PI * k / 24, [x, y] = P(rAt(yc), yc, a); ctx.lineTo(x, y); }
+    for (let j = NSEG; j >= 0; j--) { const [x] = P(rAt(ys[j]), ys[j], PI / 2); ctx.lineTo(x, ys[j]); }
+    for (let k = 24; k >= 0; k--) { const a = -PI / 2 + PI * k / 24, [x, y] = P(rAt(ya), ya, a); ctx.lineTo(x, y); }
+    ctx.closePath(); ctx.fillStyle = '#fff4ec'; ctx.fill();
+    for (let i = 0; i < NS; i++) for (let j = 0; j < NSEG; j++) {
+      const tw0 = twist * j / NSEG, tw1 = twist * (j + 1) / NSEG;
+      const a00 = phi + i * PI * 2 / NS + tw0, a01 = a00 + PI / NS, a10 = phi + i * PI * 2 / NS + tw1, a11 = a10 + PI / NS;
+      const am = (a00 + a11) / 2; if (Math.cos(am) < -0.05) continue;
+      const q = [P(rAt(ys[j]), ys[j], a00), P(rAt(ys[j]), ys[j], a01), P(rAt(ys[j + 1]), ys[j + 1], a11), P(rAt(ys[j + 1]), ys[j + 1], a10)];
+      ctx.fillStyle = '#e02a3a'; ctx.beginPath(); q.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fill();
+    }
+    // Round the band off: darken towards both edges, a gloss line down the lit side
+    const sh = ctx.createLinearGradient(tx - cw * 1.05, 0, tx + cw * 1.05, 0);
+    sh.addColorStop(0, 'rgba(40,0,10,0.55)'); sh.addColorStop(0.25, 'rgba(40,0,10,0)'); sh.addColorStop(0.75, 'rgba(40,0,10,0)'); sh.addColorStop(1, 'rgba(40,0,10,0.55)');
+    ctx.fillStyle = sh; ctx.fillRect(tx - cw * 1.1, yc - 2, cw * 2.2, ya - yc + 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.30)'; ctx.beginPath(); ctx.ellipse(tx - cw * 0.45, (ya + yc) / 2, cw * 0.07, (ya - yc) * 0.42, 0.05, 0, PI * 2); ctx.fill();
+    ctx.restore();
+    // Gold beads at the band edges
+    ctx.strokeStyle = gold(tx - cw, tx + cw); ctx.lineWidth = 1.6;
+    [ya, yc].forEach(y => { const r = rAt(y); ctx.beginPath(); ctx.ellipse(tx, y, r * 1.005, r * TILT, 0, 0, PI); ctx.stroke(); });
+  }
+  // Marquee bulbs round the shoulder, chasing
+  {
+    const y = yb - S * 0.258, r = rAt(y) * 1.01;
+    ctx.strokeStyle = gold(tx - r, tx + r); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(tx, y, r, r * TILT, 0, 0, PI); ctx.stroke();
+    for (let k = 0; k < 16; k++) {
+      const a = phi + k * PI * 2 / 16, c = Math.cos(a); if (c < 0) continue;
+      const [x, yy] = P(r, y, a), on = (k + chase) % 4 === 0 || (k + chase) % 4 === 2 && (Math.floor(t * 2.5) % 2);
+      ctx.fillStyle = on ? BULB[k % BULB.length] : 'rgba(200,160,80,0.9)';
+      ctx.beginPath(); ctx.ellipse(x, yy, 1.5 * Math.max(0.5, c), 1.5, 0, 0, PI * 2); ctx.fill();
+      if (on) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, yy, 0, x, yy, 5); g.addColorStop(0, 'rgba(255,230,160,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - 5, yy - 5, 10, 10); ctx.restore(); }
+    }
+  }
+  // One soft highlight, warm fill from the lights in front
+  ctx.save(); bowlPath(); ctx.clip();
+  ctx.fillStyle = 'rgba(255,250,220,0.30)'; ctx.beginPath(); ctx.ellipse(tx - cw * 0.62, yb - S * 0.025, cw * 0.10, S * 0.020, 0, 0, PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,120,160,0.18)'; ctx.fillRect(tx + cw * 0.5, yb - S * 0.30, cw * 0.6, S * 0.30);    // pink sky in the metal
+  ctx.restore();
+
+  // ── Carousel canopy lid: striped cone, scalloped valance, gold star finial ──
+  {
+    const cR = lipR * 1.10, cy = lipY - S * 0.006, apexY = lipY - S * 0.115, NSg = 12;
+    ctx.strokeStyle = gold(tx - cR, tx + cR); ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(tx, lipY, lipR, lipR * TILT, 0, PI, PI * 2); ctx.stroke();   // lip behind
+    const segs = [];
+    for (let i = 0; i < NSg; i++) { const a0 = phi + i * PI * 2 / NSg, a1 = a0 + PI * 2 / NSg, am = (a0 + a1) / 2; segs.push([a0, a1, am, i]); }
+    segs.sort((p, q) => Math.cos(p[2]) - Math.cos(q[2]));
+    segs.forEach(([a0, a1, am, i]) => {
+      const c = Math.cos(am); if (c < -0.2) return;
+      const p0 = P(cR, cy, a0), p1 = P(cR, cy, a1);
+      const shade = 0.55 + 0.45 * Math.max(0, c) - 0.15 * Math.max(0, Math.sin(am));
+      const base = i % 2 ? [255, 244, 236] : [224, 42, 58];
+      ctx.fillStyle = `rgb(${base.map(v => Math.round(v * shade)).join(',')})`;
+      ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 + 1.5, p1[0], p1[1]); ctx.lineTo(tx, apexY); ctx.closePath(); ctx.fill();
+    });
+    // Valance: a scallop hanging under each front segment, in alternating gold and blue
+    segs.forEach(([a0, a1, am, i]) => {
+      const c = Math.cos(am); if (c < 0.05) return;
+      const [x, y] = P(cR, cy, am), wv = Math.abs(P(cR, cy, a1)[0] - P(cR, cy, a0)[0]) * 0.5;
+      ctx.fillStyle = i % 2 ? '#2a5ab0' : '#f0c040'; ctx.beginPath(); ctx.ellipse(x, y, Math.max(0.5, wv), S * 0.022, 0, 0, PI); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x - wv * 0.6, y + 0.5, wv * 1.2, 0.8);
+    });
+    ctx.strokeStyle = gold(tx - cR, tx + cR); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(tx, cy, cR, cR * TILT, 0, 0, PI); ctx.stroke();
+    // Bulbs round the canopy edge
+    for (let k = 0; k < 12; k++) { const a = phi + (k + 0.5) * PI * 2 / 12, c = Math.cos(a); if (c < 0.05) continue; const [x, y] = P(cR, cy, a), on = (k + chase) % 3 === 1;
+      ctx.fillStyle = on ? '#fff6c0' : '#d8b060'; ctx.beginPath(); ctx.arc(x, y, 1.2, 0, PI * 2); ctx.fill(); }
+    // Finial: gold pole, ball and star, with a little pennant
+    const fTop = apexY - S * 0.060;
+    ctx.fillStyle = gold(tx - 3, tx + 3); ctx.fillRect(tx - 1.2, fTop, 2.4, apexY - fTop + 1);
+    ctx.beginPath(); ctx.arc(tx, apexY - 1, 3, 0, PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffd848'; ctx.beginPath(); for (let k = 0; k < 10; k++) { const rr = k % 2 ? 2.4 : 5.6, aa = k * PI / 5 - PI / 2; ctx.lineTo(tx + Math.cos(aa) * rr, fTop - 4 + Math.sin(aa) * rr); } ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(140,90,10,0.7)'; ctx.lineWidth = 0.5; ctx.stroke();
+    ctx.fillStyle = '#2a8ad8'; ctx.beginPath(); ctx.moveTo(tx + 1.2, fTop + 4);
+    for (let k = 1; k <= 5; k++) { const u = k / 5; ctx.lineTo(tx + 1.2 + u * 9, fTop + 4 + u * 1.5 + Math.sin(t * 6 + u * 4) * u); }
+    for (let k = 5; k >= 0; k--) { const u = k / 5; ctx.lineTo(tx + 1.2 + u * 9, fTop + 8 - u * 1 + Math.sin(t * 6 + u * 4) * u); }
+    ctx.closePath(); ctx.fill();
+  }
+  handles.filter(a => Math.cos(a) >= 0).forEach(scroll);
+  ctx.restore();
+
+  // A bat leaning on the drum, candy-striped grip, with a red ball (drawn unscaled)
+  {
+    const toeX = tx - W * 0.072 * K - W * 0.062, toeY = tb - H * 0.002, topX = tx - W * 0.072 * K + W * 0.004, topY = tb - H * 0.140;
+    const ang = Math.atan2(topY - toeY, topX - toeX), len = Math.hypot(topX - toeX, topY - toeY);
+    ctx.fillStyle = 'rgba(10,5,20,0.45)'; ctx.beginPath(); ctx.ellipse(toeX + W * 0.03, toeY + 2, W * 0.032, H * 0.007, 0.1, 0, PI * 2); ctx.fill();
+    ctx.save(); ctx.translate(toeX, toeY); ctx.rotate(ang);
+    const bw = W * 0.022, bl = len * 0.64;
+    const g = ctx.createLinearGradient(0, -bw / 2, 0, bw / 2);
+    g.addColorStop(0, '#f6dcb0'); g.addColorStop(0.45, '#d0a878'); g.addColorStop(1, '#7a5a3a');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(0, -bw / 2, bl, bw, bw * 0.28); ctx.fill();
+    ctx.fillStyle = '#2a5ab0'; ctx.fillRect(bl * 0.45, -bw / 2, bl * 0.20, bw);
+    ctx.fillStyle = '#f0c040'; ctx.fillRect(bl * 0.47, -bw * 0.12, bl * 0.16, bw * 0.24);
+    ctx.fillStyle = '#d0a878'; ctx.fillRect(bl, -bw * 0.16, bw * 0.6, bw * 0.32);
+    ctx.save(); ctx.beginPath(); ctx.rect(bl + bw * 0.55, -bw * 0.17, len - bl - bw * 0.55, bw * 0.34); ctx.clip();
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(bl, -bw, len, bw * 2);
+    ctx.fillStyle = '#e02a3a'; for (let x = bl; x < len; x += 4) { ctx.beginPath(); ctx.moveTo(x, -bw * 0.17); ctx.lineTo(x + 2, -bw * 0.17); ctx.lineTo(x + 4, bw * 0.17); ctx.lineTo(x + 2, bw * 0.17); ctx.closePath(); ctx.fill(); }
+    ctx.restore(); ctx.restore();
+    const bx = toeX - W * 0.012, by = toeY - H * 0.012, r = H * 0.012;
+    const bg = ctx.createRadialGradient(bx - r * 0.3, by - r * 0.4, r * 0.1, bx, by, r);
+    bg.addColorStop(0, '#ff8a7a'); bg.addColorStop(0.6, '#c82a2a'); bg.addColorStop(1, '#6a1010');
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(bx, by, r, 0, PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,240,220,0.8)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.ellipse(bx, by, r * 0.35, r, 0.3, 0, PI * 2); ctx.stroke();
+  }
+}
+
+// ════════ AMBIENT ANIMATION ════════
+// Far layer (behind the stalls): twinkling stars, the Ferris wheel, the big-top flag, fireworks, the balloon
+function drawAmbientFar(ctx, W, H, t) {
+  const m = t % SHOW;
+  [[0.08, 0.04], [0.33, 0.09], [0.46, 0.03], [0.70, 0.06], [0.93, 0.03]].forEach(([fx, fy], i) => {
+    const a = 0.35 + 0.35 * Math.sin(t * (1 + i * 0.4) + i);
+    ctx.fillStyle = `rgba(255,240,255,${a.toFixed(3)})`; ctx.fillRect(W * fx - 1, H * fy, 3, 1); ctx.fillRect(W * fx, H * fy - 1, 1, 3);
+  });
+  // Big-top flag
+  { const x = W * 0.180, y = H * 0.215 - H * 0.040;
+    ctx.fillStyle = '#ffd030'; ctx.beginPath(); ctx.moveTo(x, y);
+    for (let k = 1; k <= 6; k++) { const u = k / 6; ctx.lineTo(x + u * W * 0.028, y + Math.sin(t * 6 + u * 4) * 1.4 * u); }
+    for (let k = 6; k >= 0; k--) { const u = k / 6; ctx.lineTo(x + u * W * 0.028, y + H * 0.020 + Math.sin(t * 6 + u * 4) * 1.4 * u); }
+    ctx.closePath(); ctx.fill(); }
+  // Firework shows across the whole sky: peonies, golden willows that droop, and crackling glitter
+  FW_SHOWS.forEach(([s0, s1], V) => {
+    const f = win(m, [s0, s1]); if (f < 0) return;
+    const T = f * (s1 - s0);
+    const hash = (n) => { const v = Math.sin(n * 127.1 + V * 31.7) * 43758.5453; return v - Math.floor(v); };
+    const COLS = ['255,200,110', '255,110,190', '140,220,255', '180,255,140', '255,240,200', '200,140,255'];
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 18; k++) {
+      const t0 = 0.05 + k * 0.24 + (k % 3) * 0.04, x = W * (0.04 + 0.92 * hash(k * 3.3)), yb = H * (0.05 + 0.20 * hash(k * 7.7));
+      const kind = k % 4 === 3 ? 'willow' : (k % 5 === 4 ? 'crackle' : 'peony'), col = COLS[Math.floor(hash(k * 5.1) * COLS.length)];
+      const dt = T - t0; if (dt < 0) continue;
+      const rise = 0.40;
+      if (dt < rise) { const u = dt / rise, y = H * 0.47 + (yb - H * 0.47) * (1 - (1 - u) * (1 - u)); for (let j = 0; j < 5; j++) { const yy = y + j * 3; ctx.fillStyle = `rgba(255,220,170,${(0.9 - j * 0.17).toFixed(3)})`; ctx.fillRect(x - 0.6, yy, 1.3, 1.6); } continue; }
+      const db = dt - rise, life = kind === 'willow' ? 2.2 : 1.5; if (db > life) continue;
+      const size = H * (0.075 + 0.04 * hash(k * 9.9)), R = size * (1 - Math.exp(-db * 3)), a = Math.pow(1 - db / life, 1.2);
+      if (db < 0.3) { const g = ctx.createRadialGradient(x, yb, 0, x, yb, size * 1.6); g.addColorStop(0, `rgba(${col},${(0.35 * (1 - db / 0.3)).toFixed(3)})`); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - size * 1.6, yb - size * 1.6, size * 3.2, size * 3.2); }
+      const n = kind === 'crackle' ? 30 : 40;
+      for (let j = 0; j < n; j++) {
+        const ang = j / n * PI * 2 + k, rr = R * (0.85 + 0.15 * hash(j + k * 11));
+        if (kind === 'willow') {                           // long golden trails drooping down
+          for (let tr = 0; tr < 6; tr++) { const q = 1 - tr * 0.07, px = x + Math.cos(ang) * rr * q, py = yb + Math.sin(ang) * rr * q * 0.9 + db * db * H * 0.06 * q + tr * 1.4;
+            ctx.fillStyle = `rgba(255,205,120,${(a * (1 - tr / 6)).toFixed(3)})`; ctx.fillRect(px - 0.6, py - 0.6, 1.3, 1.3); }
+        } else if (kind === 'crackle') {                   // glittering white points that flicker
+          if (Math.sin(T * 40 + j * 7) < -0.2) continue;
+          const px = x + Math.cos(ang) * rr, py = yb + Math.sin(ang) * rr + db * db * H * 0.03;
+          ctx.fillStyle = `rgba(255,250,235,${a.toFixed(3)})`; ctx.fillRect(px - 0.8, py - 0.8, 1.7, 1.7);
+        } else {
+          for (let tr = 0; tr < 3; tr++) { const q = 1 - tr * 0.1, px = x + Math.cos(ang) * rr * q, py = yb + Math.sin(ang) * rr * q * 0.92 + db * db * H * 0.035 * q;
+            ctx.fillStyle = `rgba(${col},${(a * (tr ? 0.35 / tr : 1)).toFixed(3)})`; ctx.fillRect(px - 0.9, py - 0.9, tr ? 1.3 : 2, tr ? 1.3 : 2); }
+        }
+      }
+    }
+    ctx.restore();
+  });
+  // ── Slingshot behind the big top: two lattice towers, bungee cords, a pod that's fired skywards ──
+  {
+    const xL = W * 0.022, xR = W * 0.118, topY = H * 0.075, footY = H * 0.50, cx = (xL + xR) / 2, rest = H * 0.47, r = H * 0.019;
+    [xL, xR].forEach((x, i) => {
+      ctx.strokeStyle = '#d8d0e8'; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(x - 3, footY); ctx.lineTo(x - 1, topY); ctx.moveTo(x + 3, footY); ctx.lineTo(x + 1, topY); ctx.stroke();
+      ctx.lineWidth = 0.5; ctx.beginPath(); for (let k = 0; k <= 16; k++) { const u = k / 16, y = footY + (topY - footY) * u, w = 3 - 2 * u; k ? ctx.lineTo(x + (k % 2 ? w : -w), y) : ctx.moveTo(x - w, y); } ctx.stroke();
+      const on = Math.floor(t * 3 + i) % 2 === 0;
+      ctx.fillStyle = on ? '#ff5aa0' : '#ffe080'; ctx.beginPath(); ctx.arc(x, topY - 2, 2, 0, PI * 2); ctx.fill();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, topY - 2, 0, x, topY - 2, 9); g.addColorStop(0, on ? 'rgba(255,90,160,0.6)' : 'rgba(255,224,128,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - 9, topY - 11, 18, 18); ctx.restore();
+    });
+    let py = rest, spin = 0;
+    SLING.forEach(([a0, a1]) => {
+      const f = win(m, [a0, a1]); if (f < 0) return;
+      const T = f * (a1 - a0), yEq = H * 0.15, top = H * 0.035;
+      if (T < 0.40) { const u = T / 0.40; py = rest + (top - rest) * (1 - (1 - u) * (1 - u)); }
+      else if (T < 4.4) { const u = T - 0.40; py = yEq + (top - yEq) * Math.exp(-u * 0.75) * Math.cos(u * 4.2); }
+      else { const u = (T - 4.4) / (a1 - a0 - 4.4); py = yEq + (rest - yEq) * u * u * (3 - 2 * u); }
+      spin = T * 6;
+    });
+    ctx.strokeStyle = 'rgba(255,200,230,0.75)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(xL, topY); ctx.lineTo(cx - r * 0.7, py); ctx.moveTo(xR, topY); ctx.lineTo(cx + r * 0.7, py); ctx.stroke();
+    ctx.save(); ctx.translate(cx, py); ctx.rotate(spin);
+    ctx.fillStyle = 'rgba(40,30,60,0.85)'; ctx.beginPath(); ctx.arc(0, 0, r, 0, PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ffd030'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, r, 0, PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-r, 0); ctx.lineTo(r, 0); ctx.moveTo(0, -r); ctx.lineTo(0, r); ctx.stroke();
+    ctx.fillStyle = '#ffd8c0'; [-0.35, 0.35].forEach(dx => { ctx.beginPath(); ctx.arc(dx * r, -r * 0.2, r * 0.22, 0, PI * 2); ctx.fill(); });
+    ctx.restore();
+  }
+  // ── Swing-chair spinner between the big top and the cup: chairs fly out as the canopy turns ──
+  {
+    const cx = W * 0.352, mastTop = H * 0.255, canY = H * 0.270, footY = H * 0.53;
+    const spinA = t * 1.6, out = 0.85 + 0.15 * Math.sin(t * 0.4);
+    const Rc = W * (0.024 + 0.026 * out), chairY = canY + H * (0.075 - 0.035 * out), canR = W * 0.032;
+    const chairs = [];
+    for (let k = 0; k < 10; k++) { const a = spinA + k * PI * 2 / 10; chairs.push([a, Math.cos(a)]); }
+    const drawChair = ([a, c]) => {
+      const x = cx + Rc * Math.sin(a), y = chairY + Rc * c * 0.22, ax = cx + canR * Math.sin(a), ay = canY + canR * c * 0.22;
+      ctx.strokeStyle = c < 0 ? 'rgba(200,190,220,0.45)' : 'rgba(230,220,240,0.8)'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(x, y); ctx.stroke();
+      ctx.fillStyle = c < 0 ? '#8a3a6a' : BULB[Math.round((a % (PI * 2)) * 10) % BULB.length]; ctx.fillRect(x - 2, y, 4, 2.4);
+      ctx.fillStyle = c < 0 ? '#5a3a5a' : '#ffd8c0'; ctx.beginPath(); ctx.arc(x, y - 1, 1.2, 0, PI * 2); ctx.fill();
+    };
+    chairs.filter(([, c]) => c < 0).forEach(drawChair);
+    ctx.fillStyle = '#d8d0e8'; ctx.fillRect(cx - 1.5, mastTop, 3, footY - mastTop);
+    // Canopy: a striped cone that turns
+    for (let k = 0; k < 12; k++) {
+      const a0 = spinA * 0.5 + k * PI / 6, a1 = a0 + PI / 6, c = Math.cos((a0 + a1) / 2); if (c < -0.1) continue;
+      ctx.fillStyle = k % 2 ? '#fff4ec' : '#2a8ad8';
+      ctx.beginPath(); ctx.moveTo(cx + canR * Math.sin(a0), canY + canR * Math.cos(a0) * 0.22); ctx.lineTo(cx + canR * Math.sin(a1), canY + canR * Math.cos(a1) * 0.22); ctx.lineTo(cx, mastTop - H * 0.020); ctx.closePath(); ctx.fill();
+    }
+    for (let k = 0; k < 10; k++) { const a = spinA * 0.5 + k * PI / 5, c = Math.cos(a); if (c < 0) continue; ctx.fillStyle = (k + Math.floor(t * 5)) % 2 ? '#fff2a0' : '#ff7ab0'; ctx.beginPath(); ctx.arc(cx + canR * Math.sin(a), canY + canR * c * 0.22, 1.2, 0, PI * 2); ctx.fill(); }
+    ctx.fillStyle = '#f0c040'; ctx.beginPath(); ctx.arc(cx, mastTop - H * 0.022, 2, 0, PI * 2); ctx.fill();
+    chairs.filter(([, c]) => c >= 0).forEach(drawChair);
+  }
+  // ── Pendulum ride on the far right: a giant arm swinging a spinning ring of seats ──
+  {
+    const px = W * 0.948, py = H * 0.150, L = H * 0.200, theta = 0.62 * Math.sin(t * PI * 2 / 6.6);
+    ctx.strokeStyle = '#c8c0e0'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(W * 0.905, H * 0.53); ctx.moveTo(px, py); ctx.lineTo(W * 0.995, H * 0.53); ctx.stroke();
+    const gx = px + L * Math.sin(theta), gy = py + L * Math.cos(theta);
+    ctx.strokeStyle = '#f0c040'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(gx, gy); ctx.stroke();
+    ctx.fillStyle = '#f0c040'; ctx.beginPath(); ctx.arc(px, py, 3.2, 0, PI * 2); ctx.fill();
+    ctx.save(); ctx.translate(gx, gy); ctx.rotate(theta);
+    const rx = W * 0.030, ry = H * 0.012;
+    ctx.fillStyle = '#5a2a8a'; ctx.beginPath(); ctx.ellipse(0, 2, rx, ry, 0, 0, PI * 2); ctx.fill();
+    for (let k = 0; k < 10; k++) { const a = t * 2.4 + k * PI / 5, c = Math.cos(a); const x = rx * Math.sin(a), y = 1 + ry * c;
+      ctx.fillStyle = c > 0 ? '#ffd8c0' : 'rgba(255,216,192,0.4)'; ctx.beginPath(); ctx.arc(x, y - 2.2, 1.3, 0, PI * 2); ctx.fill();
+      ctx.fillStyle = (k + Math.floor(t * 6)) % 2 ? '#7ae0ff' : '#ff6a8a'; ctx.fillRect(x - 0.8, y + 1.5, 1.6, 1.6); }
+    ctx.strokeStyle = '#ffe080'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(0, 2, rx, ry, 0, 0, PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  // The Ferris wheel: turns slowly, gondolas stay level, the rim lights chase (and all flash on cue)
+  {
+    const cx = W * WHEEL[0], cy = H * WHEEL[1], R = H * WHEEL[2], rot = t * PI * 2 / 40;
+    const flash = win(m, WHEEL_FLASH) > 0 ? (Math.floor(t * 8) % 2 === 0) : null;
+    // A-frame legs
+    ctx.strokeStyle = '#d8d0e8'; ctx.lineWidth = 2;
+    [[-1, 1], [1, 1]].forEach(([sd]) => { ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + sd * R * 0.55, H * 0.565); ctx.stroke(); });
+    ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - R * 0.30, H * 0.45); ctx.lineTo(cx + R * 0.30, H * 0.45); ctx.stroke();
+    // Spokes and rims
+    ctx.strokeStyle = 'rgba(235,230,255,0.85)'; ctx.lineWidth = 0.8;
+    for (let k = 0; k < 16; k++) { const a = rot + k * PI / 8; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.stroke(); }
+    ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(cx, cy, R, 0, PI * 2); ctx.stroke();
+    ctx.lineWidth = 0.8; ctx.beginPath(); ctx.arc(cx, cy, R * 0.86, 0, PI * 2); ctx.stroke();
+    ctx.fillStyle = '#f0c040'; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, PI * 2); ctx.fill();
+    // Rim bulbs
+    for (let k = 0; k < 32; k++) {
+      const a = rot + k * PI / 16, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R;
+      const on = flash === null ? (k + Math.floor(t * 6)) % 4 < 2 : flash;
+      ctx.fillStyle = on ? BULB[k % BULB.length] : 'rgba(180,160,200,0.6)'; ctx.beginPath(); ctx.arc(x, y, 1.3, 0, PI * 2); ctx.fill();
+      if (on) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 0, x, y, 5); g.addColorStop(0, 'rgba(255,220,170,0.45)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - 5, y - 5, 10, 10); ctx.restore(); }
+    }
+    // Spoke bulbs
+    for (let k = 0; k < 8; k++) for (let j = 1; j <= 3; j++) { const a = rot + k * PI / 4, x = cx + Math.cos(a) * R * j / 4, y = cy + Math.sin(a) * R * j / 4;
+      ctx.fillStyle = (flash ?? ((j + Math.floor(t * 4)) % 3 === 0)) ? '#fff2c0' : 'rgba(200,180,220,0.5)'; ctx.fillRect(x - 0.7, y - 0.7, 1.4, 1.4); }
+    // Gondolas hanging level, swaying gently
+    const cols = ['#e83a4a', '#2a8ad8', '#f0c040', '#5ac88a', '#e868b0', '#ff8a30'];
+    for (let k = 0; k < 12; k++) {
+      const a = rot + k * PI / 6, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R, sway = Math.sin(t * 1.3 + k) * 0.08;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(sway);
+      ctx.strokeStyle = '#d8d0e8'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 4); ctx.stroke();
+      ctx.fillStyle = cols[k % cols.length]; ctx.beginPath(); ctx.roundRect(-5, 4, 10, 7, 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,240,200,0.75)'; ctx.fillRect(-3.5, 5.5, 7, 2.5);
+      ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(-5.5, 3.5, 11, 1.2);
+      ctx.restore();
+    }
+  }
+  // A lost balloon rising from behind the hook-a-duck stall and drifting away into the sky
+  {
+    const f = win(m, BALLOON);
+    if (f > 0) {
+      const x = W * (BALLOONS[0] + 0.01 + f * 0.10) + Math.sin(f * PI * 5) * W * 0.012, y = H * (0.415 - f * 0.53), r = H * 0.020 * (1 - f * 0.35);
+      ctx.strokeStyle = 'rgba(240,230,240,0.6)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(x, y + r * 1.15);
+      ctx.quadraticCurveTo(x - 3 + Math.sin(t * 3) * 2, y + r * 2.2, x + Math.sin(t * 2) * 2, y + r * 3.5); ctx.stroke();
+      const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, 0, x, y, r * 1.1); g.addColorStop(0, '#ff9ac0'); g.addColorStop(0.6, '#e8305a'); g.addColorStop(1, '#8a1030');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, r * 0.86, r, 0, 0, PI * 2); ctx.fill();
+      ctx.fillStyle = '#c82048'; ctx.beginPath(); ctx.moveTo(x - 1.5, y + r * 1.05); ctx.lineTo(x + 1.5, y + r * 1.05); ctx.lineTo(x, y + r * 0.92); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.ellipse(x - r * 0.3, y - r * 0.4, r * 0.16, r * 0.26, -0.4, 0, PI * 2); ctx.fill();
+    }
+  }
+}
+
+// Mid layer (after the stalls): festoon lights strung overhead, chasing
+function drawAmbientMid(ctx, W, H, t) {
+  // People strolling through the fair in the middle distance, rim-lit by the stalls; a family, a couple, kids
+  const person = (x, y, s, dir, col, step, prop) => {
+    ctx.fillStyle = '#140c1e';
+    ctx.beginPath(); ctx.arc(x, y - s * 0.88, s * 0.11, 0, PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x - s * 0.13, y - s * 0.76, s * 0.26, s * 0.44, s * 0.06); ctx.fill();
+    ctx.strokeStyle = '#140c1e'; ctx.lineWidth = s * 0.08; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - s * 0.05, y - s * 0.34); ctx.lineTo(x - s * 0.05 - step * s * 0.09, y); ctx.moveTo(x + s * 0.05, y - s * 0.34); ctx.lineTo(x + s * 0.05 + step * s * 0.09, y); ctx.stroke();
+    ctx.fillStyle = col; ctx.fillRect(x - s * 0.13, y - s * 0.74, s * 0.26, s * 0.05);
+    ctx.fillStyle = 'rgba(255,170,190,0.40)'; ctx.fillRect(x + dir * s * 0.11, y - s * 0.74, 0.9, s * 0.40);
+    if (prop === 'candy') { ctx.fillStyle = '#ffb8e0'; ctx.beginPath(); ctx.arc(x + dir * s * 0.22, y - s * 0.95, s * 0.12, 0, PI * 2); ctx.fill(); ctx.strokeStyle = '#eee'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(x + dir * s * 0.20, y - s * 0.85); ctx.lineTo(x + dir * s * 0.16, y - s * 0.60); ctx.stroke(); }
+    if (prop === 'balloon') { const bx = x + dir * s * 0.25, by = y - s * 1.55 + Math.sin(t * 2) * 1.5; ctx.strokeStyle = 'rgba(230,230,240,0.6)'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(x + dir * s * 0.14, y - s * 0.62); ctx.lineTo(bx, by + s * 0.16); ctx.stroke(); ctx.fillStyle = '#ffd030'; ctx.beginPath(); ctx.ellipse(bx, by, s * 0.13, s * 0.16, 0, 0, PI * 2); ctx.fill(); }
+    if (prop === 'shoulders') {                          // a child riding on their shoulders, arms up
+      ctx.fillStyle = '#140c1e'; ctx.beginPath(); ctx.arc(x, y - s * 1.30, s * 0.09, 0, PI * 2); ctx.fill(); ctx.beginPath(); ctx.roundRect(x - s * 0.09, y - s * 1.20, s * 0.18, s * 0.22, s * 0.04); ctx.fill();
+      ctx.strokeStyle = '#140c1e'; ctx.lineWidth = s * 0.06; const wave = Math.sin(t * 5) * s * 0.06;
+      ctx.beginPath(); ctx.moveTo(x - s * 0.08, y - s * 1.15); ctx.lineTo(x - s * 0.20, y - s * 1.40 + wave); ctx.moveTo(x + s * 0.08, y - s * 1.15); ctx.lineTo(x + s * 0.20, y - s * 1.40 - wave); ctx.stroke();
+      ctx.fillStyle = '#ffd030'; ctx.fillRect(x - s * 0.09, y - s * 1.19, s * 0.18, s * 0.04);
+    }
+  };
+  [ // period, offset, y, direction, colour, prop, size
+    [17.0, 0.0, 0.592, 1, '#e8508a', 'candy', 1.0], [23.0, 8.0, 0.606, -1, '#2a8ad8', 'balloon', 1.0], [19.0, 4.0, 0.578, 1, '#f0c040', '', 0.95],
+    [29.0, 15.0, 0.614, -1, '#5ac88a', 'kid', 0.68], [21.0, 11.0, 0.584, -1, '#e83a4a', 'shoulders', 1.0], [26.0, 19.0, 0.600, 1, '#a87aff', 'couple', 1.0],
+    [31.0, 6.0, 0.570, -1, '#ff8a30', '', 0.92], [27.0, 2.0, 0.596, 1, '#2ac0d0', 'kid', 0.66]
+  ].forEach(([period, off, fy, dir, col, prop, sz], i) => {
+    const u = ((t + off) % period) / period, x = dir > 0 ? W * (-0.06 + u * 1.12) : W * (1.06 - u * 1.12), y = H * fy;
+    const s = H * 0.078 * sz * (0.9 + (fy - 0.57) * 2), step = Math.sin(t * 7 + i);
+    if (prop === 'couple') { person(x, y, s, dir, col, step, ''); person(x - dir * s * 0.32, y + 1, s * 0.94, dir, '#e8508a', Math.sin(t * 7 + i + 1), '');
+      ctx.strokeStyle = '#140c1e'; ctx.lineWidth = s * 0.06; ctx.beginPath(); ctx.moveTo(x - dir * s * 0.10, y - s * 0.50); ctx.lineTo(x - dir * s * 0.22, y - s * 0.50); ctx.stroke(); }
+    else person(x, y, s, dir, col, step, prop === 'kid' ? '' : prop);
+  });
+  // Dodgem sparks crackling off the ceiling grid now and then
+  { const x0 = W * 0.705, x1 = W * 0.835, roof = H * 0.505;
+    for (let k = 0; k < 3; k++) {
+      const cyc = (t * 1.3 + k * 0.41) % 1, live = cyc < 0.12;
+      if (!live) continue;
+      const x = x0 + (x1 - x0) * ((Math.floor(t * 1.3 + k * 0.41) * 0.37 + k * 0.29) % 1), a = 1 - cyc / 0.12;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(x, roof + 2, 0, x, roof + 2, 10); g.addColorStop(0, `rgba(160,220,255,${(0.9 * a).toFixed(3)})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.fillRect(x - 10, roof - 8, 20, 20);
+      ctx.strokeStyle = `rgba(220,245,255,${a.toFixed(3)})`; ctx.lineWidth = 0.7;
+      for (let j = 0; j < 4; j++) { const ang = j * 1.6 + k + t * 10; ctx.beginPath(); ctx.moveTo(x, roof + 2); ctx.lineTo(x + Math.cos(ang) * 5, roof + 2 + Math.abs(Math.sin(ang)) * 5); ctx.stroke(); }
+      ctx.restore();
+    } }
+  const strings = [[-0.02, 0.040, 0.48, 0.075, 0.045], [0.52, 0.075, 1.02, 0.040, 0.045], [0.10, 0.000, 0.62, 0.020, 0.035]];
+  strings.forEach(([x0, y0, x1, y1, sag], si) => {
+    const pt = (u) => [W * (x0 + (x1 - x0) * u), H * (y0 + (y1 - y0) * u) + H * sag * 4 * u * (1 - u)];
+    ctx.strokeStyle = 'rgba(30,20,40,0.8)'; ctx.lineWidth = 0.7;
+    ctx.beginPath(); for (let k = 0; k <= 30; k++) { const [x, y] = pt(k / 30); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+    const n = 16;
+    for (let k = 0; k < n; k++) {
+      const [x, y] = pt((k + 0.5) / n), on = (k + si + Math.floor(t * 3)) % 3 !== 0, col = BULB[(k + si) % BULB.length];
+      ctx.fillStyle = on ? col : 'rgba(120,100,120,0.8)'; ctx.beginPath(); ctx.ellipse(x, y + 2.2, 1.4, 1.9, 0, 0, PI * 2); ctx.fill();
+      if (on) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y + 2, 0, x, y + 2, 7); g.addColorStop(0, 'rgba(255,220,170,0.40)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(x - 7, y - 5, 14, 14); ctx.restore(); }
+    }
+  });
+}
+
+// Front layer: the coconut that gets knocked off, the high striker's puck and bell, candy-floss steam
+function drawAmbientFront(ctx, W, H, t) {
+  const m = t % SHOW;
+  // The second coconut: sits on its cup; a ball flies in, knocks it flying, then it's quietly put back
+  {
+    const x0 = W * SHY.x0, x1 = W * SHY.x1, px = x0 + (x1 - x0) * 0.38, py = H * 0.615, r = H * 0.017;
+    const f = win(m, COCONUT), T = f > 0 ? f * (COCONUT[1] - COCONUT[0]) : -1;
+    let cx = px, cy = py - r + 1, rot = 0, alpha = 1;
+    if (T >= 0) {
+      if (T < 0.45) {                                     // the ball flies in from the bottom left
+        const u = T / 0.45, bx = W * -0.02 + (px - W * -0.02) * u, by = H * 0.80 + (py - r - H * 0.80) * u - Math.sin(u * PI) * H * 0.06;
+        ctx.fillStyle = '#c82a2a'; ctx.beginPath(); ctx.arc(bx, by, 2.6, 0, PI * 2); ctx.fill();
+      } else if (T < 1.6) {                               // the coconut tumbles off the back
+        const u = (T - 0.45) / 1.15; cx = px + u * W * 0.03; cy = py - r - Math.sin(u * PI) * H * 0.04 + u * u * H * 0.06; rot = u * 5; alpha = u > 0.6 ? 1 - (u - 0.6) / 0.4 : 1;
+        if (u < 0.25) { ctx.fillStyle = `rgba(255,240,200,${(0.8 * (1 - u / 0.25)).toFixed(3)})`; for (let k = 0; k < 6; k++) { const a = k * PI / 3; ctx.fillRect(px + Math.cos(a) * (4 + u * 30), py - r + Math.sin(a) * (4 + u * 30), 1.4, 1.4); } }
+      } else if (T < 2.4) alpha = 0;                       // gone
+      else alpha = Math.min(1, (T - 2.4) / 0.4);          // back on its cup
+    }
+    if (alpha > 0) {
+      ctx.save(); ctx.globalAlpha = alpha; ctx.translate(cx, cy); ctx.rotate(rot);
+      const ng = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 0, 0, 0, r); ng.addColorStop(0, '#9a6a3a'); ng.addColorStop(1, '#4a2a12');
+      ctx.fillStyle = ng; ctx.beginPath(); ctx.arc(0, 0, r, 0, PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(200,160,110,0.45)'; ctx.lineWidth = 0.5; for (let k = 0; k < 6; k++) { const a = k * 1.1; ctx.beginPath(); ctx.moveTo(Math.cos(a) * r * 0.5, Math.sin(a) * r * 0.5); ctx.lineTo(Math.cos(a) * r * 1.05, Math.sin(a) * r * 1.05); ctx.stroke(); }
+      ctx.restore();
+    }
+  }
+  // High striker: the puck shoots up, rings the bell (it flashes and rings), then drops back
+  {
+    const x = W * STRIKER[0], base = H * STRIKER[1], top = H * STRIKER[2];
+    let py = base - H * 0.030, ring = 0;
+    DINGS.forEach(range => {
+      const f = win(m, range); if (f < 0) return;
+      const T = f * (range[1] - range[0]);
+      if (T < 0.35) py = base - H * 0.030 - (base - top - H * 0.04) * Math.sin(T / 0.35 * PI / 2);
+      else if (T < 0.9) { py = top + 8; ring = 1 - (T - 0.35) / 1.4; }
+      else if (T < 1.5) { const u = (T - 0.9) / 0.6; py = top + 8 + (base - H * 0.030 - top - 8) * u * u; ring = Math.max(0, 1 - (T - 0.35) / 1.4); }
+      else ring = Math.max(0, 1 - (T - 0.35) / 1.4);
+    });
+    ctx.fillStyle = '#f2f2f2'; ctx.beginPath(); ctx.roundRect(x - 3, py - 3, 6, 6, 1.5); ctx.fill();
+    ctx.fillStyle = '#c82a2a'; ctx.fillRect(x - 3, py - 0.5, 6, 1);
+    // Bell
+    const bx = x, by = top - 7;
+    ctx.fillStyle = ring > 0 ? '#fff2a0' : '#e8b830'; ctx.beginPath(); ctx.moveTo(bx - 7, by + 4); ctx.quadraticCurveTo(bx - 6, by - 6, bx, by - 7); ctx.quadraticCurveTo(bx + 6, by - 6, bx + 7, by + 4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#a87818'; ctx.fillRect(bx - 7.5, by + 3, 15, 1.6);
+    if (ring > 0) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(bx, by, 0, bx, by, 26); g.addColorStop(0, `rgba(255,240,170,${(0.8 * ring).toFixed(3)})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.fillRect(bx - 26, by - 26, 52, 52); ctx.restore();
+      ctx.strokeStyle = `rgba(255,240,170,${ring.toFixed(3)})`; ctx.lineWidth = 1;
+      [0, 1].forEach(k => { const rr = 10 + (1 - ring) * 14 + k * 6; [-1, 1].forEach(sd => { ctx.beginPath(); ctx.arc(bx, by, rr, sd < 0 ? PI * 0.85 : -PI * 0.15, sd < 0 ? PI * 1.15 : PI * 0.15); ctx.stroke(); }); });
+    }
+  }
+  // The balloon seller's bunch, bobbing on their strings
+  { const x = W * BALLOONS[0], ty = H * 0.520;
+    const bal = [[-0.030, 0.395, '#e8305a'], [0.000, 0.375, '#ffd030'], [0.028, 0.395, '#2a8ad8'], [-0.015, 0.420, '#5ac88a'], [0.016, 0.418, '#e868b0'], [0.000, 0.440, '#ff8a30'], [-0.034, 0.440, '#a87aff']];
+    bal.forEach(([dx, fy, col], i) => {
+      const bx = x + W * dx + Math.sin(t * 1.4 + i * 1.3) * 1.6, by = H * fy + Math.sin(t * 1.9 + i) * 1.4, r = H * 0.017;
+      ctx.strokeStyle = 'rgba(240,230,240,0.55)'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(x, ty); ctx.quadraticCurveTo((x + bx) / 2, (ty + by) / 2 + 3, bx, by + r * 1.1); ctx.stroke();
+      const g = ctx.createRadialGradient(bx - r * 0.35, by - r * 0.4, 0, bx, by, r * 1.1); g.addColorStop(0, 'rgba(255,255,255,0.9)'); g.addColorStop(0.25, col); g.addColorStop(1, 'rgba(40,0,40,0.9)');
+      ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(bx, by, r * 0.86, r, 0, 0, PI * 2); ctx.fill();
+      ctx.fillStyle = g; ctx.globalAlpha = 0.55; ctx.beginPath(); ctx.ellipse(bx, by, r * 0.86, r, 0, 0, PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    }); }
+  // Popcorn popping in the cart's glass box
+  { const x = W * CART[0], base = H * CART[1], w = W * 0.075, h = H * 0.060, gy0 = base - h * 1.55, gh = h * 0.80;
+    for (let k = 0; k < 8; k++) { const u = ((t * 1.7 + k * 0.37) % 1), px = x - w * 0.36 + w * 0.72 * ((k * 0.618) % 1), py = gy0 + gh * 0.50 - Math.sin(u * PI) * gh * 0.38;
+      ctx.fillStyle = 'rgba(255,250,225,0.95)'; ctx.beginPath(); ctx.arc(px, py, 1.3, 0, PI * 2); ctx.fill(); } }
+  // Wisps of sweet steam off the candy-floss stall
+  { const sx = W * 0.634, sy = H * 0.545;
+    for (let i = 0; i < 4; i++) { const life = (t * 0.4 + i / 4) % 1; ctx.fillStyle = `rgba(255,220,240,${(0.18 * Math.sin(life * PI)).toFixed(3)})`; ctx.beginPath(); ctx.arc(sx + Math.sin(life * 4 + i) * 3, sy - life * H * 0.07, 2 + life * 5, 0, PI * 2); ctx.fill(); } }
+}
+
+// ════════ PAINT — back → far ambient → mid → festoons → props → cup → front ambient → haze ════════
+const cvs = document.getElementById('c');
+const ctx = cvs.getContext('2d');
+const SCRATCH = document.createElement('canvas').getContext('2d');
+const mk = () => { const c = document.createElement('canvas'); c.width = 620; c.height = 355; return c; };
+const back = mk(), mid = mk(), front = mk();
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function paintBase() {
+  [[back, 'back'], [mid, 'mid'], [front, 'front']].forEach(([c, part]) => { const g = c.getContext('2d'); g.clearRect(0, 0, 620, 355); draw(g, 620, 355, part); });
+}
+function frame(ms) {
+  const t = reduceMotion ? 0 : ms / 1000;
+  ctx.clearRect(0, 0, 620, 355);
+  ctx.drawImage(back, 0, 0);
+  drawAmbientFar(ctx, 620, 355, t);
+  ctx.drawImage(mid, 0, 0);
+  drawAmbientMid(ctx, 620, 355, t);
+  ctx.drawImage(front, 0, 0);
+  drawTrophy(ctx, 620, 355, (t / TURN_SECONDS) * PI * 2, t);
+  drawAmbientFront(ctx, 620, 355, t);
+  drawAtmos(ctx, 620, 355);
+}
+function loop(ms) { frame(ms); if (!reduceMotion) requestAnimationFrame(loop); }
+paintBase(); frame(0);
+if (!reduceMotion) requestAnimationFrame(loop);
+let repainted = false;
+const repaint = () => { if (!repainted) { repainted = true; paintBase(); if (reduceMotion) frame(0); } };
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(repaint).catch(() => {});
+setTimeout(repaint, 2000);
+
+</script>
