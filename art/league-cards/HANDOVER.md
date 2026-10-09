@@ -15,8 +15,9 @@ We are rebuilding every league card on the league-select screen as an **animated
 - NZCL (Lake Tekapo afternoon: Aoraki, pōhutukawa, tree ferns, kiwi, kea, tūī, jet boat; the Silver Fern on a kōwhaiwhai plinth)
 - Buccaneer Cup (file `pirate.html`, key `pirate`: treasure cove at sunset; an overflowing oak treasure chest *is* the trophy, plaque on its front; galleon firing broadsides and one cricket ball that clips the stumps — "HOWZAT!" from the parrot)
 
-**Next, in order:**
-- Tier 4 onwards: PCL, Witches' Ashes, Frontier Cup, and so on
+- PCL (file `pcl.html`, key `pcl`: Lahore at golden hour — Badshahi Mosque, Minar-e-Pakistan, the old city with a chai dhaba, Basant kite fight, truck art, a tanga, a Mughal garden with fountains, dusk lights; the Jade Lotus Cup, a carved Mughal jade wine cup that turns)
+
+**Next, in order (13 of 27 left → now 12):** Witches' Ashes, Frontier Cup, Frozen Ashes, Cosmos Cup, Inferno Cup, Neon Series, Jungle Cup, Knight's Cup, Brass Cup, Wizard's Cup, Deep Cup, Eternal Cup. All are Tier 4+ fantasy themes (`--tier` for Tier 4 is still `#b884ff` in PCL; check `THEMED_LEAGUES` for each league's tier label).
 
 Each league's name, subtitle, cup name, stats and colours live in `THEMED_LEAGUES` in `flicky-cricket.html`. Read the entry before designing.
 
@@ -50,6 +51,10 @@ Each league's name, subtitle, cup name, stats and colours live in `THEMED_LEAGUE
 - **Effects must look organic, not formulaic.** Cannon fire went from neat round puffs to seeded per-shot variety: uneven timing, ragged flash and sparks, puffs with their own burst/drag/life drifting downwind, ragged splashes. Don't fire the moment the card appears; let wrapped smoke from the previous loop show only on later loops.
 - **Palms: full, layered crowns.** Thin comb fronds looked cheap; dense drooping leaflets, back fronds darker, a gold rim light, ringed trunks, coconuts and dead fronds look right. Static palms can be drawn once into the back layer.
 - **Cache heavy static props.** The chest (hundreds of coins) is drawn once to an offscreen canvas; only its twinkles and glints redraw each frame. Clear the cache in `paintBase()` so it repaints after fonts load.
+- **Anything that turns must turn as one.** Every feature on a rotating cup (petals, beads, handles, medallions) must use the same angle convention: `x = sin(phi + offset)`, visible when `cos(...) > 0`. Mixing `cos`/`sin` made parts appear to spin opposite ways. Lighting (highlights, sheen) stays fixed to the sun, not to the cup.
+- **Never `closePath()` a shape you then stroke as an outline** if the closing edge crosses the object — it drew a black line across the cup's mouth.
+- **Movement must match direction.** For anything moving left, wheels turn anticlockwise (`rot = x / r`), and walking legs lift while swinging forward. Joe spots backwards gaits instantly.
+- **Birds and props should leave the frame, not vanish mid-air.**
 - **Offer options when Joe is unsure.** For a cup or flag, render 3 stills side by side in one artifact page and let him pick.
 
 ## How a card file works
@@ -87,6 +92,7 @@ const repaint = () => { if (!repainted) { repainted = true; paintBase(); if (red
   - First make a test copy with a charset line: `(printf '<meta charset="utf-8">\n'; cat card.html) > card_test.html`.
   - To save credit, crop or combine the frames into **one image per check**.
 - `node --check` on the extracted script catches syntax errors.
+- `python3 art/league-cards/tools/scan.py /abs/path/card_test.html` runs `frame()` every 50 ms for 60 s and prints any errors (`[]` means clean).
 - Publish each draft as an artifact for Joe to review, and re-publish the same file path to update it.
 
 ## Wiring a signed-off card into the game
@@ -102,7 +108,7 @@ const repaint = () => { if (!repainted) { repainted = true; paintBase(); if (red
 ## Working with Joe
 
 - He's the founder, reviews on his phone, and likes short, plain answers.
-- He's watching credit:
+- He's watching credit. **Start a new chat for each card** — long sessions get expensive because every step re-reads the whole conversation. Also:
   - Batch changes.
   - Use one combined screenshot per check.
   - Only push to main when he signs a card off.
