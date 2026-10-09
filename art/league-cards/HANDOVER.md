@@ -17,7 +17,9 @@ We are rebuilding every league card on the league-select screen as an **animated
 
 - PCL (file `pcl.html`, key `pcl`: Lahore at golden hour — Badshahi Mosque, Minar-e-Pakistan, the old city with a chai dhaba, Basant kite fight, truck art, a tanga, a Mughal garden with fountains, dusk lights; the Jade Lotus Cup, a carved Mughal jade wine cup that turns)
 
-**Next, in order (13 of 27 left → now 12):** Witches' Ashes, Frontier Cup, Frozen Ashes, Cosmos Cup, Inferno Cup, Neon Series, Jungle Cup, Knight's Cup, Brass Cup, Wizard's Cup, Deep Cup, Eternal Cup. All are Tier 4+ fantasy themes (`--tier` for Tier 4 is still `#b884ff` in PCL; check `THEMED_LEAGUES` for each league's tier label).
+- Witches' Ashes (file `witches.html`, key `witches`: a witch's hollow at moonrise — haunted mansion on a terrace, ruined abbey on the far ridge under a detailed harvest moon, graveyard with an iron fence and a black cat, a scarecrow, jack-o'-lanterns, a dead oak with a raven; the Cauldron boils from 1s and erupts at 6.5s in glossy metaball slime that coats everything, then drains; the cauldron stops turning while the goo is out)
+
+**Next, in order (12 of 27 left → now 11):** Frontier Cup, Frozen Ashes, Cosmos Cup, Inferno Cup, Neon Series, Jungle Cup, Knight's Cup, Brass Cup, Wizard's Cup, Deep Cup, Eternal Cup. All are Tier 4+ fantasy themes (`--tier` for Tier 4 is still `#b884ff` in PCL; check `THEMED_LEAGUES` for each league's tier label).
 
 Each league's name, subtitle, cup name, stats and colours live in `THEMED_LEAGUES` in `flicky-cricket.html`. Read the entry before designing.
 
@@ -56,6 +58,17 @@ Each league's name, subtitle, cup name, stats and colours live in `THEMED_LEAGUE
 - **Movement must match direction.** For anything moving left, wheels turn anticlockwise (`rot = x / r`), and walking legs lift while swinging forward. Joe spots backwards gaits instantly.
 - **Birds and props should leave the frame, not vanish mid-air.**
 - **Offer options when Joe is unsure.** For a cup or flag, render 3 stills side by side in one artifact page and let him pick.
+
+- **The trophy must fill the middle like the others.** A squat trophy at the standard size looked "not in the middle". Compare a frame side by side with PCL; scale it up (the cauldron uses `CK = 1.15`) and widen the plinth so its feet stand on it.
+- **Liquid must look like liquid.** Drawn shapes (a mushroom of goo, even stripes running down) were called "terrible". What worked was metaballs: soft blobs added into a small offscreen field, thresholded and lit per pixel (normal from the field gradient, a sharp specular, a darker rim), so drops merge and flow. Only shade the area the blobs cover, and keep the field around half size, or phones will struggle.
+- **An eruption should go everywhere.** A violent fountain of seeded drops with gravity: some fall back in, some slide down the pot, some splat on the plinth, grass and props (scarecrow, pumpkins, stones) and ooze down them. Overflow streams must be uneven (different widths, some stopping short), never evenly spaced bars.
+- **Pause the turn for a big moment.** The cauldron eases to a stop at the blast and restarts when it clears. Do it by integrating the turn speed (`turnTime`) so the angle never jumps, across loops too.
+- **Effects in moderation.** Big green lightning was "too much" (now just a small spark over the rim), and bats bursting out of the blast weren't wanted.
+- **Every branch joins the trunk.** Root limbs inside the trunk; check a close-up crop for gaps.
+- **Buildings stand on flat ground.** Give a house on a hill a level terrace.
+- **Clean props.** Pumpkins: shaded lobes and soft creases, no outline rings, a proper stem, tidy leaves instead of tangled vines.
+- **League names can contain apostrophes.** `build_modules.py` now JSON-quotes the `LEAGUE_LIVE_ART` keys.
+- **Measure speed in the game.** After wiring, time a few seconds of frames in the carousel (calm and during the headline moment) and compare with a lighter card like PCL.
 
 ## How a card file works
 
