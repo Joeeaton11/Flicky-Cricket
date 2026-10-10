@@ -18039,6 +18039,753 @@ function makeLeagueArt_frontier(cvs) {
     stop() { __running = false; },
   };
 }
+function makeLeagueArt_frozen(cvs) {
+  let __running = false, __t0 = 0, __elapsed = 0;
+  // Soft fade at the foot of the art so it melts into the card's info panel
+  function __fade() {
+    const g = ctx.createLinearGradient(0, 355 * 0.78, 0, 355);
+    g.addColorStop(0, 'rgba(8,8,18,0)'); g.addColorStop(1, 'rgba(8,8,18,0.92)');
+    ctx.fillStyle = g; ctx.fillRect(0, 355 * 0.78, 620, 355 * 0.22);
+  }
+  function __frame(ms) { frame(ms); __fade(); }
+  const PI = Math.PI, TAU = PI * 2;
+  const SHOW = 24.0;                                 // length of the shared schedule, seconds
+  const AURORA = [3.0, 10.0];                        // headline 1: the northern lights brighten, ripple faster and flare pink at the hem, then settle
+  const SLED = [0.4, 23.6];                          // a husky team runs along the far ice from behind the hut's point and disappears behind the glacier
+  const CRACK = 12.4;                                // a crack opens at the cliff top; chips of ice fall
+  const TOPPLE = [13.3, 14.2];                       // headline 2: the iceberg's second peak leans out, breaks away and falls into the sea
+  const HIT = 14.9;                                  // ... splash: a fountain of spray, a mist cloud drifting downwind, rings spreading; the floes rock as the swell reaches them
+  const REFORM = [21.4, 23.6];                       // the cliff face frosts back over, ready for the next loop
+  const NARWHAL = [19.0, 23.0];
+  // ice magic (frost, the snowflake swirl, snowfall) is scheduled with its drawing code further down                      // two narwhals surface in the sun's glow, tusks first, and dive again
+  const TURN_SECONDS = 12.0;
+  function win(m, [a, b]) { return m >= a && m <= b ? (m - a) / (b - a) : -1; }
+  const ease = (u) => u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u);
+  const lerp = (a, b, u) => a + (b - a) * u;
+  const SUN = { x: 0.335, y: 0.492 };                // a low pink sun sitting on the horizon between the glacier and the urn, lighting everything from the left
+  const HZ = 0.500;                                  // the far ice / horizon line
+  const WTOP = 0.507, SHORE = 0.632;                 // the open water runs from the far ice to the near shore
+  // the iceberg: a tall pinnacle berg on the left with a second peak and a natural arch; its second peak is the piece that calves
+  const WL = 0.566;                                  // the berg's waterline
+  const BERG = [[-0.02, WL], [-0.02, 0.44], [0.02, 0.38], [0.045, 0.36], [0.07, 0.29], [0.095, 0.21], [0.11, 0.185], [0.125, 0.22], [0.14, 0.30], [0.155, 0.33], [0.18, 0.31], [0.205, 0.265], [0.225, 0.29], [0.25, 0.37], [0.275, 0.43], [0.29, 0.50], [0.30, WL]];
+  const ARCH = [[0.136, WL], [0.138, 0.50], [0.147, 0.472], [0.158, 0.466], [0.168, 0.476], [0.174, 0.51], [0.176, WL]];
+  const PIECE = [[0.168, 0.320], [0.18, 0.31], [0.205, 0.265], [0.225, 0.29], [0.25, 0.37], [0.262, 0.399], [0.232, 0.41], [0.205, 0.40], [0.186, 0.37]];
+  const PIVOT = [0.262, 0.399];
+  const IMPACT = { x: 0.272, y: 0.566 };
+  function along(pts, f) { for (let i = 0; i < pts.length - 1; i++) { const [a, ya] = pts[i], [b, yb] = pts[i + 1]; if (f >= a && f <= b) return ya + (yb - ya) * (f - a) / (b - a); } return f < pts[0][0] ? pts[0][1] : pts[pts.length - 1][1]; }
+  function mkRnd(s) { let q = s; return () => { q = (q * 16807) % 2147483647; return (q - 1) / 2147483646; }; }
+  function smooth(ctx, pts) {                        // a closed curve through the midpoints of the given points
+    const n = pts.length, mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const s = mid(pts[n - 1], pts[0]); ctx.beginPath(); ctx.moveTo(s[0], s[1]);
+    for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n], m = mid(p, q); ctx.quadraticCurveTo(p[0], p[1], m[0], m[1]); }
+    ctx.closePath();
+  }
+  const PEAKS = [[-0.03, 0.13, 0.11], [0.19, 0.20, 0.13], [0.545, 0.25, 0.12], [0.90, 0.25, 0.10], [1.02, 0.21, 0.10], [0.715, 0.10, 0.165]];   // x, summit y, half-width at the horizon
+  const FLOES = [[0.285, 0.604, 0.060, 5.3, 0.0], [0.375, 0.530, 0.034, 6.1, 1.3], [0.47, 0.552, 0.050, 4.7, 2.1], [0.585, 0.524, 0.040, 5.9, 0.7], [0.625, 0.578, 0.036, 6.6, 3.0], [0.712, 0.588, 0.140, 7.3, 1.8], [0.905, 0.606, 0.060, 5.5, 2.6]];
+  const BEARFLOE = 5;
+
+  // ════════ STILL SCENE — a fjord at polar twilight: pink sun, snowy peaks, the far ice, a tidewater glacier, open water, a red hut on a point ════════
+  function draw(ctxReal, W, H, part) {
+    let ctx = part === 'sky' ? ctxReal : SCRATCH;
+    const rnd = mkRnd(9090);
+    const SX = W * SUN.x, SY = H * SUN.y, G = H * HZ;
+
+    // ── Sky: deep indigo overhead, through violet and rose, to a peach glow on the horizon ──
+    { const g = ctx.createLinearGradient(0, 0, 0, G); g.addColorStop(0, '#121848'); g.addColorStop(0.32, '#2c2f78'); g.addColorStop(0.58, '#6a4c9c'); g.addColorStop(0.80, '#d4789e'); g.addColorStop(0.93, '#ffa88c'); g.addColorStop(1, '#ffc896'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, G + 6);
+      const sg = ctx.createRadialGradient(SX, SY, 0, SX, SY, W * 0.42); sg.addColorStop(0, 'rgba(255,214,170,0.85)'); sg.addColorStop(0.18, 'rgba(255,170,150,0.40)'); sg.addColorStop(1, 'rgba(255,150,170,0)'); ctx.fillStyle = sg; ctx.fillRect(0, 0, W, G + 6);
+      // stars in the darker sky
+      for (let i = 0; i < 70; i++) { const x = rnd() * W, y = rnd() * H * 0.30, a = (1 - y / (H * 0.30)) * (0.35 + rnd() * 0.6); ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`; ctx.beginPath(); ctx.arc(x, y, 0.3 + rnd() * 0.8, 0, TAU); ctx.fill(); }
+      // the sun, half set
+      const r = H * 0.032, dg = ctx.createRadialGradient(SX - r * 0.2, SY - r * 0.3, 0, SX, SY, r); dg.addColorStop(0, '#fffbe8'); dg.addColorStop(0.7, '#ffe0a8'); dg.addColorStop(1, 'rgba(255,190,140,0.9)'); ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(SX, SY, r, 0, TAU); ctx.fill(); }
+
+    ctx = part === 'back' ? ctxReal : SCRATCH;
+
+    // ── Mountains: sunward faces glowing pink, shaded faces cool lavender-blue, snowfields and ridgelines ──
+    // a paler, farther range first for depth, then the main peaks: jagged ridgelines with shoulders and sub-summits, a crooked spine
+    // splitting the sunlit face from the shaded one, rock showing through in gullies
+    const range = (peaks, far, seed0) => peaks.forEach(([fx, fy, hw], i) => {
+      const rr = mkRnd(seed0 + i * 31), ax = W * fx, ay = H * fy, l = ax - W * hw, r = ax + W * hw, by = G + 2;
+      const side = (x0, x1, n) => { const pts = []; for (let k = 1; k < n; k++) { const u = k / n, sag = Math.sin(u * PI) * (by - ay) * (0.10 + rr() * 0.06), bump = (rr() - 0.5) * (by - ay) * 0.09 + (k === 2 ? -(by - ay) * 0.10 : 0);
+        pts.push([lerp(x0, x1, u) + (rr() - 0.5) * W * hw * 0.08, lerp(ay, by, u) + sag * 0.4 + bump]); } return pts; };
+      const L = side(ax, l, 7), R = side(ax, r, 6);
+      const spine = []; for (let k = 1; k <= 6; k++) { const u = k / 6; spine.push([ax + W * hw * (0.06 + 0.22 * u) + (rr() - 0.5) * W * hw * 0.10, lerp(ay, by, u)]); }
+      const outline = () => { ctx.beginPath(); ctx.moveTo(l, by); for (let k = L.length - 1; k >= 0; k--) ctx.lineTo(L[k][0], L[k][1]); ctx.lineTo(ax, ay); R.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(r, by); ctx.closePath(); };
+      const lit = ctx.createLinearGradient(l, ay, ax, by); lit.addColorStop(0, far ? '#f6d4e6' : '#ffe6f0'); lit.addColorStop(0.5, far ? '#d8b0d4' : '#f2b6ce'); lit.addColorStop(1, far ? '#a890c8' : '#c48cba');
+      outline(); ctx.fillStyle = lit; ctx.fill();
+      const sh = ctx.createLinearGradient(ax, ay, r, by); sh.addColorStop(0, far ? '#a8a8dc' : '#9c9cdc'); sh.addColorStop(1, far ? '#7a7ab8' : '#5c5aa4');
+      ctx.fillStyle = sh; ctx.beginPath(); ctx.moveTo(ax, ay); spine.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(r, by); for (let k = R.length - 1; k >= 0; k--) ctx.lineTo(R[k][0], R[k][1]); ctx.closePath(); ctx.fill();
+      ctx.save(); outline(); ctx.clip();
+      // gullies of dark rock running down both faces
+      for (let k = 0; k < (far ? 5 : 11); k++) { const u = 0.15 + rr() * 0.7, onLit = rr() < 0.45, x0 = onLit ? lerp(ax, l, u * 0.7) : lerp(ax, r, u * 0.6), y0 = lerp(ay, by, u * 0.75), len = 6 + rr() * 16;
+        ctx.strokeStyle = onLit ? `rgba(150,90,140,${far ? 0.25 : 0.45})` : `rgba(50,44,110,${far ? 0.25 : 0.5})`; ctx.lineWidth = 0.8 + rr() * 1.4;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + (onLit ? -1 : 1) * len * 0.35 + (rr() - 0.5) * 3, y0 + len * 0.6); ctx.lineTo(x0 + (onLit ? -1 : 1) * len * 0.5, y0 + len); ctx.stroke(); }
+      // snow light along the spine
+      ctx.strokeStyle = far ? 'rgba(255,240,248,0.45)' : 'rgba(255,244,250,0.75)'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(ax, ay); spine.slice(0, 4).forEach(([x, y]) => ctx.lineTo(x - 0.8, y)); ctx.stroke();
+      const hero = !far && i === peaks.length - 1;
+      if (hero) {
+        // the big peak: broken rock bands slanting across both faces, bright snowfields between, a hanging glacier on the shaded side
+        for (let k = 0; k < 4; k++) { const v = 0.24 + k * 0.17, y = lerp(ay, by, v), xa = lerp(ax, l, v * 0.92), xb = lerp(ax, r, v * 0.9);
+          const band = (dy, col, lw) => { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(xa, y + dy + (xa - ax) * 0.10); ctx.quadraticCurveTo(ax, y + dy - 2 + (rr() - 0.5) * 3, xb, y + dy + (xb - ax) * 0.10); ctx.stroke(); };
+          band(0, `rgba(120,70,130,${(0.30 - k * 0.04).toFixed(2)})`, 2.6 + rr() * 1.5); band(-2.2, 'rgba(255,240,248,0.40)', 0.9); }
+      }
+      ctx.restore();
+      if (hero) { const pg = ctx.createRadialGradient(ax + 16, ay + 3, 0, ax + 16, ay + 3, 26); pg.addColorStop(0, 'rgba(255,240,250,0.45)'); pg.addColorStop(1, 'rgba(255,240,250,0)');   // spindrift blowing off the summit
+        ctx.fillStyle = pg; ctx.save(); ctx.translate(ax + 16, ay + 3); ctx.scale(1, 0.22); ctx.translate(-ax - 16, -ay - 3); ctx.beginPath(); ctx.arc(ax + 16, ay + 3, 26, 0, TAU); ctx.fill(); ctx.restore(); }
+    });
+    range([[0.10, 0.27, 0.10], [0.47, 0.31, 0.09], [0.62, 0.29, 0.09], [0.76, 0.30, 0.10], [0.90, 0.28, 0.09]], true, 700);
+    range(PEAKS, false, 500);
+    // a pink haze where the mountains meet the ice
+    { const hg = ctx.createLinearGradient(0, G - H * 0.08, 0, G); hg.addColorStop(0, 'rgba(255,190,200,0)'); hg.addColorStop(1, 'rgba(255,196,196,0.55)'); ctx.fillStyle = hg; ctx.fillRect(0, G - H * 0.08, W, H * 0.08); }
+    // the far sea ice: a bright strip along the foot of the mountains
+    { const g = ctx.createLinearGradient(0, G - 2, 0, G + 5); g.addColorStop(0, '#f4d8e8'); g.addColorStop(0.45, '#dcc8e6'); g.addColorStop(1, '#9a90c8'); ctx.fillStyle = g; ctx.fillRect(0, G - 2, W, 7);
+      const sg = ctx.createRadialGradient(SX, G, 0, SX, G, W * 0.22); sg.addColorStop(0, 'rgba(255,236,220,0.75)'); sg.addColorStop(1, 'rgba(255,220,220,0)'); ctx.fillStyle = sg; ctx.fillRect(0, G - 2, W, 7); }   // brightest under the sun
+
+    ctx = part === 'mid' ? ctxReal : SCRATCH;
+
+    // ── The water: the sky's colours mirrored, darkening towards us ──
+    { const top = H * WTOP, bot = H * (SHORE + 0.04);
+      const g = ctx.createLinearGradient(0, top, 0, bot); g.addColorStop(0, '#b47aa8'); g.addColorStop(0.25, '#6a5aa6'); g.addColorStop(0.6, '#34428a'); g.addColorStop(1, '#22306c'); ctx.fillStyle = g; ctx.fillRect(0, top, W, bot - top);
+      // the sun's path on the water, broken into ripples
+      for (let y = top + 1; y < bot; y += 2.2) { const d = (y - top) / (bot - top), w = W * (0.012 + d * 0.05) * (0.6 + rnd() * 0.7), x = SX + (rnd() - 0.5) * W * 0.012 * (1 + d * 3);
+        ctx.fillStyle = `rgba(255,${200 - d * 40 | 0},${170 - d * 30 | 0},${(0.75 - d * 0.45).toFixed(2)})`; ctx.fillRect(x - w / 2, y, w, 1.1); }
+      // the mountains' pink reflections, soft and wobbly
+      ctx.fillStyle = 'rgba(240,170,200,0.16)'; PEAKS.forEach(([fx, , hw]) => { for (let k = 0; k < 6; k++) { const w = W * hw * (1 - k * 0.15) * 1.2; ctx.fillRect(W * fx - w / 2 + (rnd() - 0.5) * 6, top + 2 + k * 3.2, w, 1.4); } }); }
+
+    // ── The iceberg: a great sculpted pinnacle berg with an arch, lit pink on its sunward faces ──
+    drawBerg(ctx, W, H);
+
+    // ── The point on the right: dark rocks under deep snow, a red fishing hut with a lit window, an upturned boat ──
+    { const P = [[0.765, 0.556], [0.79, 0.528], [0.83, 0.516], [0.88, 0.512], [0.94, 0.505], [1.01, 0.500], [1.01, 0.578], [0.92, 0.572], [0.84, 0.568], [0.78, 0.566]];
+      ctx.fillStyle = '#3a3458'; ctx.beginPath(); P.forEach(([x, y], i) => i ? ctx.lineTo(W * x, H * y) : ctx.moveTo(W * x, H * y)); ctx.closePath(); ctx.fill();
+      // rock faces at the water's edge
+      for (let k = 0; k < 9; k++) { const x = W * (0.775 + rnd() * 0.23), y = H * (0.556 + rnd() * 0.012); ctx.fillStyle = rnd() < 0.5 ? '#4a4270' : '#282444'; ctx.beginPath(); ctx.moveTo(x - 5, y + 6); ctx.lineTo(x - 2, y - 3); ctx.lineTo(x + 4, y - 2); ctx.lineTo(x + 6, y + 6); ctx.fill(); }
+      // snow blanket, lit pink on its sunward rise
+      const sg = ctx.createLinearGradient(W * 0.77, 0, W, 0); sg.addColorStop(0, '#ffe2ee'); sg.addColorStop(0.4, '#f4eaf8'); sg.addColorStop(1, '#c4c8ec');
+      ctx.fillStyle = sg; ctx.beginPath(); ctx.moveTo(W * 0.768, H * 0.552);
+      ctx.quadraticCurveTo(W * 0.79, H * 0.522, W * 0.83, H * 0.514); ctx.lineTo(W * 0.94, H * 0.503); ctx.lineTo(W * 1.01, H * 0.498); ctx.lineTo(W * 1.01, H * 0.556);
+      for (let x = 1.0; x > 0.77; x -= 0.02) ctx.lineTo(W * x, H * (0.552 + Math.sin(x * 90) * 0.004)); ctx.closePath(); ctx.fill();
+      // the reflection of the point in the water
+      ctx.fillStyle = 'rgba(30,26,70,0.35)'; ctx.fillRect(W * 0.78, H * 0.572, W * 0.22, H * 0.012);
+      // the hut: gable end towards us, side wall in shade, deep snow on the roof
+      const hx = W * 0.862, hy = H * 0.513, hw = 21, hh = 17, rh = 13, sd = 14;
+      ctx.fillStyle = 'rgba(60,60,130,0.35)'; ctx.beginPath(); ctx.moveTo(hx + hw, hy); ctx.lineTo(hx + hw + sd + 18, hy + 2); ctx.lineTo(hx + hw + 4, hy + 4); ctx.closePath(); ctx.fill();   // shadow, cast right
+      ctx.fillStyle = '#7a1e22'; ctx.beginPath(); ctx.moveTo(hx + hw, hy); ctx.lineTo(hx + hw + sd, hy - 4); ctx.lineTo(hx + hw + sd, hy - hh - 4); ctx.lineTo(hx + hw, hy - hh); ctx.closePath(); ctx.fill();      // side wall
+      const wg = ctx.createLinearGradient(hx - hw, 0, hx + hw, 0); wg.addColorStop(0, '#e05048'); wg.addColorStop(1, '#a8302c'); ctx.fillStyle = wg;
+      ctx.beginPath(); ctx.moveTo(hx - hw, hy); ctx.lineTo(hx + hw, hy); ctx.lineTo(hx + hw, hy - hh); ctx.lineTo(hx, hy - hh - rh); ctx.lineTo(hx - hw, hy - hh); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(80,16,20,0.45)'; ctx.lineWidth = 0.6; for (let y = hy - 3; y > hy - hh - rh; y -= 3) { const ins = Math.max(0, (hy - hh - y)) / rh * hw; ctx.beginPath(); ctx.moveTo(hx - hw + ins, y); ctx.lineTo(hx + hw - ins, y); ctx.stroke(); }
+      ctx.strokeStyle = '#fff4ec'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(hx - hw - 2, hy - hh + 1); ctx.lineTo(hx, hy - hh - rh - 1); ctx.lineTo(hx + hw + 2, hy - hh + 1); ctx.stroke();       // barge boards
+      ctx.fillStyle = '#fff4ec'; ctx.fillRect(hx - hw, hy - hh, 1.4, hh); ctx.fillRect(hx + hw - 1.4, hy - hh, 1.4, hh);
+      // roof: snow on the slope running back over the side wall
+      ctx.fillStyle = '#c8cff0'; ctx.beginPath(); ctx.moveTo(hx, hy - hh - rh - 2); ctx.lineTo(hx + sd, hy - hh - rh - 6); ctx.lineTo(hx + hw + sd + 3, hy - hh - 5); ctx.lineTo(hx + hw + 3, hy - hh); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff2f8'; ctx.beginPath(); ctx.moveTo(hx - hw - 3, hy - hh + 1); ctx.quadraticCurveTo(hx - hw * 0.5, hy - hh - rh * 0.6, hx, hy - hh - rh - 3.5); ctx.lineTo(hx + 2, hy - hh - rh - 1); ctx.quadraticCurveTo(hx - hw * 0.45, hy - hh - rh * 0.45, hx - hw - 1, hy - hh + 2.5); ctx.closePath(); ctx.fill();
+      // chimney
+      ctx.fillStyle = '#5a4a5a'; ctx.fillRect(hx + sd + 4, hy - hh - rh - 9, 4, 8); ctx.fillStyle = '#fff2f8'; ctx.fillRect(hx + sd + 3.5, hy - hh - rh - 10, 5, 1.6);
+      // window and door
+      ctx.fillStyle = '#ffd98a'; ctx.fillRect(hx - 13, hy - 12, 9, 7); ctx.fillStyle = '#fff4ec'; ctx.fillRect(hx - 9, hy - 12, 1, 7); ctx.fillRect(hx - 13, hy - 9, 9, 1); ctx.strokeStyle = '#fff4ec'; ctx.lineWidth = 1; ctx.strokeRect(hx - 13.5, hy - 12.5, 10, 8);
+      ctx.fillStyle = '#5a1418'; ctx.fillRect(hx + 4, hy - 13, 8, 13); ctx.fillStyle = '#fff4ec'; ctx.fillRect(hx + 4, hy - 13, 8, 1);
+      ctx.fillStyle = '#f6f0fa'; ctx.beginPath(); ctx.ellipse(hx, hy + 0.5, hw + 6, 2.4, 0, 0, TAU); ctx.fill();   // snow banked against the walls
+      // upturned rowing boat beside the hut
+      const bx = hx - 40, by = H * 0.530; ctx.fillStyle = '#2c5a6a'; ctx.beginPath(); ctx.moveTo(bx - 12, by); ctx.quadraticCurveTo(bx, by - 8, bx + 13, by - 1); ctx.lineTo(bx + 11, by + 1); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff2f8'; ctx.beginPath(); ctx.moveTo(bx - 10, by - 2); ctx.quadraticCurveTo(bx - 2, by - 8.5, bx + 9, by - 4); ctx.quadraticCurveTo(bx - 1, by - 6, bx - 10, by - 2); ctx.fill();
+      // a kayak pulled up in front, its paddle across it
+      const kx = hx + 40, ky = hy + 11; ctx.fillStyle = 'rgba(70,80,160,0.3)'; ctx.beginPath(); ctx.ellipse(kx + 18, ky + 2, 18, 1.6, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#e8b020'; ctx.beginPath(); ctx.moveTo(kx, ky); ctx.quadraticCurveTo(kx + 14, ky - 4.2, kx + 30, ky - 0.5); ctx.quadraticCurveTo(kx + 14, ky + 2.2, kx, ky); ctx.fill();
+      ctx.fillStyle = '#9a6a10'; ctx.beginPath(); ctx.ellipse(kx + 15, ky - 1.8, 3, 1, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#3a2a24'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(kx + 8, ky + 1.5); ctx.lineTo(kx + 22, ky - 5); ctx.stroke(); ctx.fillStyle = '#c84030'; ctx.fillRect(kx + 6.5, ky + 0.5, 3, 1.4); ctx.fillRect(kx + 21, ky - 5.6, 3, 1.4);
+      // a lantern on a post by the door
+      ctx.strokeStyle = '#4a3428'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(hx + 16, hy + 1); ctx.lineTo(hx + 16, hy - 13); ctx.lineTo(hx + 19, hy - 13); ctx.stroke();
+      ctx.fillStyle = '#2a2024'; ctx.fillRect(hx + 17.6, hy - 12.6, 3, 4); ctx.fillStyle = '#ffe2a0'; ctx.fillRect(hx + 18.2, hy - 11.8, 1.8, 2.6); }
+
+    ctx = part === 'front' ? ctxReal : SCRATCH;
+
+    // ── The near shore: deep snow, pink where the sun catches it, blue in the hollows; rocks, and the stumps with a ball half-sunk ──
+    { const edge = (x) => H * (SHORE + 0.006 * Math.sin(x * 0.021) + 0.004 * Math.sin(x * 0.067 + 1) + (x > W * 0.36 && x < W * 0.66 ? 0.012 * Math.sin((x - W * 0.36) / (W * 0.30) * PI) * -1 : 0));
+      // the shore's ice edge, a blue band at the water
+      ctx.fillStyle = '#8aa8e4'; ctx.beginPath(); ctx.moveTo(0, edge(0) - 1); for (let x = 0; x <= W; x += 4) ctx.lineTo(x, edge(x) - 1); ctx.lineTo(W, edge(W) + 4); ctx.lineTo(0, edge(0) + 4); ctx.closePath(); ctx.fill();
+      const g = ctx.createLinearGradient(0, H * SHORE, 0, H); g.addColorStop(0, '#ffe6f0'); g.addColorStop(0.25, '#f2eaf8'); g.addColorStop(0.6, '#d6def4'); g.addColorStop(1, '#aebee6');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, edge(0) + 1); for (let x = 0; x <= W; x += 4) ctx.lineTo(x, edge(x) + 1); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+      // sunlight across the drifts from the left
+      const lg = ctx.createLinearGradient(0, 0, W, 0); lg.addColorStop(0, 'rgba(255,200,210,0.30)'); lg.addColorStop(0.5, 'rgba(255,210,220,0.08)'); lg.addColorStop(1, 'rgba(120,140,220,0.12)'); ctx.fillStyle = lg; ctx.fillRect(0, H * SHORE, W, H);
+      // sastrugi: wind-carved ridges, a light crest and a blue shadow
+      for (let k = 0; k < 12; k++) { const x = rnd() * W, y = H * (SHORE + 0.03 + rnd() * 0.30), w = 16 + rnd() * 30;
+        ctx.strokeStyle = 'rgba(130,150,215,0.30)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x - w / 2, y + 1); ctx.quadraticCurveTo(x, y - 2, x + w / 2, y + 1.5); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.quadraticCurveTo(x - 2, y - 3, x + w / 2 - 4, y); ctx.stroke(); }
+      // a pressure ridge: slabs of sea ice shoved up and tilted along the shore, lit on their sunward faces, half-buried in snow
+      [[0.012, 0.652, 20, 12, -0.35], [0.072, 0.646, 26, 15, 0.28], [0.108, 0.658, 13, 7, -0.25], [0.262, 0.650, 14, 8, 0.4], [0.680, 0.652, 18, 10, 0.32], [0.722, 0.646, 13, 8, -0.3], [0.795, 0.652, 26, 14, 0.22], [0.852, 0.648, 12, 7, -0.45]].forEach(([fx, fy, w, h, a]) => {
+        const x = W * fx, y = H * fy;
+        ctx.fillStyle = 'rgba(100,120,210,0.28)'; ctx.beginPath(); ctx.ellipse(x + w * 1.1, y + 1.5, w * 1.3, 2.2, 0, 0, TAU); ctx.fill();
+        ctx.save(); ctx.translate(x, y + 2); ctx.rotate(a);
+        ctx.fillStyle = '#3c80c8'; ctx.beginPath(); ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2 + 3, -2); ctx.lineTo(w / 2 + 3, -h - 1); ctx.lineTo(w / 2, -h); ctx.closePath(); ctx.fill();      // thickness, in shade
+        const g2 = ctx.createLinearGradient(-w / 2, -h, w / 2, 0); g2.addColorStop(0, '#fff6fa'); g2.addColorStop(0.35, '#c8ecfa'); g2.addColorStop(1, '#5aa6dc'); ctx.fillStyle = g2; ctx.fillRect(-w / 2, -h, w, h);
+        ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-w / 2, -h); ctx.lineTo(w / 2 + 3, -h - 1); ctx.stroke();
+        ctx.strokeStyle = 'rgba(30,80,170,0.35)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(-w * 0.1, -h); ctx.lineTo(w * 0.05, -h * 0.4); ctx.stroke();
+        ctx.restore();
+        ctx.fillStyle = '#f4eef8'; ctx.beginPath(); ctx.ellipse(x, y + 2.5, w * 0.75, 3, 0, 0, TAU); ctx.fill(); });
+      // one boulder under a snow cap on the right
+      [[0.935, 0.662, 18, 11]].forEach(([fx, fy, rw, rh]) => { const x = W * fx, y = H * fy;
+        ctx.fillStyle = 'rgba(100,120,210,0.28)'; ctx.beginPath(); ctx.ellipse(x + rw * 1.5, y + 1, rw * 1.7, rh * 0.25, 0, 0, TAU); ctx.fill();
+        const P = [[-rw, 1], [-rw * 0.85, -rh * 0.55], [-rw * 0.35, -rh], [rw * 0.3, -rh * 0.92], [rw * 0.85, -rh * 0.45], [rw, 1]];
+        ctx.fillStyle = '#3a3458'; poly(ctx, P.map(([px, py]) => [x + px, y + py])); ctx.fill();
+        ctx.fillStyle = '#6e5e8c'; poly(ctx, [[x - rw, y + 1], [x - rw * 0.85, y - rh * 0.55], [x - rw * 0.35, y - rh], [x - rw * 0.1, y + 1]]); ctx.fill();
+        ctx.fillStyle = '#fff2f8'; ctx.beginPath(); ctx.moveTo(x - rw * 0.9, y - rh * 0.48); ctx.lineTo(x - rw * 0.35, y - rh * 1.08); ctx.lineTo(x + rw * 0.3, y - rh * 1.0); ctx.lineTo(x + rw * 0.82, y - rh * 0.5);
+        ctx.quadraticCurveTo(x + rw * 0.2, y - rh * 0.62, x - rw * 0.2, y - rh * 0.7); ctx.quadraticCurveTo(x - rw * 0.6, y - rh * 0.62, x - rw * 0.9, y - rh * 0.48); ctx.fill();
+        ctx.fillStyle = '#f2eef8'; ctx.beginPath(); ctx.ellipse(x, y + 1, rw * 1.1, 2.2, 0, 0, TAU); ctx.fill(); });
+      // stumps, frosted, and a ball half-sunk in the snow
+      const sx = W * 0.168, sb = H * 0.700, sh = H * 0.100;
+      ctx.fillStyle = 'rgba(100,120,210,0.22)'; ctx.beginPath(); ctx.moveTo(sx - 11, sb); ctx.lineTo(sx + 11, sb); ctx.lineTo(sx + 9 + sh * 1.9, sb + 3); ctx.lineTo(sx - 9 + sh * 1.9, sb + 3); ctx.closePath(); ctx.fill();
+      [-9, 0, 9].forEach(dx => { const x = sx + dx;                       // stumps carved from clear blue ice
+        const wg = ctx.createLinearGradient(x - 2.4, 0, x + 2.4, 0); wg.addColorStop(0, 'rgba(240,252,255,0.95)'); wg.addColorStop(0.35, 'rgba(160,222,248,0.9)'); wg.addColorStop(0.75, 'rgba(70,160,225,0.9)'); wg.addColorStop(1, 'rgba(40,110,200,0.95)');
+        ctx.fillStyle = wg; ctx.fillRect(x - 2.4, sb - sh, 4.8, sh); ctx.beginPath(); ctx.ellipse(x, sb - sh, 2.4, 0.9, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(x - 1.6, sb - sh + 2, 0.9, sh - 6);                        // a bright edge of light down each one
+        ctx.fillStyle = 'rgba(30,100,190,0.35)'; ctx.fillRect(x + 0.6, sb - sh * 0.75, 0.7, sh * 0.25); ctx.fillRect(x - 0.4, sb - sh * 0.4, 1.2, 0.6);   // a fracture and a bubble line inside
+        ctx.fillStyle = 'rgba(225,248,255,0.9)'; ctx.beginPath(); ctx.moveTo(x - 1.2, sb - sh * 0.58); ctx.lineTo(x + 1.2, sb - sh * 0.58); ctx.lineTo(x, sb - sh * 0.46); ctx.fill(); });
+      const bl = (bx0) => { const g2 = ctx.createLinearGradient(0, sb - sh - 3.6, 0, sb - sh - 1.2); g2.addColorStop(0, '#f2fcff'); g2.addColorStop(1, '#6ab6e6'); ctx.fillStyle = g2; ctx.fillRect(bx0, sb - sh - 3.6, 9, 2.4); };   // ice bails
+      bl(sx - 9.5); bl(sx + 0.5);
+      ctx.fillStyle = 'rgba(160,220,250,0.35)'; ctx.beginPath(); ctx.ellipse(sx + 20, sb + 1.5, 22, 2.2, 0, 0, TAU); ctx.fill();                                // light through the ice tints their shadow
+      ctx.fillStyle = '#f4f0fa'; ctx.beginPath(); ctx.ellipse(sx, sb, 15, 3, 0, 0, TAU); ctx.fill();
+      const bx = W * 0.222, by = H * 0.703, br = 7;
+      ctx.save(); ctx.beginPath(); ctx.rect(bx - 10, by - 10, 20, 10.6); ctx.clip();
+      const bg = ctx.createRadialGradient(bx - 1.8, by - 2.2, 0.5, bx, by, br); bg.addColorStop(0, '#ff8a80'); bg.addColorStop(0.55, '#c42a2c'); bg.addColorStop(1, '#6a0e14'); ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(bx, by, br, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#f4e4c8'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.arc(bx - 7, by, 8, -0.6, 0.6); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(bx - 1.6, by - 3.3, 1.4, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(240,250,255,0.5)'; ctx.fillRect(bx - 4, by - 5.5, 2, 1.2); ctx.restore();
+      ctx.fillStyle = '#f6f2fa'; ctx.beginPath(); ctx.ellipse(bx, by + 0.6, br + 3.2, 1.8, 0, 0, TAU); ctx.fill(); }
+  }
+
+  // ════════ THE NORTHERN LIGHTS — curtains of light rippling overhead; once a loop they flare bright with a pink hem ════════
+  const AUR_SPRITE = (() => { const c = document.createElement('canvas'); c.width = 24; c.height = 128; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 128, 0, 0); gr.addColorStop(0, 'rgba(120,255,190,0)'); gr.addColorStop(0.07, 'rgba(110,255,180,1)'); gr.addColorStop(0.3, 'rgba(60,230,190,0.7)'); gr.addColorStop(0.65, 'rgba(70,150,240,0.3)'); gr.addColorStop(1, 'rgba(160,90,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 24, 128);
+    // soft sides, so neighbouring rays melt into one curtain instead of reading as stripes
+    g.globalCompositeOperation = 'destination-in'; const hz = g.createLinearGradient(0, 0, 24, 0); hz.addColorStop(0, 'rgba(0,0,0,0)'); hz.addColorStop(0.5, 'rgba(0,0,0,1)'); hz.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = hz; g.fillRect(0, 0, 24, 128);
+    return c; })();
+  // The flare speeds the ripple up, so the curtains' phase is integrated over time (never t × speed, which lurches forward)
+  const AUR_N = 400, auroraShape = (u) => Math.sin(u * PI) * (0.75 + 0.25 * Math.sin(u * PI * 3));
+  const AUR_TAB = (() => { const L = AURORA[1] - AURORA[0], a = [0]; let acc = 0; for (let i = 1; i <= AUR_N; i++) { acc += auroraShape(i / AUR_N) * L / AUR_N; a.push(acc); } return a; })();
+  function auroraPhase(t) {
+    const loops = Math.floor(t / SHOW), m = t % SHOW, tot = AUR_TAB[AUR_N]; let I = 0;
+    if (m >= AURORA[1]) I = tot; else if (m > AURORA[0]) { const k = (m - AURORA[0]) / (AURORA[1] - AURORA[0]) * AUR_N, i = Math.floor(k); I = lerp(AUR_TAB[i], AUR_TAB[Math.min(AUR_N, i + 1)], k - i); }
+    return t + 1.6 * (loops * tot + I);
+  }
+  function auroraFlare(t) { const u = win(t % SHOW, AURORA); return u < 0 ? 0 : auroraShape(u); }
+  // drawn at quarter size and scaled up, so the curtains are soft light rather than rows of rays
+  const AURC = document.createElement('canvas'); AURC.width = 155; AURC.height = 89; const actx = AURC.getContext('2d');
+  function drawAurora(ctx, W, H, t) {
+    const f = auroraFlare(t), T = auroraPhase(t);
+    actx.setTransform(1, 0, 0, 1, 0, 0); actx.clearRect(0, 0, AURC.width, AURC.height); actx.setTransform(AURC.width / W, 0, 0, AURC.height / H, 0, 0);
+    actx.globalCompositeOperation = 'lighter';
+    { const gg = actx.createRadialGradient(W * 0.62, H * 0.10, 0, W * 0.62, H * 0.10, W * 0.45); gg.addColorStop(0, `rgba(150,80,230,${(0.16 + f * 0.14).toFixed(2)})`); gg.addColorStop(1, 'rgba(120,60,200,0)');
+      actx.save(); actx.translate(W * 0.62, H * 0.10); actx.scale(1, 0.4); actx.translate(-W * 0.62, -H * 0.10); actx.fillStyle = gg; actx.fillRect(0, -H, W, H * 3); actx.restore(); }
+    [[0.00, 0.58, 0.25, 0.13, 0.13, 4.1], [0.24, 1.06, 0.225, 0.18, 0.19, 0], [0.48, 1.12, 0.13, 0.11, 0.12, 2.3]].forEach(([x0, x1, by, rh, al, ph]) => {
+      const N = 110;
+      for (let i = 0; i <= N; i++) { const u = i / N, x = W * lerp(x0, x1, u);
+        const y = H * (by + 0.045 * Math.sin(u * 5 + t * 0.22 + ph) + 0.015 * Math.sin(u * 11 - T * 0.5 + ph));
+        const h = H * rh * (0.75 + 0.35 * Math.sin(u * 4 + T * 0.35 + ph) ** 2) * (1 + f * 0.35);
+        const a = al * (0.6 + 0.4 * Math.sin(u * 3.5 - T * 0.6 + ph)) * Math.sin(u * PI) * (1 + f * 1.5);
+        if (a <= 0.01) continue;
+        actx.globalAlpha = Math.min(1, a * 0.85); actx.drawImage(AUR_SPRITE, x - 14, y - h, 28, h * 1.05);
+        if (f > 0.05) { actx.globalAlpha = Math.min(1, a * f * 0.3); actx.fillStyle = 'rgba(255,90,170,1)'; actx.beginPath(); actx.ellipse(x, y + 0.5, 10, 3, 0, 0, TAU); actx.fill(); } } });
+    actx.globalAlpha = 1;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.imageSmoothingEnabled = true; ctx.drawImage(AURC, 0, 0, W, H); ctx.restore();
+  }
+  function drawAuroraReflection(ctx, W, H, t) {
+    const f = auroraFlare(t); ctx.save(); waterClip(ctx, W, H); ctx.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 14; k++) { const y = H * (WTOP + 0.005 + k * 0.0085), x = W * (0.30 + 0.07 * Math.sin(k * 2.1 + t * 0.3)), w = W * (0.62 - k * 0.03);
+      ctx.globalAlpha = (0.13 + f * 0.26) * (1 - k / 15); ctx.fillStyle = k % 3 === 2 ? '#a070f0' : '#50f0b0'; ctx.fillRect(x + Math.sin(t * 0.8 + k) * 6, y, w, 1.3); }
+    ctx.restore();
+  }
+  function waterClip(ctx, W, H) {                    // the open water, leaving out the iceberg
+    ctx.beginPath(); ctx.rect(0, H * WTOP, W, H * (SHORE + 0.04 - WTOP)); BERG.forEach(([x, y], k) => k ? ctx.lineTo(W * x, H * y) : ctx.moveTo(W * x, H * y)); ctx.closePath(); ctx.clip('evenodd');
+  }
+
+  // ════════ STARS AND SPARKLE — a few stars twinkle; frost glitters on the near snow ════════
+  const TWINKLE = (() => { const r = mkRnd(77), a = []; for (let i = 0; i < 16; i++) a.push([r(), r() * 0.26, 1 + r() * 3, r() * TAU]); return a; })();
+  const GLITTER = (() => { const r = mkRnd(88), a = []; for (let i = 0; i < 22; i++) { const x = r(); if (x > 0.38 && x < 0.62) { i--; continue; } a.push([x, 0.66 + r() * 0.12, 0.8 + r() * 2.2, r() * TAU]); } return a; })();
+  function drawTwinkle(ctx, W, H, t) {
+    TWINKLE.forEach(([x, y, sp, ph]) => { const a = 0.5 + 0.5 * Math.sin(t * sp + ph); ctx.fillStyle = `rgba(255,255,255,${(a * 0.9).toFixed(2)})`; ctx.beginPath(); ctx.arc(W * x, H * y, 0.7 + a * 0.6, 0, TAU); ctx.fill(); });
+  }
+  const DUST = (() => { const r = mkRnd(4545), a = []; for (let i = 0; i < 46; i++) a.push([r(), 0.04 + r() * 0.62, 3 + r() * 6, 1.5 + r() * 3, 2 + r() * 4, r() * TAU]); return a; })();
+  function drawDust(ctx, W, H, t) {
+    DUST.forEach(([x0, y0, vx, vy, sp, ph]) => { const x = ((x0 * W + t * vx) % (W + 20)) - 10, y = ((y0 * H + t * vy) % (H * 0.66)) + H * 0.02;
+      const sun = 0.35 + 0.65 * Math.exp(-(((x - W * SUN.x) / (W * 0.22)) ** 2)), tw = Math.max(0, Math.sin(t * sp + ph)) ** 8;
+      ctx.fillStyle = `rgba(255,248,240,${((0.18 + tw * 0.7) * sun).toFixed(2)})`; ctx.fillRect(x, y, 1, 1);
+      if (tw > 0.45 && sun > 0.6) { const s = 1.5 + tw * 2; ctx.strokeStyle = `rgba(255,250,240,${(tw * sun * 0.8).toFixed(2)})`; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(x - s, y + 0.5); ctx.lineTo(x + s + 1, y + 0.5); ctx.moveTo(x + 0.5, y - s); ctx.lineTo(x + 0.5, y + s + 1); ctx.stroke(); } });
+  }
+  function drawGlitter(ctx, W, H, t) {
+    GLITTER.forEach(([x, y, sp, ph]) => { const a = Math.max(0, Math.sin(t * sp + ph)) ** 6; if (a < 0.05) return; const px = W * x, py = H * y, s = 1.2 + a * 1.6;
+      ctx.strokeStyle = `rgba(255,255,255,${(a * 0.95).toFixed(2)})`; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(px - s, py); ctx.lineTo(px + s, py); ctx.moveTo(px, py - s); ctx.lineTo(px, py + s); ctx.stroke(); });
+  }
+
+  // ════════ WATER LIFE — the sun's glitter, ripples, and the swell from the calving ════════
+  function swell(t, x, y) {                          // how far a point on the water is lifted by the calving swell, plus a little lean
+    const m = t % SHOW, d = Math.hypot(x - IMPACT.x * 620, (y - IMPACT.y * 355) * 2.6), ta = HIT + 0.25 + d / 115, dt = m - ta;
+    if (dt <= 0 || m < HIT) return [0, 0];
+    const amp = 3.4 / (1 + d / 160) * Math.exp(-dt * 0.55);
+    return [-amp * Math.sin(dt * 4.6), amp * 0.035 * Math.cos(dt * 4.6)];
+  }
+  function drawWater(ctx, W, H, t) {
+    ctx.save(); waterClip(ctx, W, H);
+    // glitter on the sun's path
+    const r = mkRnd(4040);
+    for (let i = 0; i < 26; i++) { const d = r(), y = H * lerp(WTOP + 0.004, SHORE, d), x = W * SUN.x + (r() - 0.5) * W * (0.02 + d * 0.06), a = Math.max(0, Math.sin(t * (1.5 + r() * 2.5) + r() * TAU)) ** 3;
+      if (a < 0.05) continue; ctx.fillStyle = `rgba(255,236,200,${(a * 0.9).toFixed(2)})`; ctx.fillRect(x - 2 - d * 3, y, 4 + d * 6, 1); }
+    // slow ripples across the water
+    ctx.strokeStyle = 'rgba(255,220,240,0.10)'; ctx.lineWidth = 0.8;
+    for (let i = 0; i < 8; i++) { const d = r(), y = H * lerp(WTOP + 0.01, SHORE, d), x = ((r() * W + t * (4 + d * 6)) % (W + 40)) - 20, w = 8 + d * 18;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.stroke(); }
+    // rings spreading from the calving
+    const m = t % SHOW;
+    [0, 0.45, 1.0].forEach((dl, i) => { const u = (m - HIT - dl) / 4.2; if (u <= 0 || u >= 1) return; const rr = 14 + u * 170;
+      ctx.strokeStyle = `rgba(240,248,255,${((1 - u) * (0.55 - i * 0.12)).toFixed(2)})`; ctx.lineWidth = 1.6 - u; ctx.beginPath(); ctx.ellipse(W * IMPACT.x + u * 18, H * IMPACT.y + 2, rr, rr * 0.17, 0, 0, TAU); ctx.stroke(); });
+    ctx.restore();
+  }
+
+  // ════════ FLOES — flat plates of ice bobbing on the water; they rock when the swell from the calving reaches them ════════
+  const FLOE_SHAPES = FLOES.map(([fx, fy, fw], i) => { const r = mkRnd(300 + i * 17), n = 7 + (i % 3), pts = []; for (let k = 0; k < n; k++) { const a = (k + r() * 0.5) / n * TAU, rr = 0.7 + r() * 0.35; pts.push([Math.cos(a) * rr, Math.sin(a) * rr]); } return pts; });
+  const poly = (ctx, pts) => { ctx.beginPath(); pts.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); };
+  function drawFloe(ctx, W, H, t, i) {
+    const [fx, fy, fw, p, ph] = FLOES[i], cx = W * fx, cy = H * fy, rx = W * fw / 2, ry = rx * 0.17;
+    const [lift, lean] = swell(t, cx, cy), bob = Math.sin(t * TAU / p + ph) * 0.6 + lift;
+    ctx.save(); ctx.translate(cx, cy + bob); ctx.rotate(lean);
+    const pts = FLOE_SHAPES[i].map(([x, y]) => [x * rx, y * ry]);
+    ctx.fillStyle = 'rgba(20,30,90,0.22)'; ctx.beginPath(); ctx.ellipse(2, ry + 2.2, rx * 0.95, ry * 0.5, 0, 0, TAU); ctx.fill();      // a faint reflection
+    if (i === BEARFLOE) {                            // the bear's berg: ice walls standing a hand's height out of the water, a turquoise glow below
+      const sg = ctx.createLinearGradient(0, ry, 0, ry + 16); sg.addColorStop(0, 'rgba(60,200,220,0.4)'); sg.addColorStop(1, 'rgba(60,200,220,0)'); ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(0, ry + 9, rx * 1.05, 7, 0, 0, TAU); ctx.fill();
+      for (let d = 10; d > 0; d -= 1) { ctx.save(); ctx.translate(0, d); poly(ctx, pts); ctx.fillStyle = d > 8 ? '#2e6cb8' : d > 3 ? '#5aa4dc' : '#a8dcf4'; ctx.fill(); ctx.restore(); } }
+    else { ctx.save(); ctx.translate(0, 1.6); poly(ctx, pts); ctx.fillStyle = '#6e98d8'; ctx.fill(); ctx.restore(); }                       // the thin blue edge
+    poly(ctx, pts); const g = ctx.createLinearGradient(-rx, 0, rx, 0); g.addColorStop(0, '#fbe6f2'); g.addColorStop(0.55, '#eeeaf8'); g.addColorStop(1, '#c4cceb'); ctx.fillStyle = g; ctx.fill();
+    if (i === BEARFLOE) drawBear(ctx, t, rx);
+    ctx.restore();
+  }
+
+  // ════════ THE POLAR BEAR — a big male standing on his berg, facing the iceberg: long neck, small head, heavy hindquarters, big paws.
+  // He breathes and shifts his weight, lowers his head to sniff the ice, lifts it to scent the air, and looks up when the berg calves ════════
+  const BEAR_BODY = [[60, -38], [58, -52], [48, -62], [30, -65], [10, -61], [-10, -58], [-24, -56], [-36, -53], [-46, -51], [-56, -51], [-64, -49], [-72, -45], [-79, -41], [-81, -37], [-75, -33.5], [-64, -33], [-54, -35], [-44, -34], [-36, -30], [-30, -22], [-14, -22], [10, -21], [30, -22], [44, -26], [56, -30]];
+  const BEAR_PIV = [-38, -48];
+  function bearHead(m, t) {                          // head angle: + lifts the nose, − lowers it
+    const sniffIce = win(m, [3.0, 6.6]), scent = win(m, [8.4, 10.6]), lookU = win(m, [HIT + 0.4, HIT + 1.2]);
+    const look = lookU >= 0 ? ease(lookU) : (m > HIT + 1.2 && m < HIT + 5.5 ? 1 : (m >= HIT + 5.5 && m < HIT + 6.7 ? 1 - ease((m - HIT - 5.5) / 1.2) : 0));
+    let a = Math.sin(t * 0.9) * 0.03;
+    if (sniffIce >= 0) a += -0.34 * Math.sin(sniffIce * PI) ** 0.6 + Math.sin(t * 9) * 0.02 * Math.sin(sniffIce * PI);
+    if (scent >= 0) a += 0.24 * Math.sin(scent * PI) ** 0.6 + Math.sin(t * 13) * 0.012 * Math.sin(scent * PI);
+    return a + 0.14 * look;
+  }
+  function drawBear(ctx, t, rx) {
+    const m = t % SHOW, ang = bearHead(m, t), breathe = Math.sin(t * 2.1), S = 0.46, shift = Math.sin(t * 0.45) * 1.2;
+    ctx.save(); ctx.translate(rx * 0.05 + shift, -1); ctx.scale(S, S);
+    ctx.fillStyle = 'rgba(60,90,180,0.32)'; ctx.beginPath(); ctx.ellipse(14, 1, 70, 5.5, 0, 0, TAU); ctx.fill();          // shadow on the ice, thrown right
+    const rot = ([x, y]) => { if (x > BEAR_PIV[0]) return [x, y < -40 ? y - breathe * 0.6 * (y + 40) / -25 : y]; const dx = x - BEAR_PIV[0], dy = y - BEAR_PIV[1], c = Math.cos(ang), s = Math.sin(ang); return [BEAR_PIV[0] + dx * c - dy * s, BEAR_PIV[1] + dx * s + dy * c]; };
+    // legs: thick columns with broad furry paws; far legs set back and shaded
+    const leg = (pts, paw, far) => { const g = ctx.createLinearGradient(paw[0] - 14, 0, paw[0] + 14, 0); g.addColorStop(0, far ? '#c6c8d8' : '#fffaf0'); g.addColorStop(1, far ? '#9ca2be' : '#d4d2dc'); ctx.fillStyle = g;
+      smooth(ctx, pts); ctx.fill(); ctx.beginPath(); ctx.ellipse(paw[0], paw[1], 10, 3.6, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(80,80,110,0.5)'; ctx.lineWidth = 0.9; [-4, 0, 4].forEach(k => { ctx.beginPath(); ctx.moveTo(paw[0] - 4 + k, paw[1] + 2.6); ctx.lineTo(paw[0] - 4 + k, paw[1] - 0.5); ctx.stroke(); }); };
+    leg([[-6, -36], [-2, -20], [-4, -6], [-6, -1], [-18, -1], [-18, -8], [-18, -24], [-20, -36]], [-13, -2], true);              // far front
+    leg([[46, -46], [50, -26], [44, -8], [42, -1], [30, -1], [30, -10], [26, -30], [24, -44]], [35, -2], true);                    // far hind
+    smooth(ctx, BEAR_BODY.map(rot));
+    const g = ctx.createLinearGradient(0, -66, 0, -20); g.addColorStop(0, '#fffbf2'); g.addColorStop(0.5, '#f3ead8'); g.addColorStop(1, '#c2c4d4'); ctx.fillStyle = g; ctx.fill();
+    const lg = ctx.createLinearGradient(-82, 0, 62, 0); lg.addColorStop(0, 'rgba(255,196,212,0.40)'); lg.addColorStop(0.45, 'rgba(255,255,255,0)'); lg.addColorStop(1, 'rgba(110,120,180,0.30)'); ctx.fillStyle = lg; ctx.fill();
+    // fur: the line of the shoulder, the curve of the haunch, a soft ruff down the neck
+    ctx.strokeStyle = 'rgba(160,150,150,0.38)'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-14, -56); ctx.quadraticCurveTo(-30, -44, -30, -26); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(30, -62); ctx.quadraticCurveTo(54, -50, 46, -28); ctx.stroke();
+    const n1 = rot([-40, -50]), n2 = rot([-44, -36]); ctx.strokeStyle = 'rgba(170,160,160,0.3)'; ctx.beginPath(); ctx.moveTo(n1[0], n1[1]); ctx.quadraticCurveTo(-36, -42, n2[0], n2[1]); ctx.stroke();
+    ctx.fillStyle = '#efe6d6'; ctx.beginPath(); ctx.arc(61, -46, 4, 0, TAU); ctx.fill();                                              // stub of a tail
+    leg([[-22, -38], [-16, -22], [-18, -6], [-20, -1], [-34, -1], [-34, -8], [-34, -24], [-38, -36]], [-28, -2], false);          // near front
+    leg([[58, -48], [62, -28], [56, -8], [54, -1], [40, -1], [40, -10], [36, -30], [34, -46]], [47, -2], false);                   // near hind
+    // ear, eye, nose, mouth
+    const ear = rot([-50, -52]), eye = rot([-64, -44.5]), nose = rot([-80, -38.5]), mouth = rot([-74, -34.5]), mouth2 = rot([-66, -34]);
+    ctx.fillStyle = '#ece4d4'; ctx.beginPath(); ctx.arc(ear[0], ear[1] - 1.5, 4.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#7e7884'; ctx.beginPath(); ctx.arc(ear[0] - 0.4, ear[1] - 1, 2.2, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#141018'; ctx.beginPath(); ctx.arc(eye[0], eye[1], 1.9, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(eye[0] - 0.6, eye[1] - 0.6, 0.6, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#141018'; ctx.beginPath(); ctx.ellipse(nose[0], nose[1], 3.4, 2.6, ang, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#3a3238'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(mouth[0], mouth[1]); ctx.lineTo(mouth2[0], mouth2[1]); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ════════ NARWHALS — two of them surface together in the sun's glow, spiral tusks first, then roll and dive with a flick of the flukes ════════
+  const NAR_BODY = [[50, 0], [46, -7], [34, -12], [10, -14], [-16, -12], [-36, -7], [-48, -3], [-54, -1], [-54, 2], [-46, 4], [-30, 7], [0, 9], [30, 8], [44, 5]];
+  function narwhal(ctx) {
+    // tusk
+    ctx.fillStyle = '#f6ecd6'; ctx.beginPath(); ctx.moveTo(48, -3.2); ctx.lineTo(112, -6.2); ctx.lineTo(112, -5.2); ctx.lineTo(48, 0.4); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(120,100,70,0.7)'; ctx.lineWidth = 0.9; for (let x = 52; x < 108; x += 5) { const y = -1.4 - (x - 48) / 64 * 3.4; ctx.beginPath(); ctx.moveTo(x, y + 1.6); ctx.lineTo(x + 2.6, y - 1.6); ctx.stroke(); }
+    // flukes
+    ctx.fillStyle = '#4a5268'; ctx.beginPath(); ctx.moveTo(-50, 0); ctx.quadraticCurveTo(-62, -14, -74, -10); ctx.quadraticCurveTo(-66, -3, -64, 0); ctx.quadraticCurveTo(-66, 3, -74, 10); ctx.quadraticCurveTo(-62, 14, -50, 0); ctx.fill();
+    smooth(ctx, NAR_BODY); const g = ctx.createLinearGradient(0, -14, 0, 9); g.addColorStop(0, '#5a6276'); g.addColorStop(0.45, '#9aa2b4'); g.addColorStop(1, '#e2e6ee'); ctx.fillStyle = g; ctx.fill();
+    ctx.save(); smooth(ctx, NAR_BODY); ctx.clip(); const r = mkRnd(61); ctx.fillStyle = 'rgba(40,46,64,0.55)';
+    for (let k = 0; k < 26; k++) { ctx.beginPath(); ctx.ellipse(-44 + r() * 90, -11 + r() * 12, 1.5 + r() * 2.5, 1 + r() * 1.4, r(), 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,190,200,0.35)'; ctx.fillRect(-60, -16, 120, 4); ctx.restore();          // sunset rim along the back
+    ctx.fillStyle = '#1a1c26'; ctx.beginPath(); ctx.arc(38, -2, 1.6, 0, TAU); ctx.fill();
+  }
+  function drawNarwhals(ctx, W, H, t) {
+    const m = t % SHOW; if (m < NARWHAL[0] - 0.2 || m > NARWHAL[1] + 1.5) return;
+    const wy = H * 0.580;
+    [[0.31, 0, 0.50], [0.355, 0.85, 0.44]].forEach(([fx, dl, s]) => {
+      const u = (m - NARWHAL[0] - dl) / 2.7;
+      // ripples where it breaks the surface and where it goes back in
+      [[0.02, -6], [0.72, 26]].forEach(([at, dx]) => { const q = (u - at) / 0.9; if (q <= 0 || q >= 1) return; ctx.strokeStyle = `rgba(255,236,236,${((1 - q) * 0.7).toFixed(2)})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(W * fx + dx, wy + 1, 4 + q * 22, 1 + q * 3.4, 0, 0, TAU); ctx.stroke(); });
+      if (u <= 0 || u >= 1) return;
+      const x = W * fx + u * 40, y = wy + 12 - Math.sin(u * PI) * 17, a = lerp(-0.55, 0.75, u);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, wy); ctx.clip(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(s, s); narwhal(ctx); ctx.restore();
+      // water streaming off the back
+      ctx.fillStyle = 'rgba(255,240,240,0.7)'; ctx.fillRect(x - 10, wy - 0.6, 20, 1.2);
+    });
+  }
+
+  // ════════ THE SLED — a husky team runs right to left along the far ice, from behind the point to behind the glacier ════════
+  function drawSled(ctx, W, H, t) {
+    const u = win(t % SHOW, SLED); if (u < 0) return;
+    const x0 = W * lerp(1.04, 0.16, u), y = H * HZ - 1.5, S = 1.25;
+    ctx.save(); ctx.translate(x0, y); ctx.scale(S, S);
+    ctx.strokeStyle = 'rgba(60,40,40,0.8)'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(-1, -3.6); ctx.lineTo(44, -3); ctx.stroke();   // gangline
+    for (let i = 0; i < 5; i++) { const dx = i * 8.6, ph = t * 7 + i * 0.9;
+      // legs: a foot swinging forward (left) lifts; the far pair is half a stride out
+      [[0, '#2a2a38'], [PI, '#4a4a5a']].forEach(([o, c], j) => { [-2.4, 2.6].forEach((lx, k) => { const p = ph + o + k * PI * 0.5, fx = -Math.sin(p) * 2.2, lift = Math.max(0, Math.cos(p)) * 1.3; ctx.strokeStyle = c; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(dx + lx, -3.4); ctx.lineTo(dx + lx + fx, -lift); ctx.stroke(); }); });
+      const bob = Math.sin(ph * 2) * 0.3;
+      ctx.fillStyle = i % 2 ? '#5a5a6a' : '#3a3a4a'; ctx.beginPath(); ctx.ellipse(dx, -4.4 + bob, 4.2, 1.9, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#f2eef4'; ctx.beginPath(); ctx.ellipse(dx - 0.6, -3.4 + bob, 3, 0.9, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = i % 2 ? '#5a5a6a' : '#3a3a4a'; ctx.beginPath(); ctx.ellipse(dx - 4.6, -5.4 + bob, 1.9, 1.4, -0.2, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(dx - 4.8, -6.4 + bob); ctx.lineTo(dx - 4, -8 + bob); ctx.lineTo(dx - 3.6, -6.2 + bob); ctx.fill();                       // ear
+      ctx.fillStyle = '#f2eef4'; ctx.beginPath(); ctx.ellipse(dx - 6, -5 + bob, 1, 0.7, 0, 0, TAU); ctx.fill();                                           // muzzle
+      ctx.strokeStyle = i % 2 ? '#5a5a6a' : '#3a3a4a'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.arc(dx + 4.6, -6.2 + bob, 1.6, PI * 0.6, PI * 1.9); ctx.stroke(); }   // curled tail
+    // the sled and the musher
+    ctx.strokeStyle = '#4a3020'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(44, -0.3); ctx.lineTo(56, -0.3); ctx.quadraticCurveTo(58, -0.3, 58, -2); ctx.moveTo(44, -0.3); ctx.quadraticCurveTo(42, -0.6, 42.5, -2.5); ctx.stroke();
+    ctx.fillStyle = '#8a5a34'; ctx.fillRect(44, -4.2, 9, 3); ctx.fillStyle = '#c84030'; ctx.fillRect(45, -5.6, 5, 1.6);                                     // basket and a load
+    ctx.strokeStyle = '#2a1e1a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(54.5, -0.6); ctx.lineTo(55, -4); ctx.moveTo(56.5, -0.6); ctx.lineTo(56, -4); ctx.stroke();   // legs on the runners
+    ctx.fillStyle = '#d0402e'; ctx.beginPath(); ctx.moveTo(53.6, -4); ctx.lineTo(57.4, -4); ctx.lineTo(56.6, -9.4); ctx.lineTo(54, -9.4); ctx.closePath(); ctx.fill();       // parka
+    ctx.strokeStyle = '#d0402e'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(54.4, -8); ctx.lineTo(52.6, -5.4); ctx.stroke();                                         // arm to the handlebar
+    ctx.fillStyle = '#f0e6dc'; ctx.beginPath(); ctx.arc(55.3, -10.6, 1.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#5a3a2a'; ctx.beginPath(); ctx.arc(55.3, -10.6, 1.6, PI * 0.7, PI * 2.3, true); ctx.fill();   // fur hood
+    // a little powder kicked up behind
+    ctx.fillStyle = 'rgba(255,240,245,0.5)'; for (let k = 0; k < 4; k++) { const q = ((t * 1.1 + k * 0.25) % 1); ctx.beginPath(); ctx.arc(58 + q * 10, -1 - q * 2, 0.6 + q * 1.4, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+
+  // ════════ THE CALVING — a crack, falling chips, then a slab of the cliff leans out and drops into the sea: spray, mist and a swell ════════
+  // ════════ THE ICEBERG — big faceted planes: sunlit faces pink-white, shaded faces lavender-blue, a glowing blue foot, turquoise veins,
+  // snow on the ledges, a lit inner wall in the arch, a wave-cut notch at the waterline ════════
+  const PX = (W, H, pts) => pts.map(([x, y]) => [W * x, H * y]);
+  function bergPath(ctx, W, H, hole, piece) {
+    ctx.beginPath(); BERG.forEach(([x, y], k) => k ? ctx.lineTo(W * x, H * y) : ctx.moveTo(W * x, H * y)); ctx.closePath();
+    if (hole) { ARCH.forEach(([x, y], k) => k ? ctx.lineTo(W * x, H * y) : ctx.moveTo(W * x, H * y)); ctx.closePath(); }
+    if (piece) { PIECE.forEach(([x, y], k) => k ? ctx.lineTo(W * x, H * y) : ctx.moveTo(W * x, H * y)); ctx.closePath(); }
+  }
+  const FACETS = [   // [points, top colour, bottom colour]
+    [[[-0.02, WL], [-0.02, 0.44], [0.02, 0.38], [0.045, 0.36], [0.07, 0.29], [0.095, 0.21], [0.11, 0.185], [0.118, 0.26], [0.122, 0.33], [0.128, 0.42], [0.132, WL]], '#fff3f8', '#e8d8ee'],
+    [[[0.11, 0.185], [0.125, 0.22], [0.14, 0.30], [0.155, 0.33], [0.16, 0.40], [0.15, 0.47], [0.14, WL], [0.132, WL], [0.128, 0.42], [0.122, 0.33], [0.118, 0.26]], '#c4c2ea', '#8c9ad8'],
+    [[[0.155, 0.33], [0.18, 0.31], [0.205, 0.265], [0.212, 0.33], [0.218, 0.42], [0.224, WL], [0.176, WL], [0.17, 0.47], [0.16, 0.40]], '#fdeaf4', '#d8dcf2'],
+    [[[0.205, 0.265], [0.225, 0.29], [0.25, 0.37], [0.275, 0.43], [0.29, 0.50], [0.30, WL], [0.224, WL], [0.218, 0.42], [0.212, 0.33]], '#b4b8e6', '#7c8ed2'],
+  ];
+  function drawBerg(ctx, W, H) {
+    const r = mkRnd(8080), wl = H * WL;
+    ctx.save(); bergPath(ctx, W, H, true); ctx.clip('evenodd');
+    FACETS.forEach(([pts, c0, c1]) => { const g = ctx.createLinearGradient(0, H * 0.19, 0, wl); g.addColorStop(0, c0); g.addColorStop(1, c1); ctx.fillStyle = g; poly(ctx, PX(W, H, pts)); ctx.fill(); });
+    // softer sub-planes that break up the big sunlit face
+    ctx.fillStyle = 'rgba(190,170,225,0.22)'; poly(ctx, PX(W, H, [[0.07, 0.29], [0.035, 0.47], [0.112, 0.45], [0.118, 0.26]])); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; poly(ctx, PX(W, H, [[0.02, 0.38], [0.045, 0.36], [0.03, 0.50], [-0.02, 0.52]])); ctx.fill();
+    ctx.fillStyle = 'rgba(170,160,220,0.2)'; poly(ctx, PX(W, H, [[0.18, 0.31], [0.205, 0.265], [0.198, 0.40], [0.175, 0.44]])); ctx.fill();
+    // the ridge lines catching light
+    ctx.strokeStyle = 'rgba(255,250,252,0.85)'; ctx.lineWidth = 1; [[[0.11, 0.185], [0.118, 0.26], [0.122, 0.33], [0.128, 0.42]], [[0.205, 0.265], [0.212, 0.33], [0.218, 0.42]]].forEach(L => { ctx.beginPath(); PX(W, H, L).forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); });
+    // turquoise veins: refrozen meltwater running in bands through the ice
+    [[0.01, 0.50, 0.11, 0.455, 2.6], [0.19, 0.52, 0.28, 0.49, 2.0]].forEach(([x0, y0, x1, y1, w]) => {
+      ctx.strokeStyle = 'rgba(70,190,230,0.30)'; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(W * x0, H * y0); ctx.quadraticCurveTo(W * (x0 + x1) / 2, H * ((y0 + y1) / 2 + 0.02), W * x1, H * y1); ctx.stroke();
+      ctx.strokeStyle = 'rgba(210,250,255,0.25)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(W * x0, H * y0 - w * 0.4); ctx.quadraticCurveTo(W * (x0 + x1) / 2, H * ((y0 + y1) / 2 + 0.02) - w * 0.4, W * x1, H * y1 - w * 0.4); ctx.stroke(); });
+    // fine vertical grain on the shaded faces
+    ctx.strokeStyle = 'rgba(60,80,170,0.18)'; ctx.lineWidth = 0.8; for (let k = 0; k < 16; k++) { const x = W * (0.13 + r() * 0.17), y0 = H * (0.30 + r() * 0.12); ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x + (r() - 0.5) * 2, y0 + H * (0.05 + r() * 0.08)); ctx.stroke(); }
+    // the foot: smooth, wave-polished and glowing blue, darkest in the notch the waves have cut
+    { const g = ctx.createLinearGradient(0, wl - H * 0.10, 0, wl); g.addColorStop(0, 'rgba(70,170,235,0)'); g.addColorStop(0.6, 'rgba(60,160,230,0.45)'); g.addColorStop(1, 'rgba(30,110,210,0.85)'); ctx.fillStyle = g; ctx.fillRect(0, wl - H * 0.10, W * 0.31, H * 0.10);
+      ctx.fillStyle = 'rgba(10,40,110,0.65)'; ctx.fillRect(0, wl - 4, W * 0.31, 4); }
+    ctx.restore();
+    // the arch: its right-hand inner wall faces the sun and glows; the left one is in deep blue shade
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(30,90,190,0.55)'; ctx.lineWidth = 1.6; ctx.beginPath(); PX(W, H, ARCH.slice(0, 4)).forEach(([x, y], k) => k ? ctx.lineTo(x + 1, y) : ctx.moveTo(x + 1, y)); ctx.stroke();
+    ctx.strokeStyle = 'rgba(190,240,255,0.7)'; ctx.lineWidth = 1.8; ctx.beginPath(); PX(W, H, ARCH.slice(3)).forEach(([x, y], k) => k ? ctx.lineTo(x - 1, y) : ctx.moveTo(x - 1, y)); ctx.stroke();
+    // pink rim light along the sunward edge, snow lying on the gentler ledges
+    ctx.strokeStyle = 'rgba(255,220,232,0.95)'; ctx.lineWidth = 1.6; ctx.beginPath(); PX(W, H, BERG.slice(1, 7)).forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+    ctx.fillStyle = '#fff6fa'; [[0.02, 0.38, 0.045, 0.36], [0.155, 0.33, 0.18, 0.31]].forEach(([x0, y0, x1, y1]) => { ctx.beginPath(); ctx.moveTo(W * x0 - 1, H * y0); ctx.quadraticCurveTo(W * (x0 + x1) / 2, H * Math.min(y0, y1) - 3.5, W * x1 + 1, H * y1); ctx.lineTo(W * x1 - 2, H * y1 + 2.5); ctx.quadraticCurveTo(W * (x0 + x1) / 2, H * ((y0 + y1) / 2) + 1.5, W * x0 + 2, H * y0 + 2.5); ctx.closePath(); ctx.fill(); });
+    // foam where the swell slaps the foot, and a few bits of brash ice
+    ctx.strokeStyle = 'rgba(240,250,255,0.85)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, wl + 1); ctx.lineTo(W * 0.136, wl + 1); ctx.moveTo(W * 0.176, wl + 1); ctx.lineTo(W * 0.30, wl + 1); ctx.stroke();
+    for (let k = 0; k < 9; k++) { const x = r() * W * 0.34, y = wl + 3 + r() * 9; ctx.fillStyle = `rgba(235,245,255,${(0.5 + r() * 0.4).toFixed(2)})`; ctx.beginPath(); ctx.ellipse(x, y, 1 + r() * 2.2, 0.6 + r() * 0.5, 0, 0, TAU); ctx.fill(); }
+  }
+  let SLABIMG = null;
+  function slabPath(ctx, W, H) { poly(ctx, PX(W, H, PIECE)); }
+  const calvePivot = (W, H) => [W * PIVOT[0], H * PIVOT[1]];
+  function slabState(t) {                            // [lean angle, drop px, visible alpha]: it leans out over its foot, breaks, drops and sinks
+    const m = t % SHOW;
+    if (m < TOPPLE[0]) return [Math.max(0, m - CRACK) / (TOPPLE[0] - CRACK) * 0.015, 0, 1];
+    if (m < TOPPLE[1]) { const u = (m - TOPPLE[0]) / (TOPPLE[1] - TOPPLE[0]); return [0.015 + u * u * 0.45, 0, 1]; }
+    if (m < HIT) { const v = (m - TOPPLE[1]) / (HIT - TOPPLE[1]); return [0.465 + v * 0.45, v * v * 70, 1]; }
+    if (m < HIT + 1.4) { const u = (m - HIT) / 1.4; return [0.915 + u * 0.3, 70 + u * 80, 1]; }
+    const r = win(m, REFORM); if (r >= 0) return [0, 0, ease(r)];
+    return m > REFORM[1] ? [0, 0, 1] : [0, 0, 0];
+  }
+  function drawCalving(ctx, W, H, t) {
+    const m = t % SHOW, [lean, drop, al] = slabState(t), [px, py] = calvePivot(W, H);
+    if (al > 0 && SLABIMG) {
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H * WL + 1); ctx.clip(); ctx.globalAlpha = al;
+      ctx.translate(px, py + drop); ctx.rotate(lean); ctx.translate(-px, -py); ctx.drawImage(SLABIMG, 0, 0);
+      if (lean > 0.002 && lean < 0.02) { ctx.strokeStyle = `rgba(10,30,70,${Math.min(1, lean / 0.012).toFixed(2)})`; ctx.lineWidth = 1.4; ctx.beginPath(); PX(W, H, PIECE.slice(5).concat([PIECE[0]])).forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); }    // the crack opening along its root
+      ctx.restore();
+    }
+    // chips and powder falling from the lip as it cracks
+    if (m > CRACK && m < HIT) { const r = mkRnd(990);
+      for (let k = 0; k < 7; k++) { const t0 = CRACK + r() * (TOPPLE[0] - CRACK + 0.4), dt = m - t0; if (dt < 0) { r(); r(); continue; }
+        const x = W * (0.215 + r() * 0.05) + dt * 10, y = H * (0.29 + r() * 0.08) + 120 * dt * dt + r() * 2; if (y > H * WL) continue;
+        ctx.fillStyle = 'rgba(235,248,255,0.95)'; ctx.fillRect(x, y, 1.6, 1.6); }
+      const q = (m - CRACK) / 1.6; if (q < 1) { ctx.fillStyle = `rgba(255,245,250,${((1 - q) * 0.5).toFixed(2)})`; ctx.beginPath(); ctx.ellipse(W * 0.205 + q * 10, H * 0.27 - q * 6, 4 + q * 12, 2 + q * 5, 0, 0, TAU); ctx.fill(); } }
+    drawSplash(ctx, W, H, t);
+  }
+  const DROPS = (() => { const r = mkRnd(1234), a = []; for (let i = 0; i < 90; i++) a.push({ x: (r() - 0.45) * 46, vx: (r() - 0.35) * 70, vy: -(70 + r() * r() * 230), d: r() * 0.45, s: 0.7 + r() * 2.1, sh: 0.75 + r() * 0.25 }); return a; })();
+  const PUFFS = (() => { const r = mkRnd(4321), a = []; for (let i = 0; i < 11; i++) a.push({ x: (r() - 0.4) * 50, rise: 30 + r() * 60, gr: 10 + r() * 22, d: r() * 0.6, life: 2.4 + r() * 2.2, drift: 6 + r() * 14 }); return a; })();
+  function drawSplash(ctx, W, H, t) {
+    const m = t % SHOW, dt0 = m - HIT; if (dt0 < 0 || dt0 > 7) return;
+    const ix = W * IMPACT.x, iy = H * IMPACT.y;
+    // the mist: soft puffs that billow up, spread and drift downwind
+    PUFFS.forEach(p => { const dt = dt0 - p.d; if (dt < 0 || dt > p.life) return; const u = dt / p.life, x = ix + p.x + u * p.drift * p.life, y = iy - p.rise * (1 - (1 - u) ** 2) + u * 6, rr = 6 + p.gr * Math.sqrt(u) * 1.6;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, rr); g.addColorStop(0, `rgba(250,250,255,${((1 - u) * 0.55).toFixed(2)})`); g.addColorStop(1, 'rgba(240,240,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rr, 0, TAU); ctx.fill(); });
+    // the spray: drops thrown up that fall back
+    DROPS.forEach(d => { const dt = dt0 - d.d; if (dt < 0) return; const x = ix + d.x + d.vx * dt, y = iy + d.vy * dt + 230 * dt * dt; if (y > iy + 4) return;
+      ctx.fillStyle = `rgba(${d.sh > 0.9 ? '255,255,255' : '214,236,255'},0.9)`; ctx.beginPath(); ctx.arc(x, y, d.s, 0, TAU); ctx.fill(); });
+    // white water boiling where it went in
+    const u = Math.min(1, dt0 / 3); ctx.fillStyle = `rgba(245,250,255,${((1 - u) * 0.85).toFixed(2)})`; ctx.beginPath(); ctx.ellipse(ix + 4, iy + 1, 18 + u * 24, 3 + u * 2, 0, 0, TAU); ctx.fill();
+  }
+
+  // ════════ ICE MAGIC — frost creeps across the near snow and up the stumps, then melts; once a loop a stream of glittering snowflakes
+  // spirals up round the urn and bursts in a shower; slow snowfall in the last part of the loop ════════
+  const FROST = [16.0, 19.8], FROSTMELT = [22.0, 23.5];
+  const FROST_SEGS = (() => { const r = mkRnd(3131), segs = [], W = 620, H = 355; let maxd = 0;
+    const grow = (x, y, a, len, depth, d0) => { let px = x, py = y, d = d0; const n = 3;
+      for (let k = 1; k <= n; k++) { const aa = a + (r() - 0.5) * 0.3, nx = px + Math.cos(aa) * len / n, ny = py + Math.sin(aa) * len / n; d += len / n; segs.push([px, py, nx, ny, d]);
+        if (depth > 0 && k < n) [1, -1].forEach(sg => grow(nx, ny, a + sg * (0.7 + r() * 0.3), len * (0.45 + r() * 0.15), depth - 1, d)); px = nx; py = ny; }
+      maxd = Math.max(maxd, d); };
+    [0.03, 0.10, 0.27, 0.33, 0.68, 0.74, 0.81, 0.88, 0.95].forEach((fx, i) => grow(W * fx + (r() - 0.5) * 10, H * 0.728, -PI / 2 + (i % 2 ? 1 : -1) * (0.5 + r() * 0.5), 24 + r() * 12, 2, 0));
+    [-9, 0, 9].forEach(dx => grow(W * 0.168 + dx, H * 0.70, -PI / 2, H * 0.085, 1, 0));
+    segs.forEach(sg => { sg[4] /= maxd; }); return segs; })();
+  function drawFrost(ctx, W, H, t) {
+    const m = t % SHOW, g = win(m, FROST), p = g >= 0 ? ease(g) : (m > FROST[1] && m < FROSTMELT[1] ? 1 : 0); if (p <= 0) return;
+    const mu = win(m, FROSTMELT), fade = mu >= 0 ? 1 - ease(mu) : 1;
+    const path = () => { ctx.beginPath(); FROST_SEGS.forEach(([x0, y0, x1, y1, d]) => { if (d > p) return; ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); }); };
+    ctx.save(); ctx.lineCap = 'round';
+    ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(140,210,255,${(0.25 * fade).toFixed(2)})`; ctx.lineWidth = 2.4; path(); ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = `rgba(240,252,255,${(0.9 * fade).toFixed(2)})`; ctx.lineWidth = 0.8; path(); ctx.stroke();
+    if (p < 1) { ctx.fillStyle = 'rgba(255,255,255,0.95)'; FROST_SEGS.forEach(([x0, y0, x1, y1, d]) => { if (d > p || d < p - 0.05) return; ctx.fillRect(x1 - 0.7, y1 - 0.7, 1.4, 1.4); }); }   // glints at the growing tips
+    ctx.restore();
+  }
+  const SWIRL = [9.4, 11.2], SHOWER = 1.8;
+  const MAGIC = (() => { const r = mkRnd(7171), a = []; for (let i = 0; i < 34; i++) a.push({ d: r() * 0.7, th: r() * TAU, s: 1.2 + r() * 1.6, vx: (r() - 0.5) * 90, vy: -(20 + r() * 60), tw: r() * TAU }); return a; })();
+  function drawSwirl(ctx, W, H, t, front) {
+    const m = t % SHOW; if (m < SWIRL[0] || m > SWIRL[1] + SHOWER + 0.3) return;
+    const cx = W * 0.5, yb = H * 0.60, yt = H * 0.16, R = W * 0.075, dur = SWIRL[1] - SWIRL[0] - 0.7;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    MAGIC.forEach(f => { const u = (m - SWIRL[0] - f.d) / dur; if (u < 0) return; let x, y, al;
+      if (u < 1) { const th = f.th + u * PI * 3.2, r = R * (1 - 0.35 * u); if ((Math.cos(th) >= 0) !== front) return; x = cx + Math.sin(th) * r; y = lerp(yb, yt, ease(u)); al = Math.min(1, u * 4) * (Math.cos(th) >= 0 ? 1 : 0.55); }
+      else { if (!front) return; const dt = (u - 1) * dur; if (dt > SHOWER) return; x = cx + Math.sin(f.th + PI * 3.2) * R * 0.65 + f.vx * dt; y = yt + f.vy * dt + 40 * dt * dt; al = 1 - dt / SHOWER; }
+      const tw = 0.6 + 0.4 * Math.sin(t * 9 + f.tw), gr = ctx.createRadialGradient(x, y, 0, x, y, f.s * 4);
+      gr.addColorStop(0, `rgba(180,230,255,${(0.5 * al * tw).toFixed(2)})`); gr.addColorStop(1, 'rgba(180,230,255,0)'); ctx.fillStyle = gr; ctx.fillRect(x - f.s * 4, y - f.s * 4, f.s * 8, f.s * 8);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(t * 1.5 + f.tw); ctx.globalAlpha = al; snowflake(ctx, f.s * 1.4, 'rgba(240,252,255,0.95)', 0.7); ctx.restore(); });
+    const b = m - SWIRL[1]; if (front && b > -0.1 && b < 0.6) { const q = (b + 0.1) / 0.7, g = ctx.createRadialGradient(cx, yt, 0, cx, yt, 40); g.addColorStop(0, `rgba(220,245,255,${(0.6 * (1 - q)).toFixed(2)})`); g.addColorStop(1, 'rgba(200,240,255,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 40, yt - 40, 80, 80); }   // the burst
+    ctx.restore();
+  }
+  const SNOWFALL = [17.2, 24.0];
+  const SNOWFLAKES = (() => { const r = mkRnd(2626), a = []; for (let i = 0; i < 34; i++) a.push([r(), r(), 12 + r() * 12, 0.8 + r() * 1.6, r() * TAU]); return a; })();
+  function drawSnowfall(ctx, W, H, t) {
+    const m = t % SHOW; if (m < SNOWFALL[0]) return; const env = Math.min(1, (m - SNOWFALL[0]) / 1.5) * Math.min(1, (SHOW - 0.15 - m) / 1.4); if (env <= 0) return;
+    const bottom = H * 0.75;
+    SNOWFLAKES.forEach(([x0, y0, v, s, ph]) => { const y = (y0 * bottom + (m - SNOWFALL[0]) * v) % bottom, x = x0 * W + Math.sin(m * 0.8 + ph) * 6, edge = Math.min(1, y / 20, (bottom - y) / 20);
+      ctx.fillStyle = `rgba(255,255,255,${(0.75 * env * edge).toFixed(2)})`; ctx.beginPath(); ctx.arc(x, y, s, 0, TAU); ctx.fill(); });
+  }
+
+  // ════════ CHIMNEY SMOKE — a thin curl from the hut, leaning downwind ════════
+  function drawSmoke(ctx, W, H, t) {
+    const cx = W * 0.862 + 20, cy = H * 0.513 - 17 - 13 - 10;
+    for (let k = 0; k < 9; k++) { const u = ((t / 6.5 + k / 9) % 1), x = cx + u * 26 + Math.sin(u * 5 + k) * 2, y = cy - u * 30, r = 1.6 + u * 6;
+      ctx.fillStyle = `rgba(230,220,240,${(0.42 * (1 - u)).toFixed(2)})`; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+    // the window glows a touch brighter now and then, like a stove being fed
+    const f = 0.5 + 0.5 * Math.sin(t * 1.3) * Math.sin(t * 0.47);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const wx = W * 0.862 - 8.5, wy = H * 0.513 - 8.5, g = ctx.createRadialGradient(wx, wy, 0, wx, wy, 16); g.addColorStop(0, `rgba(255,190,90,${(0.25 + f * 0.2).toFixed(2)})`); g.addColorStop(1, 'rgba(255,170,80,0)'); ctx.fillStyle = g; ctx.fillRect(wx - 16, wy - 16, 32, 32);
+    const sx0 = W * 0.862 - 6, sy0 = H * 0.513 + 4, sgw = ctx.createRadialGradient(sx0, sy0, 0, sx0, sy0, 26); sgw.addColorStop(0, `rgba(255,170,80,${(0.30 + f * 0.12).toFixed(2)})`); sgw.addColorStop(1, 'rgba(255,150,70,0)');
+    ctx.save(); ctx.translate(sx0, sy0); ctx.scale(1, 0.28); ctx.translate(-sx0, -sy0); ctx.fillStyle = sgw; ctx.fillRect(sx0 - 26, sy0 - 26, 52, 52); ctx.restore();   // window light on the snow
+    const lf = 0.8 + 0.2 * Math.sin(t * 7.3) * Math.sin(t * 3.1), lx = W * 0.862 + 19, ly = H * 0.513 - 10.5, lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, 11); lg.addColorStop(0, `rgba(255,200,110,${(0.5 * lf).toFixed(2)})`); lg.addColorStop(1, 'rgba(255,180,90,0)'); ctx.fillStyle = lg; ctx.fillRect(lx - 11, ly - 11, 22, 22);   // the lantern
+    ctx.restore();
+  }
+
+  function drawAtmos(ctx, W, H) {
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createRadialGradient(W * SUN.x, H * SUN.y, 0, W * SUN.x, H * SUN.y, W * 0.6); g.addColorStop(0, 'rgba(255,170,150,0.26)'); g.addColorStop(0.35, 'rgba(255,150,170,0.08)'); g.addColorStop(1, 'rgba(255,170,190,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    const vig = ctx.createRadialGradient(W * 0.5, H * 0.45, W * 0.30, W * 0.5, H * 0.45, W * 0.85); vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(10,10,50,0.24)'); ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
+  }
+
+  // ════════ THE ICE URN — the Ashes urn carved from glacier ice: a separate lid with a crystal finial, frost friezes with snowflakes,
+  // trapped bubbles and fine cracks that turn with it, three silver-set medallions (snowflake, frozen ball, stumps); on a slate plinth with an ice cap ════════
+  const ICE = [[0, '#4a9ccf'], [0.12, '#c4ebfc'], [0.22, '#ffffff'], [0.3, '#b2e2f6'], [0.55, '#62acd9'], [0.8, '#2f73ab'], [0.94, '#24609a'], [1, '#5aa0d0']];
+  const ICE_DEEP = [[0, '#1d5e98'], [0.4, '#2c78b4'], [0.7, '#174f88'], [1, '#0f3a6c']];
+  const SILVER = [[0, '#5d6b7c'], [0.17, '#dfe8f2'], [0.26, '#ffffff'], [0.38, '#b9c6d3'], [0.65, '#7d8b9b'], [0.88, '#46515f'], [1, '#2f3945']];
+  const LID = [[66, 4], [72, 8], [78, 6], [84, 13], [92, 21], [98, 25]];
+  const BODY = [[101, 21], [108, 20], [118, 26], [138, 52], [172, 63], [204, 54], [226, 32], [240, 17], [250, 15], [262, 24], [278, 40], [292, 42]];
+  const BELT = 172, UK = 0.66;                       // UK: the urn's scale in the card, so it fills the middle like the other trophies
+  function profilePath(ctx, cx, pts) {
+    ctx.beginPath(); ctx.moveTo(cx - pts[0][1], pts[0][0]);
+    for (let i = 1; i < pts.length - 1; i++) { const [y, r] = pts[i], [y2, r2] = pts[i + 1]; ctx.quadraticCurveTo(cx - r, y, cx - (r + r2) / 2, (y + y2) / 2); }
+    const last = pts[pts.length - 1]; ctx.lineTo(cx - last[1], last[0]); ctx.lineTo(cx + last[1], last[0]);
+    for (let i = pts.length - 2; i > 0; i--) { const [y, r] = pts[i], [y0, r0] = pts[i - 1]; ctx.quadraticCurveTo(cx + r, y, cx + (r + r0) / 2, (y + y0) / 2); }
+    ctx.lineTo(cx + pts[0][1], pts[0][0]); ctx.closePath();
+  }
+  function radiusAt(pts, y) { for (let i = 0; i < pts.length - 1; i++) { const [a, ra] = pts[i], [b, rb] = pts[i + 1]; if (y >= a && y <= b) return ra + (rb - ra) * (y - a) / (b - a); } return 0; }
+  function sideGrad(ctx, cx, R, stops) { const g = ctx.createLinearGradient(cx - R, 0, cx + R, 0); stops.forEach(([o, c]) => g.addColorStop(o, c)); return g; }
+  function snowflake(ctx, r, col, lw) {
+    ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = 'round';
+    for (let i = 0; i < 6; i++) { ctx.rotate(PI / 3); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -r); ctx.moveTo(0, -r * 0.5); ctx.lineTo(-r * 0.28, -r * 0.74); ctx.moveTo(0, -r * 0.5); ctx.lineTo(r * 0.28, -r * 0.74); ctx.stroke(); }
+    ctx.restore();
+  }
+  const FACES = [
+    ctx => { snowflake(ctx, 12.5, '#eef9ff', 1.8); ctx.fillStyle = '#8fd8ff'; ctx.beginPath(); ctx.arc(0, 0, 2.4, 0, TAU); ctx.fill(); },
+    ctx => { const b = ctx.createRadialGradient(-4, -4, 1, 0, 0, 11); b.addColorStop(0, '#ff8c84'); b.addColorStop(0.5, '#c0262a'); b.addColorStop(1, '#6a0e14');
+      ctx.fillStyle = b; ctx.beginPath(); ctx.arc(0, 0, 10.5, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#f6e6c8'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(-14, 0, 15, -0.75, 0.75); ctx.stroke(); ctx.beginPath(); ctx.arc(-16, 0, 15, -0.7, 0.7); ctx.stroke();
+      ctx.fillStyle = 'rgba(210,240,255,0.35)'; ctx.beginPath(); ctx.arc(0, 0, 10.5, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.ellipse(-4, -5, 3, 1.8, -0.6, 0, TAU); ctx.fill(); },
+    ctx => { ctx.fillStyle = '#eef6fc'; [-6, 0, 6].forEach(x => ctx.fillRect(x - 1.4, -8, 2.8, 17)); ctx.fillRect(-7.5, -10.5, 7, 2); ctx.fillRect(0.5, -10.5, 7, 2); ctx.fillStyle = '#8fd8ff'; ctx.fillRect(-9, 9, 18, 1.6); },
+  ];
+  function urnPlinth(ctx, cx, top, w) {
+    const h = 52, bw = w * 1.14;
+    ctx.fillStyle = 'rgba(70,90,190,0.30)'; ctx.beginPath(); ctx.moveTo(cx - bw / 2, top + h); ctx.lineTo(cx + bw / 2, top + h); ctx.lineTo(cx + bw / 2 + 110, top + h + 10); ctx.lineTo(cx - bw / 2 + 90, top + h + 12); ctx.closePath(); ctx.fill();   // long shadow to the right
+    ctx.fillStyle = sideGrad(ctx, cx, bw / 2, [[0, '#2a3e64'], [0.3, '#40598a'], [1, '#152442']]);
+    ctx.beginPath(); ctx.moveTo(cx - w / 2, top + 8); ctx.lineTo(cx + w / 2, top + 8); ctx.lineTo(cx + bw / 2, top + h); ctx.lineTo(cx - bw / 2, top + h); ctx.fill();
+    ctx.fillStyle = 'rgba(230,245,255,0.85)'; ctx.beginPath(); ctx.moveTo(cx - bw / 2 - 4, top + h + 1);
+    for (let x = -bw / 2; x <= bw / 2; x += 8) ctx.lineTo(cx + x, top + h - 3 - Math.abs(Math.sin(x * 0.3)) * 3);
+    ctx.lineTo(cx + bw / 2 + 4, top + h + 1); ctx.fill();
+    ctx.fillStyle = sideGrad(ctx, cx, w / 2 + 6, [[0, '#cfeaff'], [0.3, '#ffffff'], [1, '#86b4d8']]);
+    ctx.beginPath(); ctx.ellipse(cx, top + 6, w / 2 + 6, 7, 0, 0, TAU); ctx.fill(); ctx.fillRect(cx - w / 2 - 6, top + 2, w + 12, 6);
+    ctx.fillStyle = 'rgba(220,242,255,0.9)';
+    [-0.43, -0.28, -0.1, 0.12, 0.3, 0.45].forEach((f, i) => { const x = cx + f * w, d = 6 + ((i * 7) % 5) * 2; ctx.beginPath(); ctx.moveTo(x - 2.5, top + 9); ctx.lineTo(x + 2.5, top + 9); ctx.lineTo(x + 0.4, top + 9 + d); ctx.fill(); });
+    const pw = w * 0.82, py = top + 20, ph = 26;
+    ctx.fillStyle = sideGrad(ctx, cx, pw / 2, [[0, '#9aa8b8'], [0.3, '#f4f8fc'], [0.7, '#c4cfdb'], [1, '#7c8a9a']]);
+    ctx.beginPath(); ctx.moveTo(cx - pw / 2, py); ctx.quadraticCurveTo(cx, py + 5, cx + pw / 2, py); ctx.lineTo(cx + pw / 2, py + ph); ctx.quadraticCurveTo(cx, py + ph + 5, cx - pw / 2, py + ph); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,55,75,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#16243c'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `800 13px 'Barlow Condensed', 'Arial Narrow', sans-serif`; ctx.fillText('THE ICE URN', cx, py + 10, pw * 0.9);
+    ctx.font = `700 10px 'Barlow Condensed', 'Arial Narrow', sans-serif`; ctx.fillText('FROZEN ASHES', cx, py + 21, pw * 0.62);
+  }
+  function trophyUrn(ctx, cx, phi, t) {
+    profilePath(ctx, cx, BODY); ctx.fillStyle = sideGrad(ctx, cx, 63, ICE); ctx.fill();
+    ctx.save(); profilePath(ctx, cx, BODY); ctx.clip();
+    ctx.save(); ctx.translate(cx + 6, BELT); ctx.scale(0.72, 0.78); ctx.translate(-cx, -BELT); profilePath(ctx, cx, BODY); ctx.globalAlpha = 0.26; ctx.fillStyle = sideGrad(ctx, cx, 63, ICE_DEEP); ctx.fill(); ctx.restore();
+    const r = mkRnd(21);
+    for (let i = 0; i < 5; i++) { const a0 = r() * TAU + phi, y0 = 130 + r() * 90, rr = radiusAt(BODY, y0), c = Math.cos(a0); const len = 4 + Math.floor(r() * 4), steps = []; for (let k = 0; k < len; k++) steps.push([r(), r()]);
+      if (c < 0.15) continue; let x = cx + Math.sin(a0) * rr * 0.85, y = y0; ctx.strokeStyle = `rgba(255,255,255,${(0.25 + c * 0.25).toFixed(2)})`; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(x, y);
+      steps.forEach(([p, q]) => { x += (p - 0.5) * 9 * c; y += 3 + q * 5; ctx.lineTo(x, y); }); ctx.stroke(); }
+    for (let i = 0; i < 34; i++) { const a = r() * TAU + phi, y = 118 + r() * 110, rr = radiusAt(BODY, y) * (0.3 + r() * 0.6), c = Math.cos(a), sz = 0.7 + r() * 1.6; if (c < 0) continue; ctx.fillStyle = `rgba(255,255,255,${(0.2 + c * 0.45).toFixed(2)})`; ctx.beginPath(); ctx.arc(cx + Math.sin(a) * rr, y, sz, 0, TAU); ctx.fill(); }
+    [[128, 138, 9], [212, 220, 7]].forEach(([y0, y1, n]) => {
+      const r0 = radiusAt(BODY, y0), r1 = radiusAt(BODY, y1);
+      ctx.fillStyle = 'rgba(235,248,255,0.28)'; ctx.beginPath(); ctx.ellipse(cx, y0, r0, 4, 0, 0, PI); ctx.lineTo(cx - r1, y1); ctx.ellipse(cx, y1, r1, 4.5, 0, PI, 0, true); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.ellipse(cx, y0, r0, 4, 0, 0, PI); ctx.stroke(); ctx.beginPath(); ctx.ellipse(cx, y1, r1, 4.5, 0, 0, PI); ctx.stroke();
+      const ym = (y0 + y1) / 2 + 3, rm = (r0 + r1) / 2;
+      for (let k = 0; k < n; k++) { const a = phi + k * TAU / n, c = Math.cos(a); if (c < 0.1) continue; ctx.save(); ctx.translate(cx + Math.sin(a) * rm, ym); ctx.scale(c, 1); ctx.globalAlpha = Math.min(1, c * 1.6); snowflake(ctx, 3.4, '#ffffff', 1); ctx.restore(); } });
+    ctx.restore();
+    profilePath(ctx, cx, BODY); ctx.lineWidth = 1.6;
+    ctx.strokeStyle = sideGrad(ctx, cx, 63, [[0, 'rgba(255,255,255,0.95)'], [0.3, 'rgba(255,255,255,0.1)'], [0.7, 'rgba(160,220,255,0.1)'], [1, 'rgba(170,230,255,0.75)']]); ctx.stroke();
+    const rb = radiusAt(BODY, BELT);
+    FACES.map((f, i) => ({ f, a: phi + i * TAU / 3 })).filter(md => Math.cos(md.a) > 0.04).sort((p, q) => Math.cos(p.a) - Math.cos(q.a)).forEach(({ f, a }) => {
+      const c = Math.cos(a), x = cx + Math.sin(a) * rb * 0.94;
+      ctx.save(); ctx.translate(x, BELT); ctx.scale(c, 1); ctx.globalAlpha = Math.min(1, c * 2.2);
+      ctx.fillStyle = sideGrad(ctx, 0, 20, SILVER); ctx.beginPath(); ctx.arc(0, 0, 20, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(40,52,66,0.6)'; ctx.lineWidth = 1; for (let k = 0; k < 24; k++) { const q = k / 24 * TAU; ctx.beginPath(); ctx.moveTo(Math.cos(q) * 17.6, Math.sin(q) * 17.6); ctx.lineTo(Math.cos(q) * 19.4, Math.sin(q) * 19.4); ctx.stroke(); }
+      const inset = ctx.createRadialGradient(-5, -6, 2, 0, 0, 16); inset.addColorStop(0, '#3f8fd0'); inset.addColorStop(1, '#123e74'); ctx.fillStyle = inset; ctx.beginPath(); ctx.arc(0, 0, 16, 0, TAU); ctx.fill();
+      f(ctx); ctx.restore();
+      ctx.fillStyle = `rgba(255,255,255,${(0.5 * c).toFixed(2)})`; ctx.beginPath(); ctx.ellipse(x - 9 * c, BELT - 10, 4 * c, 2, -0.5, 0, TAU); ctx.fill(); });
+    ctx.fillStyle = '#163f6e'; ctx.beginPath(); ctx.ellipse(cx, 100, 24, 3.5, 0, 0, TAU); ctx.fill();
+    profilePath(ctx, cx, LID); ctx.fillStyle = sideGrad(ctx, cx, 25, ICE); ctx.fill();
+    ctx.strokeStyle = sideGrad(ctx, cx, 25, [[0, 'rgba(255,255,255,0.95)'], [0.4, 'rgba(255,255,255,0.1)'], [1, 'rgba(170,230,255,0.7)']]); ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(cx, 97, 25, 3.2, 0, 0, PI); ctx.stroke();
+    const fy = 62; ctx.fillStyle = '#e6f7ff'; ctx.beginPath(); ctx.moveTo(cx, fy - 9); ctx.lineTo(cx + 5, fy - 2); ctx.lineTo(cx + 3, fy + 5); ctx.lineTo(cx - 3, fy + 5); ctx.lineTo(cx - 5, fy - 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#7cc4ec'; ctx.beginPath(); ctx.moveTo(cx, fy - 9); ctx.lineTo(cx + 5, fy - 2); ctx.lineTo(cx + 3, fy + 5); ctx.lineTo(cx, fy - 1); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(235,250,255,0.85)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(cx, 262, 24, 3.2, 0, 0, PI); ctx.stroke();
+    // calm glint: a soft band crosses the urn every 7 s
+    const g = (t / 7) % 1, gx = cx - 110 + g * 220;
+    ctx.save(); profilePath(ctx, cx, BODY); ctx.clip(); const gl = ctx.createLinearGradient(gx - 20, 80, gx + 20, 300);
+    gl.addColorStop(0, 'rgba(255,255,255,0)'); gl.addColorStop(0.5, 'rgba(255,255,255,0.32)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gl; ctx.fillRect(gx - 20, 90, 40, 210); ctx.restore();
+  }
+  function drawTrophy(ctx, W, H, phi, t) {
+    ctx.save(); ctx.translate(W * 0.5, H * 0.705); ctx.scale(UK, UK); ctx.translate(-180, -344);
+    urnPlinth(ctx, 180, 292, 120); trophyUrn(ctx, 180, phi, t);
+    ctx.restore();
+  }
+
+  // (canvas passed in)
+  const ctx = cvs.getContext('2d');
+  const SCRATCH = document.createElement('canvas').getContext('2d');
+  const skyL = document.createElement('canvas'); skyL.width = 620; skyL.height = 355;
+  const back = document.createElement('canvas'); back.width = 620; back.height = 355;
+  const mid = document.createElement('canvas'); mid.width = 620; mid.height = 355;
+  const front = document.createElement('canvas'); front.width = 620; front.height = 355;
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const POINT = [[0.765, 0.556], [0.79, 0.528], [0.83, 0.516], [0.88, 0.512], [0.94, 0.505], [1.01, 0.500], [1.01, 0.578], [0.92, 0.572], [0.84, 0.568], [0.78, 0.566]];
+  function bakeReflections(md, W, H) {
+    const R = document.createElement('canvas'); R.width = W; R.height = H; const rc = R.getContext('2d'), G = H * HZ;
+    rc.save(); rc.translate(0, 2 * G); rc.scale(1, -1); rc.drawImage(back, 0, 0); rc.restore();                                           // the peaks
+    { const yb = H * WL; rc.save(); rc.beginPath(); rc.rect(0, yb, W * 0.31, 110); rc.clip(); rc.translate(0, 2 * yb); rc.scale(1, -1); rc.drawImage(mid, 0, 0); rc.restore(); }   // the iceberg
+    { const ya = H * 0.578; rc.save(); rc.beginPath(); rc.rect(W * 0.76, ya, W * 0.24, 60); rc.clip(); rc.translate(0, 2 * ya); rc.scale(1, -1); rc.drawImage(mid, 0, 0); rc.restore(); }   // the point and the hut
+    rc.globalCompositeOperation = 'source-atop'; rc.fillStyle = 'rgba(50,50,130,0.40)'; rc.fillRect(0, 0, W, H);
+    // lay it on the water in thin strips, each nudged sideways, so it ripples; leave the point itself alone
+    md.save(); md.beginPath(); md.rect(0, H * WTOP, W, H * (SHORE + 0.04 - WTOP)); BERG.forEach(([x, y], k) => k ? md.lineTo(W * x, H * y) : md.moveTo(W * x, H * y)); md.closePath();
+    POINT.forEach(([x, y], k) => k ? md.lineTo(W * x, H * y) : md.moveTo(W * x, H * y)); md.closePath(); md.clip('evenodd');
+    for (let y = Math.floor(H * WTOP); y < H * (SHORE + 0.04); y += 2) { const d = (y - H * WTOP) / (H * 0.13), dx = Math.sin(y * 1.7) * (0.6 + d * 1.8) + Math.sin(y * 0.31) * 0.8;
+      md.globalAlpha = Math.max(0.16, 0.58 - d * 0.22); md.drawImage(R, 0, y, W, 2, dx, y, W, 2); }
+    md.restore();
+    // the berg's submerged shelf glowing turquoise through the water
+    md.save(); waterClip(md, W, H); md.globalCompositeOperation = 'lighter'; const sg = md.createLinearGradient(0, H * WL, 0, H * (WL + 0.06)); sg.addColorStop(0, 'rgba(40,190,200,0.45)'); sg.addColorStop(1, 'rgba(40,160,200,0)');
+    md.fillStyle = sg; md.beginPath(); md.moveTo(-5, H * WL); md.lineTo(W * 0.33, H * WL); md.quadraticCurveTo(W * 0.31, H * (WL + 0.05), W * 0.22, H * (WL + 0.06)); md.lineTo(-5, H * (WL + 0.06)); md.closePath(); md.fill(); md.restore();
+  }
+  function paintBase() {
+    const k = skyL.getContext('2d'); k.clearRect(0, 0, 620, 355); draw(k, 620, 355, 'sky');
+    const b = back.getContext('2d'); b.clearRect(0, 0, 620, 355); draw(b, 620, 355, 'back');
+    const md = mid.getContext('2d'); md.clearRect(0, 0, 620, 355); draw(md, 620, 355, 'mid');
+    // lift the calving slab out of the cliff into its own image, and leave fresh blue ice where it was
+    SLABIMG = document.createElement('canvas'); SLABIMG.width = 620; SLABIMG.height = 355; const s = SLABIMG.getContext('2d');
+    s.save(); slabPath(s, 620, 355); s.clip(); s.drawImage(mid, 0, 0); s.restore();
+    md.save(); slabPath(md, 620, 355); md.clip(); md.clearRect(0, 0, 620, 355);
+    md.restore();
+    // fresh blue ice along the break, inside what's left of the berg
+    md.save(); bergPath(md, 620, 355, true, true); md.clip('evenodd'); md.lineJoin = 'round';
+    md.strokeStyle = '#4ab4ec'; md.lineWidth = 7; md.beginPath(); PX(620, 355, PIECE.slice(5).concat([PIECE[0]])).forEach(([x, y], k) => k ? md.lineTo(x, y) : md.moveTo(x, y)); md.stroke();
+    md.strokeStyle = '#c8f4ff'; md.lineWidth = 2; md.stroke(); md.restore();
+    bakeReflections(md, 620, 355);
+    const f = front.getContext('2d'); f.clearRect(0, 0, 620, 355); draw(f, 620, 355, 'front');
+  }
+  function frame(ms) {
+    const t = reduceMotion ? 0 : Math.max(0, ms) / 1000;   // the game's clock can start a hair below zero
+    const phi = (t / TURN_SECONDS) * Math.PI * 2;
+    ctx.clearRect(0, 0, 620, 355);
+    ctx.drawImage(skyL, 0, 0);
+    drawTwinkle(ctx, 620, 355, t);
+    drawAurora(ctx, 620, 355, t);
+    ctx.drawImage(back, 0, 0);
+    drawSled(ctx, 620, 355, t);
+    ctx.drawImage(mid, 0, 0);
+    drawAuroraReflection(ctx, 620, 355, t);
+    drawWater(ctx, 620, 355, t);
+    drawNarwhals(ctx, 620, 355, t);
+    for (let i = 0; i < FLOES.length; i++) drawFloe(ctx, 620, 355, t, i);
+    drawCalving(ctx, 620, 355, t);
+    drawSmoke(ctx, 620, 355, t);
+    ctx.drawImage(front, 0, 0);
+    drawGlitter(ctx, 620, 355, t);
+    drawFrost(ctx, 620, 355, t);
+    drawDust(ctx, 620, 355, t);
+    drawSwirl(ctx, 620, 355, t, false);
+    drawTrophy(ctx, 620, 355, phi, t);
+    drawSwirl(ctx, 620, 355, t, true);
+    drawSnowfall(ctx, 620, 355, t);
+    drawAtmos(ctx, 620, 355);
+  }
+  function loop(ms) { if (!__running) return; __elapsed = ms - __t0; __frame(__elapsed); requestAnimationFrame(loop); }
+  paintBase(); __frame(0);
+  let repainted = false;
+  const repaint = () => { if (!repainted) { repainted = true; paintBase(); __frame(__elapsed); } };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(repaint).catch(() => {});
+  setTimeout(repaint, 2000);
+  return {
+    start() { if (__running) return; if (reduceMotion) { __frame(0); return; } __running = true; __t0 = performance.now() - __elapsed; requestAnimationFrame(loop); },
+    stop() { __running = false; },
+  };
+}
 const LEAGUE_LIVE_ART = {
   "GULLY CUP": makeLeagueArt_gully,
   "FLOODLIT SERIES": makeLeagueArt_floodlit,
@@ -18057,6 +18804,7 @@ const LEAGUE_LIVE_ART = {
   "PCL": makeLeagueArt_pcl,
   "WITCHES' ASHES": makeLeagueArt_witches,
   "FRONTIER CUP": makeLeagueArt_frontier,
+  "FROZEN ASHES": makeLeagueArt_frozen,
 };
 // Only the centred card animates; everything stops when the league screen is hidden or the app is backgrounded
 window.__leagueArt = [];
