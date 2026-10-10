@@ -2,7 +2,7 @@ import json
 import sys
 import os
 SP=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','')
-cards=[('gully','GULLY CUP'),('floodlit','FLOODLIT SERIES'),('coastal','COASTAL CUP'),('fairground','FAIRGROUND CUP'),('ecl','ECL'),('acl','ACL'),('desert','DESERT LEAGUE'),('asian','LCL'),('icl','ICL'),('ccl','CCL'),('sal','SAL'),('bcl','BCL'),('nzcl','NZCL'),('pirate','BUCCANEER CUP'),('pcl','PCL'),('witches',"WITCHES' ASHES")]
+cards=[('gully','GULLY CUP'),('floodlit','FLOODLIT SERIES'),('coastal','COASTAL CUP'),('fairground','FAIRGROUND CUP'),('ecl','ECL'),('acl','ACL'),('desert','DESERT LEAGUE'),('asian','LCL'),('icl','ICL'),('ccl','CCL'),('sal','SAL'),('bcl','BCL'),('nzcl','NZCL'),('pirate','BUCCANEER CUP'),('pcl','PCL'),('witches',"WITCHES' ASHES"),('frontier','FRONTIER CUP')]
 out=["// ═══════════════════════════════════════════════════════════════════════════",
 "// LIVE LEAGUE ART — animated card scenes (Tier 1 + Tier 2 rebuilds).",
 "// Each factory paints into a 620×355 canvas and returns { start(), stop() }; only the",

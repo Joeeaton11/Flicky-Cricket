@@ -8,7 +8,7 @@ with sync_playwright() as p:
     pg.goto('file://'+__import__('os').path.abspath(__import__('os').path.join(__import__('os').path.dirname(__file__),'..','..','..','flicky-cricket.html'))+''); pg.wait_for_timeout(2500)
     pg.evaluate("""() => { try { closeAllScreens(); } catch(e){}; trophyState.count = 999; const s=document.getElementById('leagueScreen'); s.classList.remove('hidden'); renderLeagueScreen(); }""")
     pg.wait_for_timeout(1500)
-    for i in [0,1,2,3,4,5]:
+    for i in [15,16]:
         pg.evaluate(f"""() => {{ const t=document.getElementById('leagueCardsTrack'); const c=t.querySelectorAll('.leagueCard')[{i}]; t.scrollLeft = c.offsetLeft - (t.clientWidth - c.clientWidth)/2; }}""")
         pg.wait_for_timeout(4200 if i==1 else 1800)
         pg.screenshot(path=f'card{i}.png')
