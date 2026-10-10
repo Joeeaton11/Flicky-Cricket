@@ -18,8 +18,9 @@ We are rebuilding every league card on the league-select screen as an **animated
 - PCL (file `pcl.html`, key `pcl`: Lahore at golden hour — Badshahi Mosque, Minar-e-Pakistan, the old city with a chai dhaba, Basant kite fight, truck art, a tanga, a Mughal garden with fountains, dusk lights; the Jade Lotus Cup, a carved Mughal jade wine cup that turns)
 
 - Witches' Ashes (file `witches.html`, key `witches`: a witch's hollow at moonrise — haunted mansion on a terrace, ruined abbey on the far ridge under a detailed harvest moon, graveyard with an iron fence and a black cat, a scarecrow, jack-o'-lanterns, a dead oak with a raven; the Cauldron boils from 1s and erupts at 6.5s in glossy metaball slime that coats everything, then drains; the cauldron stops turning while the goo is out)
+- Frontier Cup (file `frontier.html`, key `frontier`: looking straight down Main Street at high noon in one-point perspective — undertaker's with coffins, jail and general store in shade on the left; saloon with balcony, bank and hotel in sun on the right; the plain, red mesas, snowy blue mountains, a water tower and a steam train crossing beyond the town; the Sheriff's Star sways in the street. A 30-second shootout told as one story: tumbleweed clips the stumps, robbers burst from the bank, the sheriff behind barrels, the deputy in the jail door, a gunman on the balcony; the balcony gunman's hat is shot off and he falls head first into a hay cart; the leader is disarmed and the loot sack bursts into banknotes; the deputy marches them to jail as the train whistles)
 
-**Next, in order (12 of 27 left → now 11):** Frontier Cup, Frozen Ashes, Cosmos Cup, Inferno Cup, Neon Series, Jungle Cup, Knight's Cup, Brass Cup, Wizard's Cup, Deep Cup, Eternal Cup. All are Tier 4+ fantasy themes (`--tier` for Tier 4 is still `#b884ff` in PCL; check `THEMED_LEAGUES` for each league's tier label).
+**Next, in order (10 of 27 left):** Frozen Ashes, Cosmos Cup, Inferno Cup, Neon Series, Jungle Cup, Knight's Cup, Brass Cup, Wizard's Cup, Deep Cup, Eternal Cup. All are Tier 4+ fantasy themes (`--tier` for Tier 4 is still `#b884ff` in PCL; check `THEMED_LEAGUES` for each league's tier label).
 
 Each league's name, subtitle, cup name, stats and colours live in `THEMED_LEAGUES` in `flicky-cricket.html`. Read the entry before designing.
 
@@ -69,6 +70,12 @@ Each league's name, subtitle, cup name, stats and colours live in `THEMED_LEAGUE
 - **Clean props.** Pumpkins: shaded lobes and soft creases, no outline rings, a proper stem, tidy leaves instead of tangled vines.
 - **League names can contain apostrophes.** `build_modules.py` now JSON-quotes the `LEAGUE_LIVE_ART` keys.
 - **Measure speed in the game.** After wiring, time a few seconds of frames in the carousel (calm and during the headline moment) and compare with a lighter card like PCL.
+- **Story beats over whack-a-mole.** Frontier Cup's first shootout (gunmen popping up everywhere) read as whack-a-mole. What worked: four characters, one story with two headline gags, and an ending that resets the loop.
+- **Depth makes people readable.** A one-point-perspective street (camera helper `PJ(W,H,X,Y,Z)`, figure scale `KZ`) lets the nearest characters be big and the far ones small. Keep the town short (ends at Z≈12) so the distance shows either side of the trophy.
+- **Don't fast-forward.** Joe found the first shootout too quick. Space shots about 0.7 s apart, ease every pop-up and duck (0.4 s), and slow strides; 30 s was fine for a story card.
+- **Draw characters large in a harness first.** The figure kit (`drawGunman` in frontier.html) was redesigned at 3× in a test page: profile face, shaped hat, boots, gun belt, duster coat, breathing, run lean, hands-up beside the head.
+- **Theme suitability over the house rules.** The 'no players' rule is about cricketers; Joe explicitly wanted people in this scene. Ask when a theme seems to need them.
+- **Facade text in perspective.** `ftext` draws words in vertical slices so they foreshorten; pass `stretch` for short words (BANK) and keep text clear of nearer buildings that overlap it.
 
 ## How a card file works
 
