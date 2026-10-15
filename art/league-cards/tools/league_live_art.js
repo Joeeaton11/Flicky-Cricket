@@ -15094,10 +15094,19 @@ function makeLeagueArt_inferno(cvs) {
       ctx.restore();
       // far peaks in the haze
       ctx.fillStyle = '#4a1218'; ctx.beginPath(); ctx.moveTo(0, G + 6); for (let x = 0; x <= W; x += 9) ctx.lineTo(x, H * (0.50 + 0.035 * Math.sin(x * 0.019 + 2) + 0.02 * Math.sin(x * 0.061)) + (rnd() - 0.5) * 4); ctx.lineTo(W, G + 6); ctx.closePath(); ctx.fill();
-      { const bx = W * 0.385, top = H * 0.41, bw = W * 0.1; ctx.fillStyle = '#5a1a1e'; poly(ctx, [[bx - bw, H * 0.53], [bx - bw * 0.3, top + 6], [bx - bw * 0.1, top], [bx + bw * 0.12, top + 1], [bx + bw * 0.32, top + 7], [bx + bw, H * 0.53]]); ctx.fill();   // a distant volcano, hazy, its crater glowing
-        const dg = ctx.createRadialGradient(bx, top, 0, bx, top, 22); dg.addColorStop(0, 'rgba(255,170,90,0.7)'); dg.addColorStop(1, 'rgba(255,100,40,0)'); ctx.fillStyle = dg; ctx.fillRect(bx - 22, top - 22, 44, 44);
-        ctx.strokeStyle = 'rgba(255,140,70,0.55)'; ctx.lineWidth = 0.8; line(ctx, [[bx - bw * 0.05, top + 1], [bx - bw * 0.12, top + 10], [bx - bw * 0.2, top + 18]]); ctx.stroke();
-        ctx.save(); ctx.filter = 'blur(2px)'; for (let q = 0; q < 4; q++) { ctx.fillStyle = `rgba(90,34,36,${(0.5 - q * 0.1).toFixed(2)})`; ctx.beginPath(); ctx.ellipse(bx - q * 9, top - 6 - q * 9, 6 + q * 4, 4 + q * 2, 0, 0, TAU); ctx.fill(); } ctx.restore(); }
+      { const bx = W * 0.383, top = H * 0.405, bw = W * 0.115, base = H * 0.54;   // a distant volcano: a hazy cone with a notched summit, a lava streak down its flank and a glow in its crater
+        const P = [[bx - bw, base], [bx - bw * 0.62, H * 0.49], [bx - bw * 0.4, H * 0.455], [bx - bw * 0.22, top + 7], [bx - bw * 0.13, top + 1], [bx - bw * 0.04, top + 3], [bx + bw * 0.06, top], [bx + bw * 0.15, top + 4], [bx + bw * 0.3, top + 11], [bx + bw * 0.5, H * 0.46], [bx + bw * 0.75, H * 0.5], [bx + bw, base]];
+        const vg2 = ctx.createLinearGradient(0, top, 0, base); vg2.addColorStop(0, '#6a2224'); vg2.addColorStop(1, '#8a3426'); poly(ctx, P); ctx.fillStyle = vg2; ctx.fill();
+        ctx.save(); poly(ctx, P); ctx.clip();
+        ctx.fillStyle = 'rgba(40,8,14,0.28)'; poly(ctx, [[bx + bw * 0.02, top + 2], [bx + bw * 0.15, top + 4], [bx + bw * 0.3, top + 11], [bx + bw * 0.5, H * 0.46], [bx + bw * 0.75, H * 0.5], [bx + bw, base], [bx + bw * 0.1, base]]); ctx.fill();   // its shadowed side
+        for (let q = 0; q < 6; q++) { const x0 = bx - bw * 0.1 + q * bw * 0.04, a = (q - 2.5) * 0.28; ctx.strokeStyle = 'rgba(40,8,14,0.3)'; ctx.lineWidth = 0.8; line(ctx, [[x0, top + 4], [x0 + Math.sin(a) * bw * 0.5, base]]); ctx.stroke(); }   // faint ridges
+        const cg2 = ctx.createRadialGradient(bx - bw * 0.04, top, 0, bx - bw * 0.04, top, 26); cg2.addColorStop(0, 'rgba(255,150,80,0.6)'); cg2.addColorStop(1, 'rgba(255,100,40,0)'); ctx.fillStyle = cg2; ctx.fillRect(bx - 40, top - 4, 80, 40);   // the summit lit by its crater
+        ctx.restore();
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round'; const streak = [[bx - bw * 0.08, top + 3], [bx - bw * 0.13, top + 9], [bx - bw * 0.12, top + 15], [bx - bw * 0.2, top + 22], [bx - bw * 0.26, top + 30]];
+        [[3, 'rgba(255,100,40,0.35)'], [1.1, 'rgba(255,180,100,0.85)']].forEach(([lw, col]) => { ctx.strokeStyle = col; ctx.lineWidth = lw; line(ctx, streak); ctx.stroke(); });
+        ctx.strokeStyle = 'rgba(255,170,110,0.55)'; ctx.lineWidth = 0.8; line(ctx, P.slice(1, 7)); ctx.stroke();   // its lit rim
+        const dg = ctx.createRadialGradient(bx - bw * 0.04, top + 1, 0, bx - bw * 0.04, top + 1, 14); dg.addColorStop(0, 'rgba(255,220,150,0.9)'); dg.addColorStop(1, 'rgba(255,110,40,0)'); ctx.fillStyle = dg; ctx.fillRect(bx - 20, top - 14, 40, 30);
+        const hz2 = ctx.createLinearGradient(0, top, 0, base); hz2.addColorStop(0, 'rgba(240,110,60,0.1)'); hz2.addColorStop(1, 'rgba(250,130,60,0.4)'); poly(ctx, P); ctx.fillStyle = hz2; ctx.fill(); }   // distance haze over it
       const hz = ctx.createLinearGradient(0, H * 0.45, 0, G); hz.addColorStop(0, 'rgba(240,110,40,0)'); hz.addColorStop(1, 'rgba(250,120,44,0.5)'); ctx.fillStyle = hz; ctx.fillRect(0, H * 0.45, W, G - H * 0.45 + 6); }
 
     ctx = part === 'back' ? ctxReal : SCRATCH;
@@ -15206,6 +15215,11 @@ function makeLeagueArt_inferno(cvs) {
   function erupting(m) { const u = win(m, ERUPT); return u < 0 ? 0 : Math.min(1, u * 6, (1 - u) * 3); }
   function rumbling(m) { const u = win(m, [RUMBLE, ERUPT[0]]); return u < 0 ? 0 : u; }
   const PLUME = (() => { const r = mkRnd(8181), a = []; for (let i = 0; i < 18; i++) a.push({ ph: i / 18, sz: 9 + r() * 12, dx: 0.6 + r() * 0.8, wob: r() * TAU }); return a; })();
+  function drawFarPlume(ctx, W, H, t) {   // the distant volcano's thin plume, drifting left
+    const x0 = W * 0.379, y0 = H * 0.4;
+    for (let k = 0; k < 6; k++) { const u = (t / 14 + k / 6) % 1, x = x0 - u * 30 + Math.sin(u * 4 + k) * 2, y = y0 - u * 42, r = 3 + u * 11, a = Math.min(1, u * 5) * (1 - u) * 0.55;
+      const g = ctx.createRadialGradient(x, y + r * 0.4, 0, x, y, r); g.addColorStop(0, `rgba(190,80,60,${a.toFixed(2)})`); g.addColorStop(1, 'rgba(90,30,36,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+  }
   function drawPlume(ctx, W, H, t) {
     const m = t % SHOW, cx = W * CRATER.x, cy = H * CRATER.y, e = Math.max(erupting(m), rumbling(m) * 0.5);
     PLUME.forEach(p => { const u = ((t / 10 + p.ph) % 1), x = cx - u * W * 0.16 * p.dx + Math.sin(u * 5 + p.wob) * 5, y = cy - 4 - u * H * (0.2 + e * 0.1), r = p.sz * (0.5 + u * 2) * (1 + e * 0.7), a = Math.min(1, u * 6) * (1 - u) * 0.75;
@@ -15495,6 +15509,7 @@ function makeLeagueArt_inferno(cvs) {
     ctx.clearRect(0, 0, 620, 355);
     ctx.save(); if (shake > 0) { ctx.translate(310, 178); ctx.scale(1.012, 1.012); ctx.translate(-310 + Math.sin(t * 90) * shake, -178 + Math.cos(t * 77) * shake); }   // the big strike shakes the ground
     ctx.drawImage(skyL, 0, 0);
+    drawFarPlume(ctx, 620, 355, t);
     drawPlume(ctx, 620, 355, t);
     ctx.drawImage(back, 0, 0);
     drawHaze(ctx, t);
