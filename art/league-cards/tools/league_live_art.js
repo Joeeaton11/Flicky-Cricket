@@ -16755,6 +16755,506 @@ function makeLeagueArt_jungle(cvs) {
     stop() { __running = false; },
   };
 }
+function makeLeagueArt_knight(cvs) {
+  let __running = false, __t0 = 0, __elapsed = 0;
+  // Soft fade at the foot of the art so it melts into the card's info panel
+  function __fade() {
+    const g = ctx.createLinearGradient(0, 355 * 0.78, 0, 355);
+    g.addColorStop(0, 'rgba(8,8,18,0)'); g.addColorStop(1, 'rgba(8,8,18,0.92)');
+    ctx.fillStyle = g; ctx.fillRect(0, 355 * 0.78, 620, 355 * 0.22);
+  }
+  function __frame(ms) { frame(ms); __fade(); }
+  const PI = Math.PI, TAU = PI * 2;
+  const SHOW = 24.0;                                 // length of the shared schedule, seconds
+  // the story: tournament day, late golden afternoon — the castle glowing in low sun, banners snapping, the stand packed, the lists ready
+  // → a herald on the battlements raises his trumpet; the fanfare sends petals fluttering down over the field and the Herald's Shield flares gold (headline 1)
+  // → two knights charge down the tilt and meet: lances shatter in a burst of splinters, the crowd leaps up roaring (headline 2)
+  // → a falcon stoops across the field; far off, a trebuchet lobs a flaming stone over the hill as part of the show (headline 3)
+  const FANFARE = [2.4, 6.2], PETALS = [3.2, 9.5], JOUST = [8.0, 13.4], HIT = 10.35, FALCON = [14.8, 17.6], TREB = [18.0, 22.6];
+  const HZ = 206;                                    // the foot of the castle walls / the moat
+  const SUN = { x: 70, y: 112 };                     // low in the west, on our left: everything is lit from the left
+
+  function tower(ctx, x, w, top, base, roof, rnd, banner) {   // a round tower in warm sandstone: sunlit on the left, lavender shade on the right, coursed stone, slate cone or battlements
+    const g = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0); g.addColorStop(0, '#f4dcaa'); g.addColorStop(0.3, '#dcbe8a'); g.addColorStop(0.62, '#a08a80'); g.addColorStop(1, '#6a5c6c'); ctx.fillStyle = g; ctx.fillRect(x - w / 2, top, w, base - top);
+    for (let y = top; y < base; y += 6) for (let k = 0; k < 4; k++) { const v = rnd(); if (v > 0.55) continue; const bx = x - w / 2 + ((k + (y / 6) % 2 * 0.5) / 4) * w; ctx.fillStyle = v < 0.25 ? 'rgba(255,240,210,0.16)' : 'rgba(120,90,80,0.14)'; ctx.fillRect(bx, y, w / 4, 6); }   // each stone a slightly different tint
+    for (let k = 0; k < 3; k++) { const sx = x - w / 2 + rnd() * w, sy = top + 10 + rnd() * (base - top) * 0.6, sl = 10 + rnd() * 24, sg = ctx.createLinearGradient(0, sy, 0, sy + sl); sg.addColorStop(0, 'rgba(90,80,70,0.25)'); sg.addColorStop(1, 'rgba(90,80,70,0)'); ctx.fillStyle = sg; ctx.fillRect(sx, sy, 1.6 + rnd() * 2, sl); }   // rain streaks
+    ctx.strokeStyle = 'rgba(90,70,60,0.28)'; ctx.lineWidth = 0.7; for (let y = top + 6; y < base; y += 6) { ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.lineTo(x + w / 2, y); ctx.stroke(); for (let k = 0; k < 4; k++) { const bx = x - w / 2 + ((k + (y / 6) % 2 * 0.5) / 4) * w; ctx.beginPath(); ctx.moveTo(bx, y - 6); ctx.lineTo(bx, y); ctx.stroke(); } }
+    const sh = ctx.createLinearGradient(0, base - 18, 0, base); sh.addColorStop(0, 'rgba(60,50,60,0)'); sh.addColorStop(1, 'rgba(60,50,60,0.3)'); ctx.fillStyle = sh; ctx.fillRect(x - w / 2, base - 18, w, 18);   // darker where it meets the water
+    if (roof) { ctx.fillStyle = '#d8bc8a'; ctx.fillRect(x - w / 2 - 2, top - 1, w + 4, 4); for (let k = 0; k < Math.floor((w + 4) / 4); k++) { ctx.fillStyle = 'rgba(80,60,60,0.45)'; ctx.beginPath(); ctx.moveTo(x - w / 2 - 2 + k * 4, top + 3); ctx.lineTo(x - w / 2 - 2 + k * 4 + 2, top + 6); ctx.lineTo(x - w / 2 - 2 + k * 4 + 4, top + 3); ctx.fill(); }   // corbel table under the eaves
+      const rg = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0); rg.addColorStop(0, '#7a9ad0'); rg.addColorStop(0.35, '#4a6aa8'); rg.addColorStop(1, '#283c70'); ctx.fillStyle = rg; ctx.beginPath(); ctx.moveTo(x - w / 2 - 3, top); ctx.lineTo(x, top - roof); ctx.lineTo(x + w / 2 + 3, top); ctx.closePath(); ctx.fill();
+      for (let k = 0; k < 9; k++) { const u = k / 9, yy = top - roof * u, hw = (w / 2 + 3) * (1 - u); for (let j = -hw; j < hw; j += 3) { ctx.fillStyle = `rgba(20,30,70,${(0.18 + 0.12 * ((j + hw) / (2 * hw + 0.01))).toFixed(2)})`; ctx.beginPath(); ctx.arc(x + j + 1.5, yy - 0.6, 1.5, 0, PI); ctx.fill(); } }   // scalloped slates
+      ctx.strokeStyle = 'rgba(255,240,210,0.4)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(x - w / 2 - 3, top); ctx.lineTo(x, top - roof); ctx.stroke();   // sunlit edge of the cone
+      if (w > 28) { ctx.fillStyle = '#4a6aa8'; ctx.beginPath(); ctx.moveTo(x - 6, top - roof * 0.3); ctx.lineTo(x - 3, top - roof * 0.45); ctx.lineTo(x, top - roof * 0.3); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#2a2230'; ctx.fillRect(x - 4.4, top - roof * 0.3 - 2, 2.8, 2.4); }   // a little dormer
+      ctx.fillStyle = '#e8b838'; ctx.beginPath(); ctx.arc(x, top - roof, 1.6, 0, TAU); ctx.fill();   // gilded finial
+      ctx.fillStyle = '#c8a878'; ctx.fillRect(x - w / 2 - 3, top - 1, w + 6, 2.4); }
+    else { ctx.fillStyle = '#d8bc8a'; ctx.fillRect(x - w / 2 - 2, top - 2, w + 4, 4); for (let k = 0; k < Math.floor((w + 4) / 4); k++) { ctx.fillStyle = 'rgba(80,60,60,0.5)'; ctx.beginPath(); ctx.moveTo(x - w / 2 - 2 + k * 4, top + 2); ctx.lineTo(x - w / 2 - 2 + k * 4 + 2, top + 5); ctx.lineTo(x - w / 2 - 2 + k * 4 + 4, top + 2); ctx.fill(); }   // machicolations: corbels under an overhanging parapet
+      for (let k = 0; k < Math.floor(w / 6); k++) { const lit = k / Math.floor(w / 6) < 0.5; ctx.fillStyle = lit ? '#f0d4a0' : '#8a7678'; ctx.fillRect(x - w / 2 + k * 6, top - 7, 4, 5); ctx.fillStyle = 'rgba(255,250,230,0.4)'; ctx.fillRect(x - w / 2 + k * 6, top - 7, 4, 1); } }
+    for (let i = 0; i < 3; i++) { const wy = top + 14 + i * (base - top - 20) / 3, wx = x - 1.5 + (i % 2 ? 4 : -4); ctx.fillStyle = '#2a2230'; ctx.beginPath(); ctx.moveTo(wx, wy + 7); ctx.lineTo(wx, wy + 1.5); ctx.quadraticCurveTo(wx + 1.5, wy - 0.5, wx + 3, wy + 1.5); ctx.lineTo(wx + 3, wy + 7); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(255,240,200,0.5)'; ctx.fillRect(wx - 0.8, wy + 1, 0.8, 6.5); }   // arched windows, lit along the sun side
+    if (base === HZ && x + w / 2 < 500) { ctx.fillStyle = 'rgba(110,90,110,0.18)'; ctx.beginPath(); ctx.moveTo(x + w / 2, top + 10); ctx.lineTo(x + w / 2 + 14, top + 22); ctx.lineTo(x + w / 2 + 14, base); ctx.lineTo(x + w / 2, base); ctx.closePath(); ctx.fill(); }   // its shadow thrown onto the wall beside it
+    if (banner) { ctx.strokeStyle = '#4a3a2a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, top - (roof || 5)); ctx.lineTo(x, top - (roof || 5) - 16); ctx.stroke(); }
+  }
+  function wall(ctx, x0, x1, top, base) {   // curtain wall: sunlit face, battlements with sunlit merlons, buttresses casting shadows to the right
+    const g = ctx.createLinearGradient(0, top, 0, base); g.addColorStop(0, '#e2c898'); g.addColorStop(1, '#a89078'); ctx.fillStyle = g; ctx.fillRect(x0, top, x1 - x0, base - top);
+    for (let x = x0; x < x1 - 3; x += 7) { ctx.fillStyle = '#e8d0a0'; ctx.fillRect(x, top - 4, 4.5, 4); ctx.fillStyle = 'rgba(110,90,100,0.6)'; ctx.fillRect(x + 3.4, top - 4, 1.1, 4); }
+    ctx.fillStyle = 'rgba(110,90,100,0.35)'; ctx.fillRect(x0, top, x1 - x0, 2.4);   // shadow under the wall-walk
+    ctx.strokeStyle = 'rgba(110,86,70,0.22)'; ctx.lineWidth = 0.6; for (let y = top + 5; y < base; y += 5) { ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); }
+    for (let x = x0 + 30; x < x1 - 10; x += 48) { ctx.fillStyle = '#ecd4a6'; ctx.fillRect(x, top + 12, 5, base - top - 12); ctx.fillStyle = 'rgba(110,90,100,0.35)'; ctx.beginPath(); ctx.moveTo(x + 5, top + 12); ctx.lineTo(x + 14, top + 20); ctx.lineTo(x + 14, base); ctx.lineTo(x + 5, base); ctx.closePath(); ctx.fill(); }   // buttresses and their shadows
+    for (let x = x0 + 8; x < x1 - 4; x += 22) { ctx.fillStyle = 'rgba(40,30,40,0.6)'; ctx.fillRect(x, top + 8, 1.6, 6); }   // arrow slits
+    // ivy climbing the wall
+    const r = mkRnd(x0); for (let i = 0; i < 4; i++) { const ix = x0 + 20 + r() * (x1 - x0 - 40), ih = 14 + r() * 26; for (let k = 0; k < 18; k++) { ctx.fillStyle = r() < 0.5 ? 'rgba(70,110,40,0.85)' : 'rgba(100,140,50,0.8)'; ctx.beginPath(); ctx.arc(ix + (r() - 0.5) * 12, base - r() * ih, 1.6 + r() * 1.4, 0, TAU); ctx.fill(); } }
+  }
+  function cloudMass(ctx, x, y, w, h, seed) {   // a towering fair-weather cloud: white tops, gold-lit edges towards the sun, soft lavender undersides
+    const r = mkRnd(seed); for (let i = 0; i < 11; i++) { const cx = x + (r() - 0.5) * w, cy = y + (r() - 0.6) * h * 0.6, rx = w * (0.16 + r() * 0.14), ry = h * (0.3 + r() * 0.3);
+      const g = ctx.createRadialGradient(cx - rx * 0.35, cy - ry * 0.4, 0, cx, cy, Math.max(rx, ry)); g.addColorStop(0, 'rgba(255,248,232,0.95)'); g.addColorStop(0.55, 'rgba(250,226,190,0.85)'); g.addColorStop(1, 'rgba(200,180,200,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, TAU); ctx.fill(); }
+    const b = ctx.createLinearGradient(0, y, 0, y + h * 0.5); b.addColorStop(0, 'rgba(170,150,190,0)'); b.addColorStop(1, 'rgba(170,150,190,0.35)'); ctx.fillStyle = b; ctx.beginPath(); ctx.ellipse(x, y + h * 0.25, w * 0.5, h * 0.22, 0, 0, TAU); ctx.fill();
+  }
+
+  function drawSky(ctx, W, H) {
+    const g = ctx.createLinearGradient(0, 0, 0, HZ); g.addColorStop(0, '#3e74b4'); g.addColorStop(0.45, '#8ab0d6'); g.addColorStop(0.8, '#f2d2a0'); g.addColorStop(1, '#ffd890'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const sg = ctx.createRadialGradient(SUN.x, SUN.y, 0, SUN.x, SUN.y, 260); sg.addColorStop(0, 'rgba(255,248,220,0.95)'); sg.addColorStop(0.08, 'rgba(255,236,170,0.7)'); sg.addColorStop(0.35, 'rgba(255,200,120,0.25)'); sg.addColorStop(1, 'rgba(255,190,120,0)'); ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(255,252,236,1)'; ctx.beginPath(); ctx.arc(SUN.x, SUN.y, 9, 0, TAU); ctx.fill();
+  }
+  function drawBack(ctx, W, H) {
+    const r = mkRnd(2323);
+    // far hills: warm green-gold, hazy, a hilltop for the trebuchet on the right
+    ctx.fillStyle = '#a8b080'; ctx.beginPath(); ctx.moveTo(0, HZ - 18); ctx.bezierCurveTo(120, HZ - 38, 220, HZ - 22, 300, HZ - 28); ctx.bezierCurveTo(420, HZ - 36, 520, HZ - 56, 620, HZ - 32); ctx.lineTo(620, HZ); ctx.lineTo(0, HZ); ctx.closePath(); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.moveTo(0, HZ - 18); ctx.bezierCurveTo(120, HZ - 38, 220, HZ - 22, 300, HZ - 28); ctx.bezierCurveTo(420, HZ - 36, 520, HZ - 56, 620, HZ - 32); ctx.lineTo(620, HZ); ctx.lineTo(0, HZ); ctx.closePath(); ctx.clip();
+    for (let fy = HZ - 60; fy < HZ; fy += 7) for (let fx = -20; fx < W; fx += 26 + r() * 20) { const c = ['rgba(200,190,110,0.5)', 'rgba(150,170,90,0.45)', 'rgba(120,150,80,0.4)', 'rgba(210,180,100,0.45)'][Math.floor(r() * 4)]; ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(fx, fy + 1); ctx.lineTo(fx + 30, fy - 1); ctx.lineTo(fx + 32, fy + 6); ctx.lineTo(fx + 2, fy + 8); ctx.closePath(); ctx.fill(); }   // patchwork fields
+    ctx.strokeStyle = 'rgba(80,100,50,0.55)'; ctx.lineWidth = 1; for (let fy = HZ - 56; fy < HZ; fy += 7) { ctx.beginPath(); ctx.moveTo(0, fy + Math.sin(fy) * 2); for (let x = 0; x <= W; x += 30) ctx.lineTo(x, fy + Math.sin(x * 0.05 + fy) * 2); ctx.stroke(); }   // hedgerows
+    ctx.restore();
+    ctx.fillStyle = 'rgba(100,124,70,0.75)'; for (let i = 0; i < 30; i++) { const x = r() * W, y = HZ - 12 - r() * 26; ctx.beginPath(); ctx.ellipse(x, y, 4 + r() * 5, 2.6, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(200,210,140,0.35)'; ctx.beginPath(); ctx.ellipse(x - 1.5, y - 1, 2.4, 1.2, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(100,124,70,0.75)'; }   // copses, lit on top
+    ctx.fillStyle = '#d8c0a0'; ctx.beginPath(); ctx.moveTo(110, HZ - 24); ctx.lineTo(113, HZ - 52); ctx.lineTo(123, HZ - 52); ctx.lineTo(126, HZ - 24); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(120,90,80,0.35)'; ctx.beginPath(); ctx.moveTo(118, HZ - 52); ctx.lineTo(123, HZ - 52); ctx.lineTo(126, HZ - 24); ctx.lineTo(120, HZ - 24); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#7a5a40'; ctx.beginPath(); ctx.moveTo(112, HZ - 52); ctx.lineTo(118, HZ - 60); ctx.lineTo(124, HZ - 52); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#4a3428'; ctx.fillRect(116, HZ - 32, 4, 8);   // a windmill (its sails turn)
+    const hz = ctx.createLinearGradient(0, HZ - 60, 0, HZ); hz.addColorStop(0, 'rgba(255,220,170,0)'); hz.addColorStop(1, 'rgba(255,224,180,0.45)'); ctx.fillStyle = hz; ctx.fillRect(0, HZ - 60, W, 60);
+    ctx.strokeStyle = '#6a5a48'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(546, HZ - 50); ctx.lineTo(556, HZ - 68); ctx.lineTo(566, HZ - 50); ctx.moveTo(556, HZ - 68); ctx.lineTo(556, HZ - 50); ctx.stroke();   // the trebuchet's frame
+    // the castle
+    wall(ctx, 150, 500, 150, HZ);
+    tower(ctx, 310, 64, 96, HZ, 0, r);
+    tower(ctx, 276, 22, 82, 150, 30, r, true); tower(ctx, 344, 22, 86, 150, 26, r, true);
+    tower(ctx, 150, 34, 112, HZ, 38, r, true); tower(ctx, 236, 26, 128, HZ, 0, r); tower(ctx, 388, 26, 126, HZ, 0, r); tower(ctx, 486, 36, 108, HZ, 42, r, true);
+    tower(ctx, 560, 22, 150, HZ - 8, 24, r, true);
+    { const gx = 430;   // the gatehouse: two drum towers flanking an arched gate, the drawbridge down across the moat
+      tower(ctx, gx - 17, 16, 134, HZ, 0, r); tower(ctx, gx + 17, 16, 134, HZ, 0, r);
+      ctx.fillStyle = '#e2c898'; ctx.fillRect(gx - 9, 140, 18, HZ - 140); ctx.fillStyle = '#d8bc8a'; for (let k = 0; k < 4; k++) ctx.fillRect(gx - 9 + k * 5, 136, 3.4, 4);
+      ctx.fillStyle = '#1e1620'; ctx.beginPath(); ctx.moveTo(gx - 7, HZ); ctx.lineTo(gx - 7, 172); ctx.quadraticCurveTo(gx, 162, gx + 7, 172); ctx.lineTo(gx + 7, HZ); ctx.closePath(); ctx.fill();   // the dark gateway
+      ctx.strokeStyle = '#c8a878'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(gx - 8, HZ); ctx.lineTo(gx - 8, 172); ctx.quadraticCurveTo(gx, 160, gx + 8, 172); ctx.lineTo(gx + 8, HZ); ctx.stroke(); }
+    // hanging heraldic drapes on the walls
+    [[196, '#b81c24'], [430, '#1c3496'], [460, '#b81c24']].forEach(([x, c]) => { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x - 6, 152); ctx.lineTo(x + 6, 152); ctx.lineTo(x + 6, 178); ctx.lineTo(x, 184); ctx.lineTo(x - 6, 178); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#e8b838'; ctx.fillRect(x - 6, 152, 12, 2); ctx.beginPath(); ctx.arc(x, 166, 2.6, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(x + 2, 154, 4, 26); });
+    // the moat: sky-blue water with the castle's warm reflection
+    const mg = ctx.createLinearGradient(0, HZ, 0, HZ + 16); mg.addColorStop(0, '#7aa0c8'); mg.addColorStop(1, '#4a6a98'); ctx.fillStyle = mg; ctx.fillRect(0, HZ, W, 16);
+    ctx.fillStyle = 'rgba(240,210,160,0.35)'; for (let i = 0; i < 26; i++) { const x = 150 + r() * 350; ctx.fillRect(x, HZ + 2 + r() * 10, 4 + r() * 10, 1); }
+  }
+  function drawMid(ctx, W, H) {
+    const r = mkRnd(3434);
+    // the field: sunlit grass, mown in stripes, the lists worn bare
+    const gg = ctx.createLinearGradient(0, HZ + 16, 0, H); gg.addColorStop(0, '#8ab04a'); gg.addColorStop(0.5, '#5a8a30'); gg.addColorStop(1, '#2e5418'); ctx.fillStyle = gg; ctx.fillRect(0, HZ + 16, W, H - HZ - 16);
+    for (let k = 0; k < 8; k++) { ctx.fillStyle = k % 2 ? 'rgba(255,255,200,0.05)' : 'rgba(0,40,0,0.05)'; ctx.beginPath(); ctx.moveTo(k * 90 - 60, HZ + 17); ctx.lineTo(k * 90 + 30, HZ + 17); ctx.lineTo(k * 140 - 40, H); ctx.lineTo(k * 140 - 180, H); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = '#6a5a3a'; ctx.fillRect(0, HZ + 15, W, 2.5);   // the moat's near bank
+    ctx.fillStyle = 'rgba(170,140,90,0.45)'; ctx.beginPath(); ctx.moveTo(0, 246); ctx.lineTo(232, 240); ctx.lineTo(236, 264); ctx.lineTo(0, 272); ctx.closePath(); ctx.fill();   // the churned lane of the lists
+    for (let i = 0; i < 70; i++) { const x = r() * W, y = HZ + 22 + r() * (H - HZ - 22); ctx.fillStyle = r() < 0.5 ? 'rgba(140,180,70,0.18)' : 'rgba(30,70,20,0.16)'; ctx.beginPath(); ctx.ellipse(x, y, 14 + r() * 30, 3 + r() * 5, 0, 0, TAU); ctx.fill(); }   // soft patches of lighter and darker turf
+    for (let i = 0; i < 900; i++) { const y = HZ + 20 + Math.pow(r(), 0.8) * (H - HZ - 20), x = r() * W, d = (y - HZ) / (H - HZ), hgt = 1.5 + d * 6 * r(), lean = (r() - 0.5) * 2; ctx.strokeStyle = r() < 0.55 ? `rgba(${Math.round(120 + 80 * r())},${Math.round(170 + 40 * r())},70,${(0.35 + d * 0.4).toFixed(2)})` : `rgba(30,${Math.round(60 + 30 * r())},16,${(0.3 + d * 0.3).toFixed(2)})`; ctx.lineWidth = 0.5 + d * 0.7; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + lean, y - hgt); ctx.stroke(); }   // grass blades, longer nearer us
+    for (let i = 0; i < 26; i++) { const x = r() * W, y = 248 + r() * 100, c = ['#ffe070', '#ffffff', '#ff9ab0', '#b0a0ff'][i % 4]; for (let k = 0; k < 5; k++) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + (r() - 0.5) * 8, y + (r() - 0.5) * 3, 1 + r() * 0.6, 0, TAU); ctx.fill(); } }   // clumps of wildflowers
+    // the stand on the right: a timber grandstand under a striped canopy, shields along its front
+    ctx.fillStyle = 'rgba(40,60,20,0.35)'; ctx.beginPath(); ctx.moveTo(452, 242); ctx.lineTo(602, 242); ctx.lineTo(640, 252); ctx.lineTo(480, 252); ctx.closePath(); ctx.fill();   // its shadow on the grass, cast away from the sun
+    const tg = ctx.createLinearGradient(452, 0, 602, 0); tg.addColorStop(0, '#8a6038'); tg.addColorStop(1, '#5a3a20'); ctx.fillStyle = tg; ctx.fillRect(452, 196, 150, 46); ctx.fillStyle = 'rgba(30,14,10,0.45)'; ctx.fillRect(452, 196, 150, 14); ctx.fillStyle = '#a07448'; for (let k = 0; k < 4; k++) ctx.fillRect(452, 210 + k * 8.6, 150, 1.6);   // tiers of benches, the back row in the canopy's shade
+    for (let k = 0; k < 10; k++) { const lit = k < 5; ctx.fillStyle = k % 2 ? (lit ? '#fff4dc' : '#e0d0b8') : (lit ? '#d82a30' : '#b01c24'); ctx.fillRect(446 + k * 16, 180, 16, 12); ctx.beginPath(); ctx.moveTo(446 + k * 16, 192); ctx.lineTo(454 + k * 16, 198); ctx.lineTo(462 + k * 16, 192); ctx.fill(); }   // canopy with scalloped valance
+    ctx.fillStyle = 'rgba(80,40,30,0.25)'; ctx.fillRect(446, 192, 160, 4);
+    ctx.fillStyle = '#4a3020'; [452, 526, 600].forEach(x => ctx.fillRect(x - 1.5, 180, 3, 62));
+    // the lists on the left: the tilt barrier, its posts casting shadows
+    for (let x = 14; x <= 218; x += 17) { ctx.fillStyle = 'rgba(40,60,20,0.35)'; ctx.beginPath(); ctx.moveTo(x, 252); ctx.lineTo(x + 2, 252); ctx.lineTo(x + 14, 256); ctx.lineTo(x + 12, 256); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#5a4026'; ctx.fillRect(x - 1.2, 236, 2.4, 16); }
+    for (let k = 0; k < 12; k++) { ctx.fillStyle = k % 2 ? '#fff4dc' : '#2a4ac0'; ctx.fillRect(14 + k * 17, 236, 17, 4); ctx.fillStyle = k % 2 ? '#d0c0a0' : '#1a3290'; ctx.fillRect(14 + k * 17, 240, 17, 1.4); }
+    { const tx = 26, base = 228;   // a broad old oak standing at the edge of the field, lit gold on its sun side
+      const tg = ctx.createLinearGradient(tx - 6, 0, tx + 6, 0); tg.addColorStop(0, '#8a6a48'); tg.addColorStop(1, '#4a3424'); ctx.fillStyle = tg; ctx.beginPath(); ctx.moveTo(tx - 7, base); ctx.quadraticCurveTo(tx - 3, base - 40, tx - 10, base - 70); ctx.lineTo(tx + 2, base - 72); ctx.quadraticCurveTo(tx + 4, base - 40, tx + 8, base); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#5a4030'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(tx - 4, base - 60); ctx.quadraticCurveTo(tx + 14, base - 80, tx + 30, base - 84); ctx.moveTo(tx - 6, base - 66); ctx.quadraticCurveTo(tx - 20, base - 86, tx - 26, base - 96); ctx.stroke();
+      const rr = mkRnd(88); for (let i = 0; i < 520; i++) { const u = i / 520, a = rr() * TAU, d = Math.sqrt(rr()), x = tx + Math.cos(a) * 48 * d, y = base - 100 + Math.sin(a) * 32 * d - u * 6, lit = Math.max(0, Math.min(1, (tx - x) / 48 * 0.45 + (base - 100 - y) / 32 * 0.35 + 0.35 + u * 0.3));   // the crown built leaf by leaf, back to front: lit gold-green on the sun side, deep green in its own shade
+        const cr = Math.round(40 + 120 * lit), cg = Math.round(70 + 110 * lit), cb = Math.round(24 + 40 * lit); ctx.fillStyle = `rgb(${cr},${cg},${cb})`; ctx.save(); ctx.translate(x, y); ctx.rotate(rr() * TAU); ctx.beginPath(); ctx.ellipse(0, 0, 2.8 + rr() * 1.6, 1.6 + rr() * 0.8, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+      ctx.fillStyle = 'rgba(40,60,20,0.35)'; ctx.beginPath(); ctx.ellipse(tx + 34, base + 3, 40, 4, 0, 0, TAU); ctx.fill(); }   // its shadow stretching away from the sun
+    // pavilions: striped tents, lit on their sun side, with long shadows
+    [[44, 230, 24, '#c81c24'], [92, 226, 18, '#2a4ac0']].forEach(([x, base, s, col]) => {
+      ctx.fillStyle = 'rgba(40,60,20,0.35)'; ctx.beginPath(); ctx.moveTo(x - s * 0.4, base); ctx.lineTo(x + s, base); ctx.lineTo(x + s * 2.6, base + 6); ctx.lineTo(x + s * 0.6, base + 6); ctx.closePath(); ctx.fill();
+      for (let k = 0; k < 6; k++) { const lit = k < 3; ctx.fillStyle = k % 2 ? (lit ? '#fff4dc' : '#d8c8b0') : (lit ? col : col + 'b0'); ctx.beginPath(); ctx.moveTo(x, base - s * 1.7); ctx.lineTo(x - s + k * s / 3, base); ctx.lineTo(x - s + (k + 1) * s / 3, base); ctx.closePath(); ctx.fill(); }
+      ctx.fillStyle = 'rgba(60,30,40,0.22)'; ctx.beginPath(); ctx.moveTo(x, base - s * 1.7); ctx.lineTo(x + s * 0.1, base); ctx.lineTo(x + s, base); ctx.closePath(); ctx.fill();
+      for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? '#e8b838' : col; ctx.beginPath(); ctx.moveTo(x - s + k * s / 3, base - 3); ctx.lineTo(x - s + (k + 0.5) * s / 3, base + 1); ctx.lineTo(x - s + (k + 1) * s / 3, base - 3); ctx.fill(); }   // scalloped hem
+      ctx.fillStyle = '#2a1e16'; ctx.beginPath(); ctx.moveTo(x - 3, base); ctx.lineTo(x, base - 9); ctx.lineTo(x + 3, base); ctx.closePath(); ctx.fill();   // the open door
+      ctx.strokeStyle = '#4a3a2a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, base - s * 1.7); ctx.lineTo(x, base - s * 1.7 - 10); ctx.stroke(); });
+    ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 1; for (let x = 6; x < 450; x += 26) { ctx.fillStyle = '#5a4026'; ctx.fillRect(x, HZ + 14, 1.8, 8); } ctx.beginPath(); for (let x = 6; x < 440; x += 26) { ctx.moveTo(x + 1, HZ + 16); ctx.quadraticCurveTo(x + 14, HZ + 19, x + 27, HZ + 16); } ctx.stroke();   // a rope fence along the bank
+    [[160, 232], [176, 234]].forEach(([x, y]) => { const hg = ctx.createLinearGradient(x - 8, 0, x + 8, 0); hg.addColorStop(0, '#f0d080'); hg.addColorStop(1, '#a88838'); ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(x, y, 8, 5, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(120,90,30,0.6)'; ctx.lineWidth = 0.6; for (let k = -6; k <= 6; k += 2) { ctx.beginPath(); ctx.moveTo(x + k, y - 4); ctx.lineTo(x + k + 1, y + 4); ctx.stroke(); } });   // hay bales
+    ctx.fillStyle = '#7a5030'; ctx.beginPath(); ctx.ellipse(146, 230, 4.5, 6, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a3a3a'; ctx.fillRect(141.5, 226, 9, 1); ctx.fillRect(141.5, 233, 9, 1);   // a barrel
+    // the drawbridge, lowered across the moat, with its chains
+    { const gx = 430; ctx.fillStyle = '#7a5a38'; ctx.beginPath(); ctx.moveTo(gx - 8, HZ); ctx.lineTo(gx + 8, HZ); ctx.lineTo(gx + 10, HZ + 17); ctx.lineTo(gx - 10, HZ + 17); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(40,24,14,0.6)'; ctx.lineWidth = 0.6; for (let y = HZ + 2; y < HZ + 17; y += 2.4) { ctx.beginPath(); ctx.moveTo(gx - 9, y); ctx.lineTo(gx + 9, y); ctx.stroke(); } ctx.strokeStyle = '#3a3438'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(gx - 8, 176); ctx.lineTo(gx - 9.6, HZ + 16); ctx.moveTo(gx + 8, 176); ctx.lineTo(gx + 9.6, HZ + 16); ctx.stroke(); }
+    // market stalls on the near bank, between the gate and the stand
+    [[392, '#e8b838', '#c81c24'], [420, '#2a7a3a', '#fff4dc']].forEach(([x, c1, c2]) => { ctx.save(); ctx.translate(x, 238); ctx.scale(1.45, 1.45); ctx.translate(-x, -238); ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x - 9, 226, 1.4, 12); ctx.fillRect(x + 8, 226, 1.4, 12); ctx.fillStyle = '#8a6038'; ctx.fillRect(x - 9, 233, 18, 4);   // posts and counter
+      for (let k = 0; k < 4; k++) { ctx.fillStyle = k % 2 ? c2 : c1; ctx.beginPath(); ctx.moveTo(x - 11 + k * 5.5, 222); ctx.lineTo(x - 5.5 + k * 5.5, 222); ctx.lineTo(x - 5.5 + k * 5.5, 227); ctx.lineTo(x - 8.2 + k * 5.5, 229); ctx.lineTo(x - 11 + k * 5.5, 227); ctx.closePath(); ctx.fill(); }   // striped awning
+      ['#e84a3a', '#ffd040', '#8ac04a', '#d88a40'].forEach((c, k) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x - 6 + k * 4, 232.6, 1.3, 0, TAU); ctx.fill(); }); ctx.restore(); });   // wares
+    // a weapon rack and a few shields leaning against it by the lists
+    ctx.fillStyle = '#5a4026'; ctx.fillRect(122, 222, 2, 16); ctx.fillRect(140, 222, 2, 16); ctx.fillRect(120, 224, 24, 2); ctx.strokeStyle = '#d8c8a0'; ctx.lineWidth = 1.2; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(124 + k * 5, 238); ctx.lineTo(126 + k * 5, 200); ctx.stroke(); }
+  }
+  function drawFront(ctx, W, H) {   // no frame: just a soft warm vignette and long grass in the near corners
+    const r = mkRnd(4545); for (let i = 0; i < 90; i++) { const left = i % 2, x = left ? r() * 120 : W - r() * 120, y = H - r() * 60; ctx.strokeStyle = r() < 0.5 ? 'rgba(60,100,30,0.9)' : 'rgba(110,150,50,0.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + (r() - 0.5) * 6, y - 8, x + (r() - 0.5) * 10, y - 14 - r() * 12); ctx.stroke(); }
+    const vig = ctx.createRadialGradient(W * 0.5, H * 0.45, W * 0.35, W * 0.5, H * 0.45, W * 0.8); vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(40,20,10,0.25)'); ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
+  }
+
+  function reflectCastle(bctx) {   // the castle mirrored in the moat, rippled and tinted by the water
+    const tmp = document.createElement('canvas'); tmp.width = 620; tmp.height = 355; tmp.getContext('2d').drawImage(bctx.canvas, 0, 0);
+    bctx.save(); bctx.beginPath(); bctx.rect(0, HZ, 620, 16); bctx.clip(); bctx.globalAlpha = 0.4;
+    for (let y = 0; y < 16; y += 2) { const off = Math.sin(y * 1.3) * 1.5; bctx.drawImage(tmp, 0, HZ - y - 2, 620, 2, off, HZ + y, 620, 2); }
+    bctx.restore(); const g = bctx.createLinearGradient(0, HZ, 0, HZ + 16); g.addColorStop(0, 'rgba(90,130,180,0.25)'); g.addColorStop(1, 'rgba(60,90,140,0.45)'); bctx.fillStyle = g; bctx.fillRect(0, HZ, 620, 16);
+  }
+  function win(m, [a, b]) { return m >= a && m <= b ? (m - a) / (b - a) : -1; }
+  const ease = (u) => u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u);
+  const lerp = (a, b, u) => a + (b - a) * u;
+  const mkRnd = (s) => { let q = s; return () => { q = (q * 16807) % 2147483647; return (q - 1) / 2147483646; }; };
+  const poly = (ctx, pts) => { ctx.beginPath(); pts.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); };
+  const line = (ctx, pts) => { ctx.beginPath(); pts.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); };
+  function smooth(ctx, pts) { const n = pts.length, mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; const s = mid(pts[n - 1], pts[0]); ctx.beginPath(); ctx.moveTo(s[0], s[1]); for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n], m = mid(p, q); ctx.quadraticCurveTo(p[0], p[1], m[0], m[1]); } ctx.closePath(); }
+  const sideGrad = (ctx, cx, R, stops) => { const g = ctx.createLinearGradient(cx - R, 0, cx + R, 0); stops.forEach(([o, c]) => g.addColorStop(o, c)); return g; };
+  const GOLD = [[0, '#8a5a18'], [0.18, '#f6d27a'], [0.27, '#fff4c8'], [0.4, '#e0b04a'], [0.7, '#a87420'], [1, '#5a3a10']];
+  const BASALT = [[0, '#5a4a48'], [0.2, '#8a7470'], [0.4, '#4a3c3a'], [0.8, '#241c1c'], [1, '#140e0e']];
+  function gem(ctx, x, y, r, c0, c1) { const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r); g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, c0); g.addColorStop(1, c1); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+
+  // ════════ SKY — towering fair-weather clouds drifting slowly, lit gold on the sun side ════════
+  const cloudC = document.createElement('canvas'); cloudC.width = 620; cloudC.height = 190; let cloudPainted = false;
+  function paintClouds() { const c = cloudC.getContext('2d'); c.clearRect(0, 0, 620, 190); c.filter = 'blur(2.5px)';
+    [[200, 50, 150, 60, 11], [420, 40, 180, 70, 12], [560, 90, 120, 40, 13], [330, 110, 110, 26, 14], [40, 40, 110, 34, 15]].forEach(([x, y, w, h, s]) => [-620, 0, 620].forEach(dx => cloudMass(c, x + dx, y, w, h, s)));   // painted wrapped, so a cloud crossing the seam isn't cut
+    c.filter = 'none'; cloudPainted = true; }
+  function drawClouds(ctx, W, H, t) { if (!cloudPainted) paintClouds(); const x = (t * 3) % W; ctx.drawImage(cloudC, x, 0); ctx.drawImage(cloudC, x - W, 0); }
+  function drawSunRays(ctx, W, H, t) {   // a soft warm haze from the low sun — no hard rays
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(SUN.x, SUN.y, 0, SUN.x, SUN.y, 140); g.addColorStop(0, `rgba(255,236,190,${(0.22 + 0.03 * Math.sin(t * 0.5)).toFixed(3)})`); g.addColorStop(1, 'rgba(255,220,160,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, 220, 260); ctx.restore();
+  }
+  // ════════ BANNERS — long pennants streaming from the towers, the tents and the stand ════════
+  const FLAGS = [[150, 58, 26, '#c81c24', '#e8b838'], [276, 36, 22, '#2a4ac0', '#ffffff'], [344, 44, 22, '#c81c24', '#e8b838'], [486, 50, 26, '#2a4ac0', '#e8b838'], [560, 110, 16, '#e8b838', '#c81c24'], [44, 179, 14, '#e8b838', '#c81c24'], [92, 185, 12, '#c81c24', '#ffffff'], [452, 174, 14, '#2a4ac0', '#ffffff'], [526, 174, 14, '#e8b838', '#2a4ac0'], [600, 174, 14, '#c81c24', '#e8b838']];
+  function drawFlags(ctx, W, H, t) {
+    FLAGS.forEach(([x, y, L, col, stripe], i) => { const wave = (u, k) => Math.sin(t * 6 - u * 5 + i) * 2.6 * u + k;
+      const top = [], bot = []; for (let k = 0; k <= 10; k++) { const u = k / 10; top.push([x + u * L, y + u * 2 + wave(u, 0)]); bot.push([x + u * L, y + 6.5 - u * 2.4 + wave(u, 0)]); }
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y); top.forEach(([a, b]) => ctx.lineTo(a, b)); ctx.lineTo(x + L * 0.82, y + 3.2 + wave(0.82, 0)); for (let k = 10; k >= 0; k--) ctx.lineTo(bot[k][0], bot[k][1]); ctx.closePath(); ctx.fill();   // swallow-tailed pennant
+      ctx.strokeStyle = stripe; ctx.lineWidth = 1.1; ctx.beginPath(); for (let k = 0; k <= 8; k++) { const u = k / 10; ctx.lineTo(x + u * L, y + 3.2 + wave(u, 0) - u * 0.2); } ctx.stroke();
+      for (let k = 0; k < 10; k++) { const s = Math.sin(t * 6 - (k / 10) * 5 + i + 0.6); if (s > 0.3) { ctx.fillStyle = `rgba(255,250,230,${(0.25 * s).toFixed(2)})`; ctx.fillRect(top[k][0], top[k][1] + 0.5, L / 10, 2.4); } } });   // sun catching the ripples
+  }
+  // ════════ TORCHES — small flames on the archway pillars (it's daytime: a gentle glow only) ════════
+  const TORCH = [[22, 150, 1.1], [598, 150, 1.1]];
+  function drawTorches(ctx, W, H, t) {
+    TORCH.forEach(([x, y, s], i) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y - 6 * s, 0, x, y - 6 * s, 40 * s); g.addColorStop(0, 'rgba(255,170,70,0.22)'); g.addColorStop(1, 'rgba(255,140,40,0)'); ctx.fillStyle = g; ctx.fillRect(x - 40 * s, y - 46 * s, 80 * s, 80 * s); ctx.restore();
+      ctx.fillStyle = '#3a2a1a'; ctx.fillRect(x - 1.5 * s, y, 3 * s, 16 * s); ctx.fillStyle = '#6a5640'; ctx.fillRect(x - 3 * s, y - 2 * s, 6 * s, 4 * s);
+      for (let f = 0; f < 3; f++) { const ph = t * (3 + f) + f * 2 + i, hh = (10 + 3 * Math.sin(ph) + (f === 1 ? 4 : 0)) * s, fx = x + (f - 1) * 2 * s + Math.sin(ph * 0.7) * s; const fg = ctx.createLinearGradient(0, y - 2 * s, 0, y - 2 * s - hh); fg.addColorStop(0, 'rgba(255,240,170,0.95)'); fg.addColorStop(0.45, 'rgba(255,150,40,0.9)'); fg.addColorStop(1, 'rgba(220,60,10,0)'); ctx.fillStyle = fg; ctx.beginPath(); ctx.moveTo(fx - 2.6 * s, y - 2 * s); ctx.quadraticCurveTo(fx - 2 * s, y - 2 * s - hh * 0.6, fx + Math.sin(ph * 1.6) * s, y - 2 * s - hh); ctx.quadraticCurveTo(fx + 2 * s, y - 2 * s - hh * 0.6, fx + 2.6 * s, y - 2 * s); ctx.closePath(); ctx.fill(); } });
+  }
+  // ════════ FANFARE — a herald on the battlements raises his trumpet; petals flutter down over the field ════════
+  const fanAt = (m) => { const u = win(m, FANFARE); return u < 0 ? 0 : Math.min(1, u * 4, (1 - u) * 3); };
+  function drawHerald(ctx, W, H, t) {
+    const m = t % SHOW, k = fanAt(m), x = 206, y = 146, lift = k;
+    ctx.save(); ctx.translate(x, y);
+    ctx.fillStyle = '#c81c24'; ctx.beginPath(); ctx.moveTo(-3.4, 0); ctx.lineTo(3.4, 0); ctx.lineTo(3, -10); ctx.lineTo(-3, -10); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#e8b838'; ctx.fillRect(-0.6, -10, 1.2, 10); ctx.fillRect(-3, -6, 6, 1.2);   // tabard, quartered with gold
+    ctx.fillStyle = '#f0c8a0'; ctx.beginPath(); ctx.arc(0, -12.6, 2.4, 0, TAU); ctx.fill(); ctx.fillStyle = '#1c3496'; ctx.beginPath(); ctx.ellipse(0.4, -14.4, 3.2, 1.4, -0.2, PI, TAU); ctx.fill();   // head and cap
+    const a = lerp(0.9, -0.55, lift); ctx.save(); ctx.translate(1.5, -12); ctx.rotate(a); ctx.fillStyle = '#e8b838'; ctx.fillRect(0, -0.6, 16, 1.2); ctx.beginPath(); ctx.moveTo(16, 0); ctx.lineTo(19, -2.4); ctx.lineTo(19, 2.4); ctx.closePath(); ctx.fill();   // the long herald's trumpet, raised
+    ctx.fillStyle = '#c81c24'; ctx.beginPath(); ctx.moveTo(5, 0.6); ctx.lineTo(13, 0.6); ctx.lineTo(13, 7 + Math.sin(t * 6) * 0.6); ctx.lineTo(9, 5.6); ctx.lineTo(5, 7 + Math.sin(t * 6 + 1) * 0.6); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#e8b838'; ctx.fillRect(8.4, 2, 1.2, 3); ctx.restore();   // its hanging banner
+    if (k > 0.3) { ctx.strokeStyle = `rgba(255,236,170,${(0.8 * k).toFixed(2)})`; ctx.lineWidth = 1; const tx = 1.5 + Math.cos(a) * 19, ty = -12 + Math.sin(a) * 19; for (let i = 0; i < 3; i++) { const rr = 4 + i * 5 + ((t * 14) % 5); ctx.beginPath(); ctx.arc(tx, ty, rr, a - 0.6, a + 0.6); ctx.stroke(); } }   // the fanfare ringing out
+    ctx.restore();
+  }
+  const PETAL = (() => { const r = mkRnd(9191), a = []; for (let i = 0; i < 70; i++) a.push({ x: r() * 680 - 30, d: r() * 0.4, v: 0.55 + r() * 0.35, sw: 6 + r() * 12, ph: r() * TAU, c: ['#ff8ab0', '#ffffff', '#ffd0e0', '#d82a40', '#ffe070'][i % 5] }); return a; })();
+  function drawPetals(ctx, W, H, t) {
+    const m = t % SHOW, u0 = win(m, PETALS); if (u0 < 0) return;
+    PETAL.forEach(p => { const u = (u0 - p.d) / (1 - p.d) * p.v * 1.8; if (u < 0 || u > 1) return; const y = -10 + u * 330, x = p.x + Math.sin(u * 9 + p.ph) * p.sw, rot = u * 14 + p.ph, f = Math.cos(u * 18 + p.ph);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(1, Math.abs(f) * 0.8 + 0.2); ctx.fillStyle = p.c; ctx.globalAlpha = Math.min(1, (1 - u) * 4); ctx.beginPath(); ctx.ellipse(0, 0, 2.6, 1.6, 0, 0, TAU); ctx.fill(); ctx.restore(); });
+  }
+  // ════════ THE JOUST — two knights charge down the tilt; lances shatter; the crowd roars ════════
+  function horse(ctx, coat, mane, p, toss, swish) {   // a horse in profile facing +x: round rump and deep chest, an arched neck with a flowing mane, a fine head with ears, eye and muzzle, a streaming tail
+    ctx.strokeStyle = mane; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-13, -16); ctx.bezierCurveTo(-17, -15 + swish, -19, -11 + swish * 2, -18 + swish * 3, -5); ctx.stroke(); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-13, -15); ctx.bezierCurveTo(-16, -13 + swish, -17, -9 + swish * 2, -15 + swish * 3, -4); ctx.stroke();   // tail
+    ctx.fillStyle = coat; ctx.beginPath(); ctx.moveTo(-13, -12); ctx.bezierCurveTo(-15.5, -20, -9, -21.5, -3, -19.6); ctx.lineTo(5, -19.6); ctx.bezierCurveTo(10, -20.4, 14.5, -17, 13.6, -12); ctx.bezierCurveTo(13, -8, 9, -7.6, 6, -8.2); ctx.lineTo(-6, -8.2); ctx.bezierCurveTo(-11, -8, -13.4, -9, -13, -12); ctx.closePath(); ctx.fill();   // rump, back, deep chest
+    ctx.save(); ctx.translate(8, -18); ctx.rotate(-toss); ctx.translate(-8, 18);
+    ctx.fillStyle = coat; ctx.beginPath(); ctx.moveTo(3.6, -18.6); ctx.bezierCurveTo(7, -25.5, 11, -30, 15, -31.2); ctx.lineTo(16.4, -31.4); ctx.bezierCurveTo(19.4, -30.2, 22, -27.4, 23.6, -24.6); ctx.quadraticCurveTo(24.2, -22.4, 22, -22.2); ctx.bezierCurveTo(19.6, -22.4, 17.6, -23.6, 16.6, -25.2); ctx.bezierCurveTo(15.2, -21, 13.4, -17, 12.4, -13.6); ctx.closePath(); ctx.fill();   // arched neck and long head
+    ctx.beginPath(); ctx.moveTo(14.6, -31); ctx.lineTo(14.2, -34.4); ctx.lineTo(16.6, -31.4); ctx.closePath(); ctx.fill();   // ear
+    ctx.fillStyle = 'rgba(255,220,170,0.28)'; ctx.beginPath(); ctx.moveTo(4.6, -18.6); ctx.bezierCurveTo(7.6, -24.6, 11, -28.6, 14.4, -30); ctx.lineTo(13.6, -27.6); ctx.bezierCurveTo(10.6, -26, 8, -22.6, 6.4, -18.4); ctx.closePath(); ctx.fill();   // sun on the crest of the neck
+    ctx.fillStyle = '#120c08'; ctx.beginPath(); ctx.arc(18.6, -28.4, 0.75, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(22.8, -23.8, 0.5, 0, TAU); ctx.fill();   // eye, nostril
+    ctx.strokeStyle = mane; ctx.lineWidth = 1.6; for (let k = 0; k < 6; k++) { const u = k / 6, mx = lerp(4, 14.6, u), my = lerp(-19, -31, u) + (u * u) * 2; ctx.beginPath(); ctx.moveTo(mx, my); ctx.quadraticCurveTo(mx - 2.4, my + 1 + Math.sin(p + k) * 0.6, mx - 3.6, my + 3 + Math.sin(p + k) * 1.2); ctx.stroke(); }   // the mane, flowing back
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,220,170,0.25)'; ctx.beginPath(); ctx.ellipse(-8, -18.6, 5, 1.4, -0.2, 0, TAU); ctx.fill();   // sun on the rump
+  }
+  function knight(ctx, x, y, dir, gallop, col, trim, lanceIntact, sc) {   // horse and rider in profile (facing dir), a little larger than life on the card so they read
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir * sc, sc);
+    const p = gallop;
+    const leg = (lx, ly, ph, front, near) => {   // a jointed leg: upper leg, knee or hock, cannon bone, fetlock, hoof — bending through the gallop stride
+      const c = Math.sin(p + ph), up = 0.55 * c, bend = front ? Math.max(0, Math.sin(p + ph + 1.2)) * 1.6 : -Math.max(0, Math.sin(p + ph - 1.2)) * 1.2;
+      const L1 = front ? 5.6 : 6.4, L2 = 5.2, j = [lx + Math.sin(up) * L1, ly + Math.cos(up) * L1], a2 = up + (front ? -bend : -bend), f = [j[0] + Math.sin(a2) * L2, j[1] + Math.cos(a2) * L2], a3 = a2 + (front ? -0.5 * bend : 0.3), h = [f[0] + Math.sin(a3) * 1.8, f[1] + Math.cos(a3) * 1.8];
+      const col = near ? '#5a3a24' : '#3a2618'; ctx.lineCap = 'round'; ctx.strokeStyle = col;
+      ctx.lineWidth = front ? 3 : 3.6; ctx.beginPath(); ctx.moveTo(lx, ly - 1); ctx.lineTo(j[0], j[1]); ctx.stroke();
+      ctx.lineWidth = 1.7; ctx.beginPath(); ctx.moveTo(j[0], j[1]); ctx.lineTo(f[0], f[1]); ctx.lineTo(h[0], h[1]); ctx.stroke();
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(j[0], j[1], 1.4, 0, TAU); ctx.fill();   // the knee/hock joint
+      ctx.fillStyle = '#16100a'; ctx.save(); ctx.translate(h[0], h[1]); ctx.rotate(a3 * 0.6); ctx.beginPath(); ctx.moveTo(-1.4, -0.4); ctx.lineTo(1.6, -0.4); ctx.lineTo(2, 1.4); ctx.lineTo(-1.4, 1.4); ctx.closePath(); ctx.fill(); ctx.restore();   // hoof
+      if (near) { ctx.strokeStyle = 'rgba(255,220,170,0.3)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(j[0] - 0.8, j[1]); ctx.lineTo(f[0] - 0.8, f[1]); ctx.stroke(); } };
+    leg(-8, -10, 0.8, false, false); leg(8, -10, PI + 0.8, true, false);   // far legs
+    horse(ctx, '#4a3222', '#1a120c', p, 0, Math.sin(p) * 0.6);
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-13, -19); ctx.lineTo(11, -19); ctx.quadraticCurveTo(15, -12, 13, -5); ctx.lineTo(-13, -5); ctx.quadraticCurveTo(-15, -12, -13, -19); ctx.closePath(); ctx.fill();   // the caparison, draped to the knees
+    const cg = ctx.createLinearGradient(0, -19, 0, -5); cg.addColorStop(0, 'rgba(255,240,200,0.3)'); cg.addColorStop(1, 'rgba(0,0,0,0.25)'); ctx.fillStyle = cg; ctx.fillRect(-14, -19, 28, 14);
+    ctx.fillStyle = trim; for (let k = -12; k < 12; k += 4) { ctx.beginPath(); ctx.moveTo(k, -5); ctx.lineTo(k + 2, -2.6); ctx.lineTo(k + 4, -5); ctx.fill(); } ctx.beginPath(); ctx.arc(0, -12, 3, 0, TAU); ctx.fill();   // dagged hem and a roundel
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(15.6, -30.6); ctx.bezierCurveTo(19, -29.6, 21.6, -27, 23, -24.8); ctx.lineTo(21.4, -23.6); ctx.bezierCurveTo(19.6, -25.6, 17.6, -27, 15.4, -27.6); ctx.closePath(); ctx.fill(); ctx.fillStyle = trim; ctx.beginPath(); ctx.moveTo(16.4, -30.4); ctx.lineTo(17.6, -34); ctx.lineTo(18.4, -29.8); ctx.fill();   // chanfron (head armour) with a little spike
+    leg(-6, -10, 0, false, true); leg(10, -10, PI, true, true);   // near legs
+    const ag = ctx.createLinearGradient(-4, 0, 4, 0); ag.addColorStop(0, '#f0f4fa'); ag.addColorStop(0.5, '#9aa4b2'); ag.addColorStop(1, '#5a6270'); ctx.fillStyle = ag;
+    ctx.fillRect(-3, -31, 6, 12); ctx.beginPath(); ctx.arc(0, -34, 3.4, 0, TAU); ctx.fill(); ctx.fillStyle = '#20242a'; ctx.fillRect(0.4, -35, 3, 0.9);   // rider in plate, great helm with a visor slit
+    ctx.fillStyle = col; ctx.fillRect(-3, -26, 6, 6);   // surcoat
+    ctx.fillStyle = trim; ctx.beginPath(); ctx.moveTo(-3, -38); ctx.quadraticCurveTo(-9, -42 + Math.sin(p) * 1.5, -12, -37 + Math.sin(p) * 2); ctx.quadraticCurveTo(-7, -38, -2, -36); ctx.closePath(); ctx.fill();   // plume streaming back
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-6, -30); ctx.lineTo(-1, -30); ctx.lineTo(-1, -22); ctx.lineTo(-3.5, -19.5); ctx.lineTo(-6, -22); ctx.closePath(); ctx.fill(); ctx.fillStyle = trim; ctx.fillRect(-4, -29, 1, 7);   // shield on his arm
+    ctx.strokeStyle = '#e8d8b0'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-6, -24); ctx.lineTo(lanceIntact ? 36 : 10, lanceIntact ? -29 : -25); ctx.stroke();
+    ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-2, -24.5); ctx.lineTo(lanceIntact ? 30 : 9, lanceIntact ? -28.2 : -25); ctx.stroke();   // painted spiral stripe on the lance
+    ctx.fillStyle = '#9aa4b2'; ctx.beginPath(); ctx.moveTo(1, -26); ctx.lineTo(5, -24.6); ctx.lineTo(1, -22); ctx.closePath(); ctx.fill();   // vamplate guard
+    ctx.restore();
+  }
+  function drawJoust(ctx, W, H, t) {
+    const m = t % SHOW, u = win(m, JOUST); if (u < 0) return; const meet = (HIT - JOUST[0]) / (JOUST[1] - JOUST[0]), hit = m >= HIT;
+    const xr = lerp(-40, 300, u), xb = lerp(276, -60, u), fade = Math.min(1, u * 8, (1 - u) * 8);
+    ctx.save(); ctx.globalAlpha = fade; ctx.fillStyle = 'rgba(40,60,20,0.3)'; ctx.beginPath(); ctx.ellipse(xb + 6, 243, 18, 2.4, 0, 0, TAU); ctx.fill(); knight(ctx, xb, 242, -1, t * 15, '#2a4ac0', '#e8b838', !hit, 1.25); ctx.restore();
+    ctx.save(); ctx.globalAlpha = fade; ctx.fillStyle = 'rgba(40,60,20,0.3)'; ctx.beginPath(); ctx.ellipse(xr + 6, 259, 20, 2.6, 0, 0, TAU); ctx.fill(); knight(ctx, xr, 258, 1, t * 15 + 1, '#c81c24', '#fff4dc', !hit, 1.35); ctx.restore();
+    for (let k = 0; k < 6; k++) { const du = u - k * 0.012; if (du < 0) continue; const dx = lerp(-40, 300, du) - 12, dy = 258; ctx.fillStyle = `rgba(190,160,110,${(0.35 - k * 0.05).toFixed(2)})`; ctx.beginPath(); ctx.arc(dx - k * 3, dy - 2 - k, 2 + k * 1.2, 0, TAU); ctx.fill(); }   // dust kicked up
+    const hx = lerp(-40, 300, meet) + 34, s = (m - HIT) / 1.4;
+    if (s >= 0 && s < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(hx, 222, 0, hx, 222, 32); g.addColorStop(0, `rgba(255,250,220,${(0.9 * (1 - s)).toFixed(2)})`); g.addColorStop(1, 'rgba(255,230,160,0)'); ctx.fillStyle = g; ctx.fillRect(hx - 32, 190, 64, 64); ctx.restore();
+      const r = mkRnd(77); for (let i = 0; i < 22; i++) { const a = r() * TAU, v = 30 + r() * 60, x = hx + Math.cos(a) * v * s, y = 222 + Math.sin(a) * v * s * 0.7 + 70 * s * s, rot = r() * 6 + s * 12; ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.fillStyle = r() < 0.5 ? '#e8d8b0' : (r() < 0.5 ? '#c81c24' : '#2a4ac0'); ctx.globalAlpha = 1 - s; ctx.fillRect(-3.4, -0.7, 6.8, 1.4); ctx.restore(); } }   // splinters flying
+  }
+  const CROWD = (() => { const r = mkRnd(6262), a = []; for (let row = 0; row < 4; row++) for (let i = 0; i < 17; i++) { const cloth = ['#c81c24', '#2a4ac0', '#e8b838', '#2a7a3a', '#7a3a9a', '#e8d8c0', '#d86a20', '#3a6a8a'][Math.floor(r() * 8)];
+      a.push({ x: 458 + i * 8.6 + (row % 2) * 4.3 + (r() - 0.5) * 1.5, y: 203 + row * 8.6, row, c: cloth, hair: ['#3a2416', '#7a4a20', '#d8b060', '#1a1410', '#a8a098'][Math.floor(r() * 5)], hat: r() < 0.35 ? Math.floor(r() * 4) : -1, skin: ['#f0c8a0', '#d8a878', '#a87048', '#e8b890'][Math.floor(r() * 4)], ph: r() * TAU, flag: r() < 0.14, kid: r() < 0.12 }); } return a; })();
+  function person(ctx, x, y, p, shade, t, cheer) {   // a spectator: rounded shoulders, a head with hair or a hat, arms that go up to cheer
+    const k = p.kid ? 0.82 : 1, sh = (c) => shade ? c + 'c0' : c;
+    ctx.fillStyle = p.c; ctx.beginPath(); ctx.moveTo(x - 3.4 * k, y + 7); ctx.quadraticCurveTo(x - 3.6 * k, y + 0.6, x, y); ctx.quadraticCurveTo(x + 3.6 * k, y + 0.6, x + 3.4 * k, y + 7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,240,200,0.25)'; ctx.beginPath(); ctx.moveTo(x - 3.4 * k, y + 7); ctx.quadraticCurveTo(x - 3.6 * k, y + 0.6, x, y); ctx.lineTo(x - 1, y + 7); ctx.fill();   // sunlit shoulder
+    ctx.fillStyle = p.skin; ctx.beginPath(); ctx.arc(x, y - 2.2 * k, 2.2 * k, 0, TAU); ctx.fill();
+    ctx.fillStyle = p.hair; ctx.beginPath(); ctx.arc(x + 0.4, y - 2.8 * k, 2.2 * k, PI * 1.05, PI * 2.1); ctx.fill();
+    if (p.hat === 0) { ctx.fillStyle = '#2a4ac0'; ctx.beginPath(); ctx.ellipse(x, y - 4.2 * k, 3.2, 1.1, 0, 0, TAU); ctx.fill(); ctx.fillRect(x - 1.8, y - 6.2 * k, 3.6, 2); }   // a soft cap
+    else if (p.hat === 1) { ctx.fillStyle = '#c81c24'; ctx.beginPath(); ctx.ellipse(x, y - 4 * k, 2.8, 1.6, -0.2, PI, TAU); ctx.fill(); ctx.strokeStyle = '#fff4dc'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(x + 1.5, y - 5); ctx.quadraticCurveTo(x + 4, y - 8, x + 5, y - 6); ctx.stroke(); }   // feathered hat
+    else if (p.hat === 2) { ctx.fillStyle = '#e8d8c0'; ctx.beginPath(); ctx.moveTo(x - 2.4, y - 3); ctx.lineTo(x, y - 9); ctx.lineTo(x + 2.4, y - 3); ctx.closePath(); ctx.fill(); }   // a lady's hennin
+    else if (p.hat === 3) { ctx.fillStyle = '#4a3a22'; ctx.beginPath(); ctx.arc(x, y - 3, 2.6, PI, TAU); ctx.fill(); }   // hood
+    if (cheer > 0.2 && Math.sin(p.ph * 3) > -0.3) { ctx.strokeStyle = p.skin; ctx.lineWidth = 1; const wv = Math.sin(t * 14 + p.ph) * 1.6; ctx.beginPath(); ctx.moveTo(x + 2.6, y + 1.6); ctx.lineTo(x + 4, y - 4 + wv); ctx.moveTo(x - 2.6, y + 1.6); ctx.lineTo(x - 4, y - 3.6 - wv); ctx.stroke();
+      if (p.flag) { ctx.fillStyle = p.ph > 3 ? '#c81c24' : '#2a4ac0'; ctx.fillRect(x + 4, y - 9 + wv, 5, 3.4); ctx.fillStyle = '#e8b838'; ctx.fillRect(x + 4, y - 7.6 + wv, 5, 0.8); } }
+    if (shade) { ctx.fillStyle = 'rgba(40,20,30,0.3)'; ctx.fillRect(x - 4, y - 7, 8, 14); }
+  }
+  function drawCrowd(ctx, W, H, t) {   // spectators in tiers: chattering, turning, bobbing; leaping up and waving when the lances shatter or the fanfare sounds
+    const m = t % SHOW, cheer = Math.max(m > HIT && m < HIT + 2.8 ? Math.sin((m - HIT) / 2.8 * PI) : 0, fanAt(m) * 0.6);
+    CROWD.forEach(p => { const jump = cheer * Math.max(0, Math.sin(t * 10 + p.ph)) * 3, y = p.y + Math.sin(t * 1.4 + p.ph) * 0.5 - jump; person(ctx, p.x, y, p, p.row === 0, t, cheer); });
+    ctx.fillStyle = '#7a5030'; ctx.fillRect(452, 238, 150, 3); ctx.fillStyle = 'rgba(255,230,180,0.35)'; ctx.fillRect(452, 238, 150, 1);   // the front rail
+    for (let k = 0; k < 9; k++) { ctx.fillStyle = k % 2 ? '#2a4ac0' : '#c81c24'; ctx.beginPath(); ctx.moveTo(454 + k * 16.5, 241); ctx.lineTo(469 + k * 16.5, 241); ctx.lineTo(469 + k * 16.5, 247); ctx.lineTo(461.5 + k * 16.5, 250); ctx.lineTo(454 + k * 16.5, 247); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#e8b838'; ctx.fillRect(454 + k * 16.5, 241, 15, 1); }   // drapes hung over the rail
+  }
+  // ════════ FALCON — stooping out of the sky across the field, then swinging back up ════════
+  function drawFalcon(ctx, W, H, t) {
+    const m = t % SHOW, u = win(m, FALCON); if (u < 0) return; const e = u, x = lerp(560, 40, e), y = 60 + Math.sin(e * PI) * 140 - e * 40, stoop = e > 0.15 && e < 0.55, f = stoop ? 0.15 : Math.sin(t * 14), dir = -1, ang = stoop ? 0.5 : (e > 0.55 ? -0.4 : 0.1);
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir * 1.3, 1.3); ctx.rotate(-ang);
+    ctx.fillStyle = '#5a4030'; ctx.beginPath(); ctx.ellipse(0, 0, 5, 1.8, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(-9, -1.4); ctx.lineTo(-9, 1.4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#3a2a20'; ctx.beginPath(); ctx.arc(4.6, -0.4, 1.8, 0, TAU); ctx.fill(); ctx.fillStyle = '#e8b838'; ctx.beginPath(); ctx.moveTo(6, -0.6); ctx.lineTo(7.6, 0); ctx.lineTo(6, 0.6); ctx.fill();
+    const span = stoop ? 6 : 12; ctx.fillStyle = '#6a4a34'; ctx.beginPath(); ctx.moveTo(1, -0.6); ctx.quadraticCurveTo(-2, -span * 0.6 - f * 4, -6, -span * (0.6 + f * 0.4)); ctx.lineTo(-2, -0.4); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(1, 0.6); ctx.quadraticCurveTo(-2, span * 0.3 - f * 3, -5, span * 0.4 - f * 4); ctx.lineTo(-2, 0.4); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  // ════════ SIEGE SHOW — a distant trebuchet lobs a flaming stone over the hill ════════
+  function drawTrebuchet(ctx, W, H, t) {
+    const m = t % SHOW, u = win(m, TREB), px = 556, py = HZ - 68, swing = u < 0 ? 0 : Math.min(1, u / 0.12), ang = -2.3 + swing * 2.6;
+    ctx.strokeStyle = '#5a4a38'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(px - Math.cos(ang) * 7, py - Math.sin(ang) * 7); ctx.lineTo(px + Math.cos(ang) * 20, py + Math.sin(ang) * 20); ctx.stroke(); ctx.fillStyle = '#5a4a38'; ctx.fillRect(px - Math.cos(ang) * 7 - 2.5, py - Math.sin(ang) * 7, 5, 5);
+    if (u < 0.1) return; const v = (u - 0.1) / 0.62;
+    if (v > 1) { const s = (u - 0.72) / 0.28; if (s < 1) { for (let k = 0; k < 5; k++) { ctx.fillStyle = `rgba(170,150,130,${(0.45 * (1 - s)).toFixed(2)})`; ctx.beginPath(); ctx.arc(612 + k * 5, HZ - 40 - s * 26 - k * 4, 4 + s * 12, 0, TAU); ctx.fill(); } ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(614, HZ - 38, 0, 614, HZ - 38, 24); g.addColorStop(0, `rgba(255,190,90,${(0.6 * (1 - s)).toFixed(2)})`); g.addColorStop(1, 'rgba(255,120,40,0)'); ctx.fillStyle = g; ctx.fillRect(590, HZ - 62, 48, 48); ctx.restore(); } return; }   // landing over the far hill: a puff of dust and flame
+    const x = lerp(px + 14, 614, v), y = py - 20 - Math.sin(v * PI) * 58 + v * 40;
+    for (let k = 1; k < 9; k++) { const w = Math.max(0, v - k * 0.025), tx = lerp(px + 14, 614, w), ty = py - 20 - Math.sin(w * PI) * 58 + w * 40; ctx.fillStyle = `rgba(110,100,100,${(0.4 - k * 0.04).toFixed(2)})`; ctx.beginPath(); ctx.arc(tx, ty, 1.4 + k * 0.5, 0, TAU); ctx.fill(); }   // smoke trail
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 0, x, y, 7); g.addColorStop(0, 'rgba(255,240,180,1)'); g.addColorStop(0.5, 'rgba(255,150,40,0.8)'); g.addColorStop(1, 'rgba(255,80,20,0)'); ctx.fillStyle = g; ctx.fillRect(x - 7, y - 7, 14, 14); ctx.restore();
+  }
+  // ════════ LIFE — doves wheeling round the towers, the moat glittering ════════
+  const DOVES = [[200, 70, 0], [430, 60, 2], [330, 40, 4]];
+  function drawDoves(ctx, W, H, t) {
+    DOVES.forEach(([x0, y0, ph], i) => { const a = t * (0.5 + i * 0.08) + ph, x = x0 + Math.cos(a) * (40 + i * 6), y = y0 + Math.sin(a * 1.3) * 12, f = Math.sin(t * 9 + i * 2);
+      ctx.fillStyle = '#fbfaf4'; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 3, y - 3 * f - 1, x - 6, y - 2.4 * f); ctx.lineTo(x - 3, y + 1); ctx.lineTo(x, y + 1.4); ctx.lineTo(x + 3, y + 1); ctx.lineTo(x + 6, y - 2.4 * f); ctx.quadraticCurveTo(x + 3, y - 3 * f - 1, x, y); ctx.fill(); ctx.fillStyle = 'rgba(160,150,170,0.6)'; ctx.fillRect(x - 0.8, y, 1.6, 1.4); });
+  }
+  function drawMoat(ctx, W, H, t) {
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; for (let i = 0; i < 18; i++) { const x = ((i * 47 + t * 6) % 640) - 10, y = HZ + 3 + (i * 7 % 11), k = Math.max(0, Math.sin(t * 2.4 + i * 1.7)); ctx.fillStyle = `rgba(255,240,200,${(0.35 * k).toFixed(2)})`; ctx.fillRect(x, y, 6, 0.9); } ctx.restore();
+    // a pair of swans gliding on the moat
+    [[0, 1], [0.08, 0.9]].forEach(([ph, s]) => { const u = ((t * 0.012 + ph) % 1), x = 140 + u * 380, y = HZ + 9; ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = '#fbfaf4'; ctx.beginPath(); ctx.ellipse(0, 0, 5, 2, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#fbfaf4'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(3, -1); ctx.quadraticCurveTo(5, -6, 3.6, -7); ctx.stroke(); ctx.fillStyle = '#e88a20'; ctx.fillRect(3.6, -7.4, 1.6, 0.9); ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(-5, 2.4, 10, 0.8); ctx.restore(); });
+  }
+  function drawBall(ctx, W, H, t) {
+    const x = 196, y = 278; ctx.fillStyle = 'rgba(30,40,10,0.4)'; ctx.beginPath(); ctx.ellipse(x + 4, y + 4.8, 8, 1.6, 0, 0, TAU); ctx.fill();
+    gem(ctx, x, y, 5.2, '#e8443a', '#6a0a10'); ctx.strokeStyle = '#f4e4c8'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.arc(x - 6.5, y, 7.5, -0.6, 0.6); ctx.stroke();
+  }
+
+  const GUARDS = [[160, 230, 0], [400, 470, 1.7], [250, 300, 3.1]];
+  function drawGuards(ctx, W, H, t) {   // guards pacing the wall-walk, spears glinting
+    GUARDS.forEach(([a, b, ph]) => { const u = (Math.sin(t * 0.22 + ph) + 1) / 2, x = lerp(a, b, u), y = 149, step = Math.sin(t * 6 + ph) * 0.6;
+      ctx.fillStyle = '#5a6a8a'; ctx.fillRect(x - 1.6, y - 7, 3.2, 5); ctx.fillStyle = '#b8c0cc'; ctx.beginPath(); ctx.arc(x, y - 8.6, 1.6, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#6a5040'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(x + 2, y - 2); ctx.lineTo(x + 2, y - 15); ctx.stroke(); ctx.fillStyle = '#e8eef8'; ctx.fillRect(x + 1.5, y - 17, 1, 2.4);
+      ctx.fillStyle = '#3a3040'; ctx.fillRect(x - 1.4 + step, y - 2, 1, 2); ctx.fillRect(x + 0.4 - step, y - 2, 1, 2); });
+  }
+
+  // ════════ BUNTING — strings of little flags looping between the towers ════════
+  const BUNT = [[150, 118, 236, 132], [388, 130, 413, 138], [447, 138, 486, 114]];
+  function drawBunting(ctx, W, H, t) {
+    BUNT.forEach(([x0, y0, x1, y1], j) => { const n = Math.max(4, Math.round((x1 - x0) / 7)), sag = 10, pt = (u) => [lerp(x0, x1, u), lerp(y0, y1, u) + Math.sin(u * PI) * sag + Math.sin(t * 1.5 + j) * u * (1 - u) * 3];
+      ctx.strokeStyle = '#5a4030'; ctx.lineWidth = 0.6; ctx.beginPath(); for (let k = 0; k <= 20; k++) { const [x, y] = pt(k / 20); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+      for (let k = 0; k < n; k++) { const [ax, ay] = pt((k + 0.15) / n), [bx, by] = pt((k + 0.85) / n), sw = Math.sin(t * 7 + k + j) * 1.2; ctx.fillStyle = ['#c81c24', '#e8b838', '#2a4ac0', '#fff4dc'][k % 4]; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.lineTo((ax + bx) / 2 + sw, (ay + by) / 2 + 5); ctx.closePath(); ctx.fill(); } });
+  }
+  // ════════ TETHERED HORSE — waiting by the tents, swishing its tail and tossing its head ════════
+  function drawTethered(ctx, W, H, t) {
+    const x = 120, y = 238, toss = Math.max(0, Math.sin(t * 0.9)) ** 6 * 0.25, swish = Math.sin(t * 2.2) * 0.4;
+    ctx.save(); ctx.translate(x, y); ctx.scale(-1.15, 1.15);
+    ctx.strokeStyle = '#5a3a24'; ctx.lineCap = 'round'; [[-8, 0], [-5, 1], [8, 0], [10, 1]].forEach(([lx, far]) => { ctx.strokeStyle = far ? '#4a2e1c' : '#6a4428'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(lx, -10); ctx.lineTo(lx + (lx > 0 ? 0.6 : -0.6), -5); ctx.stroke(); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(lx + (lx > 0 ? 0.6 : -0.6), -5); ctx.lineTo(lx, -0.6); ctx.stroke(); ctx.fillStyle = '#16100a'; ctx.fillRect(lx - 1.3, -1, 2.6, 1.4); });   // legs, standing square
+    horse(ctx, '#8a5430', '#2a1a10', t * 2, toss, swish * 2);
+    ctx.fillStyle = '#8a2a20'; ctx.fillRect(-4, -19, 8, 4); ctx.fillStyle = '#e8b838'; ctx.fillRect(-4, -15.6, 8, 0.8);   // saddle
+    ctx.restore();
+    ctx.fillStyle = '#5a4026'; ctx.fillRect(98, 228, 1.8, 11); ctx.strokeStyle = '#8a7050'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(99, 230); ctx.quadraticCurveTo(102, 233, 106 + toss * 4, 221); ctx.stroke();   // tethering post and rope
+  }
+  // ════════ SQUIRE — runs out after the joust to gather the broken lances ════════
+  function drawSquire(ctx, W, H, t) {
+    const m = t % SHOW, u = win(m, [HIT + 2.6, HIT + 8.2]); if (u < 0) return; const hx = 150, out = u < 0.4 ? u / 0.4 : u < 0.55 ? 1 : 1 - (u - 0.55) / 0.45, x = lerp(70, hx, ease(out)), y = 262, dir = u < 0.55 ? 1 : -1, run = Math.sin(t * 14), carry = u > 0.5;
+    ctx.save(); ctx.translate(x, y); ctx.scale(dir, 1);
+    ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(run * 2, 0); ctx.moveTo(0, -4); ctx.lineTo(-run * 2, 0); ctx.stroke();
+    ctx.fillStyle = '#2a4ac0'; ctx.fillRect(-1.8, -10, 3.6, 6); ctx.fillStyle = '#e8b838'; ctx.fillRect(-1.8, -8, 3.6, 0.8); ctx.fillStyle = '#f0c8a0'; ctx.beginPath(); ctx.arc(0, -11.6, 1.8, 0, TAU); ctx.fill(); ctx.fillStyle = '#7a4a20'; ctx.beginPath(); ctx.arc(0.3, -12.2, 1.8, PI, TAU); ctx.fill();
+    if (carry) { ctx.strokeStyle = '#e8d8b0'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-6, -9); ctx.lineTo(7, -6); ctx.moveTo(-5, -7); ctx.lineTo(6, -9.5); ctx.stroke(); }
+    ctx.restore();
+    if (!carry) { ctx.strokeStyle = '#e8d8b0'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(hx - 6, 264); ctx.lineTo(hx + 6, 262); ctx.moveTo(hx + 2, 266); ctx.lineTo(hx + 12, 263); ctx.stroke(); }   // the broken lance pieces on the ground
+  }
+  // ════════ SMALL LIFE — windmill sails, the portcullis rising for the fanfare, folk at the stalls, a slow warm glow ════════
+  function drawWindmill(ctx, W, H, t) { const x = 118, y = HZ - 50, a = t * 0.8; ctx.strokeStyle = '#6a4a34'; ctx.lineWidth = 1.3; for (let k = 0; k < 4; k++) { const b = a + k * PI / 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(b) * 19, y + Math.sin(b) * 19); ctx.stroke(); ctx.fillStyle = 'rgba(248,240,220,0.92)'; ctx.save(); ctx.translate(x, y); ctx.rotate(b); ctx.fillRect(4, -2.6, 14, 3.4); ctx.strokeStyle = 'rgba(120,90,60,0.6)'; ctx.lineWidth = 0.5; for (let q = 6; q < 18; q += 3) { ctx.beginPath(); ctx.moveTo(q, -2.6); ctx.lineTo(q, 0.8); ctx.stroke(); } ctx.restore(); } ctx.fillStyle = '#4a3428'; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, TAU); ctx.fill(); }
+  function drawPortcullis(ctx, W, H, t) {
+    const m = t % SHOW, gx = 430, lift = m < FANFARE[0] ? 0 : m < FANFARE[0] + 2 ? ease((m - FANFARE[0]) / 2) : m < SHOW - 3 ? 1 : 1 - ease((m - (SHOW - 3)) / 2.5), bottom = HZ - lift * 30;
+    ctx.save(); ctx.beginPath(); ctx.moveTo(gx - 7, HZ); ctx.lineTo(gx - 7, 172); ctx.quadraticCurveTo(gx, 162, gx + 7, 172); ctx.lineTo(gx + 7, HZ); ctx.closePath(); ctx.clip();
+    ctx.strokeStyle = '#2a2428'; ctx.lineWidth = 1.2; for (let x = gx - 6; x <= gx + 6; x += 3) { ctx.beginPath(); ctx.moveTo(x, 160); ctx.lineTo(x, bottom); ctx.stroke(); } for (let y = 166; y < bottom; y += 4) { ctx.beginPath(); ctx.moveTo(gx - 7, y); ctx.lineTo(gx + 7, y); ctx.stroke(); }
+    ctx.fillStyle = '#3a3438'; for (let x = gx - 6; x <= gx + 6; x += 3) { ctx.beginPath(); ctx.moveTo(x - 0.8, bottom); ctx.lineTo(x, bottom + 2); ctx.lineTo(x + 0.8, bottom); ctx.fill(); } ctx.restore();
+    if (lift > 0.6) { ctx.fillStyle = 'rgba(255,200,120,0.18)'; ctx.fillRect(gx - 6, 176, 12, HZ - 176); }   // daylight through the gate passage
+  }
+  const FOLK = [[384, 0.0, '#c81c24'], [404, 1.3, '#2a7a3a'], [426, 2.2, '#e8d8c0'], [444, 3.1, '#2a4ac0']];
+  function drawFolk(ctx, W, H, t) {   // townsfolk browsing the stalls, drifting between them
+    FOLK.forEach(([x0, ph, c], i) => { const x = x0 + Math.sin(t * 0.3 + ph) * 8, y = 246, step = Math.sin(t * 5 + ph) * Math.abs(Math.cos(t * 0.3 + ph)), s = 1.55;
+      ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(step * 1.5, 0); ctx.moveTo(0, -4); ctx.lineTo(-step * 1.5, 0); ctx.stroke();
+      ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(-2.4, -3); ctx.lineTo(-1.8, -10); ctx.lineTo(1.8, -10); ctx.lineTo(2.4, -3); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#e8b890'; ctx.beginPath(); ctx.arc(0, -11.6, 1.7, 0, TAU); ctx.fill(); if (i % 2) { ctx.fillStyle = '#e8d8c0'; ctx.beginPath(); ctx.arc(0, -12.4, 1.9, PI, TAU); ctx.fill(); } ctx.restore(); });
+  }
+  function drawGlow(ctx, W, H, t) {   // the light warming slowly through the loop and cooling back, so it never jumps
+    const k = (1 - Math.cos((t % SHOW) / SHOW * TAU)) / 2; ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = `rgba(255,170,80,${(0.22 * k).toFixed(3)})`; ctx.fillRect(0, 0, W, H); ctx.restore();
+  }
+
+  // ════════ THE HERALD'S SHIELD ════════
+  const STEEL = [[0, '#2a3038'], [0.14, '#9aa6b4'], [0.24, '#f4f8ff'], [0.34, '#7a8694'], [0.6, '#3a424e'], [0.85, '#6a7684'], [1, '#1a1e24']];
+  const STONE = [[0, '#4a4038'], [0.18, '#b8a888'], [0.3, '#e0d0b0'], [0.45, '#a89880'], [0.75, '#6a5e50'], [1, '#3a322a']];
+  function seam(ctx, cx, cy, R, phi, col, w, stitchCol) {
+    const tilt = 0.45, pts = [];
+    for (let i = 0; i <= 96; i++) { const a = i / 96 * TAU; let x = Math.cos(a), y = Math.sin(a) * Math.cos(tilt), z = Math.sin(a) * Math.sin(tilt);
+      const x2 = x * Math.cos(phi) + z * Math.sin(phi), z2 = -x * Math.sin(phi) + z * Math.cos(phi); y = y * Math.cos(0.3) - z2 * Math.sin(0.3); const z3 = y * Math.sin(0.3) + z2 * Math.cos(0.3); pts.push([cx + x2 * R, cy - y * R, z3]); }
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < 96; i++) { const [x, y, z] = pts[i], [x2, y2, z2] = pts[i + 1]; if (z < 0 && z2 < 0) continue; ctx.globalAlpha = Math.min(1, (z + z2) * 2 + 0.2);
+      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x2, y2); ctx.stroke();
+      if (stitchCol && i % 2 === 0) { const dx = x2 - x, dy = y2 - y, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l; ctx.strokeStyle = stitchCol; ctx.lineWidth = 0.9; [-1, 1].forEach(sd => { ctx.beginPath(); ctx.moveTo(x + nx * sd * w * 0.9, y + ny * sd * w * 0.9); ctx.lineTo(x + nx * sd * w * 2 + dx * 0.4, y + ny * sd * w * 2 + dy * 0.4); ctx.stroke(); }); } }
+    ctx.restore();
+  }
+
+  function plinth(ctx, cx, top, w, t, name) {   // dark stone bound with iron bands and rivets, a bronze name plate
+    const h = 52, bw = w * 1.12;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.ellipse(cx, top + h + 4, bw * 0.7, 7, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = sideGrad(ctx, cx, bw / 2, STONE); ctx.beginPath(); ctx.moveTo(cx - w / 2, top + 6); ctx.lineTo(cx + w / 2, top + 6); ctx.lineTo(cx + bw / 2, top + h); ctx.lineTo(cx - bw / 2, top + h); ctx.fill();
+    [top + 10, top + h - 8].forEach(y => { const f = (y - top) / h, hw = w / 2 + (bw - w) / 2 * f; ctx.fillStyle = sideGrad(ctx, cx, hw, STEEL); ctx.fillRect(cx - hw, y, hw * 2, 4); ctx.fillStyle = '#1a1e24'; for (let x = cx - hw + 6; x < cx + hw - 4; x += 14) { ctx.beginPath(); ctx.arc(x, y + 2, 1.1, 0, TAU); ctx.fill(); } });   // iron bands with rivets
+    ctx.fillStyle = sideGrad(ctx, cx, w / 2 + 6, STONE); ctx.fillRect(cx - w / 2 - 6, top, w + 12, 7);
+    const pw = w * 0.76, py = top + 17, ph = 22; ctx.fillStyle = sideGrad(ctx, cx, pw / 2, GOLD); ctx.fillRect(cx - pw / 2, py, pw, ph); ctx.fillStyle = '#2a1a08'; ctx.fillRect(cx - pw / 2 + 2, py + 2, pw - 4, ph - 4);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffe2a0'; ctx.font = "800 13px 'Barlow Condensed', 'Arial Narrow', sans-serif"; ctx.fillText(name, cx, py + 8, pw * 0.9);
+    ctx.font = "700 8px 'Barlow Condensed', 'Arial Narrow', sans-serif"; ctx.fillStyle = '#d8b878'; ctx.fillText("KNIGHT'S CUP", cx, py + 16.5, pw * 0.7);
+  }
+  function ball(ctx, cx, cy, R, phi, gold) {
+    const g = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.1, cx, cy, R); if (gold) { g.addColorStop(0, '#fff8c8'); g.addColorStop(0.35, '#ffcc40'); g.addColorStop(0.8, '#b06a08'); g.addColorStop(1, '#5a3004'); } else { g.addColorStop(0, '#ff8a70'); g.addColorStop(0.4, '#c8281c'); g.addColorStop(1, '#4a0606'); }
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+    seam(ctx, cx, cy, R, phi, gold ? '#c82818' : 'rgba(245,230,200,0.95)', 1.6, gold ? 'rgba(255,240,200,0.9)' : 'rgba(255,245,220,0.9)');
+    const sp = ctx.createRadialGradient(cx - R * 0.4, cy - R * 0.45, 0, cx - R * 0.4, cy - R * 0.45, R * 0.4); sp.addColorStop(0, 'rgba(255,255,255,0.7)'); sp.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = sp; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+  }
+  // ── C: the Herald's Shield ──
+  function trophyShield(ctx, t, boost) {
+    const cx = 180, cy = 170;
+    // crossed lances with pennants behind
+    [-1, 1].forEach(sd => { ctx.save(); ctx.translate(cx, cy + 40); ctx.rotate(sd * 0.55); ctx.fillStyle = sideGrad(ctx, 0, 4, [[0, '#4a2a10'], [0.4, '#c89060'], [1, '#3a2008']]); ctx.beginPath(); ctx.moveTo(-3, 80); ctx.lineTo(3, 80); ctx.lineTo(1.6, -150); ctx.lineTo(0, -160); ctx.lineTo(-1.6, -150); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = sd < 0 ? '#1a3aa8' : '#c81828'; ctx.beginPath(); ctx.moveTo(0, -140); for (let i = 1; i <= 10; i++) { const u = i / 10; ctx.lineTo(-sd * u * 62, -142 + u * 8 + Math.sin(t * 4 - u * 5) * 6 * u); } ctx.lineTo(-sd * 52, -130 + Math.sin(t * 4 - 4.2) * 5); for (let i = 10; i >= 0; i--) { const u = i / 10; ctx.lineTo(-sd * u * 62, -130 + u * 2 + Math.sin(t * 4 - u * 5) * 6 * u - (1 - u) * 2); } ctx.closePath(); ctx.fill(); ctx.restore(); });
+    { const G = sideGrad(ctx, cx, 30, GOLD); ctx.fillStyle = G; ctx.beginPath(); ctx.moveTo(cx - 30, 292); ctx.quadraticCurveTo(cx - 26, 276, cx - 12, 270); ctx.quadraticCurveTo(cx - 8, 256, cx, 254); ctx.quadraticCurveTo(cx + 8, 256, cx + 12, 270); ctx.quadraticCurveTo(cx + 26, 276, cx + 30, 292); ctx.closePath(); ctx.fill();   // a gold mount the shield's point sits in
+      ctx.strokeStyle = '#7a4a10'; ctx.lineWidth = 1.4; [-1, 1].forEach(sd => { ctx.beginPath(); ctx.arc(cx + sd * 18, 284, 4, 0, TAU * 0.8); ctx.stroke(); }); gem(ctx, cx, 278, 3, '#ff3040', '#5a0010'); }
+    // the shield, the arms on it and the helm crest all sway and turn slowly on the lances: squash it sideways by cos(turn) and show the rim's thickness on the trailing side
+    const turn = 0.3 * Math.sin(t * 0.45), sx = Math.cos(turn), edge = Math.sin(turn) * 7;
+    ctx.save(); ctx.translate(cx, 0); ctx.scale(sx, 1); ctx.translate(-cx, 0);
+    ctx.save(); ctx.translate(edge / sx, 0); ctx.fillStyle = '#5a3a08'; ctx.beginPath(); ctx.moveTo(cx - 58, 98); ctx.quadraticCurveTo(cx, 90, cx + 58, 98); ctx.lineTo(cx + 58, 186); ctx.bezierCurveTo(cx + 58, 226, cx + 34, 252, cx, 266); ctx.bezierCurveTo(cx - 34, 252, cx - 58, 226, cx - 58, 186); ctx.closePath(); ctx.fill(); ctx.restore();   // the rim's depth
+    // the kite shield
+    const S = () => { ctx.beginPath(); ctx.moveTo(cx - 58, 98); ctx.quadraticCurveTo(cx, 90, cx + 58, 98); ctx.lineTo(cx + 58, 186); ctx.bezierCurveTo(cx + 58, 226, cx + 34, 252, cx, 266); ctx.bezierCurveTo(cx - 34, 252, cx - 58, 226, cx - 58, 186); ctx.closePath(); };
+    ctx.fillStyle = sideGrad(ctx, cx, 60, GOLD); ctx.save(); ctx.translate(0, 0); S(); ctx.fill(); ctx.restore();
+    ctx.save(); S(); ctx.clip(); ctx.fillStyle = '#b81c24'; ctx.fillRect(cx - 60, 90, 60, 86); ctx.fillRect(cx, 176, 60, 92); ctx.fillStyle = '#1c3496'; ctx.fillRect(cx, 90, 60, 86); ctx.fillRect(cx - 60, 176, 60, 92);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)'; for (let y = 96; y < 266; y += 4) ctx.fillRect(cx - 60, y, 120, 1.2);   // fine diapering on the enamel
+    const sh = ctx.createLinearGradient(cx - 50, 0, cx + 50, 0); sh.addColorStop(0, 'rgba(0,0,0,0.35)'); sh.addColorStop(0.35, 'rgba(255,255,255,0.12)'); sh.addColorStop(1, 'rgba(0,0,0,0.4)'); ctx.fillStyle = sh; ctx.fillRect(cx - 60, 90, 120, 180);
+    ctx.restore();
+    ctx.strokeStyle = sideGrad(ctx, cx, 60, GOLD); ctx.lineWidth = 4; S(); ctx.stroke(); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, 95); ctx.lineTo(cx, 264); ctx.moveTo(cx - 57, 176); ctx.lineTo(cx + 57, 176); ctx.stroke();
+    // the charges in gold: crossed bats, a ball, a crown, three stumps
+    ctx.fillStyle = sideGrad(ctx, cx - 25, 20, GOLD); [-1, 1].forEach(sd => { ctx.save(); ctx.translate(cx - 28, 136); ctx.rotate(sd * 0.6); ctx.fillRect(-1.2, -26, 2.4, 10); ctx.beginPath(); ctx.moveTo(-4, -16); ctx.lineTo(4, -16); ctx.lineTo(4.4, 22); ctx.quadraticCurveTo(0, 25, -4.4, 22); ctx.closePath(); ctx.fill(); ctx.restore(); });
+    ball(ctx, cx + 28, 134, 14, 0.7, true);
+    { const kx = cx - 29, ky = 222, G = sideGrad(ctx, kx, 18, GOLD);   // a crown: jewelled band, five points tipped with pearls, two arches meeting under an orb
+      ctx.fillStyle = G; ctx.beginPath(); ctx.moveTo(kx - 17, ky); ctx.lineTo(kx - 18, ky - 16); ctx.lineTo(kx - 11, ky - 9); ctx.lineTo(kx - 6, ky - 20); ctx.lineTo(kx, ky - 11); ctx.lineTo(kx + 6, ky - 20); ctx.lineTo(kx + 11, ky - 9); ctx.lineTo(kx + 18, ky - 16); ctx.lineTo(kx + 17, ky); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = G; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(kx - 12, ky - 9); ctx.quadraticCurveTo(kx - 8, ky - 30, kx, ky - 28); ctx.quadraticCurveTo(kx + 8, ky - 30, kx + 12, ky - 9); ctx.stroke();
+      ctx.fillStyle = G; ctx.beginPath(); ctx.arc(kx, ky - 31, 3, 0, TAU); ctx.fill(); ctx.fillRect(kx - 0.8, ky - 37, 1.6, 4); ctx.fillRect(kx - 2.4, ky - 35.4, 4.8, 1.4);   // orb and cross-pommée
+      ctx.fillStyle = '#7a4a10'; ctx.fillRect(kx - 17, ky - 5, 34, 5); ctx.fillStyle = G; ctx.fillRect(kx - 17, ky - 5.6, 34, 1.4); ctx.fillRect(kx - 17, ky - 0.6, 34, 1.4);
+      [[-11, '#ff3040', '#5a0010'], [0, '#3080ff', '#002060'], [11, '#30d070', '#00401a']].forEach(([dx, c0, c1]) => gem(ctx, kx + dx, ky - 2.6, 2, c0, c1));
+      ctx.fillStyle = '#fff8e8'; [[-18, -16], [-6, -20], [6, -20], [18, -16]].forEach(([dx, dy]) => { ctx.beginPath(); ctx.arc(kx + dx, ky + dy - 1, 1.6, 0, TAU); ctx.fill(); }); }
+    ctx.fillStyle = sideGrad(ctx, cx + 28, 16, GOLD); [16, 28, 40].forEach(dx => ctx.fillRect(cx + dx - 1.8, 196, 3.6, 40)); ctx.fillRect(cx + 15, 192.6, 12, 2.4); ctx.fillRect(cx + 29, 192.6, 12, 2.4);   // stumps and bails
+    // the helm as its crest, with a plume
+    ctx.fillStyle = sideGrad(ctx, cx, 24, STEEL); ctx.beginPath(); ctx.moveTo(cx - 22, 96); ctx.lineTo(cx - 22, 64); ctx.quadraticCurveTo(cx - 20, 44, cx, 42); ctx.quadraticCurveTo(cx + 20, 44, cx + 22, 64); ctx.lineTo(cx + 22, 96); ctx.closePath(); ctx.fill();
+    { const G = sideGrad(ctx, cx, 22, GOLD); ctx.fillStyle = G; ctx.beginPath(); ctx.moveTo(cx - 20, 58); ctx.lineTo(cx - 20, 46); ctx.lineTo(cx - 13, 52); ctx.lineTo(cx - 7, 42); ctx.lineTo(cx, 50); ctx.lineTo(cx + 7, 42); ctx.lineTo(cx + 13, 52); ctx.lineTo(cx + 20, 46); ctx.lineTo(cx + 20, 58); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#7a4a10'; ctx.fillRect(cx - 20, 54, 40, 4); gem(ctx, cx, 56, 1.8, '#ff3040', '#5a0010'); gem(ctx, cx - 11, 56, 1.4, '#3080ff', '#002060'); gem(ctx, cx + 11, 56, 1.4, '#3080ff', '#002060'); }   // a coronet round the helm
+    ctx.fillStyle = '#0a0c10'; ctx.fillRect(cx - 18, 66, 36, 3); ctx.fillRect(cx - 18, 72, 36, 2); for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.arc(cx - 10 + i * 4, 84, 1, 0, TAU); ctx.fill(); }   // eye slits and breaths
+    ctx.fillStyle = '#c81828'; for (let i = 0; i < 6; i++) { const a = -1.9 + i * 0.16 + Math.sin(t * 2 + i) * 0.05; ctx.save(); ctx.translate(cx + 4, 42); ctx.rotate(a); ctx.beginPath(); ctx.ellipse(16, 0, 18, 4, 0.2, 0, TAU); ctx.fill(); ctx.restore(); }   // plume
+    // a gleam sweeping across the shield as it turns to the torchlight; the lightning makes it blaze
+    ctx.save(); S(); ctx.clip(); ctx.globalCompositeOperation = 'lighter'; if (boost > 0) { ctx.fillStyle = `rgba(255,236,170,${(0.18 * boost).toFixed(2)})`; ctx.fillRect(cx - 60, 90, 120, 180); } const gx = (0.5 - turn * 1.3) * 160 + cx - 80, gg = ctx.createLinearGradient(gx - 20, 0, gx + 20, 0); gg.addColorStop(0, 'rgba(255,240,200,0)'); gg.addColorStop(0.5, 'rgba(255,240,200,0.25)'); gg.addColorStop(1, 'rgba(255,240,200,0)'); ctx.fillStyle = gg; ctx.fillRect(cx - 60, 90, 120, 180); ctx.restore();
+    ctx.restore();
+  }
+  const UK = 0.6;
+  function drawTrophy(ctx, W, H, t) {
+    const boost = fanAt(t % SHOW) * 0.7;
+    ctx.save(); ctx.translate(W * 0.5, H * 0.705); ctx.scale(UK, UK); ctx.translate(-180, -344);
+    plinth(ctx, 180, 292, 116, t, "THE HERALD'S SHIELD"); ctx.translate(0, 12); trophyShield(ctx, t, boost);
+    ctx.restore();
+    if (boost > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(W * 0.5, H * 0.43, 0, W * 0.5, H * 0.43, 110); g.addColorStop(0, `rgba(255,220,140,${(0.25 * boost).toFixed(2)})`); g.addColorStop(1, 'rgba(255,200,100,0)'); ctx.fillStyle = g; ctx.fillRect(W * 0.5 - 110, H * 0.43 - 110, 220, 220); ctx.restore(); }
+  }
+  function drawBackdrop(ctx, W, H, t) {   // a soft pool of shadow behind the trophy so the gold reads against the lit castle
+    const cx = W * 0.5, cy = H * 0.45, g = ctx.createRadialGradient(cx, cy, 30, cx, cy, 120); g.addColorStop(0, 'rgba(50,34,60,0.5)'); g.addColorStop(0.55, 'rgba(50,34,60,0.26)'); g.addColorStop(1, 'rgba(50,34,60,0)'); ctx.save(); ctx.translate(cx, cy); ctx.scale(0.8, 1.1); ctx.translate(-cx, -cy); ctx.fillStyle = g; ctx.fillRect(cx - 130, cy - 130, 260, 260); ctx.restore();   // a cool pool of shade on the castle behind, so the gold stands out
+  }
+
+  // (canvas passed in)
+  const ctx = cvs.getContext('2d');
+  const SCRATCH = document.createElement('canvas').getContext('2d');
+  const skyL = document.createElement('canvas'); skyL.width = 620; skyL.height = 355;
+  const back = document.createElement('canvas'); back.width = 620; back.height = 355;
+  const mid = document.createElement('canvas'); mid.width = 620; mid.height = 355;
+  const front = document.createElement('canvas'); front.width = 620; front.height = 355;
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function draw(c, W, H, part) { if (part === 'sky') drawSky(c, W, H); else if (part === 'back') drawBack(c, W, H); else if (part === 'mid') drawMid(c, W, H); else drawFront(c, W, H); }
+  function paintBase() {
+    const k = skyL.getContext('2d'); k.clearRect(0, 0, 620, 355); draw(k, 620, 355, 'sky');
+    const b = back.getContext('2d'); b.clearRect(0, 0, 620, 355); draw(b, 620, 355, 'back'); reflectCastle(b);
+    const md = mid.getContext('2d'); md.clearRect(0, 0, 620, 355); draw(md, 620, 355, 'mid');
+    const f = front.getContext('2d'); f.clearRect(0, 0, 620, 355); draw(f, 620, 355, 'front');
+  }
+  function frame(ms) {
+    const t = reduceMotion ? 0 : Math.max(0, ms) / 1000;   // the game's clock can start a hair below zero
+    ctx.clearRect(0, 0, 620, 355);
+    ctx.drawImage(skyL, 0, 0);
+    drawClouds(ctx, 620, 355, t);
+    drawSunRays(ctx, 620, 355, t);
+    drawTrebuchet(ctx, 620, 355, t);
+    ctx.drawImage(back, 0, 0);
+    drawDoves(ctx, 620, 355, t);
+    drawGuards(ctx, 620, 355, t);
+    drawBunting(ctx, 620, 355, t);
+    drawWindmill(ctx, 620, 355, t);
+    drawPortcullis(ctx, 620, 355, t);
+    drawHerald(ctx, 620, 355, t);
+    drawMoat(ctx, 620, 355, t);
+    ctx.drawImage(mid, 0, 0);
+    drawFlags(ctx, 620, 355, t);
+    drawFolk(ctx, 620, 355, t);
+    drawCrowd(ctx, 620, 355, t);
+    drawTethered(ctx, 620, 355, t);
+    drawJoust(ctx, 620, 355, t);
+    drawSquire(ctx, 620, 355, t);
+    drawBall(ctx, 620, 355, t);
+    drawFalcon(ctx, 620, 355, t);
+    drawBackdrop(ctx, 620, 355, t);
+    drawTrophy(ctx, 620, 355, t);
+    drawPetals(ctx, 620, 355, t);
+    drawGlow(ctx, 620, 355, t);
+    ctx.drawImage(front, 0, 0);
+  }
+  function loop(ms) { if (!__running) return; __elapsed = ms - __t0; __frame(__elapsed); requestAnimationFrame(loop); }
+  paintBase(); __frame(0);
+  let repainted = false;
+  const repaint = () => { if (!repainted) { repainted = true; paintBase(); __frame(__elapsed); } };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(repaint).catch(() => {});
+  setTimeout(repaint, 2000);
+  return {
+    start() { if (__running) return; if (reduceMotion) { __frame(0); return; } __running = true; __t0 = performance.now() - __elapsed; requestAnimationFrame(loop); },
+    stop() { __running = false; },
+  };
+}
 const LEAGUE_LIVE_ART = {
   "GULLY CUP": makeLeagueArt_gully,
   "FLOODLIT SERIES": makeLeagueArt_floodlit,
@@ -16778,6 +17278,7 @@ const LEAGUE_LIVE_ART = {
   "INFERNO CUP": makeLeagueArt_inferno,
   "NEON SERIES": makeLeagueArt_neon,
   "JUNGLE CUP": makeLeagueArt_jungle,
+  "KNIGHT'S CUP": makeLeagueArt_knight,
 };
 // Only the centred card animates; everything stops when the league screen is hidden or the app is backgrounded
 window.__leagueArt = [];
