@@ -21517,6 +21517,737 @@ function makeLeagueArt_knight(cvs) {
     stop() { __running = false; },
   };
 }
+function makeLeagueArt_brass(cvs) {
+  let __running = false, __t0 = 0, __elapsed = 0;
+  // Soft fade at the foot of the art so it melts into the card's info panel
+  function __fade() {
+    const g = ctx.createLinearGradient(0, 355 * 0.78, 0, 355);
+    g.addColorStop(0, 'rgba(8,8,18,0)'); g.addColorStop(1, 'rgba(8,8,18,0.92)');
+    ctx.fillStyle = g; ctx.fillRect(0, 355 * 0.78, 620, 355 * 0.22);
+  }
+  function __frame(ms) { frame(ms); __fade(); }
+  const PI = Math.PI, TAU = PI * 2;
+  const SHOW = 30.0;                                 // length of the shared schedule, seconds
+  // the story: the cricket ground is the top deck of a great brass airship, high above the league at sunset; its huge balloon overhead.
+  // Far below, through gaps in the clouds, the whole league passes beneath: the smoky city and its clock tower, the factory district, the docks and the lighthouse.
+  // → the ship sails close past a colossal factory chimney that reaches right up to our height, smoke rolling over (headline 1)
+  // → a six is struck clean over the rail and drops away towards the city; the stoker and the captain cheer, the score drums roll, the orrery flares (headline 2)
+  // → passing over the docks, the ship's whistle salutes the harbour (headline 3)
+  const CHIM = [5.6, 13.0], SIX = [14.8, 18.2], SIXLAND = 18.2, CHEER = [18.2, 22.4], WHISTLE = [22.6, 25.8];
+  const HOR = 100, RAIL = 222;                       // the horizon (eye level — high, because we're looking down on the world), the deck's far edge at the rail
+  const STRIPW = 1860, STRIPY = 96;                  // the ground far below: three districts in a wrapped strip that scrolls past
+  const SUN = { x: 452, y: 86, r: 20 };
+  const BRASS = [[0, '#4a2e08'], [0.16, '#c8902a'], [0.26, '#fff0b0'], [0.38, '#d8a038'], [0.66, '#7a5010'], [0.88, '#b88028'], [1, '#3a2206']];
+  const COPPER = [[0, '#3a1a08'], [0.18, '#b8683a'], [0.28, '#ffc8a0'], [0.42, '#c87040'], [0.7, '#6a3010'], [1, '#2a1004']];
+  const IRON = [[0, '#1a1614'], [0.2, '#5a524a'], [0.3, '#8a8278'], [0.5, '#3a342e'], [1, '#141210']];
+
+  function drawSky(ctx, W, H) {   // sunset: deep blue overhead, rose and gold down to a glowing horizon — and below it, the haze of the world far beneath
+    const g = ctx.createLinearGradient(0, 0, 0, HOR); g.addColorStop(0, '#2a2632'); g.addColorStop(0.4, '#6a4a3c'); g.addColorStop(0.75, '#d08646'); g.addColorStop(1, '#ffd486'); ctx.fillStyle = g; ctx.fillRect(-20, -20, W + 40, HOR + 20);
+    const lg = ctx.createLinearGradient(0, HOR, 0, 230); lg.addColorStop(0, '#d8a46e'); lg.addColorStop(0.35, '#9a7a56'); lg.addColorStop(1, '#4e4a32'); ctx.fillStyle = lg; ctx.fillRect(-20, HOR, W + 40, H - HOR + 20);
+    const sg = ctx.createRadialGradient(SUN.x, SUN.y, 0, SUN.x, SUN.y, 220); sg.addColorStop(0, 'rgba(255,248,220,0.95)'); sg.addColorStop(0.08, 'rgba(255,230,160,0.7)'); sg.addColorStop(0.35, 'rgba(255,190,110,0.22)'); sg.addColorStop(1, 'rgba(255,170,100,0)'); ctx.fillStyle = sg; ctx.fillRect(-20, -20, W + 40, H + 40);
+    ctx.fillStyle = '#fffaea'; ctx.beginPath(); ctx.arc(SUN.x, SUN.y, SUN.r, 0, TAU); ctx.fill();
+    const r = mkRnd(1212); ctx.fillStyle = 'rgba(150,96,70,0.6)'; ctx.beginPath(); ctx.moveTo(-20, HOR + 6); for (let x = -20; x <= W + 20; x += 8) ctx.lineTo(x, HOR - 1 - Math.sin(x * 0.013) * 2.4 - Math.sin(x * 0.041) * 1.2 - (r() < 0.08 ? 3 + r() * 4 : 0)); ctx.lineTo(W + 20, HOR + 6); ctx.closePath(); ctx.fill();   // far hills on the horizon
+  }
+  // ════════ THE GROUND FAR BELOW — six depth bands, each scrolling at its own speed (near ones faster), so the land really passes beneath us ════════
+  // Every band wraps exactly once per loop, and the three districts sit at the same fraction of each band: city, then factories, then the docks.
+  const ROWS = [0, 1, 2, 3, 4, 5].map(k => ({ y: 8 + k * k * 2.6 + k * 8, s: 0.34 + k * 0.2 }));
+  const BAND_SPEED = [22, 34, 50, 68, 90, 116];
+  const BANDS = ROWS.map((r, k) => ({ y: STRIPY + r.y, s: r.s, W: BAND_SPEED[k] * SHOW, img: null }));
+  const BASE = 90;                                   // the baseline inside each band's canvas
+  const BAND_STACKS = [], BAND_LIGHT = [];
+  function paintBand(k) {
+    const B = BANDS[k], s = B.s, S = s * 1.6, c0 = document.createElement('canvas'); c0.width = B.W; c0.height = 130; const c = c0.getContext('2d'), r = mkRnd(4400 + k * 31), gap = (k < 5 ? BANDS[k + 1].y - B.y : 40) + 2;
+    const dist = (x) => x / B.W, region = (x) => dist(x) < 1 / 3 ? 'city' : dist(x) < 2 / 3 ? 'works' : (dist(x) > 0.985 ? 'city' : 'docks');
+    // fields, parks and lanes on the land
+    for (let i = 0; i < B.W / (60 * S); i++) { const x = r() * B.W; if (region(x) === 'docks' && k > 0) continue; c.fillStyle = ['rgba(100,130,70,0.55)', 'rgba(140,120,70,0.45)', 'rgba(80,110,60,0.5)'][i % 3]; c.beginPath(); c.ellipse(x, BASE + gap * 0.5, (14 + r() * 24) * S, gap * 0.4, 0, 0, TAU); c.fill(); }
+    // water: the river runs through band 2 in the city and works, then opens into the harbour across the docks
+    const water = (x0, x1) => { const g = c.createLinearGradient(0, BASE - 2, 0, BASE + gap); g.addColorStop(0, '#f6c08a'); g.addColorStop(1, '#a87488'); c.fillStyle = g; c.fillRect(x0, BASE - 2, x1 - x0, gap + 2); c.fillStyle = 'rgba(255,240,200,0.6)'; for (let x = x0; x < x1; x += 9 + r() * 14) c.fillRect(x, BASE + r() * gap, (3 + r() * 6) * S, 0.8); };
+    if (k === 2) water(0, B.W * 0.67); if (k >= 1 && k <= 4) water(B.W * 0.66, B.W * 0.98);
+    if (k === 2) for (let f of [0.06, 0.2, 0.31, 0.45, 0.58]) { const x = f * B.W; c.fillStyle = '#6a4a40'; c.fillRect(x - 5 * S, BASE - 3, 10 * S, gap + 3); c.fillStyle = 'rgba(255,210,150,0.5)'; c.fillRect(x + 2 * S, BASE - 3, 3 * S, gap + 3); }   // bridges over the river
+    if (k === 2) for (let f of [0.12, 0.38, 0.52]) { const x = f * B.W; c.fillStyle = '#3a2a2a'; c.fillRect(x - 12 * S, BASE + gap * 0.4, 24 * S, 4 * S); c.fillStyle = '#c87a3a'; c.fillRect(x - 8 * S, BASE + gap * 0.4 - 3 * S, 10 * S, 3 * S); }   // barges
+    // buildings, seen from above: little walls, big roofs catching the sunset on their right slopes
+    const house = (x, w, wall, roof, col, rcol) => { c.fillStyle = col; c.fillRect(x, BASE - wall, w, wall + 1); c.fillStyle = rcol; c.fillRect(x, BASE - wall - roof, w, roof); c.fillStyle = 'rgba(255,214,160,0.45)'; c.fillRect(x + w * 0.55, BASE - wall - roof, w * 0.45, roof); c.fillStyle = 'rgba(40,20,20,0.35)'; c.fillRect(x, BASE - wall - roof, w, 0.8); };
+    for (let x = 0; x < B.W;) { const reg = region(x); const step = reg === 'works' ? (34 + r() * 30) * S : (10 + r() * 10) * S;
+      if (k !== 2 && !(reg === 'docks' && k >= 1 && k <= 4)) {
+        if (reg === 'city') { if (r() < 0.22) { c.fillStyle = 'rgba(50,80,40,0.85)'; for (let q = 0; q < 3; q++) { c.beginPath(); c.arc(x + r() * step, BASE - 4 * S, (3 + r() * 2) * S, 0, TAU); c.fill(); } }   // a clump of trees
+          else if (r() < 0.82) { const w = step * 0.85; house(x, w, (3 + r() * 3) * S, (5 + r() * 4) * S, ['#7a4848', '#8a5a48', '#6a4a52'][Math.floor(r() * 3)], ['#9a5a48', '#6a6078', '#8a6a5a'][Math.floor(r() * 3)]); if (k > 1 && r() < 0.6) { c.fillStyle = 'rgba(255,200,110,0.9)'; c.fillRect(x + r() * w * 0.7, BASE - 2.4 * S, 1.6 * S, 1.6 * S); } } }
+        else if (reg === 'works' && r() < 0.4) { /* a yard between the sheds */ }
+        else if (reg === 'works') { const w = step * (0.6 + r() * 0.4), sh = (5 + r() * 6) * S, top = BASE - sh; c.fillStyle = ['#4a2c2c', '#5a3830', '#3e2a30'][Math.floor(r() * 3)]; c.fillRect(x, top, w, sh + 1); c.fillStyle = '#3a3040'; c.beginPath(); c.moveTo(x, top); for (let q = x; q < x + w; q += 7 * S) { c.lineTo(q, top - 5 * S); c.lineTo(q + 7 * S, top); } c.closePath(); c.fill(); for (let q = x + 3 * S; q < x + w - 3 * S; q += 6 * S) if (r() < 0.7) { c.fillStyle = 'rgba(255,160,70,0.9)'; c.fillRect(q, top + 3 * S, 2.4 * S, 2.6 * S); }
+          if (r() < 0.45) { const cx = x + w * (0.3 + r() * 0.4), h = (34 + r() * 26) * S; c.fillStyle = '#6a3830'; c.beginPath(); c.moveTo(cx - 3.4 * S, BASE); c.lineTo(cx - 2.2 * S, BASE - h); c.lineTo(cx + 2.2 * S, BASE - h); c.lineTo(cx + 3.4 * S, BASE); c.closePath(); c.fill(); c.fillStyle = '#2a1e1e'; c.fillRect(cx - 3 * S, BASE - h - 2 * S, 6 * S, 2.4 * S); c.fillStyle = 'rgba(255,190,110,0.5)'; c.fillRect(cx + 1 * S, BASE - h, 1.2 * S, h); BAND_STACKS.push({ k, X: cx, top: BASE - h - 2 * S, S }); } }
+        else if (reg === 'docks') { const w = step * 1.2; c.fillStyle = '#6a3e40'; c.fillRect(x, BASE - 9 * S, w * 0.9, 10 * S); c.fillStyle = 'rgba(255,210,150,0.4)'; c.fillRect(x + w * 0.6, BASE - 9 * S, w * 0.3, 10 * S); if (r() < 0.3) { c.strokeStyle = '#2a1e26'; c.lineWidth = Math.max(0.8, S * 0.7); c.beginPath(); c.moveTo(x, BASE); c.lineTo(x, BASE - 28 * S); c.lineTo(x + 24 * S, BASE - 32 * S); c.moveTo(x, BASE - 20 * S); c.lineTo(x + 24 * S, BASE - 32 * S); c.stroke(); } }   // warehouses and cranes on the quays
+      }
+      x += step; }
+    // landmarks
+    const at = (f) => f * B.W;
+    if (k === 3) { const x = at(0.16); c.fillStyle = '#4a2e3c'; c.fillRect(x - 6 * S, BASE - 70 * S, 12 * S, 70 * S); c.beginPath(); c.moveTo(x - 7 * S, BASE - 70 * S); c.lineTo(x, BASE - 92 * S); c.lineTo(x + 7 * S, BASE - 70 * S); c.fill(); c.fillStyle = '#ffe8b0'; c.beginPath(); c.arc(x, BASE - 60 * S, 4 * S, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,210,150,0.45)'; c.fillRect(x + 2.6 * S, BASE - 70 * S, 3.4 * S, 70 * S); }   // the clock tower
+    if (k === 1) { const x = at(0.07); c.fillStyle = '#5a3a48'; c.fillRect(x - 13 * S, BASE - 20 * S, 26 * S, 20 * S); c.beginPath(); c.arc(x, BASE - 20 * S, 13 * S, PI, TAU); c.fill(); c.fillRect(x - 1, BASE - 40 * S, 2, 8 * S); c.fillStyle = 'rgba(255,210,150,0.5)'; c.beginPath(); c.arc(x, BASE - 20 * S, 13 * S, -PI / 2, 0); c.lineTo(x, BASE - 20 * S); c.fill(); }   // the cathedral dome
+    if (k === 4) { const x = at(0.27); c.fillStyle = '#5a3a48'; c.fillRect(x - 5 * S, BASE - 26 * S, 10 * S, 26 * S); c.beginPath(); c.moveTo(x - 5 * S, BASE - 26 * S); c.lineTo(x, BASE - 56 * S); c.lineTo(x + 5 * S, BASE - 26 * S); c.fill(); }   // a church spire
+    if (k >= 2 && k <= 4) [[0.72, 2], [0.8, 3], [0.86, 4], [0.76, 4]].filter(([, kk]) => kk === k).forEach(([f]) => { const x = at(f); c.fillStyle = '#2a1e26'; c.beginPath(); c.moveTo(x - 30 * S, BASE + gap * 0.3); c.lineTo(x + 34 * S, BASE + gap * 0.3); c.lineTo(x + 28 * S, BASE + gap * 0.3 + 8 * S); c.lineTo(x - 26 * S, BASE + gap * 0.3 + 8 * S); c.closePath(); c.fill(); c.fillStyle = '#efe0c8'; c.fillRect(x - 22 * S, BASE + gap * 0.3 - 4 * S, 40 * S, 4 * S); [-10, 6].forEach(dx => { c.fillStyle = '#b82820'; c.fillRect(x + dx * S - 2.6 * S, BASE + gap * 0.3 - 16 * S, 5.2 * S, 12 * S); c.fillStyle = '#1a1416'; c.fillRect(x + dx * S - 2.6 * S, BASE + gap * 0.3 - 17 * S, 5.2 * S, 3 * S); }); c.fillStyle = 'rgba(255,255,255,0.3)'; c.fillRect(x - 40 * S, BASE + gap * 0.3 + 8 * S, 80 * S, 1); });   // steamships in the harbour
+    if (k === 4) { const x = at(0.93), y = BASE + gap * 0.4; c.fillStyle = '#6a4a40'; c.fillRect(at(0.88), y, at(0.98) - at(0.88), 4 * S); c.fillStyle = '#efe4d0'; c.beginPath(); c.moveTo(x - 6 * S, y); c.lineTo(x - 3.6 * S, y - 50 * S); c.lineTo(x + 3.6 * S, y - 50 * S); c.lineTo(x + 6 * S, y); c.closePath(); c.fill(); c.fillStyle = '#b82820'; [10, 26, 40].forEach(d => c.fillRect(x - 5.4 * S, y - d * S - 5 * S, 10.8 * S, 5 * S)); c.fillStyle = '#2a1e22'; c.fillRect(x - 4.6 * S, y - 58 * S, 9.2 * S, 8 * S); c.beginPath(); c.moveTo(x - 5.6 * S, y - 58 * S); c.lineTo(x, y - 64 * S); c.lineTo(x + 5.6 * S, y - 58 * S); c.fill(); c.fillStyle = '#fff4c0'; c.fillRect(x - 3 * S, y - 57 * S, 6 * S, 5 * S); BAND_LIGHT.push({ k, X: x, y: y - 54.5 * S }); }   // the lighthouse on its breakwater
+    // the air between us and the ground: further bands hazier
+    c.globalCompositeOperation = 'source-atop'; c.fillStyle = `rgba(236,170,104,${(0.55 - k * 0.09).toFixed(2)})`; c.fillRect(0, 0, B.W, 130); c.globalCompositeOperation = 'source-over';
+    return c0;
+  }
+  // ════════ THE SHIP — the balloon overhead, the boiler house and its brass stacks, the helm, the deck and rail ════════
+  const STACKS2 = [{ x: 54, w: 26, top: 46, rake: -6 }, { x: 108, w: 22, top: 70, rake: -5 }];
+  const ENV_EDGE = (x) => 32 - Math.pow((x - 310) / 340, 2) * 30;   // the balloon's belly: lowest straight overhead, curving up and away at the sides
+  function envelope(ctx, W) {   // the belly of the great balloon overhead: a rounded fabric dome caught by the sunset on its lower curve, wrapped in a rope net whose cords run down to the rail
+    const edge = ENV_EDGE;
+    ctx.save(); ctx.beginPath(); ctx.moveTo(-10, -10); ctx.lineTo(W + 10, -10); for (let x = W + 10; x >= -10; x -= 10) ctx.lineTo(x, edge(x)); ctx.closePath(); ctx.clip();
+    const g = ctx.createRadialGradient(420, 60, 10, 330, -60, 420); g.addColorStop(0, '#f0c070'); g.addColorStop(0.25, '#b88048'); g.addColorStop(0.6, '#6a4428'); g.addColorStop(1, '#2a1a10'); ctx.fillStyle = g; ctx.fillRect(-10, -10, W + 20, 60);   // lit from the low sun on the right
+    ctx.strokeStyle = 'rgba(60,30,16,0.35)'; ctx.lineWidth = 1; for (let k = -10; k <= 10; k++) { ctx.beginPath(); ctx.moveTo(310 + k * 6, -40); ctx.quadraticCurveTo(310 + k * 26, 0, 310 + k * 40, edge(310 + k * 40) + 2); ctx.stroke(); }   // gores curving round the belly
+    ctx.strokeStyle = 'rgba(70,46,30,0.55)'; ctx.lineWidth = 0.7; for (let k = -24; k <= 24; k++) [-1, 1].forEach(sd => { ctx.beginPath(); for (let i = 0; i <= 10; i++) { const u = i / 10, x = 310 + (k + sd * u * 2) * 15, y = edge(x) - (1 - u) * 34 + 2; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); });   // the diamond rope net
+    const lip = ctx.createLinearGradient(0, 0, 0, 34); lip.addColorStop(0, 'rgba(255,210,160,0)'); lip.addColorStop(1, 'rgba(255,210,160,0.35)'); ctx.fillStyle = lip; ctx.fillRect(-10, -10, W + 20, 50);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(40,24,16,0.5)'; ctx.lineWidth = 1.2; ctx.beginPath(); for (let x = -10; x <= W + 10; x += 10) { const y = edge(x); x > -10 ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+    ROPES.forEach(([x]) => { ctx.fillStyle = sideGrad(ctx, x, 3, BRASS); ctx.beginPath(); ctx.arc(x, edge(x), 2, 0, TAU); ctx.fill(); });   // brass toggles (the cords themselves sway, drawn per frame)   // the net's cords gathered down to the rail, brass toggles
+  }
+  const VENTS = [[236, 0], [380, 1.3], [560, 2.6]];
+  const ROPES = [[30, -6], [120, 40], [200, 150], [430, 470], [516, 500], [600, 640]];
+  function stack(ctx, f) {   // a riveted copper smokestack with brass hoops and a flared crown
+    const base = 200, tl = f.x - f.w / 2 + f.rake, tr = f.x + f.w / 2 + f.rake;
+    const body = () => { ctx.beginPath(); ctx.moveTo(f.x - f.w / 2, base); ctx.lineTo(tl, f.top); ctx.lineTo(tr, f.top); ctx.lineTo(f.x + f.w / 2, base); ctx.closePath(); };
+    ctx.fillStyle = sideGrad(ctx, f.x, f.w / 2, COPPER); body(); ctx.fill();
+    ctx.save(); body(); ctx.clip(); [f.top + 14, f.top + 50, f.top + 90].forEach(y => { if (y > base - 6) return; ctx.fillStyle = sideGrad(ctx, f.x, f.w / 2 + 2, BRASS); ctx.fillRect(f.x - 30, y, 60, 4); ctx.fillStyle = '#3a2206'; for (let x = f.x - 20; x < f.x + 20; x += 4) { ctx.beginPath(); ctx.arc(x, y + 2, 0.6, 0, TAU); ctx.fill(); } }); ctx.restore();
+    ctx.strokeStyle = 'rgba(255,214,150,0.75)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(f.x + f.w / 2 - 1, base); ctx.lineTo(tr - 1, f.top + 4); ctx.stroke();   // the sunset catching its right edge
+    const cx = (tl + tr) / 2; ctx.fillStyle = sideGrad(ctx, cx, f.w / 2 + 6, BRASS); ctx.beginPath(); ctx.moveTo(tl, f.top + 4); ctx.lineTo(tl - 5, f.top - 6); ctx.lineTo(tr + 5, f.top - 6); ctx.lineTo(tr, f.top + 4); ctx.closePath(); ctx.fill();   // the flared crown
+    ctx.fillStyle = '#100808'; ctx.beginPath(); ctx.ellipse(cx, f.top - 6, f.w / 2 + 4, 2.6, 0, 0, TAU); ctx.fill();
+  }
+  function boilerHouse(ctx) {   // the engine house on the left of the deck: a riveted iron casing with glowing portholes, a big gauge, pipes, and the two stacks
+    STACKS2.forEach(f => stack(ctx, f));
+    ctx.strokeStyle = sideGrad(ctx, 80, 40, COPPER); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(66, 150); ctx.quadraticCurveTo(82, 150, 82, 136); ctx.lineTo(82, 120); ctx.quadraticCurveTo(82, 110, 98, 112); ctx.stroke();   // a pipe linking the stacks
+    ctx.fillStyle = sideGrad(ctx, 82, 5, BRASS); ctx.fillRect(78, 126, 8, 5);
+    const x0 = 14, x1 = 156, top = 196, base = 248;
+    ctx.fillStyle = 'rgba(30,14,6,0.4)'; ctx.beginPath(); ctx.moveTo(x0, base); ctx.lineTo(x1, base); ctx.lineTo(x0 - 40, base + 14); ctx.lineTo(-40, base + 14); ctx.closePath(); ctx.fill();   // its long shadow, thrown left
+    ctx.fillStyle = sideGrad(ctx, 85, 72, IRON); ctx.fillRect(x0, top, x1 - x0, base - top); ctx.beginPath(); ctx.moveTo(x0 - 3, top); ctx.quadraticCurveTo(85, top - 14, x1 + 3, top); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = sideGrad(ctx, 85, 74, BRASS); ctx.fillRect(x0 - 2, top - 1, x1 - x0 + 4, 3); ctx.fillRect(x0 - 2, base - 5, x1 - x0 + 4, 4);
+    const rim = ctx.createLinearGradient(x1 - 16, 0, x1, 0); rim.addColorStop(0, 'rgba(255,190,120,0)'); rim.addColorStop(1, 'rgba(255,200,130,0.4)'); ctx.fillStyle = rim; ctx.fillRect(x1 - 16, top, 16, base - top);   // sunset on its right flank
+    ctx.fillStyle = '#c8a060'; for (let x = x0 + 4; x < x1; x += 7) { ctx.beginPath(); ctx.arc(x, top + 5, 0.8, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(x, base - 8, 0.8, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#140c06'; ctx.beginPath(); ctx.arc(34, 222, 12, 0, TAU); ctx.fill(); ctx.strokeStyle = sideGrad(ctx, 34, 13, BRASS); ctx.lineWidth = 2; ctx.stroke();   // an open window onto the boiler's clockwork (gears turn in frame())
+    [[128, 222]].forEach(([x, y]) => { ctx.fillStyle = sideGrad(ctx, x, 9, BRASS); ctx.beginPath(); ctx.arc(x, y, 8.4, 0, TAU); ctx.fill(); const g = ctx.createRadialGradient(x - 2, y - 2, 0, x, y, 6.4); g.addColorStop(0, '#fff0b0'); g.addColorStop(0.5, '#ffa040'); g.addColorStop(1, '#a03a10'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 6.2, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a2206'; for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; ctx.beginPath(); ctx.arc(x + Math.cos(a) * 7.4, y + Math.sin(a) * 7.4, 0.6, 0, TAU); ctx.fill(); } });   // portholes, the furnace glowing inside
+    // the big pressure gauge (needle per frame)
+    ctx.fillStyle = sideGrad(ctx, GAUGE.x, 15, BRASS); ctx.beginPath(); ctx.arc(GAUGE.x, GAUGE.y, 14, 0, TAU); ctx.fill(); ctx.fillStyle = '#f4ead0'; ctx.beginPath(); ctx.arc(GAUGE.x, GAUGE.y, 11.5, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#c82818'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.arc(GAUGE.x, GAUGE.y, 9, -0.6, 0.75); ctx.stroke();
+    ctx.strokeStyle = '#2a1a0a'; ctx.lineWidth = 0.8; for (let k = 0; k <= 10; k++) { const a = -PI * 1.25 + k / 10 * PI * 1.5; ctx.beginPath(); ctx.moveTo(GAUGE.x + Math.cos(a) * 7.6, GAUGE.y + Math.sin(a) * 7.6); ctx.lineTo(GAUGE.x + Math.cos(a) * 10.4, GAUGE.y + Math.sin(a) * 10.4); ctx.stroke(); }
+    // pipes and valve wheels on its face
+    ctx.strokeStyle = sideGrad(ctx, 100, 40, COPPER); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(48, 238); ctx.lineTo(114, 238); ctx.moveTo(98, 238); ctx.lineTo(98, 206); ctx.stroke();
+    [[60, 238], [106, 210]].forEach(([x, y]) => { ctx.strokeStyle = '#b83a20'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(x, y, 5, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - 5, y); ctx.lineTo(x + 5, y); ctx.moveTo(x, y - 5); ctx.lineTo(x, y + 5); ctx.stroke(); });
+    ctx.fillStyle = sideGrad(ctx, 116, 4, BRASS); ctx.fillRect(114, 84, 5, 16); ctx.beginPath(); ctx.arc(116.5, 84, 3.4, PI, TAU); ctx.fill();   // the ship's whistle on the after stack
+  }
+  const GAUGE = { x: 81, y: 220 };
+  function helm(ctx) {   // the binnacle and pedestal the ship's wheel turns on (the wheel itself is drawn per frame, in front of the captain)
+    const x = HELM.x; ctx.fillStyle = 'rgba(30,14,6,0.35)'; ctx.beginPath(); ctx.moveTo(x - 10, 256); ctx.lineTo(x + 60, 256); ctx.lineTo(x - 10, 268); ctx.lineTo(x - 70, 268); ctx.closePath(); ctx.fill();   // the helm's and the captain's long shadows
+    ctx.fillStyle = sideGrad(ctx, x, 9, BRASS); ctx.beginPath(); ctx.moveTo(x - 9, 256); ctx.lineTo(x - 5, HELM.y + 6); ctx.lineTo(x + 5, HELM.y + 6); ctx.lineTo(x + 9, 256); ctx.closePath(); ctx.fill(); ctx.fillRect(x - 11, 252, 22, 4);
+  }
+  const HELM = { x: 482, y: 226, r: 18 };
+  function drawMid(ctx, W, H) {
+    const r = mkRnd(6262), VP = [310, HOR], k = (y) => (y - VP[1]) / (RAIL + 4 - VP[1]);
+    envelope(ctx, W);
+    // the deck: warm teak planks running fore and aft
+    const dg = ctx.createLinearGradient(0, RAIL, 0, H); dg.addColorStop(0, '#b07a48'); dg.addColorStop(0.4, '#8a5a32'); dg.addColorStop(1, '#4a2e18'); ctx.fillStyle = dg; ctx.fillRect(0, RAIL + 4, W, H - RAIL);
+    ctx.strokeStyle = 'rgba(40,20,8,0.45)'; ctx.lineWidth = 0.8; for (let xe = -900; xe < 1500; xe += 16) { ctx.beginPath(); ctx.moveTo(xe, RAIL + 4); ctx.lineTo(VP[0] + (xe - VP[0]) * k(H), H); ctx.stroke(); }
+    for (let i = 0; i < 160; i++) { const y = RAIL + 6 + Math.pow(r(), 1.4) * (H - RAIL - 6), xe = -600 + r() * 1500, x = VP[0] + (xe - VP[0]) * k(y); ctx.fillStyle = 'rgba(40,20,8,0.4)'; ctx.fillRect(x, y, 16 * k(y) * 0.9, 0.8); }
+    ctx.fillStyle = 'rgba(255,200,130,0.12)'; ctx.fillRect(0, RAIL + 4, W, 30);
+    // the turf square laid in the middle of the deck, edged in brass
+    const tq = (xe, y) => VP[0] + (xe - VP[0]) * k(y), y0 = RAIL + 10;
+    ctx.fillStyle = '#4e8030'; ctx.beginPath(); ctx.moveTo(tq(180, y0), y0); ctx.lineTo(tq(440, y0), y0); ctx.lineTo(tq(440, H), H); ctx.lineTo(tq(180, H), H); ctx.closePath(); ctx.fill();
+    for (let s = 0; s < 8; s++) { const a = 180 + s * 32.5, b = a + 32.5; ctx.fillStyle = s % 2 ? 'rgba(255,240,170,0.08)' : 'rgba(0,30,0,0.08)'; ctx.beginPath(); ctx.moveTo(tq(a, y0), y0); ctx.lineTo(tq(b, y0), y0); ctx.lineTo(tq(b, H), H); ctx.lineTo(tq(a, H), H); ctx.closePath(); ctx.fill(); }
+    for (let i = 0; i < 400; i++) { const y = y0 + 2 + r() * (H - y0), xe = 182 + r() * 256, x = tq(xe, y), d = k(y); ctx.strokeStyle = r() < 0.5 ? 'rgba(150,200,90,0.5)' : 'rgba(30,70,20,0.4)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (r() - 0.5) * 2, y - 1 - d * 2.4); ctx.stroke(); }
+    ctx.strokeStyle = sideGrad(ctx, 310, 300, BRASS); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(tq(180, H), H); ctx.lineTo(tq(180, y0), y0); ctx.lineTo(tq(440, y0), y0); ctx.lineTo(tq(440, H), H); ctx.stroke();
+    // the gunwale and the brass rail
+    ctx.fillStyle = '#6a4024'; ctx.fillRect(0, RAIL - 2, W, 7); ctx.fillStyle = sideGrad(ctx, 310, 330, BRASS); ctx.fillRect(0, RAIL - 3, W, 2); ctx.fillStyle = 'rgba(30,14,6,0.5)'; ctx.fillRect(0, RAIL + 4, W, 2);
+    for (let x = 4; x < W; x += 30) { ctx.fillStyle = sideGrad(ctx, x, 2.4, BRASS); ctx.fillRect(x - 1.2, RAIL - 24, 2.4, 22); ctx.beginPath(); ctx.arc(x, RAIL - 25, 2.4, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,220,160,0.6)'; ctx.fillRect(x + 0.6, RAIL - 24, 0.8, 22); ctx.fillStyle = 'rgba(30,14,6,0.25)'; ctx.beginPath(); ctx.moveTo(x - 1, RAIL + 4); ctx.lineTo(x + 1, RAIL + 4); ctx.lineTo(x - 9, RAIL + 9); ctx.lineTo(x - 11, RAIL + 9); ctx.closePath(); ctx.fill(); }   // stanchions lit on the sun side, short shadows
+    ctx.strokeStyle = sideGrad(ctx, 310, 330, BRASS); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(0, RAIL - 24); ctx.lineTo(W, RAIL - 24); ctx.stroke(); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, RAIL - 13); ctx.lineTo(W, RAIL - 13); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,240,200,0.6)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(0, RAIL - 25); ctx.lineTo(W, RAIL - 25); ctx.stroke();
+    for (let x = 19; x < W; x += 30) gear(ctx, x, RAIL - 18.5, 4.2, 8, 0.2, BRASS);   // little brass gear rosettes worked into the rail
+    { const y = RAIL - 6; ctx.strokeStyle = sideGrad(ctx, 400, 260, COPPER); ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(150, y); ctx.lineTo(604, y); ctx.quadraticCurveTo(614, y, 614, y - 10); ctx.lineTo(614, 152); ctx.stroke();   // the steam main: from the boiler house along the deck and up the outrigger to the propeller engine
+      ctx.strokeStyle = 'rgba(255,220,170,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(150, y - 1.6); ctx.lineTo(604, y - 1.6); ctx.stroke();
+      [200, 236, 380, 446, 560].forEach(x => { ctx.fillStyle = sideGrad(ctx, x, 4, BRASS); ctx.fillRect(x - 3, y - 4, 6, 8); });   // brass flanges
+      VENTS.forEach(([x]) => { ctx.fillStyle = sideGrad(ctx, x, 3, BRASS); ctx.fillRect(x - 1.6, y - 12, 3.2, 9); ctx.strokeStyle = '#b02a18'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(x, y - 13, 4.6, 1.6, 0, 0, TAU); ctx.stroke(); });   // valves with red handwheels
+      [[466, y - 10]].forEach(([x, yy]) => { ctx.fillStyle = sideGrad(ctx, x, 7, BRASS); ctx.beginPath(); ctx.arc(x, yy, 6.4, 0, TAU); ctx.fill(); ctx.fillStyle = '#f4ead0'; ctx.beginPath(); ctx.arc(x, yy, 4.8, 0, TAU); ctx.fill(); ctx.strokeStyle = '#1a1006'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(x + 2.6, yy - 3); ctx.stroke(); }); }   // a pressure gauge on the main
+    boilerHouse(ctx);
+    // the outrigger boom carrying the great propeller (blades turn in frame())
+    ctx.fillStyle = sideGrad(ctx, 600, 30, IRON); ctx.beginPath(); ctx.moveTo(640, 134); ctx.lineTo(596, 138); ctx.lineTo(596, 148); ctx.lineTo(640, 150); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#2a2224'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(606, 148); ctx.lineTo(626, RAIL - 24); ctx.stroke();
+    ctx.fillStyle = sideGrad(ctx, 600, 12, COPPER); ctx.beginPath(); ctx.ellipse(602, 143, 13, 10, 0, 0, TAU); ctx.fill();
+    scoreboard(ctx); helm(ctx);
+  }
+  function scoreboard(ctx) {   // the score: brass number drums in a housing on an iron post, a gear train on its side
+    const x0 = 402, x1 = 448, top = 168, bot = 206;
+    ctx.fillStyle = 'rgba(30,14,6,0.35)'; ctx.beginPath(); ctx.moveTo(x0 + 12, 250); ctx.lineTo(x0 + 34, 250); ctx.lineTo(x0 - 30, 262); ctx.lineTo(x0 - 52, 262); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#1a1a1e'; ctx.fillRect(x0 + 20, bot, 6, 44); ctx.fillRect(x0 + 12, 246, 22, 4); ctx.fillStyle = 'rgba(255,200,130,0.5)'; ctx.fillRect(x0 + 24.6, bot, 1.4, 44);
+    ctx.fillStyle = sideGrad(ctx, (x0 + x1) / 2, 26, BRASS); ctx.fillRect(x0 - 3, top - 3, x1 - x0 + 6, bot - top + 6); ctx.beginPath(); ctx.moveTo(x0 - 3, top - 3); ctx.quadraticCurveTo((x0 + x1) / 2, top - 18, x1 + 3, top - 3); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#20160c'; ctx.fillRect(x0, top, x1 - x0, bot - top);
+    ctx.fillStyle = '#3a2206'; for (let x = x0; x <= x1; x += 6) { ctx.beginPath(); ctx.arc(x, top - 1.5, 0.8, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(x, bot + 1.5, 0.8, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#e8c890'; ctx.font = "800 6px 'Barlow Condensed', 'Arial Narrow', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('RUNS', (x0 + x1) / 2, top - 7);
+    ctx.font = "800 5px 'Barlow Condensed', 'Arial Narrow', sans-serif"; ctx.fillText('WKTS', x0 + 8, top + 22); ctx.fillText('OVER', x1 - 11, top + 22);
+  }
+  function drawFront(ctx, W, H) {
+    const vig = ctx.createRadialGradient(W * 0.5, H * 0.42, W * 0.32, W * 0.5, H * 0.42, W * 0.78); vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(30,14,10,0.34)'); ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
+  }
+  function drawBack(ctx, W, H) {}
+  function win(m, [a, b]) { return m >= a && m <= b ? (m - a) / (b - a) : -1; }
+  const ease = (u) => u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u);
+  const lerp = (a, b, u) => a + (b - a) * u;
+  const mkRnd = (s) => { let q = s; return () => { q = (q * 16807) % 2147483647; return (q - 1) / 2147483646; }; };
+  const poly = (ctx, pts) => { ctx.beginPath(); pts.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); };
+  const line = (ctx, pts) => { ctx.beginPath(); pts.forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); };
+  function smooth(ctx, pts) { const n = pts.length, mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; const s = mid(pts[n - 1], pts[0]); ctx.beginPath(); ctx.moveTo(s[0], s[1]); for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n], m = mid(p, q); ctx.quadraticCurveTo(p[0], p[1], m[0], m[1]); } ctx.closePath(); }
+  const sideGrad = (ctx, cx, R, stops) => { const g = ctx.createLinearGradient(cx - R, 0, cx + R, 0); stops.forEach(([o, c]) => g.addColorStop(o, c)); return g; };
+  const GOLD = [[0, '#8a5a18'], [0.18, '#f6d27a'], [0.27, '#fff4c8'], [0.4, '#e0b04a'], [0.7, '#a87420'], [1, '#5a3a10']];
+  const BASALT = [[0, '#5a4a48'], [0.2, '#8a7470'], [0.4, '#4a3c3a'], [0.8, '#241c1c'], [1, '#140e0e']];
+  function gem(ctx, x, y, r, c0, c1) { const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r); g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, c0); g.addColorStop(1, c1); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+
+  // ════════ SMOKE & STEAM sprites ════════
+  const puffC = (() => { const mk = (c0, c1) => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, c0); g.addColorStop(0.55, c1); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return c; }; return { smoke: mk('rgba(70,56,60,0.9)', 'rgba(80,64,68,0.45)'), steam: mk('rgba(255,248,236,0.95)', 'rgba(244,232,220,0.45)'), lit: mk('rgba(255,190,140,0.85)', 'rgba(230,150,110,0.4)') }; })();
+  function puff(ctx, img, x, y, r, a) { if (a <= 0.005 || r <= 0) return; ctx.globalAlpha = Math.min(1, a); ctx.drawImage(img, x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1; }
+  const roll = (t) => Math.sin(t * 0.5) * 0.007;     // the ship rolls gently: the world tilts a touch against the deck
+
+  // ════════ CLOUDS — big sunset cumulus drifting past overhead, and wisps racing by below the rail ════════
+  function cloudPuffs(c, x, y, w, h, seed, lit) { const r = mkRnd(seed); for (let i = 0; i < 12; i++) { const cx = x + (r() - 0.5) * w, cy = y + (r() - 0.6) * h * 0.6, rx = w * (0.15 + r() * 0.14), ry = h * (0.3 + r() * 0.3);
+    const g = c.createRadialGradient(cx + rx * 0.3, cy - ry * 0.4, 0, cx, cy, Math.max(rx, ry)); g.addColorStop(0, lit[0]); g.addColorStop(0.55, lit[1]); g.addColorStop(1, lit[2]); c.fillStyle = g; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, TAU); c.fill(); } }
+  const hiC = document.createElement('canvas'); hiC.width = 620; hiC.height = 150; const loC = document.createElement('canvas'); loC.width = 620; loC.height = 110; let cloudsPainted = false, STRIP = null;
+  function paintClouds() { const a = hiC.getContext('2d'); a.filter = 'blur(2px)'; [[90, 50, 170, 60, 21], [300, 30, 140, 40, 22], [520, 80, 150, 46, 23], [210, 110, 120, 26, 24]].forEach(([x, y, w, h, s]) => [-620, 0, 620].forEach(dx => cloudPuffs(a, x + dx, y, w, h, s, ['rgba(255,228,180,0.95)', 'rgba(214,150,100,0.8)', 'rgba(150,96,70,0)'])));
+    const b = loC.getContext('2d'); b.filter = 'blur(3px)'; [[60, 70, 160, 40, 31], [330, 84, 200, 36, 32], [540, 64, 130, 34, 33]].forEach(([x, y, w, h, s]) => [-620, 0, 620].forEach(dx => cloudPuffs(b, x + dx, y, w, h, s, ['rgba(250,216,170,0.95)', 'rgba(206,140,96,0.75)', 'rgba(150,96,70,0)'])));
+    a.filter = 'blur(5px)'; [[60, 64, 260], [380, 96, 300], [200, 120, 220]].forEach(([x, y, w]) => [-620, 0, 620].forEach(dx => { const g = a.createLinearGradient(x + dx, 0, x + dx + w, 0); g.addColorStop(0, 'rgba(70,50,40,0)'); g.addColorStop(0.4, 'rgba(70,50,40,0.35)'); g.addColorStop(1, 'rgba(70,50,40,0)'); a.fillStyle = g; a.beginPath(); a.ellipse(x + dx + w / 2, y, w / 2, 6, -0.04, 0, TAU); a.fill(); }));   // long smoky streaks of coal-smog across the sky
+    a.filter = b.filter = 'none'; cloudsPainted = true; }
+  function wrapDraw(ctx, img, x, y) { const w = img.width; let xx = ((x % w) + w) % w - w; for (; xx < 620; xx += w) ctx.drawImage(img, xx, y); }
+  // ════════ THE WORLD OUTSIDE — sky, far ground and clouds, all rolling a little with the ship ════════
+  function drawWorld(ctx, W, H, t) {
+    if (!cloudsPainted) paintClouds(); if (!BANDS[0].img) BANDS.forEach((B, k) => B.img = paintBand(k));
+    const m = t % SHOW;
+    ctx.save();   // (the gentle roll was dropped: rotating the whole world every frame cost too much on phones)
+    ctx.drawImage(skyL, 0, 0);
+    wrapDraw(ctx, hiC, -t * 10, 0);
+    { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(SUN.x, SUN.y, 0, SUN.x, SUN.y, 70); g.addColorStop(0, 'rgba(255,240,200,0.75)'); g.addColorStop(0.3, 'rgba(255,200,130,0.3)'); g.addColorStop(1, 'rgba(255,180,100,0)'); ctx.fillStyle = g; ctx.fillRect(SUN.x - 70, SUN.y - 70, 140, 140); ctx.restore(); ctx.fillStyle = 'rgba(255,250,232,0.9)'; ctx.beginPath(); ctx.arc(SUN.x, SUN.y, SUN.r - 1, 0, TAU); ctx.fill(); }   // the low sun burning through the cloud
+    drawConsort(ctx, t);
+    const bx = (k, X) => { const B = BANDS[k]; let x = ((X - (m / SHOW) * B.W) % B.W + B.W) % B.W; if (x > 700) x -= B.W; return x; };
+    BANDS.forEach((B, k) => {   // far to near; nearer bands slide past faster
+      wrapDraw(ctx, B.img, -(m / SHOW) * B.W, B.y - BASE);
+      if (k >= 1) BAND_STACKS.filter(q => q.k === k).forEach((q, i) => { const x = bx(k, q.X); if (x < -60 || x > 680) return; const y = B.y - BASE + q.top, n = k >= 3 ? 4 : 3; for (let j = 0; j < n; j++) { const u = (t * 0.12 + j / n + i * 0.29 + k * 0.13) % 1; puff(ctx, puffC.smoke, x - u * 30 * q.S, y - u * 24 * q.S, (2 + u * 9) * q.S, (u < 0.1 ? u / 0.1 : 1) * (1 - u) * 0.5); } });
+      BAND_LIGHT.filter(q => q.k === k).forEach(q => { const x = bx(k, q.X); if (x < -200 || x > 820) return; const y = B.y - BASE + q.y, a = t * 1.1, face = Math.cos(a), len = 150, dir = Math.sin(a);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 0, x, y, len); g.addColorStop(0, `rgba(255,244,200,${(0.35 + 0.4 * Math.max(0, face)).toFixed(3)})`); g.addColorStop(1, 'rgba(255,240,190,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dir * len, y - 6 - len * 0.05); ctx.lineTo(x + dir * len, y + 6 + len * 0.05); ctx.closePath(); ctx.fill();
+        const h = ctx.createRadialGradient(x, y, 0, x, y, 10 + 8 * Math.max(0, face)); h.addColorStop(0, 'rgba(255,250,220,0.9)'); h.addColorStop(1, 'rgba(255,240,190,0)'); ctx.fillStyle = h; ctx.fillRect(x - 20, y - 20, 40, 40); ctx.restore(); });
+    });
+    wrapDraw(ctx, loC, -t * 44, 150);   // and thicker cloud just below the deck
+    drawFlyby(ctx, t);
+    ctx.restore();
+  }
+  // ════════ THE CONSORT — a second airship keeping station off our bow ════════
+  function airship(ctx, t) {
+    const L = 150;
+    ctx.fillStyle = '#5a3a22'; ctx.beginPath(); ctx.moveTo(L * 0.34, -4); ctx.lineTo(L * 0.52, -24); ctx.lineTo(L * 0.56, -24); ctx.lineTo(L * 0.5, -2); ctx.closePath(); ctx.fill();
+    const env = () => { ctx.beginPath(); ctx.moveTo(-L / 2, 0); ctx.bezierCurveTo(-L / 2, -16, -L * 0.36, -19, -L * 0.18, -19); ctx.lineTo(L * 0.16, -18); ctx.bezierCurveTo(L * 0.36, -16, L * 0.5, -6, L * 0.54, 0); ctx.bezierCurveTo(L * 0.5, 6, L * 0.36, 16, L * 0.16, 18); ctx.lineTo(-L * 0.18, 19); ctx.bezierCurveTo(-L * 0.36, 19, -L / 2, 16, -L / 2, 0); ctx.closePath(); };
+    const g = ctx.createLinearGradient(0, -19, 0, 19); g.addColorStop(0, '#ffe0b0'); g.addColorStop(0.25, '#e0a070'); g.addColorStop(0.65, '#8a5038'); g.addColorStop(1, '#4a2820'); ctx.fillStyle = g; env(); ctx.fill();
+    ctx.save(); env(); ctx.clip(); ctx.strokeStyle = 'rgba(80,40,20,0.3)'; ctx.lineWidth = 0.7; for (let k = -6; k <= 6; k++) { const x = k * L / 14; ctx.beginPath(); ctx.moveTo(x, -20); ctx.quadraticCurveTo(x + 1.5, 0, x, 20); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(30,60,120,0.8)'; ctx.fillRect(-L / 2, -3, L * 1.1, 6); ctx.fillStyle = 'rgba(255,230,180,0.8)'; ctx.fillRect(-L / 2, -3, L * 1.1, 1); ctx.restore();
+    ctx.fillStyle = sideGrad(ctx, -L * 0.48, 4, BRASS); ctx.beginPath(); ctx.ellipse(-L / 2 + 1, 0, 3, 7, 0, 0, TAU); ctx.fill();
+    [-0.3, 0, 0.3].forEach(f => { ctx.strokeStyle = 'rgba(210,160,70,0.8)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(f * L, -18.5); ctx.quadraticCurveTo(f * L + 2, 0, f * L, 18.5); ctx.stroke(); });
+    ctx.fillStyle = '#9a6038'; ctx.beginPath(); ctx.moveTo(L * 0.3, 0); ctx.lineTo(L * 0.5, 0); ctx.lineTo(L * 0.6, 12); ctx.lineTo(L * 0.52, 12); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,24,16,0.7)'; ctx.lineWidth = 0.6; for (let k = 0; k < 7; k++) { const x = -L * 0.3 + k * L * 0.08; ctx.beginPath(); ctx.moveTo(x, 16); ctx.lineTo(-L * 0.12 + k * L * 0.035, 30); ctx.stroke(); }
+    ctx.fillStyle = '#4a2a18'; ctx.beginPath(); ctx.moveTo(-L * 0.17, 29); ctx.lineTo(L * 0.14, 29); ctx.lineTo(L * 0.11, 38); ctx.quadraticCurveTo(0, 41, -L * 0.15, 37); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffc070'; for (let k = 0; k < 6; k++) ctx.fillRect(-L * 0.14 + k * 7.4, 31, 4.4, 3.4);
+    [[L * 0.16, 33, 1], [L * 0.2, 26, 0.75]].forEach(([px, py, s]) => { ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(L * 0.1, py + 2); ctx.lineTo(px, py); ctx.stroke(); const a = t * 9; ctx.fillStyle = 'rgba(200,170,120,0.25)'; ctx.beginPath(); ctx.ellipse(px + 2, py, 1.6, 9 * s, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a2414'; ctx.beginPath(); ctx.ellipse(px + 2, py + Math.sin(a) * 4.5 * s, 1.1, Math.abs(Math.cos(a)) * 4 * s + 0.8, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(px + 2, py - Math.sin(a) * 4.5 * s, 1.1, Math.abs(Math.cos(a)) * 4 * s + 0.8, 0, 0, TAU); ctx.fill(); });
+  }
+  function drawConsort(ctx, t) { const x = 500 + Math.sin(t * TAU / SHOW) * 24, y = 66 + Math.sin(t * 0.45) * 3;   // closer now, with smoke from her engines trailing astern
+    for (let k = 0; k < 7; k++) { const u = (t * 0.25 + k / 7) % 1; puff(ctx, puffC.smoke, x - 40 - u * 90, y + 22 - u * 10, 3 + u * 12, (1 - u) * 0.35); }
+    ctx.save(); ctx.translate(x, y); ctx.scale(-0.74, 0.74); airship(ctx, t); ctx.restore(); }   // heading the same way as us (right), drifting a little ahead and back
+
+  // ════════ THE FLYBY — a towering factory chimney slides past close alongside, smoke rolling over ════════
+  function drawFlyby(ctx, t) {
+    const m = t % SHOW, u = win(m, CHIM); if (u < 0) return;
+    const x = lerp(700, -160, u), top = 62, base = 240, w0 = 50, w1 = 34;
+    // its smoke: puffs released from the crown at fixed times, left hanging in the air as it slides away (they drift with it plus a little)
+    for (let k = 0; k < 26; k++) { const born = CHIM[0] - 2 + k * 0.34, age = m - born; if (age < 0 || age > 4) continue; const xb = lerp(700, -160, (born - CHIM[0]) / (CHIM[1] - CHIM[0])), a = age / 4;
+      const px = xb + (x - xb) - age * 6, py = top - 8 - a * 70; puff(ctx, puffC.smoke, px, py, 8 + a * 34, (1 - a) * 0.75 * Math.min(1, age * 3)); }
+    const g = ctx.createLinearGradient(x - w0 / 2, 0, x + w0 / 2, 0); g.addColorStop(0, '#4a2a24'); g.addColorStop(0.5, '#7a4434'); g.addColorStop(0.85, '#d88a5a'); g.addColorStop(1, '#8a4a34'); ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(x - w0 / 2, base); ctx.lineTo(x - w1 / 2, top); ctx.lineTo(x + w1 / 2, top); ctx.lineTo(x + w0 / 2, base); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,16,10,0.3)'; ctx.lineWidth = 0.6; for (let y = top + 4; y < base; y += 4) { const f = (y - top) / (base - top), hw = lerp(w1, w0, f) / 2; ctx.beginPath(); ctx.moveTo(x - hw, y); ctx.lineTo(x + hw, y); ctx.stroke(); }
+    [0.25, 0.55].forEach(f => { const y = lerp(top, base, f), hw = lerp(w1, w0, f) / 2 + 1; ctx.fillStyle = '#2a1e1e'; ctx.fillRect(x - hw, y, hw * 2, 3); });
+    ctx.fillStyle = sideGrad(ctx, x, w1 / 2 + 6, [[0, '#3a2018'], [0.75, '#c8784a'], [1, '#5a2a1a']]); ctx.fillRect(x - w1 / 2 - 5, top - 8, w1 + 10, 8); ctx.fillRect(x - w1 / 2 - 2, top - 12, w1 + 4, 4);
+    ctx.fillStyle = 'rgba(255,150,70,0.45)'; ctx.fillRect(x - w1 / 2, top - 13, w1, 2);   // the furnace's glow at its lip
+    ctx.fillStyle = 'rgba(240,230,210,0.85)'; ctx.font = "800 9px 'Barlow Condensed', 'Arial Narrow', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ['B', 'R', 'A', 'S', 'S'].forEach((ch, i) => ctx.fillText(ch, x, top + 30 + i * 11));   // the works' name down its side
+  }
+
+  // ════════ ON DECK — funnel smoke, the pennant, the great propeller, the whistle ════════
+  function drawFunnelSmoke(ctx, W, H, t) {   // thick smoke from the funnels, streaming astern (left) on the wind of our passage
+    STACKS2.forEach((f, i) => { const tx = f.x + f.rake; for (let k = 0; k < 8; k++) { const u = (t * 0.32 + k / 8 + i * 0.5) % 1, px = tx - u * 150 - u * u * 40, py = f.top - 8 - u * 14 + Math.sin(u * 6 + k) * 3, rr = 6 + u * 22;
+      puff(ctx, puffC.smoke, px, py, rr, (u < 0.06 ? u / 0.06 : 1) * (1 - u) * 0.8); } });
+  }
+  function drawPennant(ctx, W, H, t) {   // a long pennant from a staff on the forward funnel, streaming astern
+    const f = STACKS2[0], x = f.x + f.rake, y = f.top - 22; ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, f.top - 6); ctx.lineTo(x, y - 2); ctx.stroke();
+    const L = 50, top = [], bot = []; for (let k = 0; k <= 12; k++) { const u = k / 12, wv = Math.sin(t * 9 - u * 7) * 4.4 * u + Math.sin(t * 15 - u * 11) * 1.2 * u; top.push([x - u * L, y + wv]); bot.push([x - u * L, y + 7 - u * 5.5 + wv]); }
+    ctx.fillStyle = '#c81c24'; ctx.beginPath(); top.forEach(([a, b], k) => k ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); for (let k = 12; k >= 0; k--) ctx.lineTo(bot[k][0], bot[k][1]); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffd040'; ctx.beginPath(); top.slice(0, 5).forEach(([a, b], k) => k ? ctx.lineTo(a, b + 2) : ctx.moveTo(a, b + 2)); for (let k = 4; k >= 0; k--) ctx.lineTo(bot[k][0], bot[k][1] - 2); ctx.closePath(); ctx.fill();
+  }
+  function drawPropeller(ctx, W, H, t) {   // the great four-bladed propeller at the end of the outrigger, turned towards us: brass blades over a soft blur of their sweep
+    const cx = 584, cy = 142, R = 46, a = t * 4.2;
+    const bl = ctx.createRadialGradient(cx, cy, 6, cx, cy, R); bl.addColorStop(0, 'rgba(240,200,130,0.28)'); bl.addColorStop(1, 'rgba(240,200,130,0.06)'); ctx.fillStyle = bl; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+    for (let k = 0; k < 4; k++) { const b = a + k * PI / 2; ctx.save(); ctx.translate(cx, cy); ctx.rotate(b);
+      ctx.fillStyle = 'rgba(200,150,70,0.18)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R - 2, -0.55, 0); ctx.closePath(); ctx.fill();   // a ghost trailing each blade
+      const g = ctx.createLinearGradient(0, -9, 0, 9); g.addColorStop(0, '#5a3a0c'); g.addColorStop(0.35, '#ffe8a0'); g.addColorStop(0.6, '#c8902a'); g.addColorStop(1, '#4a2e08'); ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(6, -3); ctx.bezierCurveTo(R * 0.4, -10, R * 0.85, -10, R, -3); ctx.quadraticCurveTo(R + 2, 2, R - 4, 4); ctx.bezierCurveTo(R * 0.6, 5, R * 0.3, 4, 6, 3); ctx.closePath(); ctx.fill(); ctx.restore(); }
+    ctx.fillStyle = sideGrad(ctx, cx, 9, BRASS); ctx.beginPath(); ctx.arc(cx, cy, 8, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a2206'; ctx.beginPath(); ctx.arc(cx, cy, 2.4, 0, TAU); ctx.fill();
+  }
+  function drawWhistle(ctx, W, H, t) {   // passing the docks, the ship's whistle salutes: a tall white plume
+    const m = t % SHOW; if (m < WHISTLE[0] || m > WHISTLE[1] + 2) return;
+    for (let k = 0; k < 34; k++) { const born = WHISTLE[0] + k * 0.09; if (born > WHISTLE[1] - 0.4) break; const age = m - born; if (age < 0 || age > 2) continue; const a = age / 2, rise = (1 - Math.pow(1 - a, 2)) * 70;
+      puff(ctx, puffC.steam, 116 - a * a * 50 + Math.sin(k * 1.7) * 2, 80 - rise * 0.7, 3 + a * 16, (1 - a) * 0.9); }
+  }
+
+  // ════════ THE CREW — a captain with his telescope at the rail, two deckhands by the funnels ════════
+  const cheerAt = (m) => { const u = win(m, CHEER); return u < 0 ? 0 : Math.min(1, u * 6, (1 - u) * 3); };
+  function figure(ctx, o) {   // a figure about 50px tall, facing us; o: x, base, coat, legs, skin, cap, arms [[shoulderAngleL, elbowL],[…R]], bob, beard, stripes
+    const { x, base, s } = o; ctx.save(); ctx.translate(x, base - o.bob); ctx.scale(s, s);
+    [-1, 1].forEach(sd => { ctx.fillStyle = o.legs; ctx.beginPath(); ctx.moveTo(sd * 1, -22); ctx.lineTo(sd * 6, -22); ctx.lineTo(sd * 5.4, -3); ctx.lineTo(sd * 1.6, -3); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#1a1210'; ctx.beginPath(); ctx.ellipse(sd * 4, -1.6, 3.6, 2, 0, 0, TAU); ctx.fill(); });   // legs and boots
+    if (o.longCoat) { ctx.fillStyle = o.coat; ctx.beginPath(); ctx.moveTo(-9.6, -9); ctx.lineTo(-8, -26); ctx.lineTo(8, -26); ctx.lineTo(9.6, -9); ctx.quadraticCurveTo(0, -7, -9.6, -9); ctx.fill(); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(-0.6, -22, 1.2, 13); }   // the skirts of a frock coat
+    ctx.fillStyle = o.coat; ctx.beginPath(); ctx.moveTo(-8, -20); ctx.lineTo(-7.4, -38); ctx.quadraticCurveTo(0, -42, 7.4, -38); ctx.lineTo(8, -20); ctx.closePath(); ctx.fill();   // torso
+    if (o.longCoat) { ctx.fillStyle = '#f2ead8'; ctx.beginPath(); ctx.moveTo(-2.6, -39); ctx.lineTo(0, -33); ctx.lineTo(2.6, -39); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.moveTo(-2.6, -39); ctx.lineTo(-5.4, -30); ctx.lineTo(-1, -33); ctx.fill(); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(-8, -38, 3, 18); }   // shirt front, lapels, shading
+    if (o.stripes) { ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(255,255,255,0.75)'; for (let y = -40; y < -20; y += 3.2) ctx.fillRect(-9, y, 18, 1.4); ctx.restore(); }
+    if (o.braces) { ctx.fillStyle = '#5a2a18'; [-4, 4].forEach(dx => ctx.fillRect(dx - 0.9, -39, 1.8, 18)); ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(-8, -30, 16, 10); }
+    if (o.buttons) { ctx.fillStyle = '#e8b840'; [-3, 3].forEach(dx => [-34, -29, -24].forEach(y => { ctx.beginPath(); ctx.arc(dx, y, 0.9, 0, TAU); ctx.fill(); })); ctx.fillStyle = 'rgba(255,220,170,0.25)'; ctx.fillRect(4.6, -38, 2.4, 18); }
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(-8, -22, 16, 2);   // belt
+    if (o.apron) { ctx.fillStyle = '#6a4224'; ctx.beginPath(); ctx.moveTo(-5.6, -32); ctx.lineTo(5.6, -32); ctx.lineTo(6.4, -6); ctx.lineTo(-6.4, -6); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(255,200,130,0.3)'; ctx.fillRect(4.4, -32, 1.6, 26); ctx.fillStyle = sideGrad(ctx, 0, 3, BRASS); [-4, 4].forEach(dx => { ctx.beginPath(); ctx.arc(dx, -31, 0.9, 0, TAU); ctx.fill(); }); ctx.fillStyle = '#3a2416'; ctx.fillRect(-3, -22, 6, 4); }   // a leather apron with a tool pocket
+    // arms: upper arm from the shoulder, forearm from the elbow
+    o.arms.forEach(([ua, fa, held], i) => { const sd = i ? 1 : -1, sx = sd * 7.6, sy = -37, ex = sx + Math.sin(ua * sd) * 9, ey = sy + Math.cos(ua) * 9, hx = ex + Math.sin(fa * sd) * 9, hy = ey + Math.cos(fa) * 9;   // angles are measured outward from hanging, for either arm
+      ctx.strokeStyle = o.coat; ctx.lineWidth = 3.6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); if (!o.rolled) ctx.lineTo(hx, hy); ctx.stroke(); if (o.rolled) { ctx.strokeStyle = o.skin; ctx.lineWidth = 2.8; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke(); ctx.fillStyle = o.coat; ctx.beginPath(); ctx.arc(ex, ey, 2.2, 0, TAU); ctx.fill(); } ctx.lineCap = 'butt'; if (o.buttons) { ctx.fillStyle = '#e8b840'; ctx.beginPath(); ctx.arc(ex + (hx - ex) * 0.75, ey + (hy - ey) * 0.75, 1.3, 0, TAU); ctx.fill(); } ctx.fillStyle = o.gloves || o.skin; ctx.beginPath(); ctx.ellipse(hx, hy, 2.1, 2.4, 0, 0, TAU); ctx.fill(); ctx.fillRect(hx - 2.2, hy - 0.6, 1.2, 2); if (held) held(hx, hy); });   // hands with a thumb; gold cuff rings on the captain
+    if (o.epaulettes) [-1, 1].forEach(sd => { ctx.fillStyle = '#e8b840'; ctx.beginPath(); ctx.ellipse(sd * 7.4, -38.4, 3.6, 1.8, sd * 0.2, 0, TAU); ctx.fill(); ctx.strokeStyle = '#e8b840'; ctx.lineWidth = 0.6; for (let k = -3; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(sd * 7.4 + k, -37.4); ctx.lineTo(sd * 7.4 + k * 1.1, -35); ctx.stroke(); } });   // gold-fringed epaulettes
+    ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 0.5; [[-4, -36, -5, -27], [3, -35, 4.6, -26]].forEach(([a, b, c2, d]) => { ctx.beginPath(); ctx.moveTo(a, b); ctx.quadraticCurveTo(a - 1, (b + d) / 2, c2, d); ctx.stroke(); });   // fold lines in the cloth
+    ctx.fillStyle = 'rgba(255,200,130,0.35)'; ctx.fillRect(6.4, -38, 1.6, 17); ctx.fillRect(4.6, -21, 1.2, 18);   // the sunset rimming his right side
+    ctx.fillStyle = o.skin; ctx.beginPath(); ctx.ellipse(5, -45, 1.1, 1.8, 0, 0, TAU); ctx.ellipse(-5, -45, 1.1, 1.8, 0, 0, TAU); ctx.fill();   // ears
+    ctx.fillStyle = o.skin; ctx.beginPath(); ctx.arc(0, -45, 5, 0, TAU); ctx.fill(); ctx.fillRect(-1.6, -41, 3.2, 3);   // head and neck
+    ctx.fillStyle = o.hair || '#5a3a24'; ctx.beginPath(); ctx.arc(0, -46, 5.1, PI * 1.05, TAU * 0.98); ctx.fill(); ctx.fillRect(-5.1, -47, 1.6, 4); ctx.fillRect(3.5, -47, 1.6, 4);   // hair and sideburns
+    ctx.fillStyle = 'rgba(255,220,180,0.35)'; ctx.beginPath(); ctx.arc(2.4, -46, 2.4, -1.2, 0.6); ctx.lineTo(2.4, -46); ctx.fill();   // sunlit cheek
+    ctx.strokeStyle = 'rgba(40,20,10,0.7)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(-3, -47.6); ctx.lineTo(-0.8, -47.2); ctx.moveTo(0.8, -47.2); ctx.lineTo(3, -47.6); ctx.stroke();   // brows
+    ctx.fillStyle = 'rgba(160,80,60,0.6)'; ctx.beginPath(); ctx.moveTo(0, -46); ctx.lineTo(1.1, -43.6); ctx.lineTo(-0.4, -43.6); ctx.closePath(); ctx.fill();   // nose
+    if (o.moustache) { ctx.fillStyle = o.hair || '#5a3a24'; ctx.beginPath(); ctx.ellipse(-1.4, -42.8, 1.8, 0.8, 0.3, 0, TAU); ctx.ellipse(1.4, -42.8, 1.8, 0.8, -0.3, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'rgba(120,60,40,0.25)'; ctx.beginPath(); ctx.arc(1.4, -44.4, 4.2, -0.6, 1.6); ctx.fill();
+    ctx.fillStyle = '#1a1210'; ctx.beginPath(); ctx.arc(-1.8, -45.6, 0.7, 0, TAU); ctx.arc(1.8, -45.6, 0.7, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(200,90,70,0.35)'; ctx.beginPath(); ctx.arc(-3, -43.6, 1.2, 0, TAU); ctx.arc(3, -43.6, 1.2, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(90,40,30,0.6)'; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(0, -45); ctx.lineTo(0.6, -43.4); ctx.stroke();
+    if (o.beard) { ctx.fillStyle = '#e8e0d0'; ctx.beginPath(); ctx.moveTo(-4.6, -45); ctx.quadraticCurveTo(0, -36, 4.6, -45); ctx.quadraticCurveTo(0, -41, -4.6, -45); ctx.fill(); }
+    if (o.mouthOpen) { ctx.fillStyle = '#5a1a14'; ctx.beginPath(); ctx.ellipse(0, -42.4, 1.4, 1.2 * o.mouthOpen + 0.3, 0, 0, TAU); ctx.fill(); }
+    if (o.cap) o.cap();
+    ctx.restore();
+  }
+  const pressAt = (m) => { const a = WHISTLE[0] - 7; let p = 0.3 + 0.03 * Math.sin(m * 2.1); if (m > a && m < WHISTLE[0]) p += 0.62 * ease((m - a) / 7); else if (m >= WHISTLE[0] && m < WHISTLE[1] + 1) p = lerp(0.92, 0.3, ease((m - WHISTLE[0]) / (WHISTLE[1] + 1 - WHISTLE[0]))); return p; };
+  function drawGauge(ctx, W, H, t) {   // the boiler's pressure climbs into the red before the whistle blows it off
+    const m = t % SHOW, p = pressAt(m) + (m > WHISTLE[0] - 2.5 && m < WHISTLE[0] + 0.3 ? Math.sin(t * 23) * 0.012 : 0), a = -PI * 1.25 + p * PI * 1.5;
+    ctx.strokeStyle = '#1a1006'; ctx.lineWidth = 1.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(GAUGE.x, GAUGE.y); ctx.lineTo(GAUGE.x + Math.cos(a) * 10, GAUGE.y + Math.sin(a) * 10); ctx.stroke(); ctx.lineCap = 'butt';
+    ctx.fillStyle = '#c8902a'; ctx.beginPath(); ctx.arc(GAUGE.x, GAUGE.y, 1.6, 0, TAU); ctx.fill();
+  }
+  function drawWheel(ctx, a) {   // the ship's wheel: a timber rim, eight spokes with turned handles, a brass hub
+    const { x, y, r } = HELM; ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+    ctx.strokeStyle = '#4a2810'; ctx.lineWidth = 3.4; ctx.lineCap = 'round'; for (let k = 0; k < 8; k++) { const b = k / 8 * TAU; ctx.beginPath(); ctx.moveTo(Math.cos(b) * 4, Math.sin(b) * 4); ctx.lineTo(Math.cos(b) * (r + 8), Math.sin(b) * (r + 8)); ctx.stroke(); } ctx.lineCap = 'butt';
+    ctx.strokeStyle = '#8a5428'; ctx.lineWidth = 2; for (let k = 0; k < 8; k++) { const b = k / 8 * TAU; ctx.beginPath(); ctx.moveTo(Math.cos(b) * (r + 2), Math.sin(b) * (r + 2)); ctx.lineTo(Math.cos(b) * (r + 7), Math.sin(b) * (r + 7)); ctx.stroke(); }
+    ctx.strokeStyle = '#6a3a18'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke(); ctx.strokeStyle = sideGrad(ctx, 0, r, BRASS); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, 0, r - 2.6, 0, TAU); ctx.stroke();
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(255,220,160,0.4)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, r + 1.4, -PI * 0.45, PI * 0.1); ctx.stroke();   // the low sun on its rim
+    ctx.fillStyle = sideGrad(ctx, x, 6, BRASS); ctx.beginPath(); ctx.arc(x, y, 5.4, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a2206'; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, TAU); ctx.fill();
+  }
+  function drawCrew(ctx, W, H, t) {
+    const m = t % SHOW, ch = cheerAt(m), d = m - CHEER[0], wv = Math.sin(d * 9) * 0.25;
+    // the captain beside the helm: one hand on a spoke, the other raising his telescope to sweep the horizon; at the six he waves his cap
+    { const capLift = ch * (12 + Math.sin(d * 9) * 3), look = Math.max(0, Math.min(1, (Math.sin(t * 0.3 + 1) + 0.1) * 2.2)) * (1 - ch);
+      const tele = (hx, hy) => { ctx.save(); ctx.translate(lerp(hx, 2.6, look), lerp(hy, -46, look)); ctx.rotate(lerp(1.3, -0.1, look)); ctx.fillStyle = sideGrad(ctx, 7, 8, BRASS); ctx.fillRect(-2, -1.8, 15, 3.6); ctx.fillRect(11, -2.4, 7, 4.8); ctx.fillStyle = '#2a1806'; ctx.fillRect(5, -1.9, 1, 3.8); ctx.restore(); };
+      const capFn = () => { ctx.save(); ctx.translate(ch > 0.05 ? 13 + ch * 4 : 0, -50 - capLift); ctx.rotate(ch * Math.sin(d * 9) * 0.4); ctx.fillStyle = '#16121a'; ctx.beginPath(); ctx.ellipse(0, 2, 8.4, 2, 0, 0, TAU); ctx.fill(); ctx.fillRect(-5.2, -11, 10.4, 13); ctx.beginPath(); ctx.ellipse(0, -11, 5.2, 1.4, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,210,150,0.3)'; ctx.fillRect(2.6, -11, 2, 13);   // a tall top hat
+        ctx.fillStyle = sideGrad(ctx, 0, 6, BRASS); ctx.fillRect(-5.2, -2.6, 10.4, 2.4); [-2.6, 2.6].forEach(gx => { ctx.fillStyle = sideGrad(ctx, gx, 3, BRASS); ctx.beginPath(); ctx.arc(gx, -1.6, 2.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#7ac8e0'; ctx.beginPath(); ctx.arc(gx, -1.6, 1.6, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(gx - 0.9, -2.6, 0.8, 0.8); });   // brass band and flying goggles on the brim
+        ctx.restore(); };
+      const wa = Math.sin(t * 0.35) * 0.5 + Math.sin(t * 0.9) * 0.08;
+      figure(ctx, { x: 528, base: 260, s: 1.72, bob: 0, coat: '#1e2a4a', legs: '#141a2a', skin: '#e8b898', beard: true, hair: '#e0d8c8', gloves: '#f2ead8', buttons: true, longCoat: true, epaulettes: true, cap: capFn, mouthOpen: ch * 0.6,
+        arms: [[0.75, -0.4, null], [ch > 0.05 ? 2.5 + wv : lerp(0.25, 0.9, look), ch > 0.05 ? 2.9 + wv * 1.5 : lerp(0.15, -2.5, look), ch > 0.05 ? null : tele]] });
+      drawWheel(ctx, wa); }
+    // the stoker by the boiler house, sleeves rolled, a shovel at his side; at the six he leaps and flings his cap
+    { const x = 172, jump = ch * Math.abs(Math.sin(d * 7)) * 8, capUp = ch * Math.sin(Math.min(1, d / 2.2) * PI) * 30, idle = Math.sin(t * 0.8) * 0.08;
+      const capFn = () => { ctx.save(); ctx.translate(0, -50 - capUp); ctx.rotate(capUp * 0.15); ctx.fillStyle = '#4a3a30'; ctx.beginPath(); ctx.ellipse(0.6, 0, 6, 3, 0, PI, TAU); ctx.fill(); ctx.fillRect(-1, -0.4, 8.4, 1.8); ctx.fillStyle = '#3a2416'; ctx.fillRect(-5.6, 0.2, 11.2, 1.4); [-2.4, 2.4].forEach(gx => { ctx.fillStyle = sideGrad(ctx, gx, 3, BRASS); ctx.beginPath(); ctx.arc(gx, 0.8, 2.3, 0, TAU); ctx.fill(); ctx.fillStyle = '#e09a40'; ctx.beginPath(); ctx.arc(gx, 0.8, 1.4, 0, TAU); ctx.fill(); }); ctx.restore(); };   // goggles pushed up on his cap
+      const sv = shovelPhase(t), sw = ease(sv.swing);   // 0 = scooping low on his right, 1 = tipping into the furnace door on his left
+      if (ch >= 0.05) { ctx.save(); ctx.translate(x + 15, 252); ctx.rotate(-0.12); ctx.fillStyle = '#5a3a1e'; ctx.fillRect(-1, -46, 2, 38); ctx.fillStyle = sideGrad(ctx, 0, 6, IRON); ctx.beginPath(); ctx.moveTo(-5, -8); ctx.lineTo(5, -8); ctx.lineTo(4, 2); ctx.lineTo(-4, 2); ctx.closePath(); ctx.fill(); ctx.restore(); }   // the shovel propped beside him while he cheers
+      let lh = null; const leftHand = (hx, hy) => { lh = [hx, hy]; };
+      const shovel = (hx, hy) => { if (!lh) return; const dx = lh[0] - hx, dy = lh[1] - hy, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, bx = lh[0] + ux * 12, by = lh[1] + uy * 12;
+        ctx.strokeStyle = '#6a4424'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(hx - ux * 4, hy - uy * 4); ctx.lineTo(bx, by); ctx.stroke();
+        ctx.save(); ctx.translate(bx, by); ctx.rotate(Math.atan2(uy, ux)); ctx.fillStyle = sideGrad(ctx, 0, 5, IRON); ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(9, -3.4); ctx.lineTo(9, 3.4); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill();
+        if (sv.loaded) { ctx.fillStyle = '#141010'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(2 + k * 1.5, -1.6 + (k % 2) * 1.6, 1.4, 0, TAU); ctx.fill(); } } ctx.restore(); };   // the shovel, with a heap of coal on the way to the fire
+      figure(ctx, { x, base: 252, s: 1.32, bob: jump, coat: '#e8dcc4', legs: '#3a3428', skin: '#d8a078', stripes: false, braces: true, apron: true, rolled: true, moustache: true, hair: '#3a2416', mouthOpen: ch, cap: capFn,
+        arms: ch > 0.05 ? [[2.6 + wv, 2.9 + wv, null], [2.6 - wv, 2.9 - wv, null]] : [[lerp(-0.3, 1.25, sw), lerp(-0.5, 1.7, sw), leftHand], [lerp(0.55, -0.55, sw), lerp(0.9, -1.0, sw), shovel]] }); }
+  }
+  // the stoker's rhythm: scoop, swing to the furnace door, tip the coal in, swing back
+  const SHOVEL_T = 5.2;
+  function shovelPhase(t) { const u = (t % SHOVEL_T) / SHOVEL_T; let swing; if (u < 0.3) swing = 0; else if (u < 0.5) swing = (u - 0.3) / 0.2; else if (u < 0.62) swing = 1; else if (u < 0.82) swing = 1 - (u - 0.62) / 0.2; else swing = 0; return { u, swing, loaded: u > 0.2 && u < 0.58, open: u > 0.4 && u < 0.74 ? Math.min(1, (u - 0.4) / 0.06, (0.74 - u) / 0.06) : 0 }; }
+  function drawFurnace(ctx, W, H, t) {   // the furnace door on the boiler house: it swings open for each shovelful and the fire roars out across the deck
+    const sv = shovelPhase(t), o = cheerAt(t % SHOW) > 0.05 ? 0 : sv.open, x = 140, y = 228, w = 14, h = 14;
+    ctx.fillStyle = '#100806'; ctx.fillRect(x, y, w, h);
+    if (o > 0) { const fl = 0.85 + 0.15 * Math.sin(t * 9); const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#ffd070'); g.addColorStop(0.6, '#ff8020'); g.addColorStop(1, '#a02a08'); ctx.globalAlpha = o; ctx.fillStyle = g; ctx.fillRect(x + 1, y + 1, w - 2, h - 2); ctx.globalAlpha = 1;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gl = ctx.createRadialGradient(x + w / 2, y + h, 0, x + w / 2, y + h, 70); gl.addColorStop(0, `rgba(255,150,60,${(0.45 * o * fl).toFixed(3)})`); gl.addColorStop(1, 'rgba(255,120,40,0)'); ctx.fillStyle = gl; ctx.fillRect(x - 70, y - 50, 160, 120); ctx.restore(); }
+    ctx.save(); ctx.translate(x + w, y); ctx.scale(1 - o * 0.85, 1); ctx.fillStyle = sideGrad(ctx, -w / 2, w / 2, IRON); ctx.fillRect(-w, 0, w, h); ctx.fillStyle = sideGrad(ctx, -w / 2, w / 2, BRASS); ctx.fillRect(-w, 0, w, 1.6); ctx.fillRect(-w, h - 1.6, w, 1.6); ctx.fillRect(-w + 2, h / 2 - 1, 4, 2); ctx.restore();   // the door, swinging open on its right-hand hinge
+    // sparks flying from the stack crowns after each shovelful
+    const since = ((t - SHOVEL_T * 0.55) % SHOVEL_T + SHOVEL_T) % SHOVEL_T; if (since < 1.8 && o === 0 && cheerAt(t % SHOW) <= 0.05 || since < 1.8) STACKS2.forEach((f, i) => { for (let k = 0; k < 7; k++) { const a = since / 1.8, sx = f.x + f.rake + Math.sin(k * 2.3 + i) * 6 - a * (20 + k * 6), sy = f.top - 8 - a * (30 + k * 5) + a * a * 10; ctx.fillStyle = `rgba(255,${180 + k * 10},90,${(0.9 * (1 - a)).toFixed(2)})`; ctx.fillRect(sx, sy, 1.6, 1.6); } });
+  }
+  // ════════ THE CANNON — a little brass deck gun fires a salute for the six: smoke and a burst of golden sparks ════════
+  const CANNON = { x: 224, y: 252 };
+  function drawCannon(ctx, W, H, t) {
+    const m = t % SHOW, d = m - SIXLAND - 0.3, recoil = d > 0 && d < 0.6 ? Math.sin(d / 0.6 * PI) * 3 : 0, a = -0.62, { x, y } = CANNON;
+    ctx.fillStyle = 'rgba(30,14,6,0.35)'; ctx.beginPath(); ctx.ellipse(x - 14, y + 1, 18, 3, 0, 0, TAU); ctx.fill();
+    ctx.save(); ctx.translate(x - recoil * Math.cos(a), y - 12 - recoil * Math.sin(a)); ctx.rotate(a); ctx.fillStyle = sideGrad(ctx, 0, 6, BRASS); ctx.beginPath(); ctx.moveTo(-8, -5.4); ctx.lineTo(22, -3.6); ctx.lineTo(22, 3.6); ctx.lineTo(-8, 5.4); ctx.closePath(); ctx.fill(); ctx.fillRect(20, -4.6, 4, 9.2); ctx.beginPath(); ctx.arc(-8, 0, 5.4, PI / 2, PI * 1.5); ctx.fill(); ctx.fillStyle = '#3a2206'; [2, 12].forEach(bx => ctx.fillRect(bx, -4.8, 1.4, 9.6)); ctx.fillStyle = '#100808'; ctx.beginPath(); ctx.ellipse(24, 0, 1.2, 3, 0, 0, TAU); ctx.fill(); ctx.restore();   // the barrel
+    [-1, 1].forEach(sd => { ctx.fillStyle = '#5a3818'; ctx.beginPath(); ctx.arc(x + sd * 5 - 2, y - 5, 5.4, 0, TAU); ctx.fill(); ctx.strokeStyle = sideGrad(ctx, x, 6, BRASS); ctx.lineWidth = 1.2; ctx.stroke(); ctx.fillStyle = sideGrad(ctx, x, 3, BRASS); ctx.beginPath(); ctx.arc(x + sd * 5 - 2, y - 5, 1.4, 0, TAU); ctx.fill(); });   // the carriage wheels
+    if (d > 0 && d < 2.6) { const mx = x + Math.cos(a) * 24, my = y - 12 + Math.sin(a) * 24; for (let k = 0; k < 5; k++) { const u = Math.min(1, d / 2.2) , r = 5 + u * (16 + k * 3); puff(ctx, puffC.smoke, mx + Math.cos(a) * u * 14 + Math.sin(k * 2.1) * u * 10, my + Math.sin(a) * u * 14 - u * k * 2, r, (1 - u) * 0.55); }
+      if (d < 0.25) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(mx, my, 0, mx, my, 18); g.addColorStop(0, `rgba(255,220,140,${(0.8 * (1 - d / 0.25)).toFixed(3)})`); g.addColorStop(1, 'rgba(255,180,80,0)'); ctx.fillStyle = g; ctx.fillRect(mx - 18, my - 18, 36, 36); ctx.restore(); } }   // the muzzle flash and smoke
+    const b = d - 0.7; if (b > 0 && b < 2.4) { const bx = 196, by = 72, u = b / 2.4; for (let k = 0; k < 26; k++) { const an = k / 26 * TAU, sp = 34 + (k % 3) * 8, px = bx + Math.cos(an) * sp * Math.sqrt(u), py = by + Math.sin(an) * sp * Math.sqrt(u) + u * u * 26; ctx.fillStyle = `rgba(255,${200 + (k % 3) * 18},110,${(1 - u).toFixed(2)})`; ctx.beginPath(); ctx.arc(px, py, 1.6 * (1 - u * 0.5), 0, TAU); ctx.fill(); }
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(bx, by, 0, bx, by, 40); g.addColorStop(0, `rgba(255,210,130,${(0.35 * (1 - u)).toFixed(3)})`); g.addColorStop(1, 'rgba(255,190,100,0)'); ctx.fillStyle = g; ctx.fillRect(bx - 40, by - 40, 80, 80); ctx.restore(); }   // the shell bursts high over the deck in a gold starburst
+  }
+  // ════════ LANTERNS — brass lanterns hung on the rigging, glowing warmer as the light goes ════════
+  const LGLOW = (() => { const c = document.createElement('canvas'); c.width = c.height = 80; const x = c.getContext('2d'), g = x.createRadialGradient(40, 40, 0, 40, 40, 40); g.addColorStop(0, 'rgba(255,190,90,0.5)'); g.addColorStop(1, 'rgba(255,160,60,0)'); x.fillStyle = g; x.fillRect(0, 0, 80, 80); return c; })();
+  function drawLanterns(ctx, W, H, t) {
+    const m = t % SHOW, lvl = 0.55 + 0.45 * (0.5 - 0.5 * Math.cos(m / SHOW * TAU));
+    [[1, 0.42], [2, 0.36], [3, 0.58], [5, 0.5]].forEach(([i, u], n) => { const [rx, ry] = ropePt(i, u, t), sway = Math.sin(t * 1.3 + n) * 0.08, x = rx + Math.sin(sway) * 12, y = ry + 14;
+      ctx.strokeStyle = '#3a2416'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(x, y - 10); ctx.stroke();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = lvl; ctx.drawImage(LGLOW, x - 40, y - 40); ctx.restore();
+      ctx.fillStyle = `rgb(255,${Math.round(170 + 50 * lvl)},${Math.round(80 + 40 * lvl)})`; ctx.fillRect(x - 5, y - 7.6, 10, 15);
+      ctx.fillStyle = 'rgba(255,255,230,0.8)'; ctx.fillRect(x - 1.2, y - 4, 2.4, 6);   // the flame
+      ctx.fillStyle = sideGrad(ctx, x, 7, BRASS); ctx.fillRect(x - 6.6, y - 10.4, 13.2, 3); ctx.fillRect(x - 6.6, y + 7.4, 13.2, 3); ctx.beginPath(); ctx.moveTo(x - 5, y - 10.4); ctx.lineTo(x, y - 15); ctx.lineTo(x + 5, y - 10.4); ctx.fill(); ctx.beginPath(); ctx.arc(x, y - 15.6, 1.6, 0, TAU); ctx.fill(); ctx.fillRect(x - 6, y - 7.6, 1.6, 15); ctx.fillRect(x + 4.4, y - 7.6, 1.6, 15); ctx.fillRect(x - 0.6, y - 7.6, 1.2, 15); });
+  }
+  // ════════ THE ENGINE TELEGRAPH — a brass dial by the helm: its lever rings round before the whistle, the bell rings ════════
+  function drawTelegraph(ctx, W, H, t) {
+    const m = t % SHOW, x = 578, y = 214, ring = win(m, [WHISTLE[0] - 1.6, WHISTLE[0] + 0.4]), lev = ring < 0 ? -0.9 : -0.9 + Math.sin(ring * PI * 2) * 0.8 + ring * 1.8;
+    ctx.fillStyle = 'rgba(30,14,6,0.35)'; ctx.beginPath(); ctx.moveTo(x - 6, 258); ctx.lineTo(x + 6, 258); ctx.lineTo(x - 30, 266); ctx.lineTo(x - 42, 266); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = sideGrad(ctx, x, 6, BRASS); ctx.beginPath(); ctx.moveTo(x - 6, 258); ctx.lineTo(x - 3, y + 10); ctx.lineTo(x + 3, y + 10); ctx.lineTo(x + 6, 258); ctx.closePath(); ctx.fill(); ctx.fillRect(x - 8, 255, 16, 3);
+    ctx.fillStyle = sideGrad(ctx, x, 12, BRASS); ctx.beginPath(); ctx.arc(x, y, 11.5, 0, TAU); ctx.fill(); ctx.fillStyle = '#f4ead0'; ctx.beginPath(); ctx.arc(x, y, 9, PI, TAU); ctx.fill(); ctx.fillStyle = '#1a1010'; ctx.beginPath(); ctx.arc(x, y, 9, 0, PI); ctx.fill();
+    ctx.strokeStyle = '#3a2206'; ctx.lineWidth = 0.6; for (let k = 0; k <= 4; k++) { const a = PI + k / 4 * PI; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 3, y + Math.sin(a) * 3); ctx.lineTo(x + Math.cos(a) * 9, y + Math.sin(a) * 9); ctx.stroke(); }
+    ctx.fillStyle = '#c82818'; ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, 9, -0.6, -0.08); ctx.closePath(); ctx.fill();   // FULL AHEAD sector
+    ctx.save(); ctx.translate(x, y); ctx.rotate(lev - PI / 2); ctx.fillStyle = sideGrad(ctx, 0, 3, BRASS); ctx.fillRect(-1.2, -14, 2.4, 14); ctx.beginPath(); ctx.arc(0, -15, 2.4, 0, TAU); ctx.fill(); ctx.restore();   // the lever
+    ctx.fillStyle = sideGrad(ctx, x, 3, BRASS); ctx.beginPath(); ctx.arc(x, y, 2, 0, TAU); ctx.fill();
+    if (ring >= 0) { ctx.strokeStyle = `rgba(255,230,170,${(0.6 * Math.sin(ring * PI)).toFixed(2)})`; ctx.lineWidth = 1; for (let k = 0; k < 2; k++) { const rr = 14 + k * 5 + (ring * 16) % 5; ctx.beginPath(); ctx.arc(x, y, rr, -1.2, -0.3); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, rr, PI + 0.3, PI + 1.2); ctx.stroke(); } }   // the bell ringing
+  }
+  // ════════ THE CONSORT'S SIGNAL LAMP — she flashes back when our whistle blows ════════
+  function consortPos(t) { return [500 + Math.sin(t * TAU / SHOW) * 24, 66 + Math.sin(t * 0.45) * 3]; }
+  function drawSignal(ctx, W, H, t) { const m = t % SHOW, u = win(m, [WHISTLE[0] + 0.6, WHISTLE[1] + 1.2]); if (u < 0) return; const k = Math.max(0, Math.sin(u * PI * 6)) * Math.sin(u * PI), [x, y] = consortPos(t), lx = x - 4, ly = y + 27;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, 22); g.addColorStop(0, `rgba(255,250,220,${(0.9 * k).toFixed(3)})`); g.addColorStop(0.2, `rgba(255,220,150,${(0.4 * k).toFixed(3)})`); g.addColorStop(1, 'rgba(255,200,120,0)'); ctx.fillStyle = g; ctx.fillRect(lx - 22, ly - 22, 44, 44); ctx.restore(); }
+  // ════════ THE SCOREBOARD — number drums roll over when the six lands ════════
+  function drum(ctx, x, y, w, h, v) {
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.fillStyle = '#f2e6c4'; ctx.fillRect(x, y, w, h);
+    const base = Math.floor(v), f = v - base; ctx.fillStyle = '#1a1612'; ctx.font = `800 ${Math.round(h * 0.95)}px 'Barlow Condensed', 'Arial Narrow', sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let k = -1; k <= 1; k++) { const dgt = ((base + k) % 10 + 10) % 10, yy = y + h / 2 - (k - f) * h; ctx.fillText(String(dgt), x + w / 2, yy + 0.6); }
+    const sh = ctx.createLinearGradient(0, y, 0, y + h); sh.addColorStop(0, 'rgba(40,24,6,0.55)'); sh.addColorStop(0.35, 'rgba(40,24,6,0)'); sh.addColorStop(0.65, 'rgba(40,24,6,0)'); sh.addColorStop(1, 'rgba(40,24,6,0.55)'); ctx.fillStyle = sh; ctx.fillRect(x, y, w, h);
+    ctx.restore();
+  }
+  function drawScore(ctx, W, H, t) {
+    const m = t % SHOW; let v = 247 + 6 * ease(Math.max(0, Math.min(1, (m - SIXLAND - 0.6) / 1.8))); if (m > 27.6) v = lerp(253, 247, ease(Math.min(1, (m - 27.6) / 1.6)));   // rolls quietly back before the loop comes round
+    const u = v % 10, tens = Math.floor(v / 10) % 10 + Math.max(0, u - 9), hund = Math.floor(v / 100) + Math.max(0, (Math.floor(v / 10) % 10) + Math.max(0, u - 9) - 9);
+    drum(ctx, 406, 172, 11, 15, hund); drum(ctx, 418, 172, 11, 15, tens); drum(ctx, 430, 172, 11, 15, u);
+    drum(ctx, 405, 193, 9, 10, 3); drum(ctx, 427, 193, 8, 10, 1); drum(ctx, 436, 193, 8, 10, 7);
+    const sp = (v - 247) * 2.4; gear(ctx, 396, 181, 9, 10, sp + t * 0.3, BRASS); gear(ctx, 395, 197, 6, 7, -(sp + t * 0.3) * 1.5, COPPER);
+  }
+
+  // ════════ THE SIX — struck clean over the orrery and the rail, falling away towards the city far below ════════
+  const sixPos = (u) => { const p0 = [-20, 330], p1 = [330, -130], p2 = [548, 176], a = (1 - u) * (1 - u), b = 2 * u * (1 - u), c = u * u; return [a * p0[0] + b * p1[0] + c * p2[0], a * p0[1] + b * p1[1] + c * p2[1]]; };
+  function drawSix(ctx, W, H, t) {
+    const m = t % SHOW, u = win(m, SIX); if (u < 0) return;
+    for (let k = 1; k <= 8; k++) { const uu = u - k * 0.012; if (uu < 0) break; const [x, y] = sixPos(uu); ctx.fillStyle = `rgba(255,236,200,${(0.4 * (1 - k / 9)).toFixed(2)})`; ctx.beginPath(); ctx.arc(x, y, Math.max(0.6, 3.6 - k * 0.25 - uu * 2.2), 0, TAU); ctx.fill(); }
+    const [x, y] = sixPos(u), r = 4.2 - u * 3; const g = ctx.createRadialGradient(x - 1, y - 1, 0, x, y, r); g.addColorStop(0, '#ff9a80'); g.addColorStop(0.5, '#c8281c'); g.addColorStop(1, '#5a0a06'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  }
+  const sixBoost = (m) => { const a = SIX[0] + 0.6, b = SIXLAND + 2.6; if (m < a || m > b) return 0; const u = (m - a) / (b - a); return Math.min(1, u * 3, (1 - u) * 2.5); };
+  function drawFlare(ctx, W, H, t) { const b = sixBoost(t % SHOW); if (b <= 0) return; ctx.save(); ctx.globalCompositeOperation = 'lighter'; const cx = W * 0.5, cy = SUNY, g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 90); g.addColorStop(0, `rgba(255,210,120,${(0.32 * b).toFixed(3)})`); g.addColorStop(1, 'rgba(255,180,80,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 90, cy - 90, 180, 180); ctx.restore(); }
+
+  // ════════ THE PIGEON POST — a clockwork brass pigeon flaps in with a message, perches on the scoreboard, then flies off ════════
+  const PIGEON = [1.0, 2.8, 25.6, 27.6];   // arrive, land, take off, gone
+  function brassBird(ctx, x, y, flap, s, dir, peck) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s * dir, s);
+    ctx.fillStyle = sideGrad(ctx, 0, 8, BRASS); ctx.beginPath(); ctx.ellipse(0, 0, 8, 5, -0.15, 0, TAU); ctx.fill();   // body
+    ctx.beginPath(); ctx.moveTo(-6, -1); ctx.lineTo(-14, -3); ctx.lineTo(-14, 2); ctx.closePath(); ctx.fill();   // tail
+    ctx.save(); ctx.translate(7, -4 + peck * 3); ctx.beginPath(); ctx.arc(0, 0, 3.6, 0, TAU); ctx.fill(); ctx.fillStyle = '#e04020'; ctx.beginPath(); ctx.arc(1.4, -0.8, 1.1, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a2206'; ctx.beginPath(); ctx.moveTo(3.2, -0.4); ctx.lineTo(6.4, 0.6); ctx.lineTo(3.2, 1.4); ctx.closePath(); ctx.fill(); ctx.restore();   // head, ruby eye, beak
+    ctx.fillStyle = '#f2ead6'; ctx.fillRect(-2, 3, 6, 2.4); ctx.fillStyle = '#c82818'; ctx.fillRect(0.6, 3, 1, 2.4);   // the scroll tied under it, red ribbon
+    ctx.fillStyle = sideGrad(ctx, 0, 10, COPPER); ctx.beginPath(); ctx.moveTo(-3, -2); ctx.quadraticCurveTo(-2, -2 - 14 * flap, -12, -4 - 12 * flap); ctx.lineTo(-10, -1 - 6 * flap); ctx.lineTo(-6, 0); ctx.lineTo(2, 0); ctx.closePath(); ctx.fill();   // wing: riveted copper feathers
+    ctx.strokeStyle = 'rgba(60,30,10,0.6)'; ctx.lineWidth = 0.5; for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo(-3 * k, -1); ctx.lineTo(-3 * k - 2, -2 - 10 * flap * k / 4); ctx.stroke(); }
+    ctx.restore();
+  }
+  function drawPigeon(ctx, W, H, t) {
+    const m = t % SHOW, [a0, a1, b0, b1] = PIGEON, perch = [425, 147]; if (m < a0 || m > b1) return;
+    if (m < a1) { const u = ease((m - a0) / (a1 - a0)); brassBird(ctx, lerp(660, perch[0], u), lerp(60, perch[1], u) - Math.sin(u * PI) * 20, Math.sin(t * 22) * 0.5 + 0.5, 0.9, -1, 0); }
+    else if (m < b0) { const peck = Math.max(0, Math.sin(t * 2.4) - 0.7) / 0.3; brassBird(ctx, perch[0], perch[1], 0.15 + 0.05 * Math.sin(t * 3), 0.9, -1, peck); }
+    else { const u = (m - b0) / (b1 - b0); brassBird(ctx, lerp(perch[0], 120, u), perch[1] - u * 130, Math.sin(t * 22) * 0.5 + 0.5, 0.9 * (1 - u * 0.4), -1, 0); }
+  }
+  // ════════ THE GYROCOPTER — after the six, a little brass gyrocopter dives off to fetch the ball from the city below ════════
+  function drawGyro(ctx, t) {
+    const m = t % SHOW, u = win(m, [SIXLAND + 0.3, SIXLAND + 4.2]); if (u < 0) return;
+    const e = u * u * (3 - 2 * u), x = lerp(650, 462, e), y = lerp(28, 192, Math.pow(e, 1.4)), s = lerp(1.4, 0.3, e);
+    gyroBody(ctx, x, y, s, 0.35 * Math.sin(u * PI), t);
+  }
+  function drawPatrol(ctx, W, H, t) {   // early in the loop a patrol gyrocopter buzzes past close by, pilot waving, heading the way we're going
+    const m = t % SHOW, u = win(m, [0.6, 5.4]); if (u < 0) return; const x = lerp(-60, 700, u), y = 92 + Math.sin(u * PI) * -26 + Math.sin(t * 3) * 2;
+    ctx.save(); ctx.translate(x, y); ctx.scale(-1, 1); gyroBody(ctx, 0, 0, 1.25, -0.08, t); ctx.restore();
+  }
+  function gyroBody(ctx, x, y, s, tilt, t) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(tilt);
+    ctx.fillStyle = sideGrad(ctx, 0, 9, BRASS); ctx.beginPath(); ctx.ellipse(0, 0, 9, 5, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#6a3a1a'; ctx.beginPath(); ctx.arc(-1, -3, 3, 0, TAU); ctx.fill(); ctx.fillStyle = '#e8b898'; ctx.beginPath(); ctx.arc(-1, -5.4, 2, 0, TAU); ctx.fill(); ctx.fillStyle = '#3a2a1a'; ctx.fillRect(-3, -7.6, 4, 1.4); ctx.fillStyle = 'rgba(160,220,255,0.8)'; ctx.fillRect(-2.6, -6.4, 3.2, 1);   // the pilot in goggles
+    ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(0, -11); ctx.moveTo(8, 0); ctx.lineTo(14, 0); ctx.stroke();
+    const r = t * 30; ctx.fillStyle = 'rgba(220,190,130,0.3)'; ctx.beginPath(); ctx.ellipse(0, -11, 16, 2.4, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = '#3a2414'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-Math.cos(r) * 16, -11); ctx.lineTo(Math.cos(r) * 16, -11); ctx.stroke();   // the rotor
+    ctx.fillStyle = 'rgba(220,190,130,0.3)'; ctx.beginPath(); ctx.ellipse(14, 0, 1.4, 5, 0, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  // ════════ BUNTING — strings of pennants hung on the balloon's rigging, fluttering in the wind of our passage ════════
+  function ropeSway(i, t) { return Math.sin(t * 0.9 + i * 1.7) * 3 + Math.sin(t * 2.3 + i) * 1; }
+  function ropePt(i, u, t) { const R = ROPES[i], edge = ENV_EDGE, sw = ropeSway(i, t || 0) * Math.sin(u * PI); return [lerp(R[0], R[1], u) + sw, lerp(edge(R[0]), RAIL - 24, u)]; }
+  function drawRopes(ctx, W, H, t) {   // the net's cords, bowing a little in the wind of our passage
+    ctx.strokeStyle = 'rgba(50,30,20,0.75)'; ctx.lineWidth = 0.9; ROPES.forEach(([x, dx], i) => { const sw = ropeSway(i, t); ctx.beginPath(); ctx.moveTo(x, ENV_EDGE(x)); ctx.quadraticCurveTo((x + dx) / 2 + sw * 2, (ENV_EDGE(x) + RAIL - 24) / 2, dx, RAIL - 24); ctx.stroke(); });
+  }
+  function drawBunting(ctx, W, H, t) {
+    const cols = ['#c81c24', '#ffd040', '#1c4aa8', '#2a8a4a', '#f2ead6'];
+    [[[3, 0.57], [4, 0.6]], [[4, 0.6], [5, 0.63]]].forEach(([[i0, u0], [i1, u1]], g) => { const A = ropePt(i0, u0, t), B = ropePt(i1, u1, t), sag = 12, n = Math.max(5, Math.round(Math.hypot(B[0] - A[0], B[1] - A[1]) / 11));
+      const pt = (u) => [lerp(A[0], B[0], u), lerp(A[1], B[1], u) + Math.sin(u * PI) * sag];
+      ctx.strokeStyle = 'rgba(60,40,30,0.8)'; ctx.lineWidth = 0.7; ctx.beginPath(); for (let k = 0; k <= 20; k++) { const [x, y] = pt(k / 20); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+      for (let k = 0; k < n; k++) { const ua = (k + 0.15) / n, ub = (k + 0.85) / n, [x0, y0] = pt(ua), [x1, y1] = pt(ub), mx = (x0 + x1) / 2 - 2 - Math.sin(t * 6 + k + g) * 2.4, my = (y0 + y1) / 2 + 9 + Math.sin(t * 7 + k * 1.3) * 1.2;
+        ctx.fillStyle = cols[(k + g * 2) % cols.length]; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(mx, my); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'rgba(255,240,210,0.25)'; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo((x0 + x1) / 2, (y0 + y1) / 2); ctx.lineTo(mx, my); ctx.closePath(); ctx.fill(); } });
+  }
+  // ════════ THE CLOUD BANK — the ship sails into a cloud: a rush of mist over the deck, then out into the sunlight again ════════
+  const CLOUDBANK = [26.4, 28.8];
+  const mistAt = (m) => { const u = win(m, CLOUDBANK); return u < 0 ? 0 : Math.sin(u * PI) * Math.min(1, Math.sin(u * PI) * 1.6); };
+  function drawMist(ctx, W, H, t, strength) {
+    const m = t % SHOW, k = mistAt(m) * strength; if (k <= 0.01) return;
+    ctx.fillStyle = `rgba(255,226,214,${(0.55 * k).toFixed(3)})`; ctx.fillRect(0, 0, W, H);
+    const u = win(m, CLOUDBANK); for (let i = 0; i < 10; i++) { const x = ((i * 157 + 700) - u * 1500 * (0.8 + (i % 3) * 0.25)), y = 30 + (i * 83) % 260; puff(ctx, puffC.steam, x, y, 64 + (i % 4) * 20, 0.5 * k); }
+  }
+
+  // ════════ CLOCKWORK & STEAM — exposed gears turning, pistons pumping, valves hissing ════════
+  function drawClockwork(ctx, W, H, t) {
+    ctx.save(); ctx.beginPath(); ctx.arc(34, 222, 11, 0, TAU); ctx.clip(); gear(ctx, 30, 218, 9, 10, t * 1.2, BRASS); gear(ctx, 41, 229, 6, 7, -t * 1.2 * 9 / 6, COPPER); gear(ctx, 26, 232, 5, 6, -t * 1.2 * 9 / 5, BRASS); ctx.restore();   // the boiler's clockwork through its window
+    const wa = Math.sin(t * 0.35) * 0.5 + Math.sin(t * 0.9) * 0.08;   // the helm's angle: its gearbox turns with the wheel
+    { const x = HELM.x, y = 246; ctx.fillStyle = sideGrad(ctx, x, 14, IRON); ctx.fillRect(x - 14, y - 10, 28, 12); ctx.fillStyle = sideGrad(ctx, x, 15, BRASS); ctx.fillRect(x - 15, y - 11, 30, 2); gear(ctx, x - 6, y - 5, 6, 8, wa * 3, BRASS); gear(ctx, x + 5, y - 6, 4.4, 6, -wa * 3 * 6 / 4.4, COPPER); }   // the steering engine's gearbox
+    { const px = 602, py = 143; [0, PI].forEach((ph, i) => { const x = px - 8 + i * 16, ext = Math.sin(t * 12 + ph) * 3; ctx.fillStyle = sideGrad(ctx, x, 3, IRON); ctx.fillRect(x - 2.6, py - 22, 5.2, 9); ctx.fillStyle = '#d8d8e0'; ctx.fillRect(x - 0.8, py - 13 + ext, 1.6, 6); ctx.fillStyle = sideGrad(ctx, x, 3, BRASS); ctx.fillRect(x - 3, py - 23, 6, 2); }); }   // pistons pumping on the propeller engine
+    VENTS.forEach(([x, ph], i) => { const c = ((t + ph * 1.4) % 4.6) / 4.6; if (c > 0.22) return; const a = c / 0.22; for (let k = 0; k < 5; k++) { const u = (a + k / 5) % 1; puff(ctx, puffC.steam, x + u * 8 - 2, RAIL - 19 - u * 22, 1.6 + u * 6, (1 - u) * Math.sin(a * PI) * 0.7); } });   // valves letting off little hisses of steam
+  }
+  function drawBellyHub(ctx, W, H, t) { gear(ctx, 310, 22, 13, 12, t * 0.4, BRASS); gem(ctx, 310, 22, 2.6, '#ffb040', '#402000'); }   // a brass gear hub at the heart of the balloon's net
+  // ════════ THE GRAND ORRERY ════════
+  function seam(ctx, cx, cy, R, phi, col, w, stitchCol) {
+    const tilt = 0.45, pts = [];
+    for (let i = 0; i <= 48; i++) { const a = i / 48 * TAU; let x = Math.cos(a), y = Math.sin(a) * Math.cos(tilt), z = Math.sin(a) * Math.sin(tilt);
+      const x2 = x * Math.cos(phi) + z * Math.sin(phi), z2 = -x * Math.sin(phi) + z * Math.cos(phi); y = y * Math.cos(0.3) - z2 * Math.sin(0.3); const z3 = y * Math.sin(0.3) + z2 * Math.cos(0.3); pts.push([cx + x2 * R, cy - y * R, z3]); }
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < 48; i++) { const [x, y, z] = pts[i], [x2, y2, z2] = pts[i + 1]; if (z < 0 && z2 < 0) continue; ctx.globalAlpha = Math.min(1, (z + z2) * 2 + 0.2);
+      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x2, y2); ctx.stroke();
+      if (stitchCol && i % 2 === 0) { const dx = x2 - x, dy = y2 - y, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l; ctx.strokeStyle = stitchCol; ctx.lineWidth = 0.9; [-1, 1].forEach(sd => { ctx.beginPath(); ctx.moveTo(x + nx * sd * w * 0.9, y + ny * sd * w * 0.9); ctx.lineTo(x + nx * sd * w * 2 + dx * 0.4, y + ny * sd * w * 2 + dy * 0.4); ctx.stroke(); }); } }
+    ctx.restore();
+  }
+  function ball(ctx, cx, cy, R, phi, gold) {
+    const g = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.1, cx, cy, R); if (gold) { g.addColorStop(0, '#fff8c8'); g.addColorStop(0.35, '#ffcc40'); g.addColorStop(0.8, '#b06a08'); g.addColorStop(1, '#5a3004'); } else { g.addColorStop(0, '#ff8a70'); g.addColorStop(0.4, '#c8281c'); g.addColorStop(1, '#4a0606'); }
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+    seam(ctx, cx, cy, R, phi, gold ? '#c82818' : 'rgba(245,230,200,0.95)', gold ? 1.8 : Math.max(0.8, R * 0.12), gold ? 'rgba(255,240,200,0.9)' : (R > 6 ? 'rgba(255,245,220,0.9)' : null));
+    const sp = ctx.createRadialGradient(cx - R * 0.4, cy - R * 0.45, 0, cx - R * 0.4, cy - R * 0.45, R * 0.4); sp.addColorStop(0, 'rgba(255,255,255,0.7)'); sp.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = sp; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+  }
+  function gear(ctx, x, y, r, teeth, a, stops, sy) {   // a toothed brass gear with spokes (sy squashes it for a gear seen edge-on)
+    ctx.save(); ctx.translate(x, y); ctx.scale(1, sy || 1); ctx.rotate(a); ctx.fillStyle = sideGrad(ctx, 0, r, stops); ctx.beginPath();
+    for (let i = 0; i < teeth * 2; i++) { const an = i / (teeth * 2) * TAU, rr = i % 2 ? r : r * 0.84; ctx.lineTo(Math.cos(an - 0.08) * rr, Math.sin(an - 0.08) * rr); ctx.lineTo(Math.cos(an + 0.08) * rr, Math.sin(an + 0.08) * rr); } ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(26,16,6,0.85)'; for (let k = 0; k < 5; k++) { const an = k / 5 * TAU; ctx.beginPath(); ctx.arc(Math.cos(an) * r * 0.48, Math.sin(an) * r * 0.48, r * 0.2, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = '#2a1a08'; ctx.beginPath(); ctx.arc(0, 0, r * 0.12, 0, TAU); ctx.fill(); ctx.restore();
+  }
+  function plinth(ctx, cx, top, w, t, name) {   // a riveted iron drum with a brass name plate
+    const h = 52, bw = w * 1.12;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.ellipse(cx, top + h + 4, bw * 0.7, 7, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = sideGrad(ctx, cx, bw / 2, IRON); ctx.beginPath(); ctx.moveTo(cx - w / 2, top + 6); ctx.lineTo(cx + w / 2, top + 6); ctx.lineTo(cx + bw / 2, top + h); ctx.lineTo(cx - bw / 2, top + h); ctx.fill();
+    ctx.fillStyle = '#c8a060'; [top + 10, top + h - 6].forEach(y => { const f = (y - top) / h, hw = w / 2 + (bw - w) / 2 * f; for (let x = cx - hw + 5; x < cx + hw - 3; x += 9) { ctx.beginPath(); ctx.arc(x, y, 1.2, 0, TAU); ctx.fill(); } });
+    ctx.fillStyle = sideGrad(ctx, cx, w / 2 + 6, BRASS); ctx.fillRect(cx - w / 2 - 6, top, w + 12, 7);
+    const pw = w * 0.76, py = top + 17, ph = 22; ctx.fillStyle = sideGrad(ctx, cx, pw / 2, BRASS); ctx.fillRect(cx - pw / 2, py, pw, ph); ctx.fillStyle = '#2a1806'; ctx.fillRect(cx - pw / 2 + 2, py + 2, pw - 4, ph - 4);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffe2a0'; ctx.font = "800 13px 'Barlow Condensed', 'Arial Narrow', sans-serif"; ctx.fillText(name, cx, py + 8, pw * 0.9);
+    ctx.font = "700 8px 'Barlow Condensed', 'Arial Narrow', sans-serif"; ctx.fillStyle = '#d8b070'; ctx.fillText('BRASS CUP', cx, py + 16.5, pw * 0.7);
+    ctx.fillStyle = '#3a2206'; [[cx - pw / 2 + 3, py + 3], [cx + pw / 2 - 3, py + 3], [cx - pw / 2 + 3, py + ph - 3], [cx + pw / 2 - 3, py + ph - 3]].forEach(([x, y]) => { ctx.beginPath(); ctx.arc(x, y, 1.1, 0, TAU); ctx.fill(); });   // the plate's rivets
+    { const x = cx - pw / 2 - 12, y = py + ph; ctx.fillStyle = sideGrad(ctx, x, 7, BRASS); [-5, 0, 5].forEach(dx => ctx.fillRect(x + dx - 1.2, y - 20, 2.4, 20)); ctx.fillRect(x - 6.4, y - 22, 6, 1.8); ctx.fillRect(x + 0.4, y - 22, 6, 1.8); }   // brass stumps and bails
+    { const x = cx + pw / 2 + 12, y = py + 11; [-1, 1].forEach(sd => { ctx.save(); ctx.translate(x, y); ctx.rotate(sd * 0.6); ctx.fillStyle = sideGrad(ctx, 0, 4, BRASS); ctx.fillRect(-0.9, -13, 1.8, 6); ctx.beginPath(); ctx.moveTo(-2.6, -7); ctx.lineTo(2.6, -7); ctx.lineTo(2.8, 11); ctx.quadraticCurveTo(0, 13, -2.8, 11); ctx.closePath(); ctx.fill(); ctx.restore(); }); ball(ctx, x, y + 4, 3.2, 0.5, false); }   // crossed bats with a ball
+  }
+  const CAGE = 68, OC = 180, OY = 118, OK = 0.3, RING = 114;    // the orrery's centre, its sun's height, how far we look down on the plane, the ecliptic ring's radius
+  const PLANETS = [{ R: 50, y0: 222, sp: 0.42, r: 7, kind: 'copper', a0: 0.4000, n: 2, dy: -16 }, { R: 63, y0: 211, sp: 0.42, r: 9, kind: 'jade', a0: 1.6566, n: 2, dy: 12 }, { R: 76, y0: 200, sp: 0.42, r: 11, kind: 'cricket', a0: 2.9132, n: 2, dy: -8 }, { R: 89, y0: 189, sp: 0.42, r: 8, kind: 'gear', a0: 4.1698, n: 2, dy: 16 }, { R: 102, y0: 178, sp: 0.42, r: 13, kind: 'ringed', a0: 5.4264, n: 2, dy: -20 }];   // spread out in radius and staggered above and below the ring's plane
+  const spinF = (m) => { const u = Math.max(0, Math.min(1, (m - SIXLAND - 0.2) / 4.4)); return u * u * u * (u * (6 * u - 15) + 10); };   // the spin-up after the six: whole extra turns, so the loop still joins up
+  const P3 = (r, a, y) => [OC + Math.cos(a) * r, y + Math.sin(a) * r * OK, Math.sin(a)];   // a point in the orrery's world → screen x, y and depth (z > 0 is towards us)
+  function ringHalf(ctx, front) {   // the ecliptic ring: a flat brass band engraved with the months, drawn half at a time
+    const a0 = front ? 0 : PI, a1 = front ? PI : TAU, ro = RING, ri = RING - 12;
+    ctx.fillStyle = sideGrad(ctx, OC, ro, BRASS); ctx.beginPath(); ctx.ellipse(OC, OY, ro, ro * OK, 0, a0, a1); ctx.ellipse(OC, OY, ri, ri * OK, 0, a1, a0, true); ctx.closePath(); ctx.fill();
+    if (front) { ctx.fillStyle = sideGrad(ctx, OC, ro, [[0, '#3a2206'], [0.3, '#8a5a18'], [0.5, '#5a3a0c'], [1, '#2a1804']]); ctx.beginPath(); ctx.ellipse(OC, OY, ro, ro * OK, 0, 0, PI); ctx.lineTo(OC - ro, OY + 4); ctx.ellipse(OC, OY + 4, ro, ro * OK, 0, PI, 0, true); ctx.closePath(); ctx.fill(); }   // the band's thickness, seen on the near side
+    ctx.strokeStyle = 'rgba(60,34,6,0.45)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.ellipse(OC, OY, ro - 4.5, (ro - 4.5) * OK, 0, a0, a1); ctx.stroke();   // an engraved line running round the band
+    ctx.strokeStyle = front ? 'rgba(60,34,6,0.8)' : 'rgba(60,34,6,0.5)'; ctx.lineWidth = 0.8; for (let k = 0; k < 24; k++) { const a = k / 24 * TAU + 0.03; if ((Math.sin(a) >= 0) !== front) continue; const [x1, y1] = P3(ro - 1, a, OY), [x2, y2] = P3(k % 2 ? ro - 4 : ri + 1, a, OY); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }   // engraved divisions
+    [0.6, 2.7, 4.8].forEach((a, i) => { if ((Math.sin(a) >= 0) !== front) return; const [x, y] = P3(RING - 4.5, a, OY); gem(ctx, x, y, 2.2, ['#ff3040', '#3080ff', '#30d070'][i], ['#5a0010', '#002060', '#00401a'][i]); });   // three jewelled bosses
+  }
+  function strut(ctx, a) {   // a curved bracket from the column up and out to hold the ecliptic ring
+    ctx.strokeStyle = sideGrad(ctx, OC, RING, BRASS); ctx.lineWidth = 3.6; ctx.beginPath(); for (let s = 0; s <= 1.0001; s += 0.1) { const r = 8 + (RING - 13) * Math.pow(s, 0.7), y = 226 - (226 - OY - 2) * Math.pow(s, 1.8), [x, yy] = P3(r, a, y); s ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy); } ctx.stroke();
+  }
+  function strap(ctx, a, front) {   // one of the four arching straps of the cage over the sun, from the ring up to the crown
+    ctx.strokeStyle = sideGrad(ctx, OC, RING, BRASS); ctx.lineWidth = front ? 4 : 3; ctx.globalAlpha = front ? 1 : 0.75; ctx.beginPath();
+    for (let i = 0; i <= 24; i++) { const th = i / 24 * PI / 2, r = (RING - 4.5) * Math.cos(th), y = OY - CAGE * Math.sin(th), [x, yy] = P3(r, a, y); i ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy); } ctx.stroke(); ctx.globalAlpha = 1;
+    if (front) { const th = 0.55, r = (RING - 4.5) * Math.cos(th), y = OY - CAGE * Math.sin(th), [x, yy] = P3(r, a, y); ctx.fillStyle = sideGrad(ctx, x, 3, BRASS); ctx.beginPath(); ctx.arc(x, yy, 2.4, 0, TAU); ctx.fill(); }   // a rivet boss
+  }
+  function planet(ctx, p, t, a) {   // a planet on its arm: the arm sweeps out from its collar on the column and curves up to the planet's plane
+    ctx.strokeStyle = sideGrad(ctx, OC, p.R, BRASS); ctx.lineWidth = 3; ctx.beginPath();
+    for (let i = 0; i <= 16; i++) { const s = i / 16, r = p.R * Math.min(1, s * 1.15), y = p.y0 - (p.y0 - OY - p.dy - p.r - 2) * Math.pow(s, 2.4), [x, yy] = P3(r, a, y); i ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy); } ctx.stroke();
+    const [x, y, z] = P3(p.R, a, OY + p.dy); ctx.fillStyle = sideGrad(ctx, x, 4, BRASS); ctx.beginPath(); ctx.ellipse(x, y + p.r + 1, 3.4, 1.4, 0, 0, TAU); ctx.fill(); gem(ctx, x, y + p.r + 2.6, 1.3, ['#ff3040', '#30d070', '#3080ff', '#ffb030', '#c040ff'][PLANETS.indexOf(p)], '#200808');   // a jewel set under each planet's cup   // a little cup the planet sits in
+    if (p.kind === 'copper') { const g = ctx.createRadialGradient(x - p.r * 0.35, y - p.r * 0.4, 0, x, y, p.r); g.addColorStop(0, '#ffe0c0'); g.addColorStop(0.35, '#d07040'); g.addColorStop(1, '#3a1406'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, p.r, 0, TAU); ctx.fill(); }
+    else if (p.kind === 'jade') { const g = ctx.createRadialGradient(x - p.r * 0.35, y - p.r * 0.4, 0, x, y, p.r); g.addColorStop(0, '#d8ffe8'); g.addColorStop(0.35, '#3aa870'); g.addColorStop(1, '#08301c'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, p.r, 0, TAU); ctx.fill(); ctx.save(); ctx.beginPath(); ctx.arc(x, y, p.r, 0, TAU); ctx.clip(); ctx.strokeStyle = 'rgba(240,210,130,0.6)'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.ellipse(x, y, p.r * 0.9, p.r * 0.3, 0.3, 0, TAU); ctx.stroke(); ctx.restore(); }   // a jade world with a gilt equator
+    else if (p.kind === 'gear') { gear(ctx, x, y, p.r + 2, 9, t * 2 + a * 2, BRASS); gem(ctx, x, y, 2.4, '#ffb030', '#402000'); }   // a little clockwork world: a brass cog
+    else if (p.kind === 'cricket') {   // our own world: a cricket ball, with a pearl moon on a tiny arm
+      const ma = t * 2.2, mx = x + Math.cos(ma) * 16, my = y - 3 + Math.sin(ma) * 16 * OK, mz = Math.sin(ma);
+      const moon = () => { ctx.strokeStyle = 'rgba(232,184,80,0.9)'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(x, y - 3); ctx.lineTo(mx, my); ctx.stroke(); const g = ctx.createRadialGradient(mx - 1, my - 1, 0, mx, my, 3); g.addColorStop(0, '#ffffff'); g.addColorStop(1, '#a8a0a0'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, 3, 0, TAU); ctx.fill(); };
+      if (mz < 0) moon(); ball(ctx, x, y, p.r, t * 1.4, false); if (mz >= 0) moon(); }
+    else { const ring = (half) => { ctx.strokeStyle = 'rgba(240,200,110,0.95)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, p.r * 1.9, p.r * 0.55, -0.25, half ? 0 : PI, half ? PI : TAU); ctx.stroke(); ctx.strokeStyle = 'rgba(120,80,20,0.6)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.ellipse(x, y, p.r * 1.6, p.r * 0.45, -0.25, half ? 0 : PI, half ? PI : TAU); ctx.stroke(); };
+      ring(false); const g = ctx.createRadialGradient(x - p.r * 0.35, y - p.r * 0.4, 0, x, y, p.r); g.addColorStop(0, '#d0f0ff'); g.addColorStop(0.35, '#3a7ac8'); g.addColorStop(1, '#0a1a3a'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, p.r, 0, TAU); ctx.fill();
+      ctx.save(); ctx.beginPath(); ctx.arc(x, y, p.r, 0, TAU); ctx.clip(); ctx.strokeStyle = 'rgba(230,200,120,0.5)'; ctx.lineWidth = 1.2; [-4, 1, 5].forEach(dy => { ctx.beginPath(); ctx.moveTo(x - p.r, y + dy - 1); ctx.lineTo(x + p.r, y + dy + 1); ctx.stroke(); }); ctx.restore();   // gilt bands on the enamel
+      ring(true); }
+    // the sun's light falling on the side of each planet that faces it
+    { const dx = OC - x, dy = OY - y, L = Math.hypot(dx, dy) || 1, R = p.kind === 'ringed' ? p.r : p.r + (p.kind === 'gear' ? 2 : 0); ctx.save(); ctx.beginPath(); ctx.arc(x, y, R, 0, TAU); ctx.clip(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x + dx / L * R * 0.7, y + dy / L * R * 0.7, 0, x + dx / L * R * 0.7, y + dy / L * R * 0.7, R * 1.2); g.addColorStop(0, 'rgba(255,200,110,0.55)'); g.addColorStop(1, 'rgba(255,170,60,0)'); ctx.fillStyle = g; ctx.fillRect(x - R, y - R, R * 2, R * 2); ctx.restore(); }
+    return null;
+  }
+  function cogSun(ctx, t, F, boost) {   // the sun's corona: a ring of brass gear teeth turning round the golden ball like rays
+    const cx = OC, cy = OY, rIn = 30, rOut = 40, n = 18, a = -t * 0.4 - F * TAU;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(a); ctx.fillStyle = sideGrad(ctx, 0, rOut, BRASS); ctx.beginPath();
+    for (let i = 0; i < n * 2; i++) { const an = i / (n * 2) * TAU, r = i % 2 ? rOut : rOut - 5, w = PI / n * 0.45; ctx.lineTo(Math.cos(an - w) * r, Math.sin(an - w) * r); ctx.lineTo(Math.cos(an + w) * r, Math.sin(an + w) * r); } ctx.closePath(); ctx.arc(0, 0, rIn, 0, TAU, true); ctx.fill('evenodd');
+    ctx.fillStyle = '#3a2206'; for (let i = 0; i < 9; i++) { const an = i / 9 * TAU; ctx.beginPath(); ctx.arc(Math.cos(an) * (rIn + 3), Math.sin(an) * (rIn + 3), 1.1, 0, TAU); ctx.fill(); } ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,210,130,${(0.25 + boost * 0.5).toFixed(3)})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, rOut - 2, 0, TAU); ctx.stroke(); ctx.restore();
+  }
+  function steamWorks(ctx, t, F, spin) {   // the little steam plant in the base: a copper boiler on the left with its stack, two pistons driving the gears
+    const cx = OC, bx = cx - 66, by = 262;
+    ctx.fillStyle = sideGrad(ctx, bx, 10, COPPER); ctx.beginPath(); ctx.ellipse(bx, by + 4, 11, 22, 0, 0, TAU); ctx.fill(); ctx.fillStyle = sideGrad(ctx, bx, 12, BRASS); [by - 10, by + 4, by + 18].forEach(y => ctx.fillRect(bx - 11, y, 22, 2.4));   // the boiler
+    ctx.fillStyle = sideGrad(ctx, bx, 4, IRON); ctx.fillRect(bx - 3, by - 40, 6, 22); ctx.fillStyle = sideGrad(ctx, bx, 6, BRASS); ctx.fillRect(bx - 5, by - 43, 10, 4);   // its stack
+    ctx.fillStyle = sideGrad(ctx, bx + 1, 6, BRASS); ctx.beginPath(); ctx.arc(bx + 1, by + 6, 5.4, 0, TAU); ctx.fill(); ctx.fillStyle = '#f4ead0'; ctx.beginPath(); ctx.arc(bx + 1, by + 6, 4, 0, TAU); ctx.fill(); const na = -2.4 + 1.2 + spin * 1.6 + Math.sin(t * 3) * 0.08; ctx.strokeStyle = '#a01810'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(bx + 1, by + 6); ctx.lineTo(bx + 1 + Math.cos(na) * 3.4, by + 6 + Math.sin(na) * 3.4); ctx.stroke();   // its gauge
+    ctx.strokeStyle = sideGrad(ctx, bx + 16, 8, COPPER); ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(bx + 8, by - 8); ctx.quadraticCurveTo(bx + 16, by - 14, cx - 46, by - 10); ctx.stroke();   // steam pipe into the drum
+    const ph = t * 4 + F * TAU * 6; [-1, 1].forEach(sd => { const x = cx + sd * 38, ext = Math.sin(ph + (sd > 0 ? PI : 0)) * 4; ctx.fillStyle = sideGrad(ctx, x, 5, IRON); ctx.fillRect(x - 4.4, 252, 8.8, 14); ctx.fillStyle = sideGrad(ctx, x, 5, BRASS); ctx.fillRect(x - 5, 250, 10, 3); ctx.fillStyle = '#e0e0e8'; ctx.fillRect(x - 1, 266 + ext, 2, 9); ctx.fillStyle = sideGrad(ctx, x, 3, BRASS); ctx.beginPath(); ctx.arc(x, 275 + ext, 2.6, 0, TAU); ctx.fill(); });   // pistons pumping either side of the window
+    const k = 1 + spin * 1.5; for (let i = 0; i < 4; i++) { const u = ((t * (0.5 + spin * 0.8)) + i / 4) % 1; puff(ctx, puffC.steam, bx - u * 14 + Math.sin(u * 5 + i) * 2, by - 46 - u * 30 * k, (2 + u * 9) * k, (1 - u) * (0.55 + spin * 0.3)); }   // steam from its stack, harder during the spin
+    if (spin > 0.05) [-1, 1].forEach(sd => { for (let i = 0; i < 5; i++) { const u = (t * 1.6 + i / 5) % 1; puff(ctx, puffC.steam, cx + sd * (52 + u * 26), 284 - u * 10, 2 + u * 10, (1 - u) * spin * 0.7); } });   // and jets from the base when it spins up
+  }
+  function drumBody(ctx) {   // the drum's still parts, painted once into the trophy cache
+    const cx = OC;
+    // the drum: brass, with a glazed window onto turning gears, rivets, and a winding crank on its side
+    ctx.fillStyle = sideGrad(ctx, cx, 50, BRASS); ctx.beginPath(); ctx.moveTo(cx - 50, 292); ctx.lineTo(cx - 45, 246); ctx.lineTo(cx + 45, 246); ctx.lineTo(cx + 50, 292); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = sideGrad(ctx, cx, 52, [[0, '#3a2206'], [0.2, '#d8a038'], [0.3, '#fff0b0'], [0.45, '#b88028'], [1, '#2a1804']]); ctx.fillRect(cx - 52, 286, 104, 6); ctx.fillRect(cx - 48, 244, 96, 5);   // mouldings
+    ctx.fillStyle = '#3a2206'; for (let x = cx - 42; x <= cx + 42; x += 7) { ctx.beginPath(); ctx.arc(x, 252.5, 1, 0, TAU); ctx.fill(); }
+  }
+  function trophyOrrery(ctx, t, boost) {
+    const cx = OC, m = t % SHOW, F = spinF(m), spin = Math.sin(Math.min(1, Math.max(0, (m - SIXLAND - 0.2) / 4.4)) * PI);
+    ctx.save(); ctx.beginPath(); ctx.ellipse(cx, 268, 30, 13, 0, 0, TAU); ctx.clip(); ctx.fillStyle = '#140c04'; ctx.fillRect(cx - 32, 254, 64, 28);
+    const ga = t * 1.2 + F * TAU * 4; gear(ctx, cx - 14, 268, 15, 12, ga, BRASS); gear(ctx, cx + 12, 263, 11, 9, -ga * 15 / 11, COPPER); gear(ctx, cx + 20, 279, 8, 7, ga * 15 / 8, BRASS);   // meshing gear train
+    const gl = ctx.createLinearGradient(cx - 30, 255, cx + 10, 281); gl.addColorStop(0, 'rgba(255,240,210,0.3)'); gl.addColorStop(0.4, 'rgba(255,240,210,0.04)'); gl.addColorStop(1, 'rgba(255,240,210,0)'); ctx.fillStyle = gl; ctx.fillRect(cx - 32, 254, 64, 28); ctx.restore();   // the glass
+    ctx.strokeStyle = sideGrad(ctx, cx, 32, BRASS); ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, 268, 31, 14, 0, 0, TAU); ctx.stroke();
+    { const ca = t * 1.2, hx = cx + 52, hy = 268; ctx.fillStyle = sideGrad(ctx, hx, 4, BRASS); ctx.beginPath(); ctx.arc(hx, hy, 3.4, 0, TAU); ctx.fill(); const ex = hx + 4 + Math.abs(Math.cos(ca)) * 2, ey = hy + Math.sin(ca) * 10; ctx.strokeStyle = sideGrad(ctx, hx, 8, BRASS); ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.fillStyle = '#5a2a10'; ctx.beginPath(); ctx.ellipse(ex + 3, ey, 3.6, 2, 0, 0, TAU); ctx.fill(); }   // the winding crank, turning with the gears
+    steamWorks(ctx, t, F, spin);
+    ctx.fillStyle = sideGrad(ctx, cx, 46, BRASS); ctx.beginPath(); ctx.ellipse(cx, 245, 46, 9, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(40,24,6,0.4)'; ctx.beginPath(); ctx.ellipse(cx, 245, 34, 6, 0, 0, TAU); ctx.fill();   // the drum's top deck
+    // the column: fluted, a turning worm-drive spiral inside a slot, collars where each arm takes off
+    ctx.fillStyle = sideGrad(ctx, cx, 8, BRASS); ctx.beginPath(); ctx.moveTo(cx - 8, 246); ctx.lineTo(cx - 5, OY + 20); ctx.lineTo(cx + 5, OY + 20); ctx.lineTo(cx + 8, 246); ctx.closePath(); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.rect(cx - 2, 222, 4, 20); ctx.clip(); ctx.fillStyle = '#2a1806'; ctx.fillRect(cx - 2, 222, 4, 20); ctx.strokeStyle = '#e8b850'; ctx.lineWidth = 1.2; for (let y = 216 + (t * 8) % 5; y < 246; y += 5) { ctx.beginPath(); ctx.moveTo(cx - 2, y); ctx.lineTo(cx + 2, y - 2.4); ctx.stroke(); } ctx.restore();   // the worm drive turning
+    [226, ...PLANETS.map(p => p.y0)].forEach((y, i) => { const hw = 7 + (i ? 0 : 3); ctx.fillStyle = sideGrad(ctx, cx, hw + 2, BRASS); ctx.beginPath(); ctx.ellipse(cx, y, hw + 2, 2.6, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(60,34,6,0.6)'; ctx.fillRect(cx - hw - 2, y + 1, hw * 2 + 4, 1); });
+    // gather everything above the drum in depth order
+    const items = [];
+    [PI * 0.5, PI * 0.5 + TAU / 3, PI * 0.5 - TAU / 3].forEach(a => items.push({ z: Math.sin(a) - 0.05, f: () => strut(ctx, a) }));
+    PLANETS.forEach(p => { const a = p.a0 + t * p.sp + p.n * TAU * F; items.push({ z: Math.sin(a), f: () => planet(ctx, p, t, a) }); });
+    const ca = t * 0.18 + F * TAU;   // the cage of straps turns slowly (a whole extra turn in the spin-up)
+    // back pieces
+    ringHalf(ctx, false);
+    for (let k = 0; k < 4; k++) { const a = ca + k * PI / 2; if (Math.sin(a) < 0) strap(ctx, a, false); }
+    items.filter(it => it.z < 0).sort((a, b) => a.z - b.z).forEach(it => it.f());
+    // the sun: the glowing golden ball at the heart of it all, on top of the column
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const hr = 74 + boost * 30, hg = ctx.createRadialGradient(cx, OY, 0, cx, OY, hr); hg.addColorStop(0, `rgba(255,200,90,${(0.5 + 0.06 * Math.sin(t * 0.8) + boost * 0.3).toFixed(3)})`); hg.addColorStop(0.5, `rgba(255,170,60,${(0.12 + boost * 0.15).toFixed(3)})`); hg.addColorStop(1, 'rgba(255,160,40,0)'); ctx.fillStyle = hg; ctx.fillRect(cx - hr, OY - hr, hr * 2, hr * 2); ctx.restore();
+    cogSun(ctx, t, F, boost);
+    ctx.fillStyle = sideGrad(ctx, cx, 12, BRASS); ctx.beginPath(); ctx.ellipse(cx, OY + 25, 12, 4, 0, 0, TAU); ctx.fill();   // the cup the sun sits in
+    ball(ctx, cx, OY, 27, t * 0.5 + F * TAU * 3, true);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = `rgba(255,220,150,${(0.35 + 0.15 * Math.sin(t * 0.8)).toFixed(3)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, OY, 26, -0.9, 0.9); ctx.stroke(); ctx.restore();   // the sunset's rim light on the gold sun
+    if (boost > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,220,140,${(0.35 * boost).toFixed(3)})`; ctx.beginPath(); ctx.arc(cx, OY, 27, 0, TAU); ctx.fill(); ctx.restore(); }
+    // front pieces
+    items.filter(it => it.z >= 0).sort((a, b) => a.z - b.z).forEach(it => it.f());
+    ringHalf(ctx, true);
+    for (let k = 0; k < 4; k++) { const a = ca + k * PI / 2; if (Math.sin(a) >= 0) strap(ctx, a, true); }
+    // the crown where the straps meet: a collar, a small turning cog set edge-on, a gilt finial
+    ctx.fillStyle = sideGrad(ctx, cx, 8, BRASS); ctx.beginPath(); ctx.ellipse(cx, OY - CAGE, 8, 3, 0, 0, TAU); ctx.fill();
+    [-1, 1].forEach(sd => { ctx.strokeStyle = sideGrad(ctx, cx, 14, BRASS); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(cx + sd * 7, OY - CAGE); ctx.quadraticCurveTo(cx + sd * 16, OY - CAGE - 6, cx + sd * 12, OY - CAGE - 12); ctx.arc(cx + sd * 10, OY - CAGE - 12, 2, 0, TAU * 0.75); ctx.stroke(); });   // scrolled brackets holding the crown
+    gear(ctx, cx, OY - CAGE - 11, 11, 10, t * 1.5 + F * TAU * 3, BRASS, 1);
+    gem(ctx, cx, OY - CAGE - 11, 2.4, '#ff3040', '#400008');   // a ruby at the cog's hub
+    ctx.fillStyle = sideGrad(ctx, cx, 3, BRASS); ctx.fillRect(cx - 1.4, OY - CAGE - 24, 2.8, 14); ctx.beginPath(); ctx.arc(cx, OY - CAGE - 25, 3.4, 0, TAU); ctx.fill(); ctx.fillStyle = sideGrad(ctx, cx, 5, BRASS); ctx.beginPath(); for (let k = 0; k < 10; k++) { const a = k / 10 * TAU - PI / 2, rr = k % 2 ? 2.2 : 5; ctx.lineTo(cx + Math.cos(a) * rr, OY - CAGE - 31 + Math.sin(a) * rr); } ctx.closePath(); ctx.fill();   // a gilt star on top
+  }
+  let TROPHY_UNDER = null, TROPHY_OVER = null;
+  const UK = 0.56, SUNY = 355 * 0.705 + (OY - 344) * UK;
+  function drawTrophy(ctx, W, H, t) {
+    const boost = sixBoost(t % SHOW);
+    if (!TROPHY_UNDER) { const mk = (fn) => { const c = document.createElement('canvas'); c.width = 620; c.height = 355; const x = c.getContext('2d'); x.translate(W * 0.5, H * 0.705); x.scale(UK, UK); x.translate(-180, -344); fn(x); return c; };
+      TROPHY_UNDER = mk(x => { x.fillStyle = 'rgba(40,20,10,0.35)'; x.beginPath(); x.moveTo(122, 344); x.lineTo(238, 344); x.lineTo(120, 372); x.lineTo(-10, 372); x.closePath(); x.fill(); plinth(x, 180, 292, 146, 0, 'THE GRAND ORRERY'); drumBody(x); });   // its long shadow, the plinth and the drum: painted once
+      TROPHY_OVER = mk(x => bellJar(x, 0)); }   // the glass jar: painted once
+    ctx.drawImage(TROPHY_UNDER, 0, 0);
+    ctx.save(); ctx.translate(W * 0.5, H * 0.705); ctx.scale(UK, UK); ctx.translate(-180, -344); trophyOrrery(ctx, t, boost); ctx.restore();
+    ctx.drawImage(TROPHY_OVER, 0, 0);
+  }
+  function bellJar(ctx, t) {   // a tall glass bell jar over the orrery on a brass rim: tinted glass that darkens towards its edges, bright curved reflections, the sunset caught on its right shoulder
+    const cx = OC, base = 244, top = 6, w = 128;
+    const shape = () => { ctx.beginPath(); ctx.moveTo(cx - w, base); ctx.lineTo(cx - w, top + 70); ctx.bezierCurveTo(cx - w, top + 8, cx - 46, top, cx, top); ctx.bezierCurveTo(cx + 46, top, cx + w, top + 8, cx + w, top + 70); ctx.lineTo(cx + w, base); };
+    ctx.save(); shape(); ctx.closePath(); ctx.clip();
+    ctx.fillStyle = 'rgba(200,225,235,0.1)'; ctx.fillRect(cx - w, top, w * 2, base - top);   // a faint cool tint
+    const e = ctx.createLinearGradient(cx - w, 0, cx + w, 0); e.addColorStop(0, 'rgba(150,180,190,0.42)'); e.addColorStop(0.1, 'rgba(150,180,190,0.08)'); e.addColorStop(0.9, 'rgba(150,180,190,0.08)'); e.addColorStop(1, 'rgba(150,180,190,0.42)'); ctx.fillStyle = e; ctx.fillRect(cx - w, top, w * 2, base - top);   // the glass looks thicker at its sides
+    const tg = ctx.createLinearGradient(0, top, 0, top + 46); tg.addColorStop(0, 'rgba(170,200,210,0.35)'); tg.addColorStop(1, 'rgba(170,200,210,0)'); ctx.fillStyle = tg; ctx.fillRect(cx - w, top, w * 2, 46);   // and over its dome
+    ctx.globalCompositeOperation = 'lighter';
+    const drift = 0;
+    ctx.strokeStyle = 'rgba(255,252,240,0.55)'; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx - w + 16 + drift, base - 14); ctx.lineTo(cx - w + 16 + drift, top + 74); ctx.bezierCurveTo(cx - w + 16 + drift, top + 30, cx - 60, top + 16, cx - 34, top + 13); ctx.stroke();   // a broad bright reflection running up the left side and over the dome
+    ctx.strokeStyle = 'rgba(255,252,240,0.3)'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(cx - w + 30 + drift, base - 30); ctx.lineTo(cx - w + 30 + drift, top + 86); ctx.stroke();   // a thinner one beside it
+    const sp = ctx.createRadialGradient(cx - 50, top + 22, 0, cx - 50, top + 22, 18); sp.addColorStop(0, 'rgba(255,255,250,0.8)'); sp.addColorStop(1, 'rgba(255,255,250,0)'); ctx.fillStyle = sp; ctx.fillRect(cx - 70, top + 2, 40, 40);   // the glint on the dome
+    ctx.strokeStyle = 'rgba(255,200,130,0.45)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(cx + w - 10, base - 20); ctx.lineTo(cx + w - 10, top + 76); ctx.bezierCurveTo(cx + w - 10, top + 40, cx + 70, top + 18, cx + 46, top + 14); ctx.stroke();   // the low sun catching its right shoulder
+    ctx.restore(); ctx.lineCap = 'butt';
+    ctx.strokeStyle = 'rgba(255,248,230,0.85)'; ctx.lineWidth = 2.2; shape(); ctx.stroke();   // the glass's bright rim
+    ctx.save(); ctx.translate(0, 0); ctx.strokeStyle = 'rgba(60,80,90,0.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - w + 3, base); ctx.lineTo(cx - w + 3, top + 70); ctx.bezierCurveTo(cx - w + 3, top + 11, cx - 46, top + 3, cx, top + 3); ctx.bezierCurveTo(cx + 46, top + 3, cx + w - 3, top + 11, cx + w - 3, top + 70); ctx.lineTo(cx + w - 3, base); ctx.stroke(); ctx.restore();   // and the darker inner edge that gives the glass its thickness
+    ctx.fillStyle = sideGrad(ctx, cx, w + 8, BRASS); ctx.beginPath(); ctx.ellipse(cx, base + 1, w + 6, 7, 0, 0, TAU); ctx.fill(); ctx.fillRect(cx - w - 6, base - 4, w * 2 + 12, 6); ctx.fillStyle = '#3a2206'; for (let k = 0; k < 18; k++) { const x = cx - w + 4 + k * (w * 2 - 8) / 17; ctx.beginPath(); ctx.arc(x, base - 1, 1.1, 0, TAU); ctx.fill(); }   // the riveted brass rim it sits in
+    ctx.fillStyle = sideGrad(ctx, cx, 9, BRASS); ctx.beginPath(); ctx.ellipse(cx, top - 1, 9, 3, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(cx, top - 7, 5.4, 0, TAU); ctx.fill(); gem(ctx, cx, top - 7, 2.2, '#ff3040', '#400008');   // a brass knob with a ruby
+  }
+  function drawBackdrop(ctx, W, H, t) {   // a soft pool of shade behind the trophy so the brass reads against the glowing city
+    const cx = W * 0.5, cy = H * 0.42, g = ctx.createRadialGradient(cx, cy, 30, cx, cy, 130); g.addColorStop(0, 'rgba(26,18,24,0.5)'); g.addColorStop(0.55, 'rgba(26,18,24,0.26)'); g.addColorStop(1, 'rgba(26,18,24,0)'); ctx.save(); ctx.translate(cx, cy); ctx.scale(1, 1.05); ctx.translate(-cx, -cy); ctx.fillStyle = g; ctx.fillRect(cx - 140, cy - 140, 280, 280); ctx.restore();
+  }
+
+  function drawWarm(ctx, W, H, t) {   // the low sun's warm light from the right and an overall amber grade — plain alpha blends, cheap on phones
+    ctx.drawImage(WARM, 0, 0);
+  }
+  const WARM = (() => { const c = document.createElement('canvas'); c.width = 620; c.height = 355; const x = c.getContext('2d'); const g = x.createLinearGradient(620, 0, 186, 0); g.addColorStop(0, 'rgba(255,180,90,0.16)'); g.addColorStop(1, 'rgba(255,180,90,0)'); x.fillStyle = g; x.fillRect(0, 0, 620, 355); x.fillStyle = 'rgba(170,110,50,0.1)'; x.fillRect(0, 0, 620, 355); return c; })();
+
+  // (canvas passed in)
+  const ctx = cvs.getContext('2d');
+  const SCRATCH = document.createElement('canvas').getContext('2d');
+  const skyL = document.createElement('canvas'); skyL.width = 620; skyL.height = 355;
+  const back = document.createElement('canvas'); back.width = 620; back.height = 355;
+  const mid = document.createElement('canvas'); mid.width = 620; mid.height = 355;
+  const front = document.createElement('canvas'); front.width = 620; front.height = 355;
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function draw(c, W, H, part) { if (part === 'sky') drawSky(c, W, H); else if (part === 'back') drawBack(c, W, H); else if (part === 'mid') drawMid(c, W, H); else drawFront(c, W, H); }
+  function paintBase() {
+    TROPHY_UNDER = null;   // repaint the trophy's still parts too (its plate lettering needs the font)
+    const k = skyL.getContext('2d'); k.clearRect(0, 0, 620, 355); draw(k, 620, 355, 'sky');
+    const b = back.getContext('2d'); b.clearRect(0, 0, 620, 355); draw(b, 620, 355, 'back');
+    const md = mid.getContext('2d'); md.clearRect(0, 0, 620, 355); draw(md, 620, 355, 'mid');
+    const f = front.getContext('2d'); f.clearRect(0, 0, 620, 355); draw(f, 620, 355, 'front');
+  }
+  function frame(ms) {
+    const t = reduceMotion ? 0 : Math.max(0, ms) / 1000;   // the game's clock can start a hair below zero
+    ctx.fillStyle = '#2a3a6a'; ctx.fillRect(0, 0, 620, 355);
+    drawWorld(ctx, 620, 355, t);
+    drawFunnelSmoke(ctx, 620, 355, t);
+    drawSignal(ctx, 620, 355, t);
+    ctx.drawImage(mid, 0, 0);
+    drawRopes(ctx, 620, 355, t);
+    drawLanterns(ctx, 620, 355, t);
+    drawClockwork(ctx, 620, 355, t);
+    drawFurnace(ctx, 620, 355, t);
+    drawCannon(ctx, 620, 355, t);
+    drawTelegraph(ctx, 620, 355, t);
+    drawPennant(ctx, 620, 355, t);
+    drawGauge(ctx, 620, 355, t);
+    drawWhistle(ctx, 620, 355, t);
+    drawPropeller(ctx, 620, 355, t);
+    drawBunting(ctx, 620, 355, t);
+    drawScore(ctx, 620, 355, t);
+    drawCrew(ctx, 620, 355, t);
+    drawMist(ctx, 620, 355, t, 1);
+    drawBackdrop(ctx, 620, 355, t);
+    drawTrophy(ctx, 620, 355, t);
+    drawFlare(ctx, 620, 355, t);
+    drawSix(ctx, 620, 355, t);
+    drawMist(ctx, 620, 355, t, 0.35);
+    drawWarm(ctx, 620, 355, t);
+    ctx.drawImage(front, 0, 0);
+  }
+  function loop(ms) { if (!__running) return; __elapsed = ms - __t0; __frame(__elapsed); requestAnimationFrame(loop); }
+  paintBase(); __frame(0);
+  let repainted = false;
+  const repaint = () => { if (!repainted) { repainted = true; paintBase(); __frame(__elapsed); } };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(repaint).catch(() => {});
+  setTimeout(repaint, 2000);
+  return {
+    start() { if (__running) return; if (reduceMotion) { __frame(0); return; } __running = true; __t0 = performance.now() - __elapsed; requestAnimationFrame(loop); },
+    stop() { __running = false; },
+  };
+}
 const LEAGUE_LIVE_ART = {
   "GULLY CUP": makeLeagueArt_gully,
   "FLOODLIT SERIES": makeLeagueArt_floodlit,
@@ -21541,6 +22272,7 @@ const LEAGUE_LIVE_ART = {
   "NEON SERIES": makeLeagueArt_neon,
   "JUNGLE CUP": makeLeagueArt_jungle,
   "KNIGHT'S CUP": makeLeagueArt_knight,
+  "BRASS CUP": makeLeagueArt_brass,
 };
 // Only the centred card animates; everything stops when the league screen is hidden or the app is backgrounded
 window.__leagueArt = [];
