@@ -20264,7 +20264,7 @@ function makeLeagueArt_eternal(cvs) {
   const VX = 310, VY = 200, F = 280, EYE = 2.0, R = 8.2, STRIP_TOP = 11, SPIN = TAU / 120;
   const HEROES = ['tendulkar', 'kohli', 'stokes', 'warne', 'gayle', 'devilliers', 'afridi', 'malinga', 'mccullum', 'anderson', 'yuvraj', 'dhoni', 'bravo', 'bumrah', 'murali'];
   const HERO_NAMES = { tendulkar: 'TENDULKAR', kohli: 'KOHLI', stokes: 'STOKES', warne: 'WARNE', gayle: 'GAYLE', devilliers: 'DE VILLIERS', afridi: 'AFRIDI', malinga: 'MALINGA', mccullum: 'McCULLUM', anderson: 'ANDERSON', yuvraj: 'YUVRAJ', dhoni: 'DHONI', bravo: 'BRAVO', bumrah: 'BUMRAH', murali: 'MURALITHARAN' };
-  const NICHE_W = 2.3, NICHE_SPRING = 5.3, PED_H = 0.95, HERO_H = 4.35;   // each alcove: width, where its arch springs; the pedestal; the statue's height
+  const NICHE_W = 2.3, NICHE_SPRING = 5.3, LIFT = 0.4, PED_H = 0.55 + LIFT, HERO_H = 4.35;   // each alcove: width, where its arch springs; the pedestal; the statue's height
   const TX = 310, PTOP = 226;
   const PPM = 46, CIRC = TAU * R, TW = Math.round(CIRC * PPM), TH = Math.round(STRIP_TOP * PPM), WRAP = 120;
 
@@ -20470,7 +20470,7 @@ function makeLeagueArt_eternal(cvs) {
       c.fillStyle = '#2a2420'; c.beginPath(); c.moveTo(x - 7, by); c.lineTo(x + 7, by); c.lineTo(x + 4, by + 12); c.lineTo(x - 4, by + 12); c.fill(); c.fillStyle = '#4a3a2a'; c.fillRect(x - 3, by + 12, 6, 0.3 * PPM);
       const g = c.createRadialGradient(x, by - 10, 4, x, by - 10, 1.6 * PPM); g.addColorStop(0, 'rgba(255,170,80,0.45)'); g.addColorStop(1, 'rgba(255,140,60,0)'); c.fillStyle = g; c.fillRect(x - 1.6 * PPM, by - 10 - 1.6 * PPM, 3.2 * PPM, 3.2 * PPM); });
     // ── the alcoves ──
-    HEROES.forEach((pose, i) => { const x = nicheU(i) * PPM, hw = NICHE_W / 2 * PPM, ys = rowY(NICHE_SPRING), yb = rowY(0.5), cw = 0.26 * PPM;
+    HEROES.forEach((pose, i) => { const x = nicheU(i) * PPM, hw = NICHE_W / 2 * PPM, ys = rowY(NICHE_SPRING), yb = rowY(0.5 + LIFT), cw = 0.26 * PPM;
       // colonnettes either side, with capitals and bases
       [-1, 1].forEach(s => { const cx = x + s * (hw + cw / 2 + 2); c.fillStyle = sideGrad(c, cx, cw / 2, [[0, '#4a443a'], [0.4, '#a89a84'], [1, '#4a443a']]); c.fillRect(cx - cw / 2, ys, cw, yb - ys);
         c.strokeStyle = 'rgba(30,26,20,0.5)'; c.lineWidth = 1; for (let yy = ys + 10; yy < yb - 8; yy += 10) { c.beginPath(); c.moveTo(cx - cw / 2, yy); c.lineTo(cx + cw / 2, yy + 5); c.stroke(); }   // a twist carved round it
@@ -20497,8 +20497,17 @@ function makeLeagueArt_eternal(cvs) {
         c.lineWidth = 0.035 * k; [-1, 1].forEach(s => { for (let j = 0; j < 7; j++) { const a = PI / 2 + s * (0.4 + j * 0.3), px = Math.cos(a) * 0.95 * k, py = Math.sin(a) * 0.95 * k; c.strokeStyle = 'rgba(255,215,160,0.14)'; c.beginPath(); c.ellipse(px, py, 0.13 * k, 0.05 * k, a + s * 0.9, 0, TAU); c.stroke(); } });   // the wreath
         c.restore(); }
       // the pedestal, its numeral, and candles with wax run down the stone either side
-      const pt = rowY(PED_H), pw = 0.62 * PPM; c.fillStyle = vGrad(c, pt, yb + 0.5 * PPM, [[0, '#a89a84'], [1, '#4a443a']]); c.fillRect(x - pw, pt, pw * 2, yb - pt + 0.5 * PPM); c.fillStyle = '#bcae96'; c.fillRect(x - pw - 4, pt - 4, pw * 2 + 8, 5);
-      c.strokeStyle = 'rgba(200,150,70,0.5)'; c.lineWidth = 1.5; c.strokeRect(x - pw * 0.85, pt + 0.1 * PPM, pw * 1.7, 0.36 * PPM);   // a sunk panel where the name shines when the hero is lit
+      // the whole statue stands raised in its alcove on a projecting stone sill
+      { const sy = rowY(LIFT), sw2 = hw + cw + 8; c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(x - sw2, sy + 0.16 * PPM, sw2 * 2, 5);
+        c.fillStyle = vGrad(c, sy - 3, sy + 0.16 * PPM, [[0, '#c8baa2'], [0.25, '#9a8e7a'], [1, '#5a5246']]); c.fillRect(x - sw2, sy - 3, sw2 * 2, 0.16 * PPM + 3);
+        [-0.7, 0, 0.7].forEach(o => { c.fillStyle = '#6a6052'; c.fillRect(x + o * sw2 - 5, sy + 0.16 * PPM, 10, 0.22 * PPM); c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(x + o * sw2 + 3, sy + 0.16 * PPM, 2, 0.22 * PPM); }); }   // small corbels under it
+      const pt = rowY(PED_H), pb = rowY(LIFT) - 3, pw = 0.62 * PPM; c.fillStyle = vGrad(c, pt, pb, [[0, '#a89a84'], [1, '#5a5246']]); c.fillRect(x - pw, pt, pw * 2, pb - pt); c.fillStyle = '#bcae96'; c.fillRect(x - pw - 4, pt - 4, pw * 2 + 8, 5); c.fillRect(x - pw - 3, pb - 4, pw * 2 + 6, 4);
+      // his name plaque: a gilt bronze plate fixed to the pedestal, the name cut into it
+      { const py = pt + 0.07 * PPM, ph = 0.4 * PPM, pw2 = pw * 1.8; c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(x - pw2 / 2 + 1.5, py + 1.5, pw2, ph);
+        c.fillStyle = vGrad(c, py, py + ph, [[0, '#f4d488'], [0.45, '#c8963a'], [1, '#7a5418']]); c.fillRect(x - pw2 / 2, py, pw2, ph);
+        c.strokeStyle = 'rgba(70,44,10,0.8)'; c.lineWidth = 1; c.strokeRect(x - pw2 / 2 + 2.5, py + 2.5, pw2 - 5, ph - 5); c.fillStyle = 'rgba(255,246,210,0.6)'; c.fillRect(x - pw2 / 2, py, pw2, 1.2);
+        c.font = `800 ${Math.round(ph * 0.7)}px 'Barlow Condensed', 'Arial Narrow', sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillStyle = 'rgba(255,240,200,0.55)'; c.fillText(HERO_NAMES[pose], x + 0.7, py + ph / 2 + 1.4, pw2 - 9); c.fillStyle = '#3a2208'; c.fillText(HERO_NAMES[pose], x, py + ph / 2 + 0.6, pw2 - 9); }
       CANDLES.filter(cd => cd.i === i).forEach(cd => { const cx = x + cd.du * PPM, top = rowY(cd.h), bot = yb; c.fillStyle = sideGrad(c, cx, 3, [[0, '#a89070'], [0.4, '#f4e8d0'], [1, '#9a8060']]); c.fillRect(cx - 3, top, 6, bot - top);
         c.fillStyle = '#efe2c6'; for (let k = 0; k < 3; k++) { const dx = (r() - 0.5) * 6; c.beginPath(); c.ellipse(cx + dx, top + 4 + r() * (bot - top) * 0.5, 1.4, 3 + r() * 5, 0, 0, TAU); c.fill(); }
         c.fillStyle = '#2a1a10'; c.fillRect(cx - 0.5, top - 3, 1, 3); });
@@ -20511,7 +20520,7 @@ function makeLeagueArt_eternal(cvs) {
     WALL = cv;
   }
   // the candles on each alcove's sill: offset along the wall (m) and height of the wick
-  const CANDLES = (() => { const r = mkRnd(9090), a = []; HEROES.forEach((_, i) => [-1, 1].forEach(s => { for (let k = 0; k < 3; k++) a.push({ i, du: s * (0.78 + k * 0.17), h: 0.75 + r() * 0.5 - k * 0.12 }); })); return a; })();
+  const CANDLES = (() => { const r = mkRnd(9090), a = []; HEROES.forEach((_, i) => [-1, 1].forEach(s => { for (let k = 0; k < 3; k++) a.push({ i, du: s * (0.78 + k * 0.17), h: LIFT + 0.75 + r() * 0.5 - k * 0.12 }); })); return a; })();
   const STATUE_RES = 2.4, STATUE_CV = {}, HERO_IMG = {};
   // the statue images: once one has loaded it is graded to the crypt's light (cool from above, candle-warm from below) and the wall is repainted with it
   function loadHeroImages() { Object.keys(HERO_SRC).forEach(k => { if (HERO_IMG[k]) return; const im = new Image(); im.onload = () => {
@@ -20611,10 +20620,6 @@ function makeLeagueArt_eternal(cvs) {
         HEMB.forEach(e => { const u = (t * e.sp + e.ph) % 1, ex = x + e.dx * s * 1.0 + Math.sin(t * 2 + e.ph * 9) * s * 0.15, ey = y + s * 2 - u * s * 5; const a = Math.min(1, u * 6) * (1 - u) * honour;
           ctx.fillStyle = `rgba(255,${(190 + 50 * (1 - u)) | 0},110,${a.toFixed(2)})`; ctx.beginPath(); ctx.arc(ex, ey, e.sz * s / 30, 0, TAU); ctx.fill(); }); }
       ctx.restore();
-      // the name, in gold on the face of his pedestal, while he is in the light
-      const np = wallPoint(th, 0.42, rot); if (np) { const fs = Math.round(np[2] * 0.36);
-        ctx.save(); ctx.globalAlpha = Math.min(1, (k + honour) * 1.3); ctx.font = `800 ${fs}px 'Barlow Condensed', 'Arial Narrow', sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillText(HERO_NAMES[pose], np[0] + 1, np[1] + 1.2); const g = ctx.createLinearGradient(0, np[1] - fs / 2, 0, np[1] + fs / 2); g.addColorStop(0, '#fff2c4'); g.addColorStop(0.5, '#f0c060'); g.addColorStop(1, '#a87020'); ctx.fillStyle = g; ctx.fillText(HERO_NAMES[pose], np[0], np[1]); ctx.restore(); }
       });
   }
 
