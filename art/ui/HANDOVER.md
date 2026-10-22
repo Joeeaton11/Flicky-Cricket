@@ -62,3 +62,10 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Nav: four even tiles (same size, icon centred, badge on the tile's top-right corner), gold tile for the active tab, chest tile glows when a chest is ready; the bar fades up out of the art instead of a hard strip.
 - Flicky replaced after review ("he looks weird"): new Flicky rendered on his own on a green screen (Figma node 42:191: smooth glossy ball, two big friendly eyes with one winking, big grin, fist up, facing the wicket), keyed out and placed where the old one was; the rest of the art (39:191) unchanged. To change only the character in future, render him on #00FF00 and swap him in — regenerating the whole scene changes everything else too.
 
+## Art direction (agreed, before rebuilding the screens)
+- Style: painted 2.5D casual-game look like Joe's pirate reference (Royal Match / Clash of Clans): saturated, warm, UI made of the league world's real materials. Concepts: Figma section "Style direction: painted league skins" (Gully Cup, Floodlit Series, Pirate League).
+- **The UI skin changes per league** (Joe's call): same layout, different materials, signage and props per league.
+- Home keeps a close-up of Flicky for now (may become the league ground from above later).
+- Flicky is locked by the layer set in `art/flicky/` (see its README): both eyes open by default, smooth glossy red, no pads/gloves by default, always a separate layer.
+- Next step: build the Gully Cup skin properly into Home (painted frame set + live text), then other leagues tier by tier.
+
