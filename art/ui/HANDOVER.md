@@ -69,3 +69,6 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Flicky is locked by the layer set in `art/flicky/` (see its README): both eyes open by default, smooth glossy red, no pads/gloves by default, always a separate layer.
 - Next step: build the Gully Cup skin properly into Home (painted frame set + live text), then other leagues tier by tier.
 
+
+## Kit icons
+- Category icons in `art/kit-icons/` (bat, gloves, pads, helmet, shoes): navy, gold and white, chunky glossy. Joe prefers these to a Flicky-branded version: do not put the red ball / seam motif on everything. Shoe stripes looked too much like a sports brand; if the shoe is redone, change only the stripes.
