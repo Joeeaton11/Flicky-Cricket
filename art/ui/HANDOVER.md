@@ -71,4 +71,4 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 
 
 ## Kit icons
-- Category icons in `art/kit-icons/` (bat, gloves, pads, helmet, shoes): navy, gold and white, chunky glossy. Joe prefers these to a Flicky-branded version: do not put the red ball / seam motif on everything. Shoe stripes looked too much like a sports brand; if the shoe is redone, change only the stripes.
+- Category icons in `art/kit-icons/` (bat, gloves, pads, helmet, shoes): navy, gold and white, chunky glossy. Joe prefers these to a Flicky-branded version: do not put the red ball / seam motif on everything. Shoe redrawn with two stripes (navy + gold) instead of three, so it no longer looks like a sports brand.
