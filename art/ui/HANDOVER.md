@@ -32,6 +32,7 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 ## Progress
 
 - Home: **done** (built from Figma frame "Home — Flicky v3").
+- Kit: **built on `home-tidy`** (Golf Clash style), not live yet.
 - Next: pick the next screen (Gameplay HUD is next in the list).
 
 ## Design file & brand (from the Home round)
@@ -72,3 +73,12 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 
 ## Kit icons
 - Category icons in `art/kit-icons/` (bat, gloves, pads, helmet, shoes): navy, gold and white, chunky glossy. Joe prefers these to a Flicky-branded version: do not put the red ball / seam motif on everything. Shoe redrawn with two stripes (navy + gold) instead of three, so it no longer looks like a sports brand.
+
+## Kit screen build (Golf Clash style)
+- Design on the Design canvas ("Kit" page): bag, showroom, compare, upgrade. Joe liked Golf Clash's golf bag; no Flicky on this screen.
+- Bag: kit types down the left (category icons from `art/kit-icons/`, green ▲ when the equipped item can upgrade), equipped item card with 10-segment stat bars + cards bar + upgrade button, then every item in that type as a 2-column grid (locked = greyed icon + padlock + "SEASON N" / "IN CHESTS" / gem price). Kit rating strip on top.
+- Showroom (tap any item): item on a pedestal, arrows + swipe + dots through the type, stats with green upgrade gains, COMPARE + EQUIP / UPGRADE / UNLOCK (gems) / FIND IN CHESTS.
+- Compare: equipped vs chosen item, green better / red worse. Upgrade popup: LV n → n+1, gains, coin cost.
+- Code: `renderKitBag()`, `kbShowroom()`, `kbCompare()`, `kbUpgrade()` replace the old Kit Bag and per-slot tabs; they call the existing `upgradeItem`, `unlockPremiumItem`, `saveEquipmentState`. The old tab row and DONE button are hidden (nav + back button do that job); Chests and Gem Shop still render in the same screen. `renderKitBagTab` / `renderEquipSlotTab` are left in place but unused.
+- Every item in a type shows the same category icon for now. Next chat: new list of equipment styles per category, then redesign each item's art and wire it in.
+
