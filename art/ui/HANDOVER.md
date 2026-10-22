@@ -60,4 +60,5 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Top bar: no Flicky picture; trophies, gems and coins as three equal-width pills, icons inside the pills, numbers centred, + on gems/coins.
 - How To Play removed from Home (`#howToPlayBtn` kept hidden for the existing code).
 - Nav: four even tiles (same size, icon centred, badge on the tile's top-right corner), gold tile for the active tab, chest tile glows when a chest is ready; the bar fades up out of the art instead of a hard strip.
+- Flicky replaced after review ("he looks weird"): new Flicky rendered on his own on a green screen (Figma node 42:191: smooth glossy ball, two big friendly eyes with one winking, big grin, fist up, facing the wicket), keyed out and placed where the old one was; the rest of the art (39:191) unchanged. To change only the character in future, render him on #00FF00 and swap him in — regenerating the whole scene changes everything else too.
 
