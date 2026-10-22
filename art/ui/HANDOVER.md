@@ -31,4 +31,21 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 
 ## Progress
 
-- Home: not started.
+- Home: **done** (built from Figma frame "Home — Flicky v3").
+- Next: pick the next screen (Gameplay HUD is next in the list).
+
+## Design file & brand (from the Home round)
+
+- Figma: https://www.figma.com/design/WjYzgtNxSxMY4XIT8Oaqem ("Flicky Cricket — Logo & Mascot", Kumu team). Holds the mascot concepts, the Home iterations (v1 → v3) and reusable components in "Components — Flicky Home": `art/*` icon components, Rail Button, Nav Tile — art, Currency Pill — art.
+- Mascot: **Flicky**, a cheeky, friendly red cricket ball (winks, grins, little red arms and feet). Red, not white (reads as cricket worldwide, pops on green). No pads/gloves/bat by default; kit is better as unlockable cosmetics (cap, shades, helmet, white-ball skin).
+- Look: deep navy (#01162C) with gold, chunky "game" UI — thick dark outlines (#050A14), 3D bases, top shine, Lilita One for UI type, illustrated 3D icons (no emoji, no line icons). Yellow is only for the main action (PLAY); red only for alerts/badges.
+- Artwork is generated in Figma (generate_image, uses Joe's Figma AI credits — ask before spending). Ask for a plain #06152C/#01162C background so it can be keyed out; icons came from one 4×2 icon sheet.
+
+## How the Home build works (lessons)
+
+- This session can't download from figma.com or upload into Figma (proxy blocks both). Workaround that works: `get_screenshot` with `enableBase64Response:true` on the image node saves a full-size PNG locally.
+- Icons/wordmark: navy background keyed out in PIL to real transparency, saved as WebP and embedded as data URIs in CSS classes (`.hi-trophy`, `.hi-coin`, …) so each image is in the file once. Lilita One is embedded as base64 woff2.
+- Kept every original ID and JS hook (`menuGemCount`, `menuCoinCount`, `menuTrophyVal`, `menuBestVal`, `nextOpponentDisplay`, `menuChestAlert`, `startBtn`, `removeAdsBtn`, `removeAdsGemBundleBtn`, `howToPlayBtn`, `introText`, result panel, nav IDs). `#nextOpponentDisplay` is kept as screen-reader text.
+- New JS (Home only): `updateHomeLeagueCard()` draws the current league's real card art (`lg.drawArt`) plus entry cost and trophy progress; taps on the chest button → Chests, league card → Leagues, gem pill → gem shop; How-to-play opens a popup (tap to close). `PLAY AGAIN` keeps the new button styling.
+- Playwright: the PLAY button pulses, so click it with `force=True`.
+- Wide screens keep the phone layout as a centred column.
