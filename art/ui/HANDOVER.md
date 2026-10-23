@@ -82,3 +82,8 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Code: `renderKitBag()`, `kbShowroom()`, `kbCompare()`, `kbUpgrade()` replace the old Kit Bag and per-slot tabs; they call the existing `upgradeItem`, `unlockPremiumItem`, `saveEquipmentState`. The old tab row and DONE button are hidden (nav + back button do that job); Chests and Gem Shop still render in the same screen. `renderKitBagTab` / `renderEquipSlotTab` are left in place but unused.
 - Every item in a type shows the same category icon for now. Next chat: new list of equipment styles per category, then redesign each item's art and wire it in.
 
+
+## Kit item art + Home background (Oct 23)
+- Item names renamed per the agreed list (IDs unchanged). Per-item art in `EQUIP_ART` (WebP data URIs), one `.ka-<id>` CSS class each; `kbTile` uses it when present, else the category icon. Epics/legendaries are in; commons/rares were regenerated more detailed (Figma nodes 63–67:191) but only the bats sheet could be fetched before the Starter plan's MCP limit hit.
+- Style rules Joe agreed: medium boldness (themed paint/decals, obvious logos) placed where real branding goes; shaped bat-face decals like real pro bats on some items; no real brand marks (no swoosh, three stripes or formstrip); same size and angle per slot; better image model (gemini-3.1-flash-image).
+- Home for now: floodlit stadium background with the gold/cream "Flicky Cricket" logo (Joe's images), replacing the Flicky key art. Everything else from the polish pass stays.
