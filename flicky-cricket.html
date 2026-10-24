@@ -717,6 +717,32 @@
   @keyframes kbShine { 0% { background-position:150% 0; } 60%,100% { background-position:-50% 0; } }
   .kbNewDot { position:absolute; left:-4px; top:-6px; font-size:9px; padding:0 5px; border-radius:6px; background:linear-gradient(#FF6A6A,#D92D3A);
     border:2px solid #050A14; color:#fff; letter-spacing:0.06em; }
+  .kbStatName { width:62px; flex:none; padding:0; border:0; background:none; color:inherit; font:inherit; font-size:12px; letter-spacing:0.04em;
+    text-transform:uppercase; text-align:left; cursor:pointer; display:flex; align-items:center; gap:3px; white-space:nowrap; }
+  .kbStatName i { font-style:normal; width:12px; height:12px; flex:none; border-radius:50%; font-size:9px; line-height:12px; text-align:center;
+    background:rgba(255,255,255,0.18); color:#fff; }
+  #statInfoPopup { z-index:300 !important; }
+  #statInfoIcon { display:none; }
+  .kbBest { margin-left:auto; margin-right:8px; height:26px; padding:0 10px; border-radius:9px; border:2px solid #050A14; cursor:pointer;
+    font-family:inherit; font-size:12px; letter-spacing:0.08em; color:#fff; background:linear-gradient(#9BF5AE,#1FA64A); box-shadow:0 2px 0 #0C5A27; text-shadow:0 1px 0 #0C5A27; }
+  .kbBest:active { transform:translateY(2px); }
+  button.kbSets { width:100%; border:0; background:none; padding:0; font-family:inherit; cursor:pointer; text-align:left; }
+  .kbSetsGo { margin-left:auto; color:#FFC93A; }
+  .kbSetsIntro { margin:0; font-family:Arial,sans-serif; font-weight:700; font-size:13px; color:#B4C2DD; }
+  .kbSetCard { padding:10px; border-radius:18px; background:linear-gradient(#24447f,#13284f); border:3px solid var(--sc); box-shadow:0 5px 0 rgba(0,0,0,0.5);
+    display:flex; flex-direction:column; gap:8px; text-align:left; }
+  .kbSetCard header { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .kbSetCard header b { font-weight:400; font-size:20px; color:var(--sc); text-shadow:0 2px 0 #000; }
+  .kbSetCard header small { font-size:11px; letter-spacing:0.08em; color:#B4C2DD; }
+  .kbSetTiers.big { margin-left:0; flex-wrap:wrap; }
+  .kbSetTiers.big span { font-size:11px; padding:1px 7px; }
+  .kbSetGrid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; }
+  .kbSetItem { position:relative; padding:0; border:0; background:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:#fff; font-family:inherit; }
+  .kbSetItem .kbTile { width:100%; aspect-ratio:1; height:auto; border-width:2px; border-radius:10px; }
+  .kbSetItem.eq .kbTile { box-shadow:0 0 0 2px #FFC93A, 0 3px 0 rgba(0,0,0,0.5); }
+  .kbSetItem > .kbCrest { width:20px; height:20px; right:-5px; top:-5px; }
+  .kbSetItem > span { font-size:9px; line-height:1.05; text-align:center; text-shadow:0 1px 0 #000; }
+  .kbSetItem .kbLv { font-size:9px; padding:0 3px; }
   /* sets */
   .kbSets { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:-2px 0 2px; font-size:11px; letter-spacing:0.1em; color:#B4C2DD; }
   .kbSetChip { padding:2px 8px; border-radius:8px; border:2px solid rgba(255,255,255,0.15); color:var(--sc); background:rgba(1,22,44,0.6); }
@@ -27384,7 +27410,7 @@ function kbStats(item, lvl, withGain, bonus) {
   return Object.keys(item.stats).map((k, i) => {
     const v = Math.min(100, statAtLevel(item, k, lvl) + bonus);
     const g = withGain ? Math.min(100, statAtLevel(item, k, lvl + 1) + bonus) - v : 0;
-    return `<div class="kbStat"><span>${kbEsc((STAT_INFO[k] || {}).label || k)}</span>${kbPips(v, g, KB_COLS[i % 3])}<span>${v}${g > 0 ? `<em>+${g}</em>` : ''}</span></div>`;
+    return `<div class="kbStat"><button class="kbStatName" data-stat="${k}" aria-label="What does ${kbEsc((STAT_INFO[k] || {}).label || k)} do?">${kbEsc((STAT_INFO[k] || {}).label || k)}<i>?</i></button>${kbPips(v, g, KB_COLS[i % 3])}<span>${v}${g > 0 ? `<em>+${g}</em>` : ''}</span></div>`;
   }).join('');
 }
 // Long one-word names get a break point so they wrap inside the small item boxes
@@ -27416,7 +27442,7 @@ function kbSetLine(item) {
 function kbSetsStrip() {
   const chips = KIT_SETS.map(set => ({ set, n: kitSetCount(set) })).filter(x => x.n >= 1)
     .map(({ set, n }) => `<span class="kbSetChip${n >= 2 ? ' on' : ''}" style="--sc:${set.color}">${set.name} ${n}${n >= 2 ? ` · +${SET_BONUS[Math.min(n, 5)]}` : ''}</span>`).join('');
-  return `<div class="kbSets"><span>SETS</span>${chips}</div>`;
+  return `<button class="kbSets" data-sets aria-label="Open kit sets"><span>SETS</span>${chips}<span class="kbSetsGo">VIEW ›</span></button>`;
 }
 function kbBurst(color) {
   if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -27429,6 +27455,63 @@ function kbBurst(color) {
   }
   document.body.appendChild(b);
   setTimeout(() => b.remove(), 900);
+}
+function kbBindStats(root) {
+  root.querySelectorAll('[data-stat]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); hapticTap(); showStatInfoPopup(b.dataset.stat); }));
+}
+// ---------- best kit: try every owned combination, set bonuses included ----------
+function kbBestLoadout() {
+  const opts = KB_SLOTS.map(sl => EQUIPMENT[sl].filter(it => (itemLevels[it.id] || 0) >= 1));
+  if (opts.some(o => !o.length)) return null;
+  let best = null, bestScore = -1;
+  const pick = new Array(KB_SLOTS.length);
+  const score = () => {
+    const counts = {};
+    pick.forEach(it => { const st = kitSetOf(it.id); if (st) counts[st.id] = (counts[st.id] || 0) + 1; });
+    let t = 0;
+    pick.forEach(it => {
+      const st = kitSetOf(it.id), bonus = st ? (SET_BONUS[Math.min(counts[st.id], 5)] || 0) : 0;
+      Object.keys(it.stats).forEach(k => { t += Math.min(100, statAtLevel(it, k, itemLevels[it.id] || 1) + bonus); });
+    });
+    return t;
+  };
+  const walk = i => {
+    if (i === KB_SLOTS.length) { const sc = score(); if (sc > bestScore) { bestScore = sc; best = pick.slice(); } return; }
+    for (const it of opts[i]) { pick[i] = it; walk(i + 1); }
+  };
+  walk(0);
+  return best;
+}
+function kbEquipBest() {
+  const best = kbBestLoadout(); if (!best) return;
+  const changed = best.some((it, i) => equippedItems[KB_SLOTS[i]] !== it.id);
+  if (!changed) { showMessage('ALREADY WEARING YOUR BEST KIT', '#FFE27A', 1500); return; }
+  best.forEach((it, i) => { equippedItems[KB_SLOTS[i]] = it.id; });
+  saveEquipmentState(); hapticBig(); kbBurst('#FFC93A');
+  showMessage('BEST KIT EQUIPPED', '#6EE787', 1500);
+  kbRefresh();
+}
+// ---------- sets collection ----------
+function kbSetsView() {
+  const el = kbLayer('kbSetsOv', 'kbOv');
+  const owned = it => (itemLevels[it.id] || 0) >= 1;
+  const find = id => { for (const sl of KB_SLOTS) { const it = EQUIPMENT[sl].find(x => x.id === id); if (it) return { sl, it }; } return null; };
+  const cards = KIT_SETS.map(set => {
+    const n = kitSetCount(set), have = set.items.filter(id => owned(find(id).it)).length;
+    const tiers = [2, 3, 4, 5].map(k => `<span class="${n >= k ? 'on' : ''}">${k} WORN +${SET_BONUS[k]}</span>`).join('');
+    const tiles = set.items.map(id => {
+      const { sl, it } = find(id), st = kbState(sl, it);
+      return `<button class="kbSetItem${st.equipped ? ' eq' : ''}" data-sl="${sl}" data-idx="${EQUIPMENT[sl].indexOf(it)}" aria-label="${kbEsc(it.name)}">${kbTile(sl, it, 0, st)}${kbCrest(it, !st.owned)}<span>${kbBreak(it.name)}</span></button>`;
+    }).join('');
+    return `<section class="kbSetCard" style="--sc:${set.color}"><header><b>${set.name}</b><small>${have} / ${set.items.length} OWNED · ${n} WORN</small></header>
+      <div class="kbSetTiers big">${tiers}</div><div class="kbSetGrid">${tiles}</div></section>`;
+  }).join('');
+  el.innerHTML = `<div class="kbOvIn">
+    <div class="kbOvTop"><button class="kbBack" data-close aria-label="Back to kit bag">${KB_SVG.back}</button><h2>KIT SETS</h2><span style="width:36px"></span></div>
+    <p class="kbSetsIntro">Wear items from the same set to boost every stat on them.</p>${cards}</div>`;
+  el.classList.remove('hidden');
+  el.querySelector('[data-close]').addEventListener('click', () => { hapticTap(); el.classList.add('hidden'); kbRefresh(); });
+  el.querySelectorAll('.kbSetItem').forEach(b => b.addEventListener('click', () => { hapticTap(); kbShowroom(b.dataset.sl, +b.dataset.idx); }));
 }
 function kbCrest(item, locked) {
   return (typeof EQUIP_CREST !== 'undefined' && EQUIP_CREST[item.id]) ? `<i class="kbCrest kc-${item.id}${locked ? ' locked' : ''}" aria-hidden="true"></i>` : '';
@@ -27450,7 +27533,7 @@ function kbRating() {
   let tot = 0, max = 0;
   KB_SLOTS.forEach(s => { Object.values(kbEquippedItem(s).stats).forEach(v => { tot += v; max += 100; }); });
   const score = Math.round(tot / max * 100), g = kitRatingGrade(score);
-  return `<div class="kbRating"><span>KIT RATING<b>${score}</b>/ 100</span><span class="kbGrade" style="background:${g.color}">${g.letter}</span></div>`;
+  return `<div class="kbRating"><span>KIT RATING<b>${score}</b>/ 100</span><button class="kbBest" data-best aria-label="Equip your best kit">BEST KIT</button><span class="kbGrade" style="background:${g.color}">${g.letter}</span></div>`;
 }
 
 function renderKitBag(container) {
@@ -27486,6 +27569,9 @@ function renderKitBag(container) {
   container.querySelectorAll('.kbItem').forEach(b => b.addEventListener('click', () => { hapticTap(); kbShowroom(slot, +b.dataset.idx); }));
   const card = container.querySelector('.kbCard');
   card.addEventListener('click', e => { if (e.target.closest('[data-act="up"]')) return; hapticTap(); kbShowroom(slot, +card.dataset.idx); });
+  kbBindStats(container);
+  const bb = container.querySelector('[data-best]'); if (bb) bb.addEventListener('click', () => { hapticTap(); kbEquipBest(); });
+  const sb = container.querySelector('[data-sets]'); if (sb) sb.addEventListener('click', () => { hapticTap(); kbSetsView(); });
   const ub = container.querySelector('.kbCard [data-act="up"]');
   if (ub) ub.addEventListener('click', e => { e.stopPropagation(); hapticTap(); kbUpgrade(slot, eqItem); });
 }
@@ -27500,6 +27586,7 @@ function kbRefresh() {
   updateEquipTopBar();
   if (typeof updateKitUpgradeArrow === 'function') updateKitUpgradeArrow();
   if (!document.getElementById('customiseScreen').classList.contains('hidden') && currentEquipTab !== 'chests' && currentEquipTab !== 'shop') renderKitBag();
+  const so = document.getElementById('kbSetsOv'); if (so && !so.classList.contains('hidden')) { const y = so.scrollTop; kbSetsView(); so.scrollTop = y; }
 }
 
 function kbActionButtons(slot, item, st, withCompare) {
@@ -27547,6 +27634,7 @@ function kbShowroom(slot, idx) {
   el.querySelector('[data-close]').addEventListener('click', () => { hapticTap(); el.classList.add('hidden'); kbRefresh(); });
   el.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => { hapticTap(); kbShowroom(slot, idx + +b.dataset.nav); }));
   kbBindActions(el.querySelector('.kbOvIn'), slot, item, () => kbShowroom(slot, idx));
+  kbBindStats(el);
   const stage = el.querySelector('.kbStage'); let sx = null;
   stage.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
   stage.addEventListener('touchend', e => {
@@ -27592,6 +27680,7 @@ function kbUpgrade(slot, item, onDone) {
   el.classList.remove('hidden');
   el.querySelector('[data-close]').addEventListener('click', () => { hapticTap(); el.classList.add('hidden'); });
   el.addEventListener('click', e => { if (e.target === el) el.classList.add('hidden'); }, { once: true });
+  kbBindStats(el);
   const go = el.querySelector('[data-go]');
   if (go && st.canAfford) go.addEventListener('click', () => {
     if (upgradeItem(item.id)) {
@@ -54761,6 +54850,21 @@ function drawWicketKeeper() {
   ctx.restore();
 }
 
+// In-match colours for each kit item: c = main colour, a = trim / grille / grip
+const KIT_LOOK = {
+  bat_classic:{c:'#e9cf98',a:'#e8dcc0',s:'#2f7d3a'}, bat_slogger:{c:'#d9b178',a:'#1b1b1b',s:'#5b636e'}, bat_surgeon:{c:'#d9b178',a:'#2f7d3a',s:'#2f9d47'},
+  bat_hurricane:{c:'#d9b178',a:'#d8342c',s:'#d8342c'}, bat_enforcer:{c:'#5a3b24',a:'#3a3a3a',s:'#8a8f96'}, bat_maestro:{c:'#e9b47a',a:'#e8641c',s:'#e8641c'},
+  bat_sovereign:{c:'#22201f',a:'#1b1b1b',s:'#f2b632'}, bat_diamond:{c:'#cfeaf7',a:'#c9d2dc',s:'#f2b632'},
+  gloves_classic:{c:'#f4f6fa',a:'#2f63c8'}, gloves_vise:{c:'#f2efe6',a:'#7a4a24'}, gloves_velvet:{c:'#9fd3f5',a:'#ffffff'}, gloves_ironhand:{c:'#1e1e22',a:'#f0f0f0'},
+  gloves_featherweight:{c:'#f2e6f5',a:'#c79be6'}, gloves_traction:{c:'#1b1b1f',a:'#d8342c'}, gloves_dynasty:{c:'#f2c24e',a:'#ffffff'}, gloves_kohinoor:{c:'#f4f2fa',a:'#5b2a9e'},
+  pads_standard:{c:'#f5f0e6',a:'#b08850'}, pads_sprinter:{c:'#f5f2ec',a:'#f07a1e'}, pads_fortress:{c:'#e6e8ea',a:'#7c858f'}, pads_swift:{c:'#f5f2ec',a:'#2f8f3f'},
+  pads_phantom:{c:'#dceef8',a:'#9fc6dd'}, pads_guardian:{c:'#9aa0a6',a:'#6a4a9a'}, pads_titan:{c:'#f2efe8',a:'#e0a52a'}, pads_wall:{c:'#4b5560',a:'#e0a52a'},
+  helmet_basic:{c:'#8a929c',a:'#c8ced6'}, helmet_bulldog:{c:'#d63a35',a:'#1b1b1b'}, helmet_eagle:{c:'#2f63c8',a:'#d7dee6'}, helmet_centurion:{c:'#8e1f35',a:'#e0b13a'},
+  helmet_oracle:{c:'#1d2027',a:'#38e0ff'}, helmet_gladiator:{c:'#1f8a86',a:'#2b3238'}, helmet_legend:{c:'#bfe3f5',a:'#e6f4fb'}, helmet_obsidian:{c:'#15151c',a:'#7a1414'},
+  shoes_trainer:{c:'#f4f4f4',a:'#2a2a2a'}, shoes_dasher:{c:'#f4f4f4',a:'#f07a1e'}, shoes_anchor:{c:'#1e2a4a',a:'#f4f4f4'}, shoes_quickstep:{c:'#eef2f6',a:'#2f63c8'},
+  shoes_mercury:{c:'#f4f4f4',a:'#2f9d47'}, shoes_ironfoot:{c:'#7a5230',a:'#3f8f3a'}, shoes_pinnacle:{c:'#f6f0dc',a:'#e0b13a'}, shoes_aurora:{c:'#e8eef8',a:'#7b5cd6'},
+};
+function kitLook(slot) { return KIT_LOOK[equippedItems[slot]] || null; }
 function drawBatsman() {
   const bx = W/2;
   // For scenes with a background image the pitch is painted at different coords;
@@ -54770,13 +54874,20 @@ function drawBatsman() {
   const by = _bsHasBg ? H * 0.588 : PITCH_BOTTOM() - 4;
   const s = 0.78;
 
-  const hat = CUSTOM_CATEGORIES[0].colors[playerCustom.hat];
+  // helmet, gloves, pads, boots and bat come from the equipped kit
+  const lkH = kitLook('helmet'), lkG = kitLook('gloves'), lkP = kitLook('pads'), lkS = kitLook('shoes'), lkB = kitLook('bat');
+  const hat = lkH ? lkH.c : CUSTOM_CATEGORIES[0].colors[playerCustom.hat];
+  const grille = lkH ? lkH.a : 'rgba(40,40,40,0.5)';
   const face = CUSTOM_CATEGORIES[1].colors[playerCustom.face];
   const body = CUSTOM_CATEGORIES[2].colors[playerCustom.body];
-  const gloveColor = CUSTOM_CATEGORIES[3].colors[playerCustom.hands];
+  const gloveColor = lkG ? lkG.c : CUSTOM_CATEGORIES[3].colors[playerCustom.hands];
+  const gloveTrim = lkG ? lkG.a : 'rgba(0,0,0,0.2)';
   const trousers = CUSTOM_CATEGORIES[4].colors[playerCustom.trousers];
-  const boots = CUSTOM_CATEGORIES[5].colors[playerCustom.boots];
-  const padColor = '#f5f0e6';
+  const boots = lkS ? lkS.c : CUSTOM_CATEGORIES[5].colors[playerCustom.boots];
+  const soles = lkS ? lkS.a : 'rgba(0,0,0,0.35)';
+  const padColor = lkP ? lkP.c : '#f5f0e6';
+  const padTrim = lkP ? lkP.a : 'rgba(0,0,0,0.25)';
+  const bladeCol = lkB ? lkB.c : '#d9b178', gripCol = lkB ? lkB.a : '#3a2a1a', stickerCol = lkB ? lkB.s : null;
 
   ctx.fillStyle = 'rgba(0,0,0,0.18)';
   ctx.beginPath();
@@ -54786,12 +54897,15 @@ function drawBatsman() {
   ctx.fillStyle = boots;
   ctx.fillRect(bx-11*s, by-2, 9*s, 4);
   ctx.fillRect(bx+2*s, by-2, 9*s, 4);
+  ctx.fillStyle = soles;
+  ctx.fillRect(bx-11*s, by+1, 9*s, 1.5);
+  ctx.fillRect(bx+2*s, by+1, 9*s, 1.5);
 
   ctx.fillStyle = padColor;
   ctx.fillRect(bx-12*s, by-20*s, 10*s, 19*s);
   ctx.fillRect(bx+2*s, by-20*s, 10*s, 19*s);
-  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = padTrim;
+  ctx.lineWidth = 1.2;
   for (let i=0;i<3;i++) {
     const py2 = by-17*s + i*5*s;
     ctx.beginPath(); ctx.moveTo(bx-12*s, py2); ctx.lineTo(bx-2*s, py2); ctx.stroke();
@@ -54811,6 +54925,8 @@ function drawBatsman() {
   ctx.fillRect(bx-15*s, by-50*s, 5*s, 16*s);
   ctx.fillStyle = gloveColor;
   ctx.fillRect(bx-16*s, by-36*s, 7*s, 6*s);
+  ctx.fillStyle = gloveTrim;
+  ctx.fillRect(bx-16*s, by-31*s, 7*s, 1.5*s);
 
   ctx.fillStyle = face;
   ctx.fillRect(bx-3*s, by-58*s, 6*s, 6*s);
@@ -54824,8 +54940,8 @@ function drawBatsman() {
   ctx.fill();
   ctx.fillRect(bx-10.5*s, by-66*s, 21*s, 5*s);
   ctx.fillRect(bx-10.5*s, by-62*s, 9*s, 2.5*s);
-  ctx.strokeStyle = 'rgba(40,40,40,0.5)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = grille;
+  ctx.lineWidth = 1.2;
   for (let i=-2;i<=2;i++) {
     ctx.beginPath();
     ctx.moveTo(bx + i*2.2*s, by-63*s);
@@ -54840,7 +54956,7 @@ function drawBatsman() {
   if (touchStart) batAngle = 0.85;
   ctx.rotate(batAngle);
 
-  ctx.fillStyle = '#3a2a1a';
+  ctx.fillStyle = gripCol;
   ctx.fillRect(-2.5*s, -10*s, 5*s, 12*s);
   ctx.strokeStyle = 'rgba(255,255,255,0.25)';
   ctx.lineWidth = 1;
@@ -54850,7 +54966,7 @@ function drawBatsman() {
     ctx.lineTo(2.5*s, -9*s + i*2.5*s);
     ctx.stroke();
   }
-  ctx.fillStyle = '#d9b178';
+  ctx.fillStyle = bladeCol;
   ctx.beginPath();
   ctx.moveTo(-5*s, 0);
   ctx.lineTo(5*s, 0);
@@ -54858,6 +54974,7 @@ function drawBatsman() {
   ctx.lineTo(-4*s, 38*s);
   ctx.closePath();
   ctx.fill();
+  if (stickerCol) { ctx.fillStyle = stickerCol; ctx.fillRect(-3.5*s, 4*s, 7*s, 6*s); ctx.fillRect(-3*s, 31*s, 6*s, 3*s); }
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
   ctx.fillRect(-1*s, 2*s, 2*s, 34*s);
 
