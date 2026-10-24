@@ -35,7 +35,8 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Kit: **done** and live (Golf Clash style bag, per-item art and crests for all 40 items).
 - Gameplay HUD: **parked** (Oct 24). Every ground and its HUD gets redone in the painted style, which costs a lot of credits, so it waits until the rest is tied down. Gully Cup HUD concepts (truck-art board, chai-stall chalkboard, brick-wall plates) are on the Design canvas, Gameplay HUD page. Known bugs still to fix: a stray "null" under "BOWLED!"; some grounds draw no scoreboard (e.g. the Mumbai rooftop ground).
 - Chests → **Kit Bags: done** and live (Oct 24).
-- Order from here (Joe): **Stats**, then popups, then Leagues, then Result (fix "GULLY CUP" printed twice there).
+- Stats: **done** and live (Oct 25).
+- Order from here (Joe): popups, then Leagues, then Result (fix "GULLY CUP" printed twice there).
 
 ## Design file & brand (from the Home round)
 
@@ -113,3 +114,13 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Ready notifications use `window.Capacitor.Plugins.LocalNotifications` (does nothing in the browser). `@capacitor/local-notifications` is in package.json; run `npm install && npm run sync` and rebuild the app to turn it on. Note: `initAds` uses `import('@capacitor-community/admob')`, which can't resolve in a plain HTML file; it probably needs `window.Capacitor.Plugins.AdMob` instead (not changed).
 - Bug fixed: the hidden COLLECT button sat over SKIP during the opening (`#chestOpenDoneBtn:not(.visible) { pointer-events:none }`).
 - Lessons: generate each tier's closed and open art in ONE image (same design, angle and size), then cut it out by connected blobs and normalise sizes in code. Ask for flat #01162C or #00FF00 backgrounds. Test taps with real clicks at the element centre (not `force`) to catch invisible overlays.
+
+
+## Stats screen (Oct 25)
+- Joe's calls: three tabs (CAREER · RECORDS · AWARDS) in the blue game UI, no scrolling where possible; the **wooden honours board only for the "fastest to" milestones** (Records tab). Coin/gem pills in the header like Kit; old "STATS & COINS" box and DONE button hidden (kept in the DOM for old code).
+- Working method this round: Joe asked not to see artifacts/canvas. Mockups were plain HTML rendered with Playwright and sent as one image (a "Stats" page was also started on the Design canvas but not used).
+- Career: best innings + average, runs / win rate / fours / sixes, matches bar, league card (trophies, current league, highest league reached in `career.highestLeague`, trophies to next), recent form (last 10 innings in `career.recent`, gold = won; fills from now on).
+- Records: fastest-to 50…500 on the wooden board, next milestone marked NEXT.
+- Awards: 24 achievements (14 new tiers: 150/200 innings, 25/50 wins, 50/100 played, 1k/5k/10k runs, 100/500 fours, 25/100/250 sixes). Every locked one shows a progress bar (`prog(c)` on each achievement; per-innings ones use bests: `career.bestScore`, `bestSixesInnings`, `bestBeatBy`). Order: to-claim, closest to done, then a folded "COMPLETED (n)" row.
+- Gems are **no longer auto-granted** on unlock: they wait in Stats; one CLAIM button collects all. Existing players unlock what they already qualify for on load (`checkAchievements` with an empty innings). New tier rewards were halved by Joe (all 24 total ~440 gems).
+- NEW flags (`flickyStatsNew` in localStorage): beating best innings or a fastest-to milestone sets a flag; shown as a pulsing NEW tag the next time that tab opens, then cleared. STATS nav tile badge (`#menuStatsBadge`) shows the number of rewards to claim, else NEW (`updateStatsNavBadge`, also called from `updateMenuHUD`).
