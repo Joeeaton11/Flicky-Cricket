@@ -32,8 +32,8 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 ## Progress
 
 - Home: **done** (built from Figma frame "Home — Flicky v3").
-- Kit: **built on `home-tidy`** (Golf Clash style), not live yet.
-- Next: pick the next screen (Gameplay HUD is next in the list).
+- Kit: **done** and live (Golf Clash style bag, per-item art and crests for all 40 items).
+- Next: **Gameplay HUD**. Known bugs to fix there: a stray "null" under "BOWLED!"; the result screen prints "GULLY CUP" twice on top of itself (fix with the Result screen).
 
 ## Design file & brand (from the Home round)
 
