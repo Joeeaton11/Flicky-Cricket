@@ -3374,9 +3374,11 @@ const KIT_SETS = [
   { id:'royal',    name:'ROYAL',    color:'#FFC93A', items:['bat_diamond','gloves_featherweight','gloves_dynasty','gloves_kohinoor','helmet_centurion'] },
 ];
 const SET_BONUS = [0, 0, 2, 4, 6, 8];   // by number of set items equipped
+const KIT_SETS_ON = false;              // Joe: set bonuses off for now (cluttered); flip to bring them back
 function kitSetOf(itemId) { return KIT_SETS.find(st => st.items.includes(itemId)) || null; }
 function kitSetCount(set) { return set ? EQUIP_SLOTS.filter(sl => set.items.includes(equippedItems[sl])).length : 0; }
 function kitSetBonus(itemId) {
+  if (!KIT_SETS_ON) return 0;
   const set = kitSetOf(itemId);
   if (!set || !EQUIP_SLOTS.some(sl => equippedItems[sl] === itemId)) return 0;
   return SET_BONUS[Math.min(kitSetCount(set), 5)] || 0;
@@ -3489,7 +3491,7 @@ function getEquipStat(slot, stat) {
   const itemId = equippedItems[slot];
   const item = EQUIPMENT[slot].find(i => i.id === itemId);
   if (!item) return 0;
-  return Math.min(100, statAtLevel(item, stat, itemLevels[itemId] || 1) + kitSetBonus(itemId));
+  return statAtLevel(item, stat, itemLevels[itemId] || 1);
 }
 
 // ========== CHEST SYSTEM ==========
@@ -27436,12 +27438,14 @@ function kbMarkSeen(item) {
   try { localStorage.setItem('flickySeenKit', JSON.stringify([...KB_SEEN])); } catch (e) {}
 }
 function kbSetLine(item) {
+  if (!KIT_SETS_ON) return '';
   const set = kitSetOf(item.id); if (!set) return '';
   const n = kitSetCount(set), wearing = EQUIP_SLOTS.some(sl => equippedItems[sl] === item.id);
   const tiers = [2, 3, 4, 5].map(k => `<span class="${wearing && n >= k ? 'on' : ''}">${k}: +${SET_BONUS[k]}</span>`).join('');
   return `<div class="kbSetLine" style="--sc:${set.color}"><b>${set.name} SET</b><small>${n} WORN</small><span class="kbSetTiers">${tiers}</span></div>`;
 }
 function kbSetsStrip() {
+  if (!KIT_SETS_ON) return '';
   const chips = KIT_SETS.map(set => ({ set, n: kitSetCount(set) })).filter(x => x.n >= 1)
     .map(({ set, n }) => `<span class="kbSetChip${n >= 2 ? ' on' : ''}" style="--sc:${set.color}">${set.name} ${n}${n >= 2 ? ` · +${SET_BONUS[Math.min(n, 5)]}` : ''}</span>`).join('');
   return `<button class="kbSets" data-sets aria-label="Open kit sets"><span>SETS</span>${chips}<span class="kbSetsGo">VIEW ›</span></button>`;
@@ -27472,7 +27476,7 @@ function kbBestLoadout() {
     pick.forEach(it => { const st = kitSetOf(it.id); if (st) counts[st.id] = (counts[st.id] || 0) + 1; });
     let t = 0;
     pick.forEach(it => {
-      const st = kitSetOf(it.id), bonus = st ? (SET_BONUS[Math.min(counts[st.id], 5)] || 0) : 0;
+      const st = KIT_SETS_ON ? kitSetOf(it.id) : null, bonus = st ? (SET_BONUS[Math.min(counts[st.id], 5)] || 0) : 0;
       Object.keys(it.stats).forEach(k => { t += Math.min(100, statAtLevel(it, k, itemLevels[it.id] || 1) + bonus); });
     });
     return t;
