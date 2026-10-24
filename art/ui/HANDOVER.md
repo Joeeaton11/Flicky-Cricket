@@ -33,7 +33,9 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 
 - Home: **done** (built from Figma frame "Home — Flicky v3").
 - Kit: **done** and live (Golf Clash style bag, per-item art and crests for all 40 items).
-- Next: **Gameplay HUD**. Known bugs to fix there: a stray "null" under "BOWLED!"; the result screen prints "GULLY CUP" twice on top of itself (fix with the Result screen).
+- Gameplay HUD: **parked** (Oct 24). Every ground and its HUD gets redone in the painted style, which costs a lot of credits, so it waits until the rest is tied down. Gully Cup HUD concepts (truck-art board, chai-stall chalkboard, brick-wall plates) are on the Design canvas, Gameplay HUD page. Known bugs still to fix: a stray "null" under "BOWLED!"; some grounds draw no scoreboard (e.g. the Mumbai rooftop ground).
+- Chests → **Kit Bags: done** and live (Oct 24).
+- Order from here (Joe): **Stats**, then popups, then Leagues, then Result (fix "GULLY CUP" printed twice there).
 
 ## Design file & brand (from the Home round)
 
@@ -62,6 +64,10 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - How To Play removed from Home (`#howToPlayBtn` kept hidden for the existing code).
 - Nav: four even tiles (same size, icon centred, badge on the tile's top-right corner), gold tile for the active tab, chest tile glows when a chest is ready; the bar fades up out of the art instead of a hard strip.
 - Flicky replaced after review ("he looks weird"): new Flicky rendered on his own on a green screen (Figma node 42:191: smooth glossy ball, two big friendly eyes with one winking, big grin, fist up, facing the wicket), keyed out and placed where the old one was; the rest of the art (39:191) unchanged. To change only the character in future, render him on #00FF00 and swap him in — regenerating the whole scene changes everything else too.
+
+## Art standard (Oct 24, Joe)
+- Joe's pirate-ground gameplay image is the quality bar for the whole game (not the pirate theme): painted top-down diorama ground, wooden flip-number RUNS/TARGET scoreboard, energy bar, BEST plaque, themed props and signs.
+- Every stadium/scene gets its own bespoke HUD and pitch/stadium art in that style.
 
 ## Art direction (agreed, before rebuilding the screens)
 - Style: painted 2.5D casual-game look like Joe's pirate reference (Royal Match / Clash of Clans): saturated, warm, UI made of the league world's real materials. Concepts: Figma section "Style direction: painted league skins" (Gully Cup, Floodlit Series, Pirate League).
@@ -94,3 +100,16 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - More kit (Oct 24): tap any stat name (with "?") for what it does (`showStatInfoPopup`, emoji icon hidden). BEST KIT button on the rating strip tries every owned combination, set bonuses included (`kbBestLoadout`). Sets strip opens a KIT SETS view (`kbSetsView`): each set's items, owned/worn counts and bonus tiers; tap an item for its showroom. The in-match batter wears the equipped kit: helmet + grille, gloves + trim, pads + straps, boots + soles, bat blade + grip + sticker (`KIT_LOOK` colours per item, in `drawBatsman`). Shirt, trousers and face still come from the old colour customiser.
 - Set bonuses switched OFF (Joe: cluttered, not adding much): `KIT_SETS_ON = false` hides the set chips, set lines and Kit Sets view and removes the bonus from `getEquipStat`. Data and code kept; flip the flag to bring them back. BEST KIT now just picks the highest-rated owned items.
 
+
+
+## Kit Bags screen (was Chests), Oct 24
+- Joe's calls: cricket **kit bags**, not treasure chests; **changing room**, not trophy room; **5 tiers**: WOODEN, BRONZE, SILVER, GOLD, PLATINUM. Platinum replaces Elite and Legendary (`CHEST_TYPES.elite/legendary` alias to platinum, and old saves are converted on load). This also fixes the top 9 leagues, which awarded a `platinum` chest that didn't exist.
+- Bags are an upgrade path in real cricket bag shapes, long and low, each opening its own way: wooden = junior canvas duffle (zip), bronze = maroon club holdall (red-ball zip pull), silver = bottle-green wheelie with a cream stripe (flap), gold = navy and cream pro leather bag (stumps-and-bails buckles), platinum = ivory hard-shell kit trunk (latches). Joe kept the wooden bag and asked for cricket club colours on the rest. No bat on the lid. The kit trunk must not look like a funeral casket.
+- Art is in `CHEST_IMG_SRC` / `CHEST_OPEN_SRC` (closed and open WebP, all on the same 320×240 canvas with the bag the same length so every tier draws the same size); `drawChestArt(canvas, type, pct, open)` draws them. Old canvas chest drawing is kept as `drawChestArtLegacy` (unused).
+- Screen: changing-room background (Figma 103:191); each bag sits in an open wooden locker (102:191) with a tier-coloured name tag (`--tc/--tt/--tg` per `data-tier`), and the button sits on the bench. A ready bag's locker lights up. Locked 5th locker with a 200-gem unlock. "Free bags in …" pill. Tap a bag (the "i") for contents, unlock time and rarity odds (`showBagInfo`).
+- Rules: **one bag unlocks at a time** (`bagUnlockingIdx`; others show WAITING). Gem spends over 20 ask first (`bagConfirm`). Free daily bags wait for an empty locker instead of being lost.
+- Opening: room dims, the bag shakes, then the open-lid art pops with its own sound (`playBagOpenSound`). Coins/gems and item cards share one 352px frame. Cards: rarity-coloured frame, painted backdrop per rarity (nets / village green / county ground / floodlit stadium), flip-in, foil on epic and legendary, painted item art. Epic and legendary get a build-up ("SOMETHING LEGENDARY…", shake, rising notes, flash). SKIP goes to the summary (YOU RECEIVED + COLLECT).
+- Earned bags fly from Home into the BAGS tab (`window._pendingBagFly`, `flyBagToTab`). Nav tile renamed BAGS with a painted bag icon (`.hi-chest`).
+- Ready notifications use `window.Capacitor.Plugins.LocalNotifications` (does nothing in the browser). `@capacitor/local-notifications` is in package.json; run `npm install && npm run sync` and rebuild the app to turn it on. Note: `initAds` uses `import('@capacitor-community/admob')`, which can't resolve in a plain HTML file; it probably needs `window.Capacitor.Plugins.AdMob` instead (not changed).
+- Bug fixed: the hidden COLLECT button sat over SKIP during the opening (`#chestOpenDoneBtn:not(.visible) { pointer-events:none }`).
+- Lessons: generate each tier's closed and open art in ONE image (same design, angle and size), then cut it out by connected blobs and normalise sizes in code. Ask for flat #01162C or #00FF00 backgrounds. Test taps with real clicks at the element centre (not `force`) to catch invisible overlays.
