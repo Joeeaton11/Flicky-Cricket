@@ -36,7 +36,8 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Gameplay HUD: **parked** (Oct 24). Every ground and its HUD gets redone in the painted style, which costs a lot of credits, so it waits until the rest is tied down. Gully Cup HUD concepts (truck-art board, chai-stall chalkboard, brick-wall plates) are on the Design canvas, Gameplay HUD page. Known bugs still to fix: a stray "null" under "BOWLED!"; some grounds draw no scoreboard (e.g. the Mumbai rooftop ground).
 - Chests → **Kit Bags: done** and live (Oct 24).
 - Stats: **done** and live (Oct 25).
-- Order from here (Joe): popups, then Leagues, then Result (fix "GULLY CUP" printed twice there).
+- Popups + in-game commentary: **done** and live (Oct 25).
+- Order from here (Joe): Leagues, then Result (fix "GULLY CUP" printed twice there).
 
 ## Design file & brand (from the Home round)
 
@@ -124,3 +125,13 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Awards: 24 achievements (14 new tiers: 150/200 innings, 25/50 wins, 50/100 played, 1k/5k/10k runs, 100/500 fours, 25/100/250 sixes). Every locked one shows a progress bar (`prog(c)` on each achievement; per-innings ones use bests: `career.bestScore`, `bestSixesInnings`, `bestBeatBy`). Order: to-claim, closest to done, then a folded "COMPLETED (n)" row.
 - Gems are **no longer auto-granted** on unlock: they wait in Stats; one CLAIM button collects all. Existing players unlock what they already qualify for on load (`checkAchievements` with an empty innings). New tier rewards were halved by Joe (all 24 total ~440 gems).
 - NEW flags (`flickyStatsNew` in localStorage): beating best innings or a fastest-to milestone sets a flag; shown as a pulsing NEW tag the next time that tab opens, then cleared. STATS nav tile badge (`#menuStatsBadge`) shows the number of rewards to claim, else NEW (`updateStatsNavBadge`, also called from `updateMenuHUD`).
+
+
+## Popups & in-game commentary (Oct 25)
+- Joe: **no Flicky on these** (he's in use in the game); liked the 3D-letter burst style (explosion burst, confetti, tilt) for FOUR / SIX / OUT and the TV-broadcast player card for milestones. He was shown 10 SIX styles (flip board, stamp, slash banner, TV bar, LED screen, fireworks, distance tracker…) and chose the burst "for now".
+- All drawn in DOM in `#fxLayer` (fixed, z 8400, pointer-events none), not on the canvas. `#message` is hidden; `showMessage(text, color, duration)` now routes: **in play** (`fxInPlay()`: state ≠ menu and Home hidden) → ball-by-ball pill (`.fxPill`, tilted; DOT BALL grey; CROSS-BAT/TIRED as a red tag) with a random commentary line (`FX_LINES`); "N RUNS TO M" → `.fxChase` banner at the **bottom** of the screen (own slot, shown once when within 10 runs, `checkMilestone`). **In menus** → toast (`.fxToast`) coloured by colour/emoji (gem purple, coin gold, ok green, no red, info navy), stacking. This fixed toasts being invisible behind menu screens.
+- `fxBig('four'|'six'|'out', {word, runs, caught})`: rays + spinning burst SVG + 3D word (stroke/extrude layer, gradient fill, shine) + ribbon (BOUNDARY · +4 / MAXIMUM · +6 / OUT · N RUNS) + commentary line + confetti. FOUR smaller than SIX. SIX is gold (purple means gems). **Positioned in the band between the scoreboard and the umpire** (computed from `canvas` rect and `PITCH_TOP()`; burst squashed to fit) so the umpire's signal stays visible — Joe flagged that. Canvas pop text for these is suppressed with `popText.dom = true`; flash/shake/particles unchanged. Whoosh-pop sound `fxBurstSound`; "+4/+6" flies to the scoreboard (`fxFlyToScore`, lands at ~35% across / 10% down — scoreboards differ per ground).
+- Milestones: `showMilestonePause` fills a TV card (`#msHead/#msNum/#msGrid…`): HALF CENTURY blue, CENTURY gold, DOUBLE CENTURY red; runs, balls, 4s, 6s, SR, best; NEW RECORD when `flickyStatsNew` has `ft<score>`; random line `MS_LINES`. Still pauses at every milestone (Joe didn't pick the "don't stop at 50" idea).
+- Stat info popup: blue card, stat short-name badge instead of emoji, tap anywhere to close.
+- Fixed: stray "null" under BOWLED (wicket theme had no sub-text).
+- Not done (offered): combos ("2 IN A ROW"), auto-dismiss 50. Per-league skins for these come with the HUD work.
