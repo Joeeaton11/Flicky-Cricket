@@ -660,9 +660,14 @@
   .kbTile .kbArt { width:86%; height:86%; }
   .kbLv { position:absolute; left:4px; bottom:4px; font-size:12px; line-height:1.3; padding:0 6px; border-radius:7px; background:#050A14; color:#fff; }
   .kbLock { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
-  .kbCrest { position:absolute; right:3px; top:3px; width:34%; height:34%; min-width:18px; min-height:18px; z-index:2;
+  .kbCrest { position:absolute; right:5px; top:5px; width:24px; height:24px; z-index:2; pointer-events:none;
     background-size:contain; background-repeat:no-repeat; background-position:center; filter:drop-shadow(0 2px 0 rgba(0,0,0,0.55)); }
-  .kbArt.locked ~ .kbCrest { filter:grayscale(1) brightness(0.6); }
+  .kbCrest.locked { filter:grayscale(1) brightness(0.6); }
+  .kbCard, .kbCmpCard { position:relative; }
+  .kbCard > .kbCrest { width:38px; height:38px; right:8px; top:8px; }
+  .kbCmpCard > .kbCrest { width:30px; height:30px; right:6px; top:6px; }
+  .kbItem > .kbCrest { width:26px; height:26px; right:-7px; top:-7px; }
+  .kbItem .kbUp { left:-6px; right:auto; }
   .kbHeroCrest { display:inline-block; width:34px; height:34px; margin-right:8px; vertical-align:-6px;
     background-size:contain; background-repeat:no-repeat; background-position:center; filter:drop-shadow(0 3px 0 rgba(0,0,0,0.55)); }
   .kbLock svg { width:40%; max-width:28px; height:auto; filter:drop-shadow(0 2px 0 rgba(0,0,0,0.6)); }
@@ -703,6 +708,8 @@
   .kbItem .kbTile { width:52px; height:52px; border-width:2px; border-color:#050A14; border-radius:10px; }
   .kbItemTxt { display:flex; flex-direction:column; gap:2px; min-width:0; }
   .kbItemTxt b { font-weight:400; font-size:13px; line-height:1.05; text-shadow:0 2px 0 #000; }
+  .kbItemTxt b { padding-right:12px; }
+  .kbItemTxt b.long { font-size:11px; }
   .kbItemTxt small { font-size:9px; letter-spacing:0.1em; }
   .kbItemTxt span { font-family:Arial,sans-serif; font-weight:700; font-size:10px; color:#FFE27A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .kbItem.lk .kbItemTxt span { color:#9FB0CF; }
@@ -27320,11 +27327,16 @@ function kbStats(item, lvl, withGain) {
     return `<div class="kbStat"><span>${kbEsc((STAT_INFO[k] || {}).label || k)}</span>${kbPips(v, g, KB_COLS[i % 3])}<span>${v}${g > 0 ? `<em>+${g}</em>` : ''}</span></div>`;
   }).join('');
 }
+// Long one-word names get a break point so they wrap inside the small item boxes
+const KB_BREAKS = { SLEDGEHAMMER:'SLEDGE&shy;HAMMER', NIGHTWATCHMAN:'NIGHT&shy;WATCHMAN', QUICKSILVER:'QUICK&shy;SILVER' };
+function kbBreak(name) { return kbEsc(name).split(' ').map(w => KB_BREAKS[w] || w).join(' '); }
+function kbCrest(item, locked) {
+  return (typeof EQUIP_CREST !== 'undefined' && EQUIP_CREST[item.id]) ? `<i class="kbCrest kc-${item.id}${locked ? ' locked' : ''}" aria-hidden="true"></i>` : '';
+}
 function kbTile(slot, item, size, st) {
   const locked = !st.owned;
   const artCls = (typeof EQUIP_ART !== 'undefined' && EQUIP_ART[item.id]) ? 'ka-' + item.id : 'ki-' + slot;
   return `<span class="kbTile" style="--rc:${rarityColor(item.rarity)}${size ? `;width:${size}px;height:${size}px` : ''}"><i class="kbArt ${artCls}${locked ? ' locked' : ''}"></i>` +
-    ((typeof EQUIP_CREST !== 'undefined' && EQUIP_CREST[item.id]) ? `<i class="kbCrest kc-${item.id}" aria-hidden="true"></i>` : '') +
     (locked ? `<span class="kbLock">${KB_SVG.lock}</span>` : `<span class="kbLv">LV ${st.level}</span>`) + '</span>';
 }
 function kbProgress(st, withBtn) {
@@ -27355,12 +27367,12 @@ function renderKitBag(container) {
     const st = kbState(slot, it);
     const foot = st.owned ? (st.isMax ? 'LV ' + st.level + ' · MAX' : `LV ${st.level} · ${st.cards}/${st.needed}`) : (st.cards > 0 ? `${st.cards}/${st.needed} · ${st.lockText}` : st.lockText);
     return `<button class="kbItem${st.equipped ? ' eq' : ''}${st.owned ? '' : ' lk'}" data-idx="${idx}" style="--rc:${rarityColor(it.rarity)};position:relative">` +
-      kbTile(slot, it, 0, st) +
-      `<span class="kbItemTxt"><b>${kbEsc(it.name)}</b><small style="color:${rarityColor(it.rarity)}">${it.rarity.toUpperCase()}</small><span>${foot}</span></span>` +
+      kbTile(slot, it, 0, st) + kbCrest(it, !st.owned) +
+      `<span class="kbItemTxt"><b${it.name.split(' ').some(w => w.length > 7) ? ' class="long"' : ''}>${kbBreak(it.name)}</b><small style="color:${rarityColor(it.rarity)}">${it.rarity.toUpperCase()}</small><span>${foot}</span></span>` +
       (st.ready ? `<span class="kbUp">${KB_SVG.chev}</span>` : '') + '</button>';
   }).join('');
   container.innerHTML = `<div class="kb">${kbRating()}<div class="kbBody"><div class="kbRail">${tabs}</div><div>
-    <div class="kbCard" data-idx="${items.indexOf(eqItem)}" role="button" tabindex="0" aria-label="${kbEsc(eqItem.name)}, open">
+    <div class="kbCard" data-idx="${items.indexOf(eqItem)}" role="button" tabindex="0" aria-label="${kbEsc(eqItem.name)}, open">${kbCrest(eqItem, false)}
       <div class="kbCardTop">${kbTile(slot, eqItem, 0, est)}<div class="kbCardInfo"><span class="kbEq">EQUIPPED</span><span class="kbName">${kbEsc(eqItem.name)}</span>
       <span class="kbRar" style="color:${rarityColor(eqItem.rarity)}">${eqItem.rarity.toUpperCase()} ${KB_LABEL[slot]}</span></div></div>
       ${kbStats(eqItem, est.level || 1, false)}${kbProgress(est, true)}</div>
@@ -27441,7 +27453,7 @@ function kbShowroom(slot, idx) {
 function kbCompare(slot, item) {
   const el = kbLayer('kbCmp', 'kbOv');
   const mine = kbEquippedItem(slot), ms = kbState(slot, mine), ts = kbState(slot, item);
-  const card = (it, st, tag, tagCol, ring) => `<div class="kbCmpCard" style="--rc:${ring}"><span class="kbTag" style="color:${tagCol}">${tag}</span>${kbTile(slot, it, 0, st)}<b>${kbEsc(it.name)}</b><span class="kbTag" style="color:${rarityColor(it.rarity)}">${it.rarity.toUpperCase()}</span></div>`;
+  const card = (it, st, tag, tagCol, ring) => `<div class="kbCmpCard" style="--rc:${ring}">${kbCrest(it, !st.owned)}<span class="kbTag" style="color:${tagCol}">${tag}</span>${kbTile(slot, it, 0, st)}<b>${kbEsc(it.name)}</b><span class="kbTag" style="color:${rarityColor(it.rarity)}">${it.rarity.toUpperCase()}</span></div>`;
   const rows = Object.keys(item.stats).map((k, i) => {
     const a = statAtLevel(mine, k, ms.level || 1), b = statAtLevel(item, k, ts.showLevel), d = b - a;
     const col = d > 0 ? ['#9BF5AE', '#1FA64A'] : d < 0 ? ['#FF9A9A', '#D92D3A'] : KB_COLS[i % 3];
