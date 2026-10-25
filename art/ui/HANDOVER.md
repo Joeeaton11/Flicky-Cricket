@@ -37,7 +37,7 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Chests → **Kit Bags: done** and live (Oct 24).
 - Stats: **done** and live (Oct 25).
 - Popups + in-game commentary: **done** and live (Oct 25).
-- Game loop review (Oct 25): Joe asked for the loop to be nailed down before the Leagues screen. Agreed plan (wireframe in chat): 1 fix loop basics ✅, 2 Leagues screen (option A: big card carousel) ✅, 3 Result screen ✅, 4 Player screen / character creation (cosmetics only, unlockables), 5 trophy road (reward every ~10 🏆), 6 daily missions + free daily bag, 7 season pass + events, 8 gameplay HUD + per-league skins (parked).
+- Game loop review (Oct 25): Joe asked for the loop to be nailed down before the Leagues screen. Agreed plan (wireframe in chat): 1 fix loop basics ✅, 2 Leagues screen (option A: big card carousel) ✅, 3 Result screen ✅, 4 Player screen / character creation ✅ (first part; more looks need the art batch), 5 trophy road (reward every ~10 🏆), 6 daily missions + free daily bag, 7 season pass + events, 8 gameplay HUD + per-league skins (parked).
 
 ## Design file & brand (from the Home round)
 
@@ -158,3 +158,12 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Ads: plugins via `window.Capacitor.Plugins` (`capAdMob`, `capPlatform`, `admobId`); `ADMOB_CONFIG` has interstitial + rewarded ids (Google test ids — replace before release); `watchAdForGems` and 2× coins both use `showRewardedVideo`; free grant only in a desktop browser.
 - Notifications: run `npm install && npm run sync` on Joe's Mac, then rebuild (ios/android are not in the repo).
 - Removed 32 unused functions (old season table, old Kit tabs, old colour customiser, legacy chest drawing…), ~57 KB.
+
+
+## Player (Oct 25, step 4 — first part, live)
+- Art (Figma file WjYzgtNxSxMY4XIT8Oaqem): style tests 104:191 (chunky) and 105:191 (realistic); chosen base players 106:191 (male) and 107:191 (female), glossy chunky 3D, navy kit with gold trim, made on #00FF00 and keyed out. Kept in `art/player/player-m.png`, `player-f.png` (760px tall). Embedded as WebP in `PLAYER_ART` with a baked mask (R = navy kit/cap/straps, G = gold trim).
+- **Kit colours are recoloured in code** (`renderPlayer`, HSV, shading kept): 12 shirt & cap colours (`PLAYER_SHIRTS`; pink at Fairground Cup, sky at ECL, gold at ICL, white 60 gems), 6 trims (`PLAYER_TRIMS`; silver at Coastal Cup), 6 club colour presets (`PLAYER_SETS`). **Skin can't be recoloured** (bat wood is skin-coloured), so skin tones, hair, faces, headwear, eyewear, bat stickers and celebration poses need the next art batch (~8–12 images; Joe approved the Mix approach).
+- Screens: first launch opens "CREATE YOUR PLAYER" (`openPlayerScreen('create')`, tabs BODY · KIT COLOURS · NAME, SURPRISE ME, START → a brand-new player goes straight into their first match; welcome toasts are held until START). PLAYER tab (new 1st nav tile, icon = live head crop; nav is now 5 tiles) uses the same screen in edit mode. Saved in `flickyPlayer` {g, shirt, trim, name, flag, team}; gem buys in `flickyCosmetics`.
+- Player shows on Home (left of the pitch, idle bob, tap opens Player), in the match as a name plate bottom-left (`#matchName`), on the share card (team or name), and as the hero of the Result screen: big on the left with spotlight, rays + confetti on a win, slump on a loss, a random speech bubble, team chip top-left; ribbon + stamped run count on the right. The match batter's shirt and cap use the chosen colour.
+- Result layout checked at 360×740, 375×667, 390×844, 430×932 (compact rules at max-height 760 and 700); PLAY button is two lines (action + league name & entry).
+- Next: art batch (skin tones, hair, faces, headwear, eyewear, stickers, win/lose poses), then trophy road rewards to hand them out.
