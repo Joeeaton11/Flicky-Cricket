@@ -2206,6 +2206,24 @@
   .plSw button .plNew { position:absolute; top:-8px; right:-6px; z-index:2; font-style:normal; font-size:8px; line-height:11px; padding:1px 4px; border-radius:6px; border:2px solid #050A14;
     background:linear-gradient(#ff6b6b,#d62828); color:#fff; animation:plNewPulse 1.2s ease-in-out infinite; }
   @keyframes plNewPulse { 50% { transform:scale(1.15); } }
+
+  /* try-on for locked colours (Oct 25) */
+  .plSw button.try { outline:3px dashed #FFC93A; outline-offset:2px; }
+  #plTry { position:absolute; left:10px; right:10px; top:6px; z-index:3; display:flex; align-items:center; gap:8px; padding:6px 6px 6px 6px; border-radius:16px; border:3px solid #050A14;
+    background:rgba(1,22,44,.92); box-shadow:0 4px 0 rgba(0,0,0,.45); animation:plTryIn .25s cubic-bezier(.3,.8,.4,1); }
+  #plTry.hidden { display:none; }
+  #playerScreen.trying #plCanvas { height:calc(100% - 92px); }
+  #plCanvas { transition:height .25s; }
+  @keyframes plTryIn { from { transform:translateY(-12px); opacity:0; } }
+  #plTry > div { flex:1; min-width:0; line-height:1.05; }
+  #plTry small { display:block; font-size:10px; letter-spacing:.12em; color:#FFC93A; }
+  #plTry b { display:block; font-weight:400; font-size:16px; text-shadow:0 2px 0 #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #plTryX { flex:none; width:34px; height:34px; border-radius:10px; border:2px solid #050A14; background:#13284f; color:#fff; font-size:16px; cursor:pointer; padding:0; }
+  #plTryBuy { flex:none; height:40px; padding:0 12px; border-radius:12px; border:3px solid #050A14; color:#fff; font-size:15px; letter-spacing:.04em; cursor:pointer; display:flex; align-items:center; gap:4px;
+    text-shadow:0 2px 0 rgba(0,0,0,.4); box-shadow:0 3px 0 rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.4); }
+  #plTryBuy.gem { background:linear-gradient(#B98CFF,#7C3AED); }
+  #plTryBuy.lg { background:linear-gradient(#3a63ad,#13284f); font-size:12px; cursor:default; opacity:.95; }
+  #plTryBuy .hIco { width:20px; height:20px; }
   /* ===== RESULT redesign (Oct 25) ===== */
   #resultScreen.r2 { display:block; background:linear-gradient(#123063,#0a1d3d 45%,#01162C) !important; font-family:'Lilita One','Arial Black',Arial,sans-serif; color:#fff;
     padding-bottom:calc(92px + max(env(safe-area-inset-bottom,0px),8px)); box-sizing:border-box; }
@@ -2977,7 +2995,7 @@
 
 <div id="playerScreen" class="hidden">
   <div id="plTop"><div id="plTitle">PLAYER</div><div id="plPills"><span class="lgPill"><i class="hIco hi-gem"></i><span id="plGemVal">0</span></span><span class="lgPill"><i class="hIco hi-coin"></i><span id="plCoinVal">0</span></span></div></div>
-  <div id="plStage"><div class="plPlinth"></div><canvas id="plCanvas" width="10" height="10"></canvas><div id="plTag"><b id="plTagName"></b></div></div>
+  <div id="plStage"><div class="plPlinth"></div><canvas id="plCanvas" width="10" height="10"></canvas><div id="plTag"><b id="plTagName"></b></div><div id="plTry" class="hidden"></div></div>
   <div id="plPanel">
     <button id="plGrab" aria-label="Show or hide options"><i></i></button>
     <div id="plColl"><span>COLLECTION</span><div id="plCollBar"><i id="plCollFill"></i></div><b id="plCollN">0 / 0</b></div>
@@ -27845,10 +27863,10 @@ function refreshPlayerArt() {
   paintPlayerTo(document.getElementById('homePlayerCanvas'), L);
   paintPlayerTo(document.getElementById('playerNavIco'), L, true);
 }
-let plTab = 'body', plMode = 'edit';
+let plTab = 'body', plMode = 'edit', plPreview = null;
 const PLAYER_SETS = [
-  { name:'NAVY & GOLD', shirt:'navy', trim:'gold' }, { name:'MAROON & GOLD', shirt:'maroon', trim:'gold' }, { name:'GREEN & CREAM', shirt:'green', trim:'cream' },
-  { name:'BLACK & SILVER', shirt:'black', trim:'silver' }, { name:'ROYAL & RED', shirt:'royal', trim:'red' }, { name:'ORANGE & BLUE', shirt:'orange', trim:'blue' },
+  { name:'NAVY & GOLD', shirt:'navy', trim:'gold', pants:'navy' }, { name:'MAROON & GOLD', shirt:'maroon', trim:'gold', pants:'white' }, { name:'GREEN & CREAM', shirt:'green', trim:'cream', pants:'cream' },
+  { name:'BLACK & SILVER', shirt:'black', trim:'silver', pants:'black' }, { name:'ROYAL & RED', shirt:'royal', trim:'red', pants:'royal' }, { name:'ORANGE & BLUE', shirt:'orange', trim:'blue', pants:'navy' },
 ];
 function plTeam(L) { return (L && L.team) ? L.team : ''; }
 function plHop() { const c = document.getElementById('plCanvas'); if (!c) return; c.classList.remove('hop'); void c.offsetWidth; c.classList.add('hop'); }
@@ -27890,7 +27908,7 @@ function openPlayerScreen(mode) {
   document.getElementById('plTitle').textContent = plMode === 'create' ? 'CREATE YOUR PLAYER' : 'PLAYER';
   document.getElementById('plStart').classList.toggle('hidden', plMode !== 'create');
   if (plMode === 'create') { hideNav(); plTab = 'body'; } else showNav('player');
-  plShownNew = []; plSetMini(false);
+  plShownNew = []; plPreview = null; plSetMini(false);
   renderPlayerScreen();
 }
 function renderPlayerScreen() {
@@ -27901,7 +27919,8 @@ function renderPlayerScreen() {
   const pc = plCount();
   document.getElementById('plCollN').textContent = `${pc.got} / ${pc.all}`;
   document.getElementById('plCollFill').style.width = (pc.got / pc.all * 100) + '%';
-  paintPlayerTo(document.getElementById('plCanvas'), L);
+  paintPlayerTo(document.getElementById('plCanvas'), plPreview ? Object.assign({}, L, { [plPreview.kind]: plPreview.id }) : L);
+  plRenderTry();
   if (plTab === 'kit') plMarkSeen();
   const kitNew = plNewKeys().length;
   document.querySelectorAll('#plTabs button').forEach(b => {
@@ -27933,36 +27952,29 @@ function renderPlayerScreen() {
       const un = cosUnlocked(it, kind), on = (L[kind] || (kind === 'pants' ? 'cream' : '')) === it.id;
       const chip = un ? '' : it.unlock.gems ? `<small class="gem">${it.unlock.gems} GEMS</small>` : `<small>${THEMED_LEAGUES[it.unlock.league].name}</small>`;
       const nw = plShownNew.includes(it.id + ':' + kind) ? '<i class="plNew">NEW</i>' : '';
-      return `<button data-k="${kind}" data-id="${it.id}" aria-label="${it.name}" class="${on ? 'on' : ''} ${un ? '' : 'lk'}" style="background:${it.c}">${chip}${nw}</button>`;
+      const tr = plPreview && plPreview.kind === kind && plPreview.id === it.id;
+      return `<button data-k="${kind}" data-id="${it.id}" aria-label="${it.name}" class="${on ? 'on' : ''} ${un ? '' : 'lk'} ${tr ? 'try' : ''}" style="background:${it.c}">${chip}${nw}</button>`;
     }).join('');
     const n = (list, kind) => `${list.filter(x => cosUnlocked(x, kind)).length} / ${list.length}`;
     setTimeout(() => body.querySelectorAll('.plSets button').forEach(b => b.onclick = () => {
-      const st = PLAYER_SETS[+b.dataset.set], sh = PLAYER_SHIRTS.find(x => x.id === st.shirt), tr = PLAYER_TRIMS.find(x => x.id === st.trim);
-      if (!cosUnlocked(sh, 'shirt') || !cosUnlocked(tr, 'trim')) { showMessage('Unlock both colours first', '#ffe27a', 1500); return; }
-      playUiTap(); L.shirt = st.shirt; L.trim = st.trim; plCommit();
+      const st = PLAYER_SETS[+b.dataset.set], sh = PLAYER_SHIRTS.find(x => x.id === st.shirt), tr = PLAYER_TRIMS.find(x => x.id === st.trim), pa = PLAYER_PANTS.find(x => x.id === st.pants);
+      if (!cosUnlocked(sh, 'shirt') || !cosUnlocked(tr, 'trim') || !cosUnlocked(pa, 'pants')) { showMessage('Unlock all three colours first', '#ffe27a', 1500); return; }
+      playUiTap(); plPreview = null; L.shirt = st.shirt; L.trim = st.trim; L.pants = st.pants; plCommit();
     }), 0);
     const sets = PLAYER_SETS.map((st, i) => {
-      const sh = PLAYER_SHIRTS.find(x => x.id === st.shirt), tr = PLAYER_TRIMS.find(x => x.id === st.trim);
-      const un = cosUnlocked(sh, 'shirt') && cosUnlocked(tr, 'trim'), on = L.shirt === st.shirt && L.trim === st.trim;
-      return `<button data-set="${i}" class="${on ? 'on' : ''} ${un ? '' : 'lk'}" style="background:linear-gradient(135deg, ${sh.c} 0 58%, ${tr.c} 58%)">${st.name}</button>`;
+      const sh = PLAYER_SHIRTS.find(x => x.id === st.shirt), tr = PLAYER_TRIMS.find(x => x.id === st.trim), pa = PLAYER_PANTS.find(x => x.id === st.pants);
+      const un = cosUnlocked(sh, 'shirt') && cosUnlocked(tr, 'trim') && cosUnlocked(pa, 'pants'), on = L.shirt === st.shirt && L.trim === st.trim && (L.pants || 'cream') === st.pants;
+      return `<button data-set="${i}" class="${on ? 'on' : ''} ${un ? '' : 'lk'}" style="background:linear-gradient(135deg, ${sh.c} 0 50%, ${tr.c} 50% 62%, ${pa.c} 62%)">${st.name}</button>`;
     }).join('');
     body.innerHTML = `<div class="plLbl"><span>CLUB COLOURS</span></div><div class="plSets">${sets}</div><div class="plLbl"><span>SHIRT &amp; CAP</span><span>${n(PLAYER_SHIRTS, 'shirt')}</span></div><div class="plSw">${sw(PLAYER_SHIRTS, 'shirt')}</div>
       <div class="plLbl" style="margin-top:8px"><span>TRIM</span><span>${n(PLAYER_TRIMS, 'trim')}</span></div><div class="plSw">${sw(PLAYER_TRIMS, 'trim')}</div>
       <div class="plLbl" style="margin-top:8px"><span>TROUSERS</span><span>${n(PLAYER_PANTS, 'pants')}</span></div><div class="plSw">${sw(PLAYER_PANTS, 'pants')}</div>`;
     body.querySelectorAll('.plSw button').forEach(b => b.onclick = () => {
       const kind = b.dataset.k, list = kind === 'shirt' ? PLAYER_SHIRTS : kind === 'pants' ? PLAYER_PANTS : PLAYER_TRIMS, it = list.find(x => x.id === b.dataset.id);
-      if (!cosUnlocked(it, kind)) {
-        if (it.unlock.gems) {
-          bagConfirm(it.unlock.gems, `Unlock ${it.name} ${kind === 'shirt' ? 'kit' : kind === 'pants' ? 'trousers' : 'trim'}?`, () => {
-            if (gems < it.unlock.gems) { showMessage('Not enough gems!', '#ff6b6b', 1500); return; }
-            gems -= it.unlock.gems; saveEquipmentState();
-            ownedCos.push(it.id + ':' + kind); try { localStorage.setItem('flickyCosmetics', JSON.stringify(ownedCos)); } catch (e) {}
-            L[kind] = it.id; plCommit();
-          });
-        } else showMessage(`Unlocks at ${THEMED_LEAGUES[it.unlock.league].name}`, '#ffe27a', 1800);
-        return;
+      if (!cosUnlocked(it, kind)) {   // try it on first
+        playUiTap(); plPreview = { kind, id: it.id }; renderPlayerScreen(); plHop(); return;
       }
-      playUiTap(); L[kind] = it.id; plCommit();
+      playUiTap(); plPreview = null; L[kind] = it.id; plCommit();
     });
   } else {
     body.innerHTML = `<div class="plLbl"><span>NAME</span></div><input class="plName" id="plNameIn" maxlength="14" autocomplete="off" spellcheck="false" aria-label="Player name" value="${(L.name || '').replace(/"/g, '')}">
@@ -27975,8 +27987,33 @@ function renderPlayerScreen() {
     body.querySelectorAll('.plFlags button').forEach(b => b.onclick = () => { playUiTap(); L.flag = b.dataset.f; plCommit(); });
   }
 }
+const PL_KIND_NAME = { shirt:'SHIRT', trim:'TRIM', pants:'TROUSERS' };
+function plListFor(kind) { return kind === 'shirt' ? PLAYER_SHIRTS : kind === 'pants' ? PLAYER_PANTS : PLAYER_TRIMS; }
+function plRenderTry() {
+  const el = document.getElementById('plTry'); if (!el) return;
+  document.getElementById('playerScreen').classList.toggle('trying', !!plPreview);
+  if (!plPreview) { el.classList.add('hidden'); return; }
+  const it = plListFor(plPreview.kind).find(x => x.id === plPreview.id);
+  const btn = it.unlock.gems ? `<button id="plTryBuy" class="gem">UNLOCK <i class="hIco hi-gem"></i>${it.unlock.gems}</button>`
+    : `<button id="plTryBuy" class="lg" disabled>REACH ${THEMED_LEAGUES[it.unlock.league].name}</button>`;
+  el.innerHTML = `<button id="plTryX" aria-label="Stop trying on">✕</button><div><small>TRYING ON</small><b>${it.name} ${PL_KIND_NAME[plPreview.kind]}</b></div>${btn}`;
+  el.classList.remove('hidden'); el.onclick = e => e.stopPropagation();
+  document.getElementById('plTryX').onclick = e => { e.stopPropagation(); playUiTap(); plPreview = null; renderPlayerScreen(); };
+  const buy = document.getElementById('plTryBuy');
+  buy.onclick = e => {
+    e.stopPropagation(); if (!it.unlock.gems) return;
+    const kind = plPreview.kind;
+    bagConfirm(it.unlock.gems, `Unlock ${it.name} ${kind === 'shirt' ? 'kit' : kind === 'pants' ? 'trousers' : 'trim'}?`, () => {
+      if (gems < it.unlock.gems) { showMessage('Not enough gems!', '#ff6b6b', 1500); return; }
+      gems -= it.unlock.gems; saveEquipmentState();
+      ownedCos.push(it.id + ':' + kind); try { localStorage.setItem('flickyCosmetics', JSON.stringify(ownedCos)); } catch (e) {}
+      try { localStorage.setItem('flickyPlSeen', JSON.stringify(plSeen().concat(it.id + ':' + kind))); } catch (e) {}
+      plPreview = null; playerLook[kind] = it.id; plCommit(); hapticBig && hapticBig();
+    });
+  };
+}
 function plCommit() { savePlayerLook(); renderPlayerScreen(); refreshPlayerArt(); plHop(); }
-document.querySelectorAll('#plTabs button').forEach(b => b.addEventListener('click', () => { playUiTap(); plTab = b.dataset.pt; plSetMini(false); renderPlayerScreen(); }));
+document.querySelectorAll('#plTabs button').forEach(b => b.addEventListener('click', () => { playUiTap(); plTab = b.dataset.pt; plPreview = null; plSetMini(false); renderPlayerScreen(); }));
 document.getElementById('plGrab').addEventListener('click', () => { playUiTap(); plSetMini(!document.getElementById('playerScreen').classList.contains('mini')); });
 document.getElementById('plStage').addEventListener('click', () => { if (plMode === 'create') return; playUiTap(); plSetMini(!document.getElementById('playerScreen').classList.contains('mini')); plHop(); });
 (() => {   // swipe the panel down to admire the player, up to bring the options back
@@ -55267,7 +55304,7 @@ function drawBatsman() {
   const body = _pl || CUSTOM_CATEGORIES[2].colors[playerCustom.body];
   const gloveColor = lkG ? lkG.c : CUSTOM_CATEGORIES[3].colors[playerCustom.hands];
   const gloveTrim = lkG ? lkG.a : 'rgba(0,0,0,0.2)';
-  const trousers = CUSTOM_CATEGORIES[4].colors[playerCustom.trousers];
+  const trousers = (typeof playerLook !== 'undefined' && playerLook && (PLAYER_PANTS.find(x => x.id === (playerLook.pants || 'cream')) || {}).c) || CUSTOM_CATEGORIES[4].colors[playerCustom.trousers];
   const boots = lkS ? lkS.c : CUSTOM_CATEGORIES[5].colors[playerCustom.boots];
   const soles = lkS ? lkS.a : 'rgba(0,0,0,0.35)';
   const padColor = lkP ? lkP.c : '#f5f0e6';
