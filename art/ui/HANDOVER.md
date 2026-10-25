@@ -37,7 +37,7 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Chests → **Kit Bags: done** and live (Oct 24).
 - Stats: **done** and live (Oct 25).
 - Popups + in-game commentary: **done** and live (Oct 25).
-- Game loop review (Oct 25): Joe asked for the loop to be nailed down before the Leagues screen. Agreed plan (wireframe in chat): 1 fix loop basics ✅, 2 Leagues screen (option A: big card carousel), 3 Result screen (fix "GULLY CUP" printed twice), 4 Player screen / character creation (cosmetics only, unlockables), 5 trophy road (reward every ~10 🏆), 6 daily missions + free daily bag, 7 season pass + events, 8 gameplay HUD + per-league skins (parked).
+- Game loop review (Oct 25): Joe asked for the loop to be nailed down before the Leagues screen. Agreed plan (wireframe in chat): 1 fix loop basics ✅, 2 Leagues screen (option A: big card carousel) ✅, 3 Result screen (fix "GULLY CUP" printed twice), 4 Player screen / character creation (cosmetics only, unlockables), 5 trophy road (reward every ~10 🏆), 6 daily missions + free daily bag, 7 season pass + events, 8 gameplay HUD + per-league skins (parked).
 
 ## Design file & brand (from the Home round)
 
@@ -143,3 +143,6 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - **One bag per win** (the league's bag); the random `earnChest()` after every match was removed. Free daily bags and welcome bag unchanged.
 - **PLAY on Home starts your selected league in one tap** (`playLeague(selectedLeagueIdx())`; `flickySelectedLeague`). Selecting PLAY on a Leagues card makes it your league; unlocking a new league selects it. Not enough coins → gem confirm (15 gems) or opens Leagues. PLAY AGAIN replays your selected league.
 - **Hidden 10-team season table retired**: `recordLeagueMatch` no longer called; kit rarities unlock by league (`RARITY_UNLOCK_LEAGUE`: rare at Coastal Cup, epic at ECL, legendary at ICL; kit tiles show the league name instead of "SEASON N"); bowling season ramp removed (difficulty = league). Result screen's "RD n/14" bar now shows trophies to the next league ("NEW LEAGUE UNLOCKED!" when one opens).
+
+## Leagues screen (Oct 25, step 2)
+- Option A built: blue game UI, round back button + trophy/coin pills, trophy bar to the next league (`#leagueRoad`), one big card per league (`renderLeagueScreen`). Opens on your selected league (scrolls to it). Card: art with "LEAGUE n / 27" chip and YOUR LEAGUE / COINS ONLY chip, name, subtitle, rewards (coin, trophies +winTrophy–+2 or "NO TROPHIES" for older leagues, bag art from `CHEST_IMG_SRC`), target + difficulty balls, a dashed note when the league brings a new kit rarity or bag tier, yellow PLAY with entry. Locked: padlock over the art, "WIN n MORE", "UNLOCKS AT n". PLAY calls `playLeague(idx)`. Small dots (unlocked lighter). New CSS sits after the old league rules (the old ones are still in the file and would otherwise win).
