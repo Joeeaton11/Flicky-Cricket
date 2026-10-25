@@ -37,7 +37,7 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Chests → **Kit Bags: done** and live (Oct 24).
 - Stats: **done** and live (Oct 25).
 - Popups + in-game commentary: **done** and live (Oct 25).
-- Order from here (Joe): Leagues, then Result (fix "GULLY CUP" printed twice there).
+- Game loop review (Oct 25): Joe asked for the loop to be nailed down before the Leagues screen. Agreed plan (wireframe in chat): 1 fix loop basics ✅, 2 Leagues screen (option A: big card carousel), 3 Result screen (fix "GULLY CUP" printed twice), 4 Player screen / character creation (cosmetics only, unlockables), 5 trophy road (reward every ~10 🏆), 6 daily missions + free daily bag, 7 season pass + events, 8 gameplay HUD + per-league skins (parked).
 
 ## Design file & brand (from the Home round)
 
@@ -135,3 +135,11 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Stat info popup: blue card, stat short-name badge instead of emoji, tap anywhere to close.
 - Fixed: stray "null" under BOWLED (wicket theme had no sub-text).
 - Not done (offered): combos ("2 IN A ROW"), auto-dismiss 50. Per-league skins for these come with the HUD work.
+
+
+## Game loop rules (Oct 25, step 1)
+- **Target = the league's target** (`leagueTarget(lg)` = `targetFloor`, 24 Gully … 76 Eternal). The ever-rising personal target (+20 per win) is gone; `target` is set by `playLeague` and on load.
+- **Trophies by margin** (`trophyChangeFor`): win = `winTrophy` +1 at 20+ margin, +2 at 40+; loss −1, never below the unlock of your highest league reached (`trophyState.best`). Playing an **older league** (below the one your trophies put you in) gives coins and its bag but no trophies won or lost.
+- **One bag per win** (the league's bag); the random `earnChest()` after every match was removed. Free daily bags and welcome bag unchanged.
+- **PLAY on Home starts your selected league in one tap** (`playLeague(selectedLeagueIdx())`; `flickySelectedLeague`). Selecting PLAY on a Leagues card makes it your league; unlocking a new league selects it. Not enough coins → gem confirm (15 gems) or opens Leagues. PLAY AGAIN replays your selected league.
+- **Hidden 10-team season table retired**: `recordLeagueMatch` no longer called; kit rarities unlock by league (`RARITY_UNLOCK_LEAGUE`: rare at Coastal Cup, epic at ECL, legendary at ICL; kit tiles show the league name instead of "SEASON N"); bowling season ramp removed (difficulty = league). Result screen's "RD n/14" bar now shows trophies to the next league ("NEW LEAGUE UNLOCKED!" when one opens).

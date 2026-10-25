@@ -3599,13 +3599,7 @@ function payLeagueEntryWithGems(lgIdx, btn) {
     showMessage('Not enough gems!', '#ff6b6b', 1500);
     return;
   }
-  const lg = THEMED_LEAGUES[lgIdx];
-  gems -= GEM_ENTRY_COST;
-  saveEquipmentState();
-  window._activeLeagueIdx = lgIdx;
-  window._leagueTargetFloor = lg.targetFloor || 0;
-  leagueScreen.classList.add('hidden');
-  startGame();
+  playLeague(lgIdx);
 }
 
 function renderGemShopTab(container) {
@@ -3947,7 +3941,9 @@ function kitSetBonus(itemId) {
   return SET_BONUS[Math.min(kitSetCount(set), 5)] || 0;
 }
 const RARITY_MAX_LEVEL    = { common:8, rare:6, epic:5, legendary:4 };
-const RARITY_UNLOCK_SEASON = { common:1, rare:2, epic:4, legendary:7 };
+const RARITY_UNLOCK_SEASON = { common:1, rare:2, epic:4, legendary:7 };   // legacy, unused
+// kit rarities unlock by league reached (replaces seasons): rare at Coastal Cup, epic at ECL, legendary at ICL
+const RARITY_UNLOCK_LEAGUE = { common:0, rare:2, epic:4, legendary:8 };
 
 // Coin cost to upgrade per rarity, indexed by current level (0 = L1→L2)
 const UPGRADE_COIN_COST = {
@@ -4111,7 +4107,7 @@ function openChestRewards(typeName) {
   const rewards = { cards: [], gems: gemReward, coins: coinReward };
   // only offer rarities the player has unlocked via season progression
   const allRarities = ['common','rare','epic','legendary'];
-  const unlockedRarities = allRarities.filter(r => league.season >= RARITY_UNLOCK_SEASON[r]);
+  const unlockedRarities = allRarities.filter(r => highestLeagueIdx() >= RARITY_UNLOCK_LEAGUE[r]);
 
   for (let i = 0; i < numCards; i++) {
     // build a normalised probability table using only unlocked rarities
@@ -5023,10 +5019,7 @@ function startGame() {
 startBtn.addEventListener('click', () => {
   getAudioCtx();
   playUiTap(); hapticTap();
-  closeAllScreens();
-  leagueScreen.classList.remove('hidden');
-  renderLeagueScreen();
-  showNav('league');
+  playLeague(selectedLeagueIdx());
 });
 
 function _hasKitUpgradeAvailable() {
@@ -5128,10 +5121,7 @@ function updateStreakDisplay() {
 function updateNextOpponentDisplay() {
   const trophies = trophyState ? trophyState.count : 0;
   // Find highest unlocked league
-  let currentLg = THEMED_LEAGUES[0];
-  for (let i = THEMED_LEAGUES.length - 1; i >= 0; i--) {
-    if (trophies >= THEMED_LEAGUES[i].unlock) { currentLg = THEMED_LEAGUES[i]; break; }
-  }
+  let currentLg = THEMED_LEAGUES[selectedLeagueIdx()];
   // Next league to unlock
   const nextLg = THEMED_LEAGUES.find(lg => lg.unlock > trophies);
   let line = `${currentLg.name}  \u00b7  ${currentLg.entry.toLocaleString()}\ud83e\ude99 ENTRY`;
@@ -5154,7 +5144,8 @@ function updateHomeLeagueCard(lg, nextLg, trophies) {
   document.getElementById('homeLeagueEntry').textContent = lg.entry.toLocaleString();
   const fill = document.getElementById('homeRoadFill'), txt = document.getElementById('homeRoadTxt');
   if (nextLg) {
-    const p = Math.max(0, Math.min(1, (trophies - lg.unlock) / Math.max(1, nextLg.unlock - lg.unlock)));
+    const _base = THEMED_LEAGUES[currentLeagueIdx()].unlock;
+    const p = Math.max(0, Math.min(1, (trophies - _base) / Math.max(1, nextLg.unlock - _base)));
     fill.style.width = (p * 100) + '%';
     txt.textContent = `${trophies} / ${nextLg.unlock}`;
   } else {
@@ -27346,6 +27337,53 @@ function loadTrophies() {
 }
 function saveTrophies() { localStorage.setItem('flickyTrophies', JSON.stringify(trophyState)); }
 let trophyState = loadTrophies();
+// ── Game loop (Oct 25): targets set by the league, trophies by margin, one league = "your league" ──
+if (typeof trophyState.best !== 'number') trophyState.best = trophyState.count;
+function leagueIdxForTrophies(t) {
+  let idx = 0;
+  for (let i = THEMED_LEAGUES.length - 1; i >= 0; i--) { if (t >= THEMED_LEAGUES[i].unlock) { idx = i; break; } }
+  return idx;
+}
+function currentLeagueIdx() { return leagueIdxForTrophies(trophyState.count); }        // the league your trophies put you in
+function highestLeagueIdx() { return leagueIdxForTrophies(Math.max(trophyState.best || 0, trophyState.count)); }
+function leagueTarget(lg) { return lg.targetFloor || STARTING_TARGET; }
+function selectedLeagueIdx() {
+  const hi = highestLeagueIdx();
+  let s = parseInt(localStorage.getItem('flickySelectedLeague'));
+  if (isNaN(s) || s > hi) s = hi;
+  return s;
+}
+target = leagueTarget(THEMED_LEAGUES[Math.min(THEMED_LEAGUES.length - 1, leagueIdxForTrophies(trophyState.count))]);
+function setSelectedLeague(i) { try { localStorage.setItem('flickySelectedLeague', String(i)); } catch (e) {} }
+// trophies for a result: win +winTrophy (+1 at 20+ margin, +2 at 40+); loss −1, never below your highest league's floor;
+// older leagues (below the one your trophies put you in) give coins and bags but no trophies either way
+function trophyChangeFor(lgIdx, beatTarget, beatBy) {
+  if (lgIdx < currentLeagueIdx()) return 0;
+  const lg = THEMED_LEAGUES[lgIdx];
+  if (beatTarget) return (lg.winTrophy || 1) + (beatBy >= 40 ? 2 : beatBy >= 20 ? 1 : 0);
+  const floor = THEMED_LEAGUES[highestLeagueIdx()].unlock;
+  return -Math.min(1, Math.max(0, trophyState.count - floor));
+}
+// start a match in a league (Home PLAY, Leagues PLAY, Play Again); handles entry fee / gem fallback
+function playLeague(idx) {
+  const lg = THEMED_LEAGUES[idx]; if (!lg) return;
+  if (idx > highestLeagueIdx()) { showMessage('LEAGUE LOCKED', '#ff6b6b', 1500); return; }
+  const go = () => {
+    setSelectedLeague(idx);
+    window._activeLeagueIdx = idx;
+    target = leagueTarget(lg);
+    window._leagueTargetFloor = target;
+    leagueScreen.classList.add('hidden');
+    startGame();
+  };
+  if (career.coins >= lg.entry) { career.coins -= lg.entry; saveCareerStats(); go(); return; }
+  if (gems >= GEM_ENTRY_COST) {
+    bagConfirm(GEM_ENTRY_COST, 'Not enough coins.<br>Play with gems?', () => { gems -= GEM_ENTRY_COST; saveEquipmentState(); go(); });
+    return;
+  }
+  showMessage('Not enough coins!', '#ff6b6b', 1600);
+  closeAllScreens(); leagueScreen.classList.remove('hidden'); renderLeagueScreen(); showNav('league');
+}
 
 function renderLeagueScreen() {
   // Update header
@@ -27412,7 +27450,7 @@ function renderLeagueScreen() {
       </div>
       <div class="lcTargetRow">
         <span class="trLabel">🎯 TARGET</span>
-        <span class="trVal" style="color:rgba(255,255,255,0.85)">${Math.max(lg.targetFloor, target)} RUNS</span>
+        <span class="trVal" style="color:rgba(255,255,255,0.85)">${leagueTarget(lg)} RUNS</span>
         <span style="width:1px;background:rgba(255,255,255,0.1);height:20px;margin:0 4px;display:inline-block;"></span>
         <span class="trLabel">DIFFICULTY</span>
         <span class="trVal" style="color:${diffCol};font-size:10px;letter-spacing:0px">${diffStars}</span>
@@ -27449,43 +27487,7 @@ function renderLeagueScreen() {
 
   // Set up play buttons
   track.querySelectorAll('.leaguePlayBtn.active').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const lg = THEMED_LEAGUES[parseInt(btn.dataset.idx)];
-      if (career.coins < lg.entry) {
-        if (gems >= GEM_ENTRY_COST) {
-          // Offer gem payment — replace button with two-option prompt
-          const origText = btn.textContent;
-          btn.textContent = `❌ NEED COINS · USE 💎${GEM_ENTRY_COST}?`;
-          btn.dataset.awaitingGemConfirm = '1';
-          setTimeout(() => {
-            btn.textContent = origText;
-            delete btn.dataset.awaitingGemConfirm;
-          }, 2500);
-          // On second tap within window, pay with gems
-          const onConfirm = (e2) => {
-            e2.stopImmediatePropagation();
-            if (btn.dataset.awaitingGemConfirm) {
-              payLeagueEntryWithGems(parseInt(btn.dataset.idx));
-            }
-            btn.removeEventListener('click', onConfirm);
-          };
-          btn.addEventListener('click', onConfirm, { once: true });
-        } else {
-          btn.textContent = '❌ NOT ENOUGH COINS';
-          setTimeout(() => { btn.textContent = `▶ PLAY  ·  ${lg.entry.toLocaleString()}🪙`; }, 1500);
-        }
-        return;
-      }
-      career.coins -= lg.entry;
-      saveCareerStats();
-      // Store active league for result handling
-      window._activeLeagueIdx = parseInt(btn.dataset.idx);
-      // Apply target floor: if league minimum is higher than current target, use the floor
-      window._leagueTargetFloor = lg.targetFloor || 0;
-      leagueScreen.classList.add('hidden');
-      // Start game
-      startGame();
-    });
+    btn.addEventListener('click', () => playLeague(parseInt(btn.dataset.idx)));
   });
 
   // Scale-driven carousel: active card grows, others shrink
@@ -28107,8 +28109,8 @@ function kbState(slot, item) {
   const needed = owned ? (isMax ? 0 : item.cardsToLevel[level - 1]) : item.cardsToLevel[0];
   const ready = owned && !isMax && cards >= needed;
   const cost = owned && !isMax ? getUpgradeCoinCost(item, level) : 0;
-  const lockSeason = RARITY_UNLOCK_SEASON[item.rarity] || 1;
-  const lockText = item.gemOnly ? item.gemPrice + ' GEMS' : lockSeason > 1 ? 'SEASON ' + lockSeason : 'IN BAGS';
+  const lockLg = RARITY_UNLOCK_LEAGUE[item.rarity] || 0;
+  const lockText = item.gemOnly ? item.gemPrice + ' GEMS' : lockLg > highestLeagueIdx() ? THEMED_LEAGUES[lockLg].name : 'IN BAGS';
   return { level, owned, cards, maxLvl, isMax, needed, ready, cost, canAfford: career.coins >= cost,
     equipped: equippedItems[slot] === item.id, lockText, showLevel: owned ? level : 1 };
 }
@@ -30047,7 +30049,7 @@ function startBallSequence() {
 
   // ── Base ramp (innings progress + season) ──
   const baseSpeed = 0.011 + Math.min(ballsBowled * 0.0006, 0.01);
-  const seasonRamp = Math.min((league.season - 1) * 0.0008, 0.006);
+  const seasonRamp = 0;   // difficulty now comes from the league only
 
   // ── League difficulty (shifts the pool weights, not a flat multiplier) ──
   const activeLgDiff = (window._activeLeagueIdx !== undefined && window._activeLeagueIdx !== null)
@@ -30978,7 +30980,7 @@ function generateShareCard(result) {
   // league position
   c.fillStyle = '#f4d03f';
   c.font = 'bold 22px Courier New';
-  c.fillText(`SEASON ${result.season} \u2014 ${ordinal(result.leaguePos)} / 10 IN LEAGUE`, cw/2, 430);
+  c.fillText(`${result.leagueName || ''} \u2014 ${result.trophies || 0} TROPHIES`, cw/2, 430);
 
   // mini stadium illustration (simple oval + pitch, echoes the in-game look)
   const fcx = cw/2, fcy = 580, frx = 220, fry = 130;
@@ -31043,8 +31045,7 @@ function endGame() {
   const isNewBest = runs > career.bestScore;
 
   if (beatTarget) {
-    // Only advance the personal target if the player beat it (not just the floor)
-    if (runs >= target) target += TARGET_STEP;
+    // targets are set by the league now (no ever-rising personal target)
   } else if (nearMiss) {
     setTimeout(playNearMissSound, 400);
   }
@@ -31061,7 +31062,8 @@ function endGame() {
   const activeLgIdx = window._activeLeagueIdx;
   if (activeLgIdx !== undefined && activeLgIdx !== null) {
     activeLg = THEMED_LEAGUES[activeLgIdx];
-    trophyDelta = beatTarget ? activeLg.winTrophy : -activeLg.lossTrophy;
+    trophyDelta = trophyChangeFor(activeLgIdx, beatTarget, beatBy);
+    const _lgBefore = highestLeagueIdx();
     const lgCoins = beatTarget ? activeLg.winCoins : activeLg.lossCoins;
     // use the actual league entry fee for loss refund calculation
     if (beatTarget) {
@@ -31071,7 +31073,10 @@ function endGame() {
       coinsEarned = Math.round(activeLg.entry * refundPct) + activeLg.lossCoins;
     }
     trophyState.count = Math.max(0, trophyState.count + trophyDelta);
+    trophyState.best = Math.max(trophyState.best || 0, trophyState.count);
     saveTrophies();
+    // a newly unlocked league becomes your league
+    if (highestLeagueIdx() > _lgBefore) { setSelectedLeague(highestLeagueIdx()); window._newLeagueUnlocked = highestLeagueIdx(); }
     if (beatTarget && activeLg.winChest) {
       const ci = chestSlots.indexOf(null);
       if (ci !== -1) {
@@ -31113,7 +31118,7 @@ function endGame() {
   let firstWinGems = 0;
   if (beatTarget) firstWinGems = checkFirstWinOfDay();
 
-  const seasonSummary = recordLeagueMatch(runs, beatTarget, beatBy);
+  const seasonSummary = null;   // hidden 10-team season table retired (Oct 25)
   let seasonBonus = 0;
   if (!activeLg && seasonSummary) {
     seasonBonus = Math.max(0, (11 - seasonSummary.position) * 10);
@@ -31124,8 +31129,8 @@ function endGame() {
   lastResult = {
     runs, target: effectiveTarget, beatTarget, nearMiss,
     fours: thisRunFours, sixes: thisRunSixes,
-    leaguePos: sortedLeagueTable().findIndex(t=>t.isPlayer) + 1,
-    season: league.season,
+    leaguePos: 0, season: 0,
+    leagueName: activeLg ? activeLg.name : '', trophies: trophyState.count,
   };
 
   // update legacy UI (share button still uses overlay)
@@ -31139,7 +31144,6 @@ function endGame() {
   shareBtn.classList.remove('hidden');
 
   muteBtn.classList.remove('hidden');
-  earnChest();
   showInterstitialIfDue();
 
   showResultScreen({
@@ -31148,7 +31152,7 @@ function endGame() {
     coinsEarned, trophyDelta, trophyTotal: trophyState.count,
     earnedChestType, activeLg, newlyUnlocked,
     seasonSummary, seasonBonus,
-    matchInSeason: league.matchInSeason, seasonLength: SEASON_LENGTH,
+    matchInSeason: 0, seasonLength: SEASON_LENGTH,
     entryPaid: activeLg ? activeLg.entry : 0,
     firstWinGems,
   });
@@ -31252,10 +31256,7 @@ function showResultScreen(d) {
     lgNameEl.textContent = lg.name;
     lgSubEl.textContent  = lg.subtitle || 'Match complete';
     lgNameEl.style.color = lg.textColor || '#fff';
-    if (d.matchInSeason) {
-      roundChip.textContent = `RD ${d.matchInSeason}/${d.seasonLength || 14}`;
-      roundChip.style.display = '';
-    } else {
+    if (false) {
       roundChip.style.display = 'none';
     }
   } else {
@@ -31303,7 +31304,7 @@ function showResultScreen(d) {
   targetBadge.className = 'tb-' + (d.beatTarget ? 'win' : 'loss');
   if (d.beatTarget) {
     targetBadge.textContent = `TARGET ${d.target} ✓`;
-    targetLineEl.textContent = `NEXT: ${d.target}`;
+    targetLineEl.textContent = d.runs - d.target >= 40 ? 'WON BY 40+' : d.runs - d.target >= 20 ? 'WON BY 20+' : `WON BY ${d.runs - d.target}`;
   } else {
     const short = d.target - d.runs;
     targetBadge.textContent = `${short > 0 ? short + ' SHORT' : 'BEATEN'}`;
@@ -31391,15 +31392,13 @@ function showResultScreen(d) {
   // ── league progress ──
   const progBar = document.getElementById('rs-progressBar');
   if (d.activeLg) {
-    const roundNum    = d.matchInSeason  || 1;
-    const totalRounds = d.seasonLength   || 14;
-    const pct = Math.round((roundNum / totalRounds) * 100);
-    document.getElementById('rs-progRound').textContent = `RD ${roundNum} / ${totalRounds}`;
+    const _ci = currentLeagueIdx(), _cur = THEMED_LEAGUES[_ci], _nx = THEMED_LEAGUES[_ci + 1];
+    const pct = _nx ? Math.round(Math.max(0, Math.min(1, (d.trophyTotal - _cur.unlock) / Math.max(1, _nx.unlock - _cur.unlock))) * 100) : 100;
+    document.getElementById('rs-progRound').textContent = _nx ? `${d.trophyTotal} / ${_nx.unlock} \u{1F3C6} \u2192 ${_nx.name}` : 'TOP LEAGUE';
+    { const t = document.querySelector('#rs-progressBar .rs-progTitle'); if (t) t.textContent = window._newLeagueUnlocked != null ? 'NEW LEAGUE UNLOCKED!' : 'TROPHY ROAD'; window._newLeagueUnlocked = null; }
     const fill = document.getElementById('rs-progressFill');
     fill.style.width = '0%';
-    fill.style.background = d.beatTarget
-      ? 'linear-gradient(90deg,#22c55e,#16a34a)'
-      : 'linear-gradient(90deg,#555,#333)';
+    fill.style.background = 'linear-gradient(90deg,#FFE27A,#F4A30A)';
     fill.style.boxShadow = d.beatTarget ? '0 0 8px rgba(34,197,94,0.5)' : 'none';
     setTimeout(() => { fill.style.width = pct + '%'; }, 200);
     progBar.classList.remove('hidden');
@@ -31460,22 +31459,7 @@ function hideResultScreen() {
         // If there's a last-played league, replay it directly without going
         // through the carousel — unless the player beat the target (then they
         // may want to pick a different / newly unlocked league).
-        const lastIdx = window._lastLeagueIdx;
-        if (lastIdx !== undefined && lastIdx !== null && !window._lastBeatTarget) {
-          const lg = THEMED_LEAGUES[lastIdx];
-          if (lg && career.coins >= lg.entry) {
-            career.coins -= lg.entry;
-            saveCareerStats();
-            window._activeLeagueIdx = lastIdx;
-            window._leagueTargetFloor = lg.targetFloor || 0;
-            startGame();
-            return;
-          }
-        }
-        closeAllScreens();
-        leagueScreen.classList.remove('hidden');
-        renderLeagueScreen();
-        showNav('league');
+        playLeague(selectedLeagueIdx());
       }, 120);
     });
   }
