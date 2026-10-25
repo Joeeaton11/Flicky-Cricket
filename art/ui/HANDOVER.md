@@ -152,7 +152,7 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Joe's add-ons: coins/first-win gems fly into the pills (`r2Fly`); losses show the net coin change in red ("−153 · 347 BACK"); Share button uses `generateShareCard` (card now shows league + trophies); WATCH AD · 2× COINS on wins (`showRewardedVideo`, 5 a day via `flickyDoubleAds`; uses `window.Capacitor.Plugins.AdMob`, placeholder ad unit id still to be set; grants without an ad only on file:/localhost for testing). Rejected: delaying PLAY AGAIN.
 - `showResultScreen` clears any in-game burst/pill first (a BOWLED! burst could sit over the result).
 
-## Balance pass + tidy-up (Oct 25) — on branch `balance-pass`, waiting for Joe's sign-off
+## Balance pass + tidy-up (Oct 25) — live
 - Simulator (scratch, not in repo) of the batting rules: league difficulty barely moves scores (~31 → 27 runs), targets do the work; old prizes (1.2× entry) drained coins in every league above the first.
 - Changes: targets 20 → 101 (`leagueTarget` = 20 + idx×3.1); prize = 2× entry (`winCoins` set at load); loss refund cap 50%; trophies win +winTrophy+1 (+1 at 20+, +2 at 40+), loss −1.
 - Ads: plugins via `window.Capacitor.Plugins` (`capAdMob`, `capPlatform`, `admobId`); `ADMOB_CONFIG` has interstitial + rewarded ids (Google test ids — replace before release); `watchAdForGems` and 2× coins both use `showRewardedVideo`; free grant only in a desktop browser.
