@@ -36,7 +36,8 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Gameplay HUD: **parked** (Oct 24). Every ground and its HUD gets redone in the painted style, which costs a lot of credits, so it waits until the rest is tied down. Gully Cup HUD concepts (truck-art board, chai-stall chalkboard, brick-wall plates) are on the Design canvas, Gameplay HUD page. Known bugs still to fix: a stray "null" under "BOWLED!"; some grounds draw no scoreboard (e.g. the Mumbai rooftop ground).
 - Chests → **Kit Bags: done** and live (Oct 24).
 - Stats: **done** and live (Oct 25).
-- Order from here (Joe): popups, then Leagues, then Result (fix "GULLY CUP" printed twice there).
+- Popups + in-game commentary: **done** and live (Oct 25).
+- Game loop review (Oct 25): Joe asked for the loop to be nailed down before the Leagues screen. Agreed plan (wireframe in chat): 1 fix loop basics ✅, 2 Leagues screen (option A: big card carousel) ✅, 3 Result screen ✅, 4 Player screen / character creation ✅ (first part; more looks need the art batch), 5 trophy road (reward every ~10 🏆), 6 daily missions + free daily bag, 7 season pass + events, 8 gameplay HUD + per-league skins (parked).
 
 ## Design file & brand (from the Home round)
 
@@ -124,3 +125,45 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Awards: 24 achievements (14 new tiers: 150/200 innings, 25/50 wins, 50/100 played, 1k/5k/10k runs, 100/500 fours, 25/100/250 sixes). Every locked one shows a progress bar (`prog(c)` on each achievement; per-innings ones use bests: `career.bestScore`, `bestSixesInnings`, `bestBeatBy`). Order: to-claim, closest to done, then a folded "COMPLETED (n)" row.
 - Gems are **no longer auto-granted** on unlock: they wait in Stats; one CLAIM button collects all. Existing players unlock what they already qualify for on load (`checkAchievements` with an empty innings). New tier rewards were halved by Joe (all 24 total ~440 gems).
 - NEW flags (`flickyStatsNew` in localStorage): beating best innings or a fastest-to milestone sets a flag; shown as a pulsing NEW tag the next time that tab opens, then cleared. STATS nav tile badge (`#menuStatsBadge`) shows the number of rewards to claim, else NEW (`updateStatsNavBadge`, also called from `updateMenuHUD`).
+
+
+## Popups & in-game commentary (Oct 25)
+- Joe: **no Flicky on these** (he's in use in the game); liked the 3D-letter burst style (explosion burst, confetti, tilt) for FOUR / SIX / OUT and the TV-broadcast player card for milestones. He was shown 10 SIX styles (flip board, stamp, slash banner, TV bar, LED screen, fireworks, distance tracker…) and chose the burst "for now".
+- All drawn in DOM in `#fxLayer` (fixed, z 8400, pointer-events none), not on the canvas. `#message` is hidden; `showMessage(text, color, duration)` now routes: **in play** (`fxInPlay()`: state ≠ menu and Home hidden) → ball-by-ball pill (`.fxPill`, tilted; DOT BALL grey; CROSS-BAT/TIRED as a red tag) with a random commentary line (`FX_LINES`); "N RUNS TO M" → `.fxChase` banner at the **bottom** of the screen (own slot, shown once when within 10 runs, `checkMilestone`). **In menus** → toast (`.fxToast`) coloured by colour/emoji (gem purple, coin gold, ok green, no red, info navy), stacking. This fixed toasts being invisible behind menu screens.
+- `fxBig('four'|'six'|'out', {word, runs, caught})`: rays + spinning burst SVG + 3D word (stroke/extrude layer, gradient fill, shine) + ribbon (BOUNDARY · +4 / MAXIMUM · +6 / OUT · N RUNS) + commentary line + confetti. FOUR smaller than SIX. SIX is gold (purple means gems). **Positioned in the band between the scoreboard and the umpire** (computed from `canvas` rect and `PITCH_TOP()`; burst squashed to fit) so the umpire's signal stays visible — Joe flagged that. Canvas pop text for these is suppressed with `popText.dom = true`; flash/shake/particles unchanged. Whoosh-pop sound `fxBurstSound`; "+4/+6" flies to the scoreboard (`fxFlyToScore`, lands at ~35% across / 10% down — scoreboards differ per ground).
+- Milestones: `showMilestonePause` fills a TV card (`#msHead/#msNum/#msGrid…`): HALF CENTURY blue, CENTURY gold, DOUBLE CENTURY red; runs, balls, 4s, 6s, SR, best; NEW RECORD when `flickyStatsNew` has `ft<score>`; random line `MS_LINES`. Still pauses at every milestone (Joe didn't pick the "don't stop at 50" idea).
+- Stat info popup: blue card, stat short-name badge instead of emoji, tap anywhere to close.
+- Fixed: stray "null" under BOWLED (wicket theme had no sub-text).
+- Not done (offered): combos ("2 IN A ROW"), auto-dismiss 50. Per-league skins for these come with the HUD work.
+
+
+## Game loop rules (Oct 25, step 1)
+- **Target = the league's target** (`leagueTarget(lg)` = `targetFloor`, 24 Gully … 76 Eternal). The ever-rising personal target (+20 per win) is gone; `target` is set by `playLeague` and on load.
+- **Trophies by margin** (`trophyChangeFor`): win = `winTrophy` +1 at 20+ margin, +2 at 40+; loss −1, never below the unlock of your highest league reached (`trophyState.best`). Playing an **older league** (below the one your trophies put you in) gives coins and its bag but no trophies won or lost.
+- **One bag per win** (the league's bag); the random `earnChest()` after every match was removed. Free daily bags and welcome bag unchanged.
+- **PLAY on Home starts your selected league in one tap** (`playLeague(selectedLeagueIdx())`; `flickySelectedLeague`). Selecting PLAY on a Leagues card makes it your league; unlocking a new league selects it. Not enough coins → gem confirm (15 gems) or opens Leagues. PLAY AGAIN replays your selected league.
+- **Hidden 10-team season table retired**: `recordLeagueMatch` no longer called; kit rarities unlock by league (`RARITY_UNLOCK_LEAGUE`: rare at Coastal Cup, epic at ECL, legendary at ICL; kit tiles show the league name instead of "SEASON N"); bowling season ramp removed (difficulty = league). Result screen's "RD n/14" bar now shows trophies to the next league ("NEW LEAGUE UNLOCKED!" when one opens).
+
+## Leagues screen (Oct 25, step 2)
+- Option A built: blue game UI, round back button + trophy/coin pills, trophy bar to the next league (`#leagueRoad`), one big card per league (`renderLeagueScreen`). Opens on your selected league (scrolls to it). Card: art with "LEAGUE n / 27" chip and YOUR LEAGUE / COINS ONLY chip, name, subtitle, rewards (coin, trophies +winTrophy–+2 or "NO TROPHIES" for older leagues, bag art from `CHEST_IMG_SRC`), target + difficulty balls, a dashed note when the league brings a new kit rarity or bag tier, yellow PLAY with entry. Locked: padlock over the art, "WIN n MORE", "UNLOCKS AT n". PLAY calls `playLeague(idx)`. Small dots (unlocked lighter). New CSS sits after the old league rules (the old ones are still in the file and would otherwise win).
+
+## Result screen (Oct 25, step 3)
+- New `#resultScreen.r2` markup (`r2*` ids; kept `rs-playAgainBtn`, `rs-menuBtn`, `rs-playCost`, `.rs-playLabel`, sparkle canvas). Painted league art header (same live-art still frame as the Leagues card; league name shown once, which fixed the doubled "GULLY CUP"), gem/coin pills, outcome ribbon (YOU WON! / SO CLOSE! / OUT!), score card (runs count-up, target badge, margin line, 4s/6s/balls/SR), three reward tiles (coins; trophies with reason or OLDER LEAGUE / LEAGUE FLOOR; bag art or LOCKERS FULL / NO BAG), trophy road bar animating to the new total + gold "NEW LEAGUE UNLOCKED!" card, extras as one row of badges, buttons HOME · SHARE · PLAY AGAIN (entry of your selected league; "PLAY <league>" after an unlock). Staggered pop-in via `--d`.
+- Joe's add-ons: coins/first-win gems fly into the pills (`r2Fly`); losses show the net coin change in red ("−153 · 347 BACK"); Share button uses `generateShareCard` (card now shows league + trophies); WATCH AD · 2× COINS on wins (`showRewardedVideo`, 5 a day via `flickyDoubleAds`; uses `window.Capacitor.Plugins.AdMob`, placeholder ad unit id still to be set; grants without an ad only on file:/localhost for testing). Rejected: delaying PLAY AGAIN.
+- `showResultScreen` clears any in-game burst/pill first (a BOWLED! burst could sit over the result).
+
+## Balance pass + tidy-up (Oct 25) — live
+- Simulator (scratch, not in repo) of the batting rules: league difficulty barely moves scores (~31 → 27 runs), targets do the work; old prizes (1.2× entry) drained coins in every league above the first.
+- Changes: targets 20 → 101 (`leagueTarget` = 20 + idx×3.1); prize = 2× entry (`winCoins` set at load); loss refund cap 50%; trophies win +winTrophy+1 (+1 at 20+, +2 at 40+), loss −1.
+- Ads: plugins via `window.Capacitor.Plugins` (`capAdMob`, `capPlatform`, `admobId`); `ADMOB_CONFIG` has interstitial + rewarded ids (Google test ids — replace before release); `watchAdForGems` and 2× coins both use `showRewardedVideo`; free grant only in a desktop browser.
+- Notifications: run `npm install && npm run sync` on Joe's Mac, then rebuild (ios/android are not in the repo).
+- Removed 32 unused functions (old season table, old Kit tabs, old colour customiser, legacy chest drawing…), ~57 KB.
+
+
+## Player (Oct 25, step 4 — first part, live)
+- Art (Figma file WjYzgtNxSxMY4XIT8Oaqem): style tests 104:191 (chunky) and 105:191 (realistic); chosen base players 106:191 (male) and 107:191 (female), glossy chunky 3D, navy kit with gold trim, made on #00FF00 and keyed out. Kept in `art/player/player-m.png`, `player-f.png` (760px tall). Embedded as WebP in `PLAYER_ART` with a baked mask (R = navy kit/cap/straps, G = gold trim).
+- **Kit colours are recoloured in code** (`renderPlayer`, HSV, shading kept): 12 shirt & cap colours (`PLAYER_SHIRTS`; pink at Fairground Cup, sky at ECL, gold at ICL, white 60 gems), 6 trims (`PLAYER_TRIMS`; silver at Coastal Cup), 6 club colour presets (`PLAYER_SETS`). **Skin can't be recoloured** (bat wood is skin-coloured), so skin tones, hair, faces, headwear, eyewear, bat stickers and celebration poses need the next art batch (~8–12 images; Joe approved the Mix approach).
+- Screens: first launch opens "CREATE YOUR PLAYER" (`openPlayerScreen('create')`, tabs BODY · KIT COLOURS · NAME, SURPRISE ME, START → a brand-new player goes straight into their first match; welcome toasts are held until START). PLAYER tab (new 1st nav tile, icon = live head crop; nav is now 5 tiles) uses the same screen in edit mode. Saved in `flickyPlayer` {g, shirt, trim, name, flag, team}; gem buys in `flickyCosmetics`.
+- Player shows on Home (left of the pitch, idle bob, tap opens Player), in the match as a name plate bottom-left (`#matchName`), on the share card (team or name), and as the hero of the Result screen: big on the left with spotlight, rays + confetti on a win, slump on a loss, a random speech bubble, team chip top-left; ribbon + stamped run count on the right. The match batter's shirt and cap use the chosen colour.
+- Result layout checked at 360×740, 375×667, 390×844, 430×932 (compact rules at max-height 760 and 700); PLAY button is two lines (action + league name & entry).
+- Next: art batch (skin tones, hair, faces, headwear, eyewear, stickers, win/lose poses), then trophy road rewards to hand them out.
