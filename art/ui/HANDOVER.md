@@ -170,6 +170,6 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 
 ## Player customisation (Oct 25, parked)
 - Live on main: slide-down panel, collection bar, NEW badges, changeable trousers (`PLAYER_PANTS`, mask B channel), club sets include trousers, try-on for locked colours, match batter wears your trousers.
-- On branch `player-panel-trousers` only (NOT merged): commit d72d970 adds 5 preset looks per gender (separate full-character images). Joe wants full mix-and-match instead (pick beard / hair / skin separately on the same character), so don't merge as is.
+- Also live: 5 preset looks per gender (`PLAYER_ART` m1–m4/f1–f4, LOOK picker on BODY tab; masks rebuilt so trouser colour no longer bleeds onto gloves/pads). Joe ultimately wants full mix-and-match (beard / hair / skin picked separately on one character) — presets are the stopgap.
 - Tried and rejected: recolouring skin/hair in code on painted art (halos, bat/skin confusion), and pasting beards/hair from other generated images (never fit the face).
 - Plan when resumed: use Figma Weave (account linked; Nano Banana 2.1 edit, ~7 Weave credits per edit, 143 left) to edit the ONE base male/female ("add a goatee, change nothing else"), then diff against the base to cut out pixel-perfect layers. Blocked on the session network: add `media.weavy.ai` (and `mcp.figma.com`) to claude.ai Settings → Capabilities → allowed domains so results can be downloaded. First test (short beard on base male) already generated in Weave.
