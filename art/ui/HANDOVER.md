@@ -167,3 +167,9 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Player shows on Home (left of the pitch, idle bob, tap opens Player), in the match as a name plate bottom-left (`#matchName`), on the share card (team or name), and as the hero of the Result screen: big on the left with spotlight, rays + confetti on a win, slump on a loss, a random speech bubble, team chip top-left; ribbon + stamped run count on the right. The match batter's shirt and cap use the chosen colour.
 - Result layout checked at 360×740, 375×667, 390×844, 430×932 (compact rules at max-height 760 and 700); PLAY button is two lines (action + league name & entry).
 - Next: art batch (skin tones, hair, faces, headwear, eyewear, stickers, win/lose poses), then trophy road rewards to hand them out.
+
+## Player customisation (Oct 25, parked)
+- Live on main: slide-down panel, collection bar, NEW badges, changeable trousers (`PLAYER_PANTS`, mask B channel), club sets include trousers, try-on for locked colours, match batter wears your trousers.
+- On branch `player-panel-trousers` only (NOT merged): commit d72d970 adds 5 preset looks per gender (separate full-character images). Joe wants full mix-and-match instead (pick beard / hair / skin separately on the same character), so don't merge as is.
+- Tried and rejected: recolouring skin/hair in code on painted art (halos, bat/skin confusion), and pasting beards/hair from other generated images (never fit the face).
+- Plan when resumed: use Figma Weave (account linked; Nano Banana 2.1 edit, ~7 Weave credits per edit, 143 left) to edit the ONE base male/female ("add a goatee, change nothing else"), then diff against the base to cut out pixel-perfect layers. Blocked on the session network: add `media.weavy.ai` (and `mcp.figma.com`) to claude.ai Settings → Capabilities → allowed domains so results can be downloaded. First test (short beard on base male) already generated in Weave.
