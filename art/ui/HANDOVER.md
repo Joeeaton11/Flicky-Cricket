@@ -37,7 +37,7 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Chests → **Kit Bags: done** and live (Oct 24).
 - Stats: **done** and live (Oct 25).
 - Popups + in-game commentary: **done** and live (Oct 25).
-- Game loop review (Oct 25): Joe asked for the loop to be nailed down before the Leagues screen. Agreed plan (wireframe in chat): 1 fix loop basics ✅, 2 Leagues screen (option A: big card carousel) ✅, 3 Result screen (fix "GULLY CUP" printed twice), 4 Player screen / character creation (cosmetics only, unlockables), 5 trophy road (reward every ~10 🏆), 6 daily missions + free daily bag, 7 season pass + events, 8 gameplay HUD + per-league skins (parked).
+- Game loop review (Oct 25): Joe asked for the loop to be nailed down before the Leagues screen. Agreed plan (wireframe in chat): 1 fix loop basics ✅, 2 Leagues screen (option A: big card carousel) ✅, 3 Result screen ✅, 4 Player screen / character creation (cosmetics only, unlockables), 5 trophy road (reward every ~10 🏆), 6 daily missions + free daily bag, 7 season pass + events, 8 gameplay HUD + per-league skins (parked).
 
 ## Design file & brand (from the Home round)
 
@@ -146,3 +146,8 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 
 ## Leagues screen (Oct 25, step 2)
 - Option A built: blue game UI, round back button + trophy/coin pills, trophy bar to the next league (`#leagueRoad`), one big card per league (`renderLeagueScreen`). Opens on your selected league (scrolls to it). Card: art with "LEAGUE n / 27" chip and YOUR LEAGUE / COINS ONLY chip, name, subtitle, rewards (coin, trophies +winTrophy–+2 or "NO TROPHIES" for older leagues, bag art from `CHEST_IMG_SRC`), target + difficulty balls, a dashed note when the league brings a new kit rarity or bag tier, yellow PLAY with entry. Locked: padlock over the art, "WIN n MORE", "UNLOCKS AT n". PLAY calls `playLeague(idx)`. Small dots (unlocked lighter). New CSS sits after the old league rules (the old ones are still in the file and would otherwise win).
+
+## Result screen (Oct 25, step 3)
+- New `#resultScreen.r2` markup (`r2*` ids; kept `rs-playAgainBtn`, `rs-menuBtn`, `rs-playCost`, `.rs-playLabel`, sparkle canvas). Painted league art header (same live-art still frame as the Leagues card; league name shown once, which fixed the doubled "GULLY CUP"), gem/coin pills, outcome ribbon (YOU WON! / SO CLOSE! / OUT!), score card (runs count-up, target badge, margin line, 4s/6s/balls/SR), three reward tiles (coins; trophies with reason or OLDER LEAGUE / LEAGUE FLOOR; bag art or LOCKERS FULL / NO BAG), trophy road bar animating to the new total + gold "NEW LEAGUE UNLOCKED!" card, extras as one row of badges, buttons HOME · SHARE · PLAY AGAIN (entry of your selected league; "PLAY <league>" after an unlock). Staggered pop-in via `--d`.
+- Joe's add-ons: coins/first-win gems fly into the pills (`r2Fly`); losses show the net coin change in red ("−153 · 347 BACK"); Share button uses `generateShareCard` (card now shows league + trophies); WATCH AD · 2× COINS on wins (`showRewardedVideo`, 5 a day via `flickyDoubleAds`; uses `window.Capacitor.Plugins.AdMob`, placeholder ad unit id still to be set; grants without an ad only on file:/localhost for testing). Rejected: delaying PLAY AGAIN.
+- `showResultScreen` clears any in-game burst/pill first (a BOWLED! burst could sit over the result).
