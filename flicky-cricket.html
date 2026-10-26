@@ -5403,7 +5403,7 @@ if (new URLSearchParams(location.search).get('scene')) {
     shareBtn.classList.add('hidden');
     overlay.classList.add('hidden');
     muteBtn.classList.add('hidden');
-    runs = 0; ballsBowled = 0; thisRunFours = 0; thisRunSixes = 0; window._ballLog = [];
+    runs = 0; ballsBowled = 0; thisRunFours = 0; thisRunSixes = 0; window._ballLog = []; try { _gl.marks = []; _gl.petals = []; } catch (e) {}
     shotHistory = []; energy = MAX_ENERGY;
     rollStadiumConditions();
     updateHud();
@@ -31199,6 +31199,103 @@ function drawGullyDustV4() {
   ctx.restore();
 }
 
+
+// ════════ GULLY CUP life: bunting, kite, crowd hops, six petals, pitch marks, afternoon light ════════
+const _gl = { petals: [], marks: [], lastBoundaryAt: 0 };
+function _gCheering() { return popTextType === 'boundary' && performance.now() - popTextStartTime < 1900; }
+// crowd strips cut from the cached background, redrawn a few px higher in a bouncing rhythm while they cheer
+const G_CROWD = [[0.00, 0.44, 0.075, 0.86], [0.925, 0.44, 1.00, 0.86], [0.13, 0.245, 0.32, 0.33], [0.72, 0.235, 0.93, 0.33]];
+function gullyLiveBack() {
+  const now = performance.now(), cache = window._gPlateCache; if (!cache) return;
+  const cheer = _gCheering(), sx = cache.width / W, sy = cache.height / H;
+  G_CROWD.forEach(([x0, y0, x1, y1], i) => {
+    const amp = cheer ? 5 : 0.9, sp = cheer ? 95 : 650;
+    const dy = -Math.abs(Math.sin(now / sp + i * 1.7)) * amp;
+    if (Math.abs(dy) < 0.15) return;
+    const X = W * x0, Y = H * y0, w = W * (x1 - x0), h = H * (y1 - y0);
+    ctx.drawImage(cache, X * sx, Y * sy, w * sx, h * sy, X, Y + dy, w, h);
+  });
+  // bunting strung across the lane, fluttering
+  const cols = ['#ff4f6e', '#ffcf2a', '#2a8ae0', '#22b36a', '#ff8a2a', '#ffffff', '#b45ae0'];
+  [[0.252, 0.022, 0], [0.236, 0.016, 1.9]].forEach(([fy, sag, ph], j) => {
+    const yAt = x => H * fy + Math.sin(x / W * Math.PI) * H * sag;
+    ctx.save(); ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(0, yAt(0));
+    for (let x = 0; x <= W; x += 6) ctx.lineTo(x, yAt(x)); ctx.stroke();
+    for (let i = 0, x = 6 + j * 7; x < W; x += 16, i++) {
+      const y = yAt(x), sw = Math.sin(now / 240 + i * 0.8 + ph) * 2.6;
+      ctx.fillStyle = cols[(i + j * 3) % cols.length]; ctx.beginPath(); ctx.moveTo(x - 5, y); ctx.lineTo(x + 5, y); ctx.lineTo(x + sw, y + 11); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(30,15,10,0.7)'; ctx.lineWidth = 0.9; ctx.stroke();
+    }
+    ctx.restore();
+  });
+  // a kite drifting above the rooftops on the right, string trailing to a balcony
+  { const t = now / 1000, kx = W * (0.90 + Math.sin(t * 0.35) * 0.03), ky = H * (0.335 + Math.sin(t * 0.6) * 0.012), rot = Math.sin(t * 1.3) * 0.25;
+    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(kx, ky + 9);
+    ctx.quadraticCurveTo(kx - W * 0.05, ky + H * 0.05, W * 0.86, H * 0.43); ctx.stroke();
+    ctx.translate(kx, ky); ctx.rotate(rot);
+    ctx.fillStyle = '#ff3d6e'; ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, 0); ctx.lineTo(0, 11); ctx.lineTo(-8, 0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffcf2a'; ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, 0); ctx.lineTo(0, 0); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, 0); ctx.lineTo(0, 11); ctx.lineTo(-8, 0); ctx.closePath(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(0, 11); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke();
+    ctx.strokeStyle = '#ffcf2a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, 11);
+    for (let k = 1; k <= 4; k++) ctx.lineTo(Math.sin(t * 5 + k) * 3, 11 + k * 5); ctx.stroke();
+    ctx.restore(); }
+}
+// marigold petals and confetti showering from the balconies on a six
+function gullyLiveFront() {
+  const now = performance.now();
+  if (popTextType === 'boundary' && popTextIsSix && popTextStartTime !== _gl.lastBoundaryAt && now - popTextStartTime < 500) {
+    _gl.lastBoundaryAt = popTextStartTime;
+    const pc = ['#ff8a1a', '#ffb31a', '#ffd23a', '#ff5a3a', '#ffffff', '#ff4f9e', '#2ac0ff'];
+    for (let i = 0; i < 150; i++) {
+      const side = i % 3, x = side === 0 ? Math.random() * W * 0.3 : side === 1 ? W - Math.random() * W * 0.3 : Math.random() * W;
+      _gl.petals.push({ x, y: H * (0.20 + Math.random() * 0.22), vx: (Math.random() - 0.5) * 1.6, vy: 0.8 + Math.random() * 1.6,
+        r: 3 + Math.random() * 3, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3, c: pc[i % pc.length], petal: i % 2 === 0, life: 1 });
+    }
+  }
+  if (!_gl.petals.length) return;
+  ctx.save();
+  _gl.petals = _gl.petals.filter(p => {
+    p.x += p.vx + Math.sin(now / 300 + p.rot) * 0.5; p.y += p.vy; p.rot += p.vr; p.life -= 0.0045;
+    if (p.life <= 0 || p.y > H) return false;
+    ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillStyle = p.c; ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    if (p.petal) { ctx.beginPath(); ctx.ellipse(0, 0, p.r, p.r * 0.55, 0, 0, 7); ctx.fill(); }
+    else ctx.fillRect(-p.r * 0.6, -p.r * 0.3, p.r * 1.2, p.r * 0.6);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.translate(shake.x, shake.y);
+    return true;
+  });
+  ctx.restore();
+}
+// where each delivery pitches: a scuff on the concrete with a puff of dust; the last few stay, fading
+function gullyNoteBall(px, py, t) {
+  if (t < 0.08) { ball._gMarked = false; return; }
+  if (!ball._gMarked && t >= 0.62) {
+    ball._gMarked = true; _gl.marks.push({ x: px, y: py, at: performance.now() }); if (_gl.marks.length > 6) _gl.marks.shift();
+    try { spawnParticles(px, py, 'rgba(200,170,130,ALPHA)', 7, 0.35); } catch (e) {}
+  }
+}
+function gullyPitchMarks() {
+  const now = performance.now();
+  _gl.marks.forEach((m, i) => {
+    const age = (now - m.at) / 1000, a = Math.max(0.35, 0.85 - age * 0.04) * (0.6 + 0.4 * (i + 1) / _gl.marks.length);
+    ctx.fillStyle = `rgba(150,120,90,${(a * 0.45).toFixed(2)})`; ctx.beginPath(); ctx.ellipse(m.x, m.y + 0.5, 7.5, 3.6, 0, 0, 7); ctx.fill();   // dust ring
+    ctx.fillStyle = `rgba(70,50,35,${a.toFixed(2)})`; ctx.beginPath(); ctx.ellipse(m.x, m.y, 4.6, 2.3, 0, 0, 7); ctx.fill();                   // scuff
+    ctx.fillStyle = `rgba(200,60,50,${(a * 0.55).toFixed(2)})`; ctx.beginPath(); ctx.ellipse(m.x + 0.8, m.y - 0.3, 2.2, 1, 0.3, 0, 7); ctx.fill(); // red from the ball
+  });
+}
+// warm late-afternoon light over the ground and players (the HUD is drawn after this, untinted)
+function gullyAfternoonLight() {
+  ctx.save();
+  ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = 'rgba(255,160,80,0.35)'; ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'screen';
+  const g = ctx.createRadialGradient(W * 1.05, H * 0.18, 0, W * 1.05, H * 0.18, H * 0.75);
+  g.addColorStop(0, 'rgba(255,214,150,0.22)'); g.addColorStop(1, 'rgba(255,214,150,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'multiply';
+  const b = ctx.createRadialGradient(0, H, 0, 0, H, H * 0.5);
+  b.addColorStop(0, 'rgba(150,110,170,0.22)'); b.addColorStop(1, 'rgba(150,110,170,0)'); ctx.fillStyle = b; ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
 function drawGullyPaintedGround() {
   if (window.GULLY_V4 && g4Ready()) return drawGullyV4Ground();   // layered build, parked
   // The plate is only scaled evenly (never warped). The field and kerb are drawn here, exactly on the
@@ -31263,6 +31360,7 @@ function drawGullyPaintedGround() {
     window._gPlateCache = cv; window._gPlateKey = key;
   }
   ctx.drawImage(window._gPlateCache, 0, 0, W, H);
+  gullyLiveBack();
   drawGullyDust();
 }
 // lived-in dust on the field: afternoon building shadow, scuffs and run-up marks, a chalk hopscotch
@@ -31312,6 +31410,7 @@ function drawGullyPitch() {
       ctx.drawImage(P, 0, sy * ihS, iw, 4 * ihS + 0.5, W/2 - w * (235 / 470), y, w, 4 * sk + 0.6);
     }
     ctx.restore();
+    gullyPitchMarks();
     return;
   }
   const t = PITCH_TOP(), b = PITCH_BOTTOM(), tw = PITCH_TOP_W(), bw = PITCH_BOTTOM_W(), cx = W/2;
@@ -33632,7 +33731,7 @@ function drawStands() {
     ctx.save();
     try { fn(); } catch(e) { if (!window._sceneErrLogged) { window._sceneErrLogged = true; console.warn('scene draw error', currentTimeOfDay.key, e); } }
     ctx.restore();
-    if (!window._sbDrawn) {
+    if (!window._sbDrawn && !gullyPainted()) {
       ctx.save(); try { drawSceneScoreboard(); } catch(e) {} ctx.restore();
     }
   };
@@ -56168,6 +56267,7 @@ function drawBall() {
     px = lerp(W/2, W/2 + (ball.targetX-0.5)*PITCH_BOTTOM_W()*2, t);
     py = lerp(PITCH_TOP()+6, PITCH_BOTTOM()-8, Math.min(t,1));
     size = lerp(3, 7, Math.min(t,1));
+    if (gullyPainted()) gullyNoteBall(px, py, t);
   }
 
   if (currentTimeOfDay.key === 'beach') {
@@ -57195,6 +57295,7 @@ function gameLoop() {
     drawBoundaryParticles();
     drawPopText();
     drawSwipeTrail();
+    if (gullyPainted()) { gullyLiveFront(); gullyAfternoonLight(); drawSceneScoreboard(); }
 
     ctx.restore();
   } catch(e) {
