@@ -7,7 +7,7 @@ GS = {'bat': 0.117, 'shot': 0.1485, 'react': 0.126}
 def grp(n): return 'react' if n in ('bat_out', 'bat_raise') else 'shot' if n.startswith('shot_') else 'bat'
 ENT = re.compile(r'"((?:bat|shot)_[a-z_]+)": \{"src": "data:image/webp;base64,([^"]*)", "ax": ([0-9.]+), "ay": ([0-9.]+), "k": ([0-9.]+)')
 RIGHTMOST = False
-LEVEL = {'shot_pull_b'}   # feet level or kneeling: use the rightmost (back) shoe                                     # poses with both feet level
+LEVEL = {'shot_pull_b', 'shot_scoop_c', 'shot_scoop'}   # feet level or kneeling: use the rightmost (back) shoe                                     # poses with both feet level
 def backfoot(b64, rightmost=False):
     global RIGHTMOST; RIGHTMOST = rightmost
     im = np.array(Image.open(io.BytesIO(base64.b64decode(b64))).convert('RGBA')).astype(int); h = im.shape[0]
