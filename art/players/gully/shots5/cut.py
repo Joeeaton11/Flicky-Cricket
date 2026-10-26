@@ -2,11 +2,12 @@
 # Each sheet holds [contact, follow-through]. Cut, 320 px tall, size by helmet-to-shoe height vs the stance, anchor at the shoes.
 import cv2, numpy as np, json, sys
 from PIL import Image
-SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0}
+SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0, 'revsweep': 0.70}
 # Joe's picks for the pull: wind-up from the single sketch, contact from the first sheet (mirrored), finish from the second
-PICK = {'pull': [('pull_v1_src.png', 0, '_b', False), ('pull_v1_src.png', 1, '_c', True), ('pull_src.png', 2, '', False)]}
-TAGS = {'pull': ['_b', '_c', '']}       # three-frame shots: wind-up, contact, follow-through
-FLIP = {}                    # frames drawn on the wrong side, mirrored to match the reference          # name: how low the pose sits vs standing (lunge)
+PICK = {'revsweep': [('revsweep_windup_src.png', 0, '_b', False), ('revsweep_src.png', 1, '_c', True), ('revsweep_src.png', 2, '', True)],
+        'pull': [('pull_v1_src.png', 0, '_b', False), ('pull_v1_src.png', 1, '_c', True), ('pull_src.png', 2, '', False)]}
+TAGS = {'pull': ['_b', '_c', ''], 'revsweep': ['_b', '_c', '']}       # three-frame shots: wind-up, contact, follow-through
+FLIP = {'revsweep': [0, 1, 2]}          # drawn kneeling on the wrong knee: mirrored = right knee down, swept to the off side                    # frames drawn on the wrong side, mirrored to match the reference          # name: how low the pose sits vs standing (lunge)
 meta = json.load(open('meta.json')) if __import__('os').path.exists('meta.json') else {}
 SC_S = 0.117 / 0.6262; OFF_S = (47 - 66.7) * SC_S; SHOT = 0.1485
 def figures(path):
@@ -21,7 +22,9 @@ for name, LOW in SHEETS.items():
         F = figures(name + '_src.png'); jobs = [(F, i, tag, i in FLIP.get(name, [])) for i, tag in enumerate(TAGS.get(name, ['_c', '']))]
     for (sm, al, boxes), fi, tag, flip in jobs:
         x, y, w, h, a = boxes[fi]
-        c = sm[y:y + h, x:x + w].copy(); A = al[y:y + h, x:x + w]
+        c = sm[y:y + h, x:x + w].copy(); A = al[y:y + h, x:x + w].copy()
+        nn_, ll_, ss_, _ = cv2.connectedComponentsWithStats((A > 0.5).astype(np.uint8)); big_ = 1 + np.argmax(ss_[1:, 4])
+        A *= cv2.dilate(np.isin(ll_, [i for i in range(1, nn_) if ss_[i][4] > 0.1 * ss_[big_][4]]).astype(np.uint8), np.ones((5, 5), np.uint8))
         cb, cg, cr = c[..., 0], c[..., 1], c[..., 2]; c[..., 1] = np.where(A < 1, np.minimum(cg, np.maximum(cr, cb) + 8), cg)
         rgba = np.dstack([c, A * 255]).clip(0, 255).astype(np.uint8)
         ys, xs = np.nonzero(rgba[..., 3] > 10); rgba = rgba[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
