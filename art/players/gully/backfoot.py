@@ -23,10 +23,18 @@ found = {m.group(1): m for m in ENT.finditer(s)}
 sx, sy = backfoot(found['bat_stance'].group(2)); m = found['bat_stance']
 scS = GS['bat'] / float(m.group(5)); ax0, ay0 = float(m.group(3)), float(m.group(4))
 tdx, tdy = (sx - ax0) * scS, (sy - ay0) * scS              # stance back foot relative to the anchor, in screen units (per H)
+def torso(b64):   # centre of the shirt's lower edge (the hips)
+    im = np.array(Image.open(io.BytesIO(base64.b64decode(b64))).convert('RGBA')).astype(int)
+    r, g, bb, a = im[..., 0], im[..., 1], im[..., 2], im[..., 3]
+    navy = (bb > r + 18) & (bb > g + 6) & (a > 128); rows = np.nonzero(navy.sum(1) > 8)[0]; y = rows.max()
+    xs = np.nonzero(navy[max(0, y - 12):y + 1].any(0))[0]; return float((xs.min() + xs.max()) / 2)
+TORSO = {'shot_revsweep_b', 'shot_revsweep_c', 'shot_revsweep'}   # kneeling: hips stay over the stance's hips (the shin lies back, so the shoe isn't under him)
+tx_s = torso(found['bat_stance'].group(2)); thx = (tx_s - ax0) * scS
 out = {}
 for n, m in found.items():
     if n in ('bat_out', 'bat_raise'): continue             # the walk-off / celebration move on their own
     x, y = backfoot(m.group(2), n in LEVEL); sc = GS[grp(n)] / float(m.group(5))
+    if n in TORSO: x = torso(m.group(2)); out[n] = (round(x - thx / sc, 1), round(y - tdy / sc, 1)); continue
     out[n] = (round(x - tdx / sc, 1), round(y - tdy / sc, 1))
 def fix(mm):
     n = mm.group(1)
