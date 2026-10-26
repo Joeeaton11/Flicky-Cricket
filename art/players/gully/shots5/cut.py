@@ -4,7 +4,7 @@ import cv2, numpy as np, json, sys
 from PIL import Image
 SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0}
 TAGS = {'pull': ['_b', '_c', '']}       # three-frame shots: wind-up, contact, follow-through
-FLIP = {'pull': [1]}                    # frames drawn on the wrong side, mirrored to match the reference          # name: how low the pose sits vs standing (lunge)
+FLIP = {}                    # frames drawn on the wrong side, mirrored to match the reference          # name: how low the pose sits vs standing (lunge)
 meta = json.load(open('meta.json')) if __import__('os').path.exists('meta.json') else {}
 SC_S = 0.117 / 0.6262; OFF_S = (47 - 66.7) * SC_S; SHOT = 0.1485
 for name, LOW in SHEETS.items():
