@@ -4,7 +4,8 @@ import cv2, numpy as np, json, sys
 from PIL import Image
 SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0, 'revsweep': 0.70}
 # Joe's picks for the pull: wind-up from the single sketch, contact from the first sheet (mirrored), finish from the second
-PICK = {'revsweep': [('revsweep_windup_src.png', 0, '_b', False), ('revsweep_src.png', 1, '_c', True), ('revsweep_src.png', 2, '', True)],
+# Joe's reverse-sweep refs run backlift (bat up on the leg side) -> contact -> finish (bat swept low out to the off side)
+PICK = {'revsweep': [('revsweep_src.png', 2, '_b', True), ('revsweep_src.png', 1, '_c', True), ('revsweep_windup_src.png', 0, '', False)],
         'pull': [('pull_v1_src.png', 0, '_b', False), ('pull_v1_src.png', 1, '_c', True), ('pull_src.png', 2, '', False)]}
 TAGS = {'pull': ['_b', '_c', ''], 'revsweep': ['_b', '_c', '']}       # three-frame shots: wind-up, contact, follow-through
 FLIP = {'revsweep': [0, 1, 2]}          # drawn kneeling on the wrong knee: mirrored = right knee down, swept to the off side                    # frames drawn on the wrong side, mirrored to match the reference          # name: how low the pose sits vs standing (lunge)
