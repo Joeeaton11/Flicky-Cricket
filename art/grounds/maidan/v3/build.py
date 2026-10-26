@@ -14,7 +14,7 @@ def pop(im):   # make the painting pop like the new props: richer saturation, a 
     c = im[..., :3]; hsv = cv2.cvtColor(c, cv2.COLOR_BGR2HSV).astype(np.float32); hsv[..., 1] = np.clip(hsv[..., 1] * 1.16, 0, 255)
     c = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR).astype(np.float32); c = np.clip((c - 128) * 1.07 + 132, 0, 255).astype(np.uint8)
     return np.dstack([c, im[..., 3]]) if im.shape[2] == 4 else c
-plate = pop(cv2.imread('../v2/plate.png')); Image.fromarray(cv2.cvtColor(plate, cv2.COLOR_BGR2RGB)).save('../../../../assets/maidan/plate.webp', quality=88, method=6)
+plate = pop(cv2.imread('../v2/plate_calm.png')); Image.fromarray(cv2.cvtColor(plate, cv2.COLOR_BGR2RGB)).save('../../../../assets/maidan/plate.webp', quality=88, method=6)
 plate = plate.astype(np.float32); OH = plate.shape[0]
 yy, xx = np.mgrid[0:OH, 0:1170]
 field = ((xx - 585) / (0.46 * 1170 + 26)) ** 2 + ((yy - 0.6 * 2532) / (0.335 * 2532 + 26)) ** 2 < 1

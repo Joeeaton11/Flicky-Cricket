@@ -31688,7 +31688,7 @@ const G_SCENES = {
     top: 663, src: { plate: 'assets/maidan/plate.webp', sprites: 'assets/maidan/sprites.webp' }, img: {}, pitch: 'mat',
     atlas: {"treeR":[0,0,146,608],"treeL":[150,0,158,336],"umbL":[312,0,129,250],"sightscreen":[445,0,311,218],"vadapav":[760,0,148,177],"scorer":[912,0,185,175],"coconut":[1101,0,142,164],"kids":[1247,0,141,155],"kit":[1392,0,153,152],"team":[1549,0,219,150],"bikes":[1772,0,187,139]},
     pxPerAtlas: 1,   // v3: props (Figma 170:191) + the painting's trees/groups, all packed at plate scale
-    sprites: [["treeL",78,1006,1,0,0,0],["umbL",12,1265,1,0,1,0],["treeR",1164,1278,1,0,1,0],["vadapav",1138,1130,1,0,0,1],["kids",1214,1700,1,0,1,1],["team",130,2300,1,0,1,1],["scorer",1060,2300,1,0,0,1],["sightscreen",600,2596,1,0,0,1],["kit",365,2528,1,0,0,1],["coconut",845,2528,1,0,1,1],["bikes",1090,2535,1,0,0,1]],
+    sprites: [["treeL",78,1006,1,0,0,0],["umbL",12,1265,1,0,1,0],["treeR",1164,1278,1,0,1,0],["vadapav",1138,1130,1,0,0,1],["kids",1214,1700,1,0,1,1],["team",130,2300,1,0,1,1],["scorer",1060,2300,1,0,0,1],["sightscreen",600,2596,1,0,0,1],["kit",365,2528,1,0,0,1],["coconut",845,2528,1,0,1,1],["bikes",1090,2535,1,0,0,1],["bikes",30,1760,1,1,0,1]],
     boundary: 'stones', birds: [[80, 230], [900, 230]],
   },
 };
@@ -31702,15 +31702,67 @@ function gcupSprite(c, sc, e, dy) {
 // whitewashed boundary stones, the maidan way: one every ~9 px round the oval, each with its own little shadow
 function gcupStones(c) {
   const cx = W / 2, cy = H * FIELD_CY, rx = W * FIELD_RX + 3, ry = H * FIELD_RY + 3, k = W / 390;
-  const N = Math.round(Math.PI * (rx + ry) / (7.2 * k)); let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const N = Math.round(Math.PI * (rx + ry) / (11 * k)), FLAG = ['#e8433a', '#ffc928', '#2f86e0', '#29b05c']; let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   for (let i = 0; i < N; i++) {
-    const a = i / N * Math.PI * 2, x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry, w = (3.4 + rnd() * 0.8) * k, h = (2.4 + rnd() * 0.5) * k;
+    const a = i / N * Math.PI * 2, x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry, w = (4.4 + rnd() * 0.8) * k, h = (3.0 + rnd() * 0.5) * k;
     c.fillStyle = 'rgba(70,45,10,0.30)'; c.beginPath(); c.ellipse(x - 1.4 * k, y + 1.2 * k, w, h * 0.8, 0, 0, 7); c.fill();
     c.fillStyle = '#f4f1e6'; c.strokeStyle = '#3a2e1c'; c.lineWidth = 0.9 * k;
     c.beginPath(); c.ellipse(x, y, w, h, (rnd() - 0.5) * 0.4, 0, 7); c.fill(); c.stroke();
     c.fillStyle = '#c9c2ad'; c.beginPath(); c.ellipse(x - w * 0.15, y + h * 0.35, w * 0.75, h * 0.45, 0, 0, 7); c.fill();
     c.fillStyle = '#ffffff'; c.beginPath(); c.ellipse(x + w * 0.25, y - h * 0.35, w * 0.35, h * 0.25, 0, 0, 7); c.fill();
+    if (i % 9 === 4) {   // a little pennant on a stick every ninth stone
+      const fc = FLAG[(i / 9 | 0) % FLAG.length], top = y - 11 * k;
+      c.strokeStyle = '#3a2e1c'; c.lineWidth = 1.1 * k; c.beginPath(); c.moveTo(x, y - h * 0.4); c.lineTo(x, top); c.stroke();
+      c.fillStyle = fc; c.beginPath(); c.moveTo(x, top); c.lineTo(x + 7 * k, top + 2.2 * k); c.lineTo(x, top + 4.4 * k); c.closePath(); c.fill();
+      c.lineWidth = 0.8 * k; c.stroke();
+      c.fillStyle = 'rgba(255,255,255,0.45)'; c.beginPath(); c.moveTo(x + 0.6 * k, top + 0.7 * k); c.lineTo(x + 3.6 * k, top + 1.7 * k); c.lineTo(x + 0.6 * k, top + 2.2 * k); c.closePath(); c.fill();
+    }
   }
+}
+// low whitewashed maidan walls along both side edges (they still read when the screen edge cuts them)
+function gcupWalls(c) {
+  const k = W / 390, y0 = H * 0.52, y1 = H * 0.80, t = 9 * k;
+  [[0, 1], [W, -1]].forEach(([ex, dir]) => {
+    const xo = ex + dir * t;
+    c.fillStyle = 'rgba(70,50,15,0.28)'; c.fillRect(Math.min(ex, xo + dir * 4 * k), y0 + 3 * k, t + 4 * k, y1 - y0);   // shadow on the grass
+    c.fillStyle = '#cfc4a8'; c.fillRect(Math.min(xo, xo + dir * 3 * k), y0, 3 * k, y1 - y0);                               // field-side face
+    c.fillStyle = '#f2eedf'; c.fillRect(Math.min(ex, xo), y0 - 2 * k, t, y1 - y0);                                          // top
+    c.fillStyle = '#c4573a'; c.fillRect(Math.min(xo, xo + dir * 3 * k), y0 + (y1 - y0) * 0.0, 3 * k, 2 * k);
+    c.strokeStyle = '#3a2e1c'; c.lineWidth = 1 * k; c.strokeRect(Math.min(ex, xo + dir * 3 * k), y0 - 2 * k, t + 3 * k, y1 - y0 + 2 * k);
+    c.strokeStyle = 'rgba(120,100,70,0.5)'; c.lineWidth = 0.8 * k;
+    for (let y = y0 + 18 * k; y < y1; y += 22 * k) { c.beginPath(); c.moveTo(Math.min(ex, xo), y); c.lineTo(Math.max(ex, xo), y); c.stroke(); }   // coping joints
+    c.fillStyle = 'rgba(90,130,50,0.55)'; for (let y = y0 + 8 * k; y < y1; y += 37 * k) { c.beginPath(); c.ellipse(xo + dir * 1.5 * k, y, 2 * k, 4 * k, 0, 0, 7); c.fill(); }   // moss
+  });
+}
+// dappled shade from the big rain tree on the right, falling left across the edge of the field (sun on the right)
+function gcupTreeShade(c, sc) {
+  const e = sc.sprites.find(s => s[0] === 'treeR'); if (!e) return;
+  const k = W / 390, X = W / 2 + (e[1] - 585) / 538 * W * FIELD_RX, Y = H * FIELD_CY + (e[2] - 1519) / 848 * H * FIELD_RY;
+  let seed = 9; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  c.save(); c.fillStyle = 'rgba(40,70,20,0.20)';
+  for (let i = 0; i < 16; i++) { c.beginPath(); c.ellipse(X - (28 + rnd() * 52) * k, Y - (40 + rnd() * 48) * k, (9 + rnd() * 12) * k, (5 + rnd() * 7) * k, rnd() * 0.6, 0, 7); c.fill(); }
+  c.globalCompositeOperation = 'destination-out'; c.fillStyle = 'rgba(0,0,0,0.6)';   // sun flecks through the leaves
+  for (let i = 0; i < 7; i++) { c.beginPath(); c.ellipse(X - (30 + rnd() * 48) * k, Y - (44 + rnd() * 40) * k, (2 + rnd() * 2.5) * k, (1.4 + rnd() * 1.4) * k, 0, 0, 7); c.fill(); }
+  c.restore();
+}
+// a bare, worn patch round the square where every game has been played (crisp ragged edge)
+function gcupWornSquare(c) {
+  const cx = W / 2, cy = (PITCH_TOP() + PITCH_BOTTOM()) / 2, rx = W * 0.13, ry = (PITCH_BOTTOM() - PITCH_TOP()) * 0.76;
+  let seed = 17; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const pts = []; for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2, r = 0.86 + rnd() * 0.22; pts.push([cx + Math.cos(a) * rx * r, cy + Math.sin(a) * ry * r]); }
+  c.save(); c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath();
+  c.fillStyle = 'rgba(226,186,104,0.70)'; c.fill();
+  for (let i = 0; i < 26; i++) { c.fillStyle = 'rgba(190,140,70,0.35)'; c.beginPath(); c.ellipse(cx + (rnd() - 0.5) * rx * 1.5, cy + (rnd() - 0.5) * ry * 1.6, 3 + rnd() * 4, 1.4 + rnd() * 1.6, 0, 0, 7); c.fill(); }
+  c.restore();
+}
+// the other games on the maidan: now and then one of them hits a big one that sails up over the scoreboard
+const _gcFar = { list: [], next: performance.now() + 4000 };
+function gcupFarHits(sc, now) {
+  if (now > _gcFar.next) { _gcFar.next = now + 5000 + Math.random() * 6000; const m = gPlateMap(sc.top);
+    const x0 = (120 + Math.random() * 930) * m.u, y0 = m.y0 + 430 * m.u; _gcFar.list.push({ x0, y0, dx: (Math.random() - 0.5) * W * 0.35, peak: H * (0.10 + Math.random() * 0.05), at: now, dur: 2200 }); }
+  _gcFar.list = _gcFar.list.filter(b => { const u = (now - b.at) / b.dur; if (u > 1) return false;
+    const x = b.x0 + b.dx * u, y = b.y0 - Math.sin(u * Math.PI) * b.peak, r = 1.6 * W / 390;
+    ctx.fillStyle = '#fffaf0'; ctx.strokeStyle = 'rgba(40,30,20,0.6)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke(); return true; });
 }
 function drawGcupScene(gk) {
   const sc = G_SCENES[gk], key = gk + W + 'x' + H + '@' + DPR;
@@ -31725,11 +31777,14 @@ function drawGcupScene(gk) {
     const sun = c.createRadialGradient(cx - rx * 0.1, cy + ry * 0.05, 0, cx, cy, ry * 0.85);
     sun.addColorStop(0, 'rgba(255,245,200,0.16)'); sun.addColorStop(1, 'rgba(255,245,200,0)'); c.fillStyle = sun; c.fillRect(0, 0, W, H);
     const sq = c.createRadialGradient(cx, (PITCH_TOP() + PITCH_BOTTOM()) / 2, W * 0.04, cx, (PITCH_TOP() + PITCH_BOTTOM()) / 2, W * 0.22);
-    sq.addColorStop(0, 'rgba(190,140,70,0.30)'); sq.addColorStop(1, 'rgba(190,140,70,0)');   // the square is worn to bare earth
+    sq.addColorStop(0, 'rgba(190,140,70,0.12)'); sq.addColorStop(1, 'rgba(190,140,70,0)');
     c.save(); c.translate(cx, (PITCH_TOP() + PITCH_BOTTOM()) / 2); c.scale(1, 1.9); c.translate(-cx, -(PITCH_TOP() + PITCH_BOTTOM()) / 2);
     c.fillStyle = sq; c.fillRect(0, 0, W, H); c.restore();
+    gcupWornSquare(c);
     c.restore();
+    gcupWalls(c);
     if (sc.boundary === 'stones') gcupStones(c);
+    gcupTreeShade(c, sc);
     sc.sprites.forEach(e => { if (e[6]) {   // soft contact shadow, thrown left (sun on the right)
       const A = sc.atlas[e[0]], w = A[2] * sc.pxPerAtlas * e[3] * W / 1170, X = W / 2 + (e[1] - 585) / 538 * W * FIELD_RX, Y = H * FIELD_CY + (e[2] - 1519) / 848 * H * FIELD_RY;
       c.fillStyle = 'rgba(70,50,15,0.28)'; c.beginPath(); c.ellipse(X - w * 0.08, Y - 1, w * 0.47, Math.max(3, w * 0.09), 0, 0, 7); c.fill(); } });
@@ -31740,6 +31795,7 @@ function drawGcupScene(gk) {
   const now = performance.now(), cheer = _gCheering();
   sc.sprites.forEach((e, i) => { if (e[5]) gcupSprite(ctx, sc, e, -Math.abs(Math.sin(now / (cheer ? 90 : 560) + i * 2.1)) * (cheer ? 4 : 0.8)); });
   gcupBirds(sc, now);
+  gcupFarHits(sc, now);
   drawGullyDust();
 }
 // birds (crows off the trees here) burst up on a six
