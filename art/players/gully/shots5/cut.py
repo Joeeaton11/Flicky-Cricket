@@ -2,10 +2,11 @@
 # Each sheet holds [contact, follow-through]. Cut, 320 px tall, size by helmet-to-shoe height vs the stance, anchor at the shoes.
 import cv2, numpy as np, json, sys
 from PIL import Image
-SHEETS = {'coverdrive': 0.86}          # name: how low the pose sits vs standing (lunge)
-meta = json.load(open('meta.json')) if len(sys.argv) > 1 else {}
+SHEETS = {'coverdrive': 0.86, 'cut': 0.95}          # name: how low the pose sits vs standing (lunge)
+meta = json.load(open('meta.json')) if __import__('os').path.exists('meta.json') else {}
 SC_S = 0.117 / 0.6262; OFF_S = (47 - 66.7) * SC_S; SHOT = 0.1485
 for name, LOW in SHEETS.items():
+    if len(sys.argv) > 1 and name not in sys.argv[1:]: continue
     sm = cv2.imread(name + '_src.png').astype(np.float32); b, g, r = sm[..., 0], sm[..., 1], sm[..., 2]
     al = np.clip(1 - (g - np.maximum(r, b) - 25) / 70, 0, 1)
     m = cv2.dilate((al > 0.5).astype(np.uint8), np.ones((15, 15), np.uint8)); n, lab, st, _ = cv2.connectedComponentsWithStats(m)
