@@ -5,7 +5,7 @@ from PIL import Image
 SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0, 'revsweep': 0.85, 'scoop': 0.80}
 # Joe's picks for the pull: wind-up from the single sketch, contact from the first sheet (mirrored), finish from the second
 # Joe's reverse-sweep refs run backlift (bat up on the leg side) -> contact -> finish (bat swept low out to the off side)
-PICK = {'scoop': [('scoop_src.png', 0, '_c', False), ('scoop_src.png', 1, '', False)],
+PICK = {'scoop': [('scoop_src.png', 0, '_c', False), ('scoop_finish_src.png', 0, '', False)],
                 'pull': [('pull_v1_src.png', 0, '_b', False), ('pull_v1_src.png', 1, '_c', True), ('pull_src.png', 2, '', False)]}
 TAGS = {'pull': ['_b', '_c', ''], 'revsweep': ['_b', '_c', '']}       # three-frame shots: wind-up, contact, follow-through
 FLIP = {'scoop': [1]}          # drawn kneeling on the wrong knee: mirrored = right knee down, swept to the off side                    # frames drawn on the wrong side, mirrored to match the reference          # name: how low the pose sits vs standing (lunge)
