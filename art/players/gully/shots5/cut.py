@@ -3,23 +3,30 @@
 import cv2, numpy as np, json, sys
 from PIL import Image
 SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0}
+# Joe's picks for the pull: wind-up from the single sketch, contact from the first sheet (mirrored), finish from the second
+PICK = {'pull': [('pull_windup_src.png', 0, '_b', False), ('pull_v1_src.png', 1, '_c', True), ('pull_src.png', 2, '', False)]}
 TAGS = {'pull': ['_b', '_c', '']}       # three-frame shots: wind-up, contact, follow-through
 FLIP = {}                    # frames drawn on the wrong side, mirrored to match the reference          # name: how low the pose sits vs standing (lunge)
 meta = json.load(open('meta.json')) if __import__('os').path.exists('meta.json') else {}
 SC_S = 0.117 / 0.6262; OFF_S = (47 - 66.7) * SC_S; SHOT = 0.1485
-for name, LOW in SHEETS.items():
-    if len(sys.argv) > 1 and name not in sys.argv[1:]: continue
-    sm = cv2.imread(name + '_src.png').astype(np.float32); b, g, r = sm[..., 0], sm[..., 1], sm[..., 2]
+def figures(path):
+    sm = cv2.imread(path).astype(np.float32); b, g, r = sm[..., 0], sm[..., 1], sm[..., 2]
     al = np.clip(1 - (g - np.maximum(r, b) - 25) / 70, 0, 1)
     m = cv2.dilate((al > 0.5).astype(np.uint8), np.ones((15, 15), np.uint8)); n, lab, st, _ = cv2.connectedComponentsWithStats(m)
-    boxes = sorted([st[i] for i in range(1, n) if st[i][4] > 20000], key=lambda s: s[0])
-    for fi, (tag, (x, y, w, h, a)) in enumerate(zip(TAGS.get(name, ['_c', '']), boxes)):
+    return sm, al, sorted([st[i] for i in range(1, n) if st[i][4] > 20000], key=lambda s: s[0])
+for name, LOW in SHEETS.items():
+    if len(sys.argv) > 1 and name not in sys.argv[1:]: continue
+    if name in PICK: jobs = [(figures(p), i, tag, fl) for p, i, tag, fl in PICK[name]]
+    else:
+        F = figures(name + '_src.png'); jobs = [(F, i, tag, i in FLIP.get(name, [])) for i, tag in enumerate(TAGS.get(name, ['_c', '']))]
+    for (sm, al, boxes), fi, tag, flip in jobs:
+        x, y, w, h, a = boxes[fi]
         c = sm[y:y + h, x:x + w].copy(); A = al[y:y + h, x:x + w]
         cb, cg, cr = c[..., 0], c[..., 1], c[..., 2]; c[..., 1] = np.where(A < 1, np.minimum(cg, np.maximum(cr, cb) + 8), cg)
         rgba = np.dstack([c, A * 255]).clip(0, 255).astype(np.uint8)
         ys, xs = np.nonzero(rgba[..., 3] > 10); rgba = rgba[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
         s = 320 / rgba.shape[0]; rgba = cv2.resize(rgba, (round(rgba.shape[1] * s), 320), interpolation=cv2.INTER_AREA)
-        if fi in FLIP.get(name, []): rgba = np.ascontiguousarray(rgba[:, ::-1])
+        if flip: rgba = np.ascontiguousarray(rgba[:, ::-1])
         p = rgba.astype(int); pb, pg, pr, pa = p[..., 0], p[..., 1], p[..., 2], p[..., 3]
         navy = (pb > pr + 18) & (pb > pg + 6) & (pa > 128); top = np.nonzero(navy.sum(1) > 3)[0].min()
         band = navy.copy(); band[:top] = False; band[top + 44:] = False          # the helmet: navy in the top ~44 px of the figure
