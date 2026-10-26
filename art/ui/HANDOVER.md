@@ -179,3 +179,13 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 - Result: sparkle canvas off, softer rays, 12 confetti, art header dimmed, margin folded into the target badge (`#r2Line` hidden). Home icon replaced by CONTINUE (`#rs-menuBtn`, same handler): yellow on a win (PLAY AGAIN goes blue), blue on a loss.
 - Bag opening: longer building shake; new burst `_fireRayBurst(col, {big, coins})` from the bag's mouth (flash, rays, shock rings, confetti, coin spray, screen jolt); each tap makes the bag hop (`_bagHop`) and the reward pops out; rarity rays behind cards (`#bagCardRays`), shine sweep and "+N" stamp; SKIP works during the shake.
 - Summary: coins/gems strip + 2-column card tiles (+count, level, cards/needed bar, "N MORE TO LV x" / UPGRADE READY / MAX). Old `#chestOpenDoneBtn` hidden (was behind COLLECT). COLLECT (`_collectBag`) flies coins and gems into the Bags screen pills, which tick up.
+
+## Painted league card test (Oct 25) — parked
+- Buccaneer Cup redone as Figma art in layers (cove plate, galleon, chest, parrot on #00FF00, keyed out; the right palm cut from the plate so the ship sits behind it), animated in code: broadside at 2s, cricket ball clips the stumps + HOWZAT at 13s, bob/reflection, sea sparkle, shore wash, waterfall, campfire, gulls. File `art/league-cards/pirate-painted.html` on branch `painted-cards` (not in the game). Sources and build script in `art/league-cards/painted/pirate/`. ~4 Figma credits.
+- Figma downloads are blocked from the session: use `get_screenshot` with `enableBase64Response:true` and copy the saved tool-result PNG.
+- Joe then switched focus to the stadiums / gameplay scene, so this is waiting for his verdict.
+
+## Next: stadiums + gameplay scene (from Oct 26)
+- Joe wants the real grounds and the in-match scene done next, in the painted style (pirate-ground image is the quality bar, see "Art standard"). One ground per chat.
+- Suggested order: 1) fix the known bugs first (no scoreboard on some grounds, e.g. Mumbai rooftop); 2) Gully Cup ground + HUD (concepts already on the Design canvas, Gameplay HUD page); 3) then tier by tier.
+- Method that works: painted plate in Figma for the ground (top-down diorama), separate green-screen layers for anything that moves (crowd, flags, props), live text for the scoreboard; keep the gameplay geometry (pitch, stumps, ball path) unchanged so play isn't affected.
