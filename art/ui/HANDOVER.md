@@ -33,7 +33,7 @@ Also: popups/overlays (`showMessage`, `#milestoneOverlay`, `#upgradeFlashOverlay
 
 - Home: **done** (built from Figma frame "Home — Flicky v3").
 - Kit: **done** and live (Golf Clash style bag, per-item art and crests for all 40 items).
-- Gameplay HUD: **parked** (Oct 24). Every ground and its HUD gets redone in the painted style, which costs a lot of credits, so it waits until the rest is tied down. Gully Cup HUD concepts (truck-art board, chai-stall chalkboard, brick-wall plates) are on the Design canvas, Gameplay HUD page. Known bugs still to fix: a stray "null" under "BOWLED!"; some grounds draw no scoreboard (e.g. the Mumbai rooftop ground).
+- Gameplay HUD: **Gully Cup layout live** (Oct 26, option B; Joe: layout signed off, artwork reworked as we go). Next: next ground. Previously parked (Oct 24). Every ground and its HUD gets redone in the painted style, which costs a lot of credits, so it waits until the rest is tied down. Gully Cup HUD concepts (truck-art board, chai-stall chalkboard, brick-wall plates) are on the Design canvas, Gameplay HUD page. Known bugs still to fix: a stray "null" under "BOWLED!"; some grounds draw no scoreboard (e.g. the Mumbai rooftop ground).
 - Chests → **Kit Bags: done** and live (Oct 24).
 - Stats: **done** and live (Oct 25).
 - Popups + in-game commentary: **done** and live (Oct 25).
