@@ -2,7 +2,9 @@
 # Each sheet holds [contact, follow-through]. Cut, 320 px tall, size by helmet-to-shoe height vs the stance, anchor at the shoes.
 import cv2, numpy as np, json, sys
 from PIL import Image
-SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93}          # name: how low the pose sits vs standing (lunge)
+SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0}
+TAGS = {'pull': ['_b', '_c', '']}       # three-frame shots: wind-up, contact, follow-through
+FLIP = {'pull': [1]}                    # frames drawn on the wrong side, mirrored to match the reference          # name: how low the pose sits vs standing (lunge)
 meta = json.load(open('meta.json')) if __import__('os').path.exists('meta.json') else {}
 SC_S = 0.117 / 0.6262; OFF_S = (47 - 66.7) * SC_S; SHOT = 0.1485
 for name, LOW in SHEETS.items():
@@ -11,12 +13,13 @@ for name, LOW in SHEETS.items():
     al = np.clip(1 - (g - np.maximum(r, b) - 25) / 70, 0, 1)
     m = cv2.dilate((al > 0.5).astype(np.uint8), np.ones((15, 15), np.uint8)); n, lab, st, _ = cv2.connectedComponentsWithStats(m)
     boxes = sorted([st[i] for i in range(1, n) if st[i][4] > 20000], key=lambda s: s[0])
-    for tag, (x, y, w, h, a) in zip(['_c', ''], boxes):
+    for fi, (tag, (x, y, w, h, a)) in enumerate(zip(TAGS.get(name, ['_c', '']), boxes)):
         c = sm[y:y + h, x:x + w].copy(); A = al[y:y + h, x:x + w]
         cb, cg, cr = c[..., 0], c[..., 1], c[..., 2]; c[..., 1] = np.where(A < 1, np.minimum(cg, np.maximum(cr, cb) + 8), cg)
         rgba = np.dstack([c, A * 255]).clip(0, 255).astype(np.uint8)
         ys, xs = np.nonzero(rgba[..., 3] > 10); rgba = rgba[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
         s = 320 / rgba.shape[0]; rgba = cv2.resize(rgba, (round(rgba.shape[1] * s), 320), interpolation=cv2.INTER_AREA)
+        if fi in FLIP.get(name, []): rgba = np.ascontiguousarray(rgba[:, ::-1])
         p = rgba.astype(int); pb, pg, pr, pa = p[..., 0], p[..., 1], p[..., 2], p[..., 3]
         navy = (pb > pr + 18) & (pb > pg + 6) & (pa > 128); top = np.nonzero(navy.sum(1) > 3)[0].min()
         band = navy.copy(); band[:top] = False; band[top + 44:] = False          # the helmet: navy in the top ~44 px of the figure
