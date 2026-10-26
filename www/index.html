@@ -29874,7 +29874,7 @@ function fxBig(kind, opts) {
   el.className = 'fxBig ' + kind;
   try {
     const r = canvas.getBoundingClientRect(), sy = r.height / H;
-    const top = r.top + H * (gullyPainted() ? 0.285 : 0.135) * sy;   // Gully: in the open field above the umpire, clear of the HUD
+    const top = r.top + H * (gullyPainted() ? 0.262 : 0.135) * sy;   // Gully: in the open field above the umpire, clear of the HUD
     const bottom = r.top + (PITCH_TOP() - 70) * sy;         // clear of the umpire's raised arms
     const h = Math.min(150, Math.max(110, (PITCH_TOP() - 48) * sy + r.top - top));   // compact: a small stamp just under the scoreboard (Joe: too big and intrusive)
     el.style.setProperty('--fxTop', top + 'px'); el.style.setProperty('--fxH', h + 'px');
@@ -29888,7 +29888,7 @@ function fxBig(kind, opts) {
     el.innerHTML = `<span class="fxPWBox"><img class="fxPW" src="${_pw}" alt="${K.word}" style="height:${_ph}px"><i class="fxShine" style="-webkit-mask-image:url(${_pw});mask-image:url(${_pw})"></i></span>`;
     layer.appendChild(el); _fxBigEl = el;
     fxBurstSound(kind); gullySfx(kind, opts);
-    if (kind === 'four' || kind === 'six') setTimeout(() => fxFlyToScore(kind), 700);
+    // (no flying +4/+6 on painted grounds — Joe)
     setTimeout(() => { el.classList.add('leave'); setTimeout(() => { el.remove(); if (_fxBigEl === el) _fxBigEl = null; }, 360); }, K.life);
     return;
   }
@@ -31193,7 +31193,7 @@ Object.keys(GULLY_ART_SRC).forEach(k => { GULLY_ART[k] = new Image(); });
 function gullyLoadArt() {
   if (window._gullyArtLoading) return; window._gullyArtLoading = true;
   Object.keys(GULLY_ART_SRC).forEach(k => { GULLY_ART[k].src = GULLY_ART_SRC[k]; });
-  Object.keys(GCUP_PLATES).forEach(k => { GCUP_PLATES[k].src = 'assets/' + k + '/plate.webp'; });
+  Object.keys(GCUP_PLATES).forEach(k => { GCUP_PLATES[k].src = GCUP_PLATE_FILE[k] || ('assets/' + k + '/plate.webp'); });
   Object.keys(G4_SRC).forEach(k => { G4[k].src = G4_SRC[k]; });
   Object.keys(GP_SRC).forEach(k => { GP[k].src = GP_SRC[k].src; });
   Object.values(GULLY_WORDS).forEach(u => { const im = new Image(); im.src = u; });
@@ -31202,9 +31202,10 @@ function gullyLoadArt() {
 // Gully Cup grounds painted in the new style. The league skin (HUD, words, crew, sounds) is shared;
 // each ground has its own background. codeField: field + kerb drawn in code on the oval (Gully);
 // otherwise the plate's own field and boundary already sit on the oval (Maidan).
-const GCUP_PLATES = { maidan: new Image() };
-function gcupGround() { const k = currentTimeOfDay && currentTimeOfDay.key; return (k === 'gully' || GCUP_PLATES[k]) ? k : null; }
-function gcupPlate(k) { return k === 'gully' ? GULLY_ART.plate : GCUP_PLATES[k]; }
+const GCUP_PLATES = { gully: new Image() };   // maidan: new Image() — waiting for sign-off
+function gcupGround() { const k = currentTimeOfDay && currentTimeOfDay.key; return GCUP_PLATES[k] ? k : null; }
+function gcupPlate(k) { return GCUP_PLATES[k]; }
+const GCUP_PLATE_FILE = { gully: 'assets/gully/plate9.webp' };
 function gullyPainted() {
   const k = gcupGround(); if (!k) return false;
   const p = gcupPlate(k);
@@ -31333,7 +31334,9 @@ const _gl = { petals: [], marks: [], lastBoundaryAt: 0 };
 function _gCheering() { return popTextType === 'boundary' && performance.now() - popTextStartTime < 1900; }
 // crowd strips cut from the cached background, redrawn a few px higher in a bouncing rhythm while they cheer
 const G_CROWD = [[0.00, 0.44, 0.075, 0.86], [0.925, 0.44, 1.00, 0.86], [0.13, 0.245, 0.32, 0.33], [0.72, 0.235, 0.93, 0.33]];
-const GCUP_CROWD = { maidan: [[0.00, 0.30, 0.075, 0.82], [0.93, 0.30, 1.00, 0.82]] };
+const GCUP_CROWD = { maidan: [[0.00, 0.30, 0.075, 0.82], [0.93, 0.30, 1.00, 0.82]], gully: [[0.00, 0.44, 0.075, 0.66], [0.93, 0.44, 1.00, 0.66], [0.00, 0.10, 0.17, 0.24], [0.83, 0.13, 1.00, 0.24]] };
+// props placed in the bottom corners, fully on screen and clear of the field and the name plate: [sprite, x, y, height, flip]
+const GCUP_PROPS = { gully: [['crates', 0.085, 0.94, 50, false], ['chairs', 0.77, 0.998, 50, true], ['scooter', 0.915, 0.985, 62, true]] };
 function gcupLiveCrowd(gk) {
   const now = performance.now(), cache = window._gPlateCache, list = GCUP_CROWD[gk]; if (!cache || !list) return;
   const cheer = _gCheering(), sx = cache.width / W, sy = cache.height / H;
@@ -31485,13 +31488,17 @@ function gullyBakeGrade(c) {
 function drawGullyPaintedGround() {
   if (window.GULLY_V4 && g4Ready()) return drawGullyV4Ground();   // layered build, parked
   const gk = gcupGround();
-  if (gk && gk !== 'gully') {
+  if (gk) {
     const key = gk + W + 'x' + H + '@' + DPR;
     if (window._gPlateKey !== key) {
       const cv = document.createElement('canvas'); cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
       const c = cv.getContext('2d'); c.setTransform(DPR, 0, 0, DPR, 0, 0);
       const P = gcupPlate(gk), sc = Math.max(W / P.naturalWidth, H / P.naturalHeight);
       c.drawImage(P, (W - P.naturalWidth * sc) / 2, (H - P.naturalHeight * sc) / 2, P.naturalWidth * sc, P.naturalHeight * sc);
+      const props = GCUP_PROPS[gk] || [];
+      if (props.length && !g4Ready()) { ctx.drawImage(cv, 0, 0, W, H); return; }   // wait for the prop sprites
+      props.forEach(p => _g4Sprite(c, p[0], p[1], p[2], p[3], p[4]));
+      if (gk === 'gully') gullyBakeGrade(c);
       window._gPlateCache = cv; window._gPlateKey = key;
     }
     ctx.drawImage(window._gPlateCache, 0, 0, W, H);
@@ -31814,7 +31821,7 @@ function drawGullyKidSprite(x, y, chasing, diving, stridePhase, f) {
   }
 }
 function drawGullyUmpireSprite(x, y) {
-  x += 20;   // beside the stumps, the bowler runs in past him
+  y -= 8;   // stands just behind the bowler's stumps; the bowler runs in past him
   const sig = umpireSignalTimer > 0 ? umpireSignal : null, now = performance.now();
   if (sig !== (window._umpSig && window._umpSig.s)) window._umpSig = { s: sig, at: now };
   const e = (now - window._umpSig.at) / 1000;                     // seconds into the signal
@@ -31848,11 +31855,11 @@ function drawGullyUmpireSprite(x, y) {
 function drawGullyBowler() {
   const now = performance.now();
   if (state !== window._bwState) { window._bwState = state; window._bwAt = now; }
-  const e = now - window._bwAt, x = W / 2 - 9;
+  const e = now - window._bwAt; let x = W / 2 - 10;
   let pose = 'bowl_follow', y = PITCH_TOP() - 4, bob = 0;
   if (state === 'ready') {
     const t = Math.min(1, e / 400);                       // run-up over the 420 ms 'ready' window
-    y = PITCH_TOP() - 62 + t * 50;
+    y = PITCH_TOP() - 62 + t * 56; x = W / 2 - 22 + t * 12;   // runs in past the umpire's left shoulder
     if (t < 0.72) { pose = 'bowl_run'; bob = Math.abs(Math.sin(e / 55)) * 2.2; } else { pose = 'bowl_leap'; bob = 4 * Math.sin((t - 0.72) / 0.28 * Math.PI); }
   } else if (state === 'ballcoming') {
     if (e < 140) { pose = 'bowl_release'; y = PITCH_TOP() - 10; }
@@ -32352,8 +32359,9 @@ function drawField() {
   // umpire stands directly behind the bowler's stumps (same line as the
   // pitch), just a little further back, with only a small lateral nudge -
   // not a full pitch-width to the side
-  drawUmpire(W/2, PITCH_TOP()-10);
-  if (gullyPaintedPeople()) drawGullyBowler();
+  // bowler drawn in depth order with the umpire (behind him during the run-up, in front at the crease)
+  if (gullyPaintedPeople() && state === 'ready' && performance.now() - (window._bwAt || 0) < 230) { drawGullyBowler(); drawUmpire(W/2, PITCH_TOP()-10); }
+  else { drawUmpire(W/2, PITCH_TOP()-10); if (gullyPaintedPeople()) drawGullyBowler(); }
 
   // fielders (sorted so ones higher on screen draw first - simple depth)
   const sorted = [...fielders].sort((a,b)=>a.y-b.y);
