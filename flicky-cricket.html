@@ -4986,7 +4986,7 @@ function rollStadiumConditions() {
     currentTimeOfDay = TIME_OF_DAY[Math.floor(Math.random()*TIME_OF_DAY.length)];
   }
   currentGroundScheme = GROUND_SCHEMES[Math.floor(Math.random()*GROUND_SCHEMES.length)];
-  if (currentTimeOfDay && currentTimeOfDay.key === 'gully' && typeof gullyLoadArt === 'function') gullyLoadArt();
+  if (typeof gcupGround === 'function' && gcupGround() && typeof gullyLoadArt === 'function') gullyLoadArt();
 }
 
 // field geometry - the oval ground fills most of the screen, batsman stands
@@ -30956,7 +30956,7 @@ function showResultScreen(d) {
   const rib = $('r2Ribbon');
   rib.className = 'r2-step ' + (d.beatTarget ? 'win' : d.nearMiss ? 'close' : 'lose');
   rib.textContent = d.beatTarget ? 'YOU WON!' : d.nearMiss ? 'SO CLOSE!' : 'OUT!';
-  { const g = currentTimeOfDay && currentTimeOfDay.key === 'gully' && GULLY_ART.plate && GULLY_ART.plate.naturalWidth;
+  { const g = gullyPainted();
     document.body.classList.toggle('glyRes', !!g);
     if (g) { const w = d.isNewBest && d.beatTarget ? 'res_best' : d.beatTarget ? 'res_won' : d.nearMiss ? 'res_close' : 'res_out';
       rib.classList.add('painted'); rib.innerHTML = `<img src="assets/gully/${w}.webp" alt="${rib.textContent}">`; } }
@@ -31193,14 +31193,22 @@ Object.keys(GULLY_ART_SRC).forEach(k => { GULLY_ART[k] = new Image(); });
 function gullyLoadArt() {
   if (window._gullyArtLoading) return; window._gullyArtLoading = true;
   Object.keys(GULLY_ART_SRC).forEach(k => { GULLY_ART[k].src = GULLY_ART_SRC[k]; });
+  Object.keys(GCUP_PLATES).forEach(k => { GCUP_PLATES[k].src = 'assets/' + k + '/plate.webp'; });
   Object.keys(G4_SRC).forEach(k => { G4[k].src = G4_SRC[k]; });
   Object.keys(GP_SRC).forEach(k => { GP[k].src = GP_SRC[k].src; });
   Object.values(GULLY_WORDS).forEach(u => { const im = new Image(); im.src = u; });
   ['frame_plate','frame_banner','frame_card'].forEach(n => { const im = new Image(); im.src = 'assets/gully/' + n + '.webp'; });
 }
+// Gully Cup grounds painted in the new style. The league skin (HUD, words, crew, sounds) is shared;
+// each ground has its own background. codeField: field + kerb drawn in code on the oval (Gully);
+// otherwise the plate's own field and boundary already sit on the oval (Maidan).
+const GCUP_PLATES = { maidan: new Image() };
+function gcupGround() { const k = currentTimeOfDay && currentTimeOfDay.key; return (k === 'gully' || GCUP_PLATES[k]) ? k : null; }
+function gcupPlate(k) { return k === 'gully' ? GULLY_ART.plate : GCUP_PLATES[k]; }
 function gullyPainted() {
-  const p = GULLY_ART.plate;
-  return currentTimeOfDay && currentTimeOfDay.key === 'gully' && p && p.complete && p.naturalWidth > 0;
+  const k = gcupGround(); if (!k) return false;
+  const p = gcupPlate(k);
+  return !!(p && p.complete && p.naturalWidth > 0);
 }
 const G4_SRC = {"stand": "assets/gully/prop_stand.webp", "chai": "assets/gully/prop_chai.webp", "rickshaw": "assets/gully/prop_rickshaw.webp", "scooter": "assets/gully/prop_scooter.webp", "fruit": "assets/gully/prop_fruit.webp", "crates": "assets/gully/prop_crates.webp", "lamp": "assets/gully/prop_lamp.webp", "chairs": "assets/gully/prop_chairs.webp", "dog": "assets/gully/prop_dog.webp", "kidsBack": "assets/gully/prop_kidsBack.webp", "adultsBack": "assets/gully/prop_adultsBack.webp", "kidsFront": "assets/gully/prop_kidsFront.webp", "adultsFront": "assets/gully/prop_adultsFront.webp", "cycle": "assets/gully/prop_cycle.webp", "uncle": "assets/gully/prop_uncle.webp", "marigold": "assets/gully/prop_marigold.webp"};
 // ════════ GULLY CUP v4 — layered, crisp: painted grandstand + sprite props (Figma 142–144:191), code-drawn field & kerb ════════
@@ -31325,6 +31333,16 @@ const _gl = { petals: [], marks: [], lastBoundaryAt: 0 };
 function _gCheering() { return popTextType === 'boundary' && performance.now() - popTextStartTime < 1900; }
 // crowd strips cut from the cached background, redrawn a few px higher in a bouncing rhythm while they cheer
 const G_CROWD = [[0.00, 0.44, 0.075, 0.86], [0.925, 0.44, 1.00, 0.86], [0.13, 0.245, 0.32, 0.33], [0.72, 0.235, 0.93, 0.33]];
+const GCUP_CROWD = { maidan: [[0.00, 0.30, 0.075, 0.82], [0.93, 0.30, 1.00, 0.82]] };
+function gcupLiveCrowd(gk) {
+  const now = performance.now(), cache = window._gPlateCache, list = GCUP_CROWD[gk]; if (!cache || !list) return;
+  const cheer = _gCheering(), sx = cache.width / W, sy = cache.height / H;
+  list.forEach(([x0, y0, x1, y1], i) => {
+    const dy = -Math.abs(Math.sin(now / (cheer ? 95 : 650) + i * 1.7)) * (cheer ? 5 : 0.9); if (Math.abs(dy) < 0.15) return;
+    const X = W * x0, Y = H * y0, w = W * (x1 - x0), h = H * (y1 - y0);
+    ctx.drawImage(cache, X * sx, Y * sy, w * sx, h * sy, X, Y + dy, w, h);
+  });
+}
 function gullyLiveBack() {
   const now = performance.now(), cache = window._gPlateCache; if (!cache) return;
   const cheer = _gCheering(), sx = cache.width / W, sy = cache.height / H;
@@ -31466,9 +31484,24 @@ function gullyBakeGrade(c) {
 
 function drawGullyPaintedGround() {
   if (window.GULLY_V4 && g4Ready()) return drawGullyV4Ground();   // layered build, parked
+  const gk = gcupGround();
+  if (gk && gk !== 'gully') {
+    const key = gk + W + 'x' + H + '@' + DPR;
+    if (window._gPlateKey !== key) {
+      const cv = document.createElement('canvas'); cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+      const c = cv.getContext('2d'); c.setTransform(DPR, 0, 0, DPR, 0, 0);
+      const P = gcupPlate(gk), sc = Math.max(W / P.naturalWidth, H / P.naturalHeight);
+      c.drawImage(P, (W - P.naturalWidth * sc) / 2, (H - P.naturalHeight * sc) / 2, P.naturalWidth * sc, P.naturalHeight * sc);
+      window._gPlateCache = cv; window._gPlateKey = key;
+    }
+    ctx.drawImage(window._gPlateCache, 0, 0, W, H);
+    gcupLiveCrowd(gk);
+    drawGullyDust();
+    return;
+  }
   // The plate is only scaled evenly (never warped). The field and kerb are drawn here, exactly on the
   // game's oval, covering the painted field underneath. Cached per screen size.
-  const key = W + 'x' + H + '@' + DPR;
+  const key = 'gully' + W + 'x' + H + '@' + DPR;
   if (!window._gPlateCache || window._gPlateKey !== key) {
     const cv = document.createElement('canvas'); cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
     const c = cv.getContext('2d'); c.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -35130,7 +35163,7 @@ function drawSceneScoreboard() {
   const key = (currentTimeOfDay && currentTimeOfDay.key) || 'day';
 
   // ── Street Cricket League: scene-specific scoreboards ─────────────────────
-  if (key === 'gully' && gullyPainted()) {
+  if (gullyPainted()) {
     const _h = document.getElementById('hud'); if (_h) _h.style.display = 'none';
     const bW = W * 0.84, bH = H * 0.086;
     drawGullyBoard((W - bW) / 2, H * (window.GULLY_BOARD_TOP || 0.091), bW, bH);   // body top 9.1%: crest + bunting clear the Dynamic Island
