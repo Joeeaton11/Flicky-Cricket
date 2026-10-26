@@ -7,7 +7,7 @@ GS = {'bat': 0.117, 'shot': 0.1485, 'react': 0.126}
 def grp(n): return 'react' if n in ('bat_out', 'bat_raise') else 'shot' if n.startswith('shot_') else 'bat'
 ENT = re.compile(r'"((?:bat|shot)_[a-z_]+)": \{"src": "data:image/webp;base64,([^"]*)", "ax": ([0-9.]+), "ay": ([0-9.]+), "k": ([0-9.]+)')
 RIGHTMOST = False
-LEVEL = {'shot_pull_b', 'shot_revsweep_b', 'shot_revsweep_c', 'shot_revsweep'}   # feet level or kneeling: use the rightmost (back) shoe                                     # poses with both feet level
+LEVEL = {'shot_pull_b'}   # feet level or kneeling: use the rightmost (back) shoe                                     # poses with both feet level
 def backfoot(b64, rightmost=False):
     global RIGHTMOST; RIGHTMOST = rightmost
     im = np.array(Image.open(io.BytesIO(base64.b64decode(b64))).convert('RGBA')).astype(int); h = im.shape[0]
@@ -28,7 +28,7 @@ def torso(b64):   # centre of the shirt's lower edge (the hips)
     r, g, bb, a = im[..., 0], im[..., 1], im[..., 2], im[..., 3]
     navy = (bb > r + 18) & (bb > g + 6) & (a > 128); rows = np.nonzero(navy.sum(1) > 8)[0]; y = rows.max()
     xs = np.nonzero(navy[max(0, y - 12):y + 1].any(0))[0]; return float((xs.min() + xs.max()) / 2)
-TORSO = {'shot_revsweep_b', 'shot_revsweep_c', 'shot_revsweep'}   # kneeling: hips stay over the stance's hips (the shin lies back, so the shoe isn't under him)
+TORSO = set()   # kneeling: hips stay over the stance's hips (the shin lies back, so the shoe isn't under him)
 tx_s = torso(found['bat_stance'].group(2)); thx = (tx_s - ax0) * scS
 out = {}
 for n, m in found.items():
