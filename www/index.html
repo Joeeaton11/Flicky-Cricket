@@ -31334,7 +31334,7 @@ const _gl = { petals: [], marks: [], lastBoundaryAt: 0 };
 function _gCheering() { return popTextType === 'boundary' && performance.now() - popTextStartTime < 1900; }
 // crowd strips cut from the cached background, redrawn a few px higher in a bouncing rhythm while they cheer
 // plate px boxes round the painted crowd (v11 plate), with a little wall/sand margin for the soft edge
-const G_CROWD = [[560, 340, 800, 660], [800, 250, 1015, 450], [1000, 300, 1170, 820], [0, 480, 80, 820], [0, 80, 230, 290], [280, 80, 570, 300], [600, 80, 880, 280]];
+const G_CROWD = [[70, 210, 250, 550], [930, 220, 1120, 500], [0, 720, 110, 1070], [1060, 720, 1170, 1080]];
 const GCUP_CROWD = { maidan: [[0.00, 0.30, 0.075, 0.82], [0.93, 0.30, 1.00, 0.82]], gully: [[0.00, 0.44, 0.075, 0.66], [0.93, 0.44, 1.00, 0.66], [0.00, 0.10, 0.17, 0.24], [0.83, 0.13, 1.00, 0.24]] };
 // props placed in the bottom corners, fully on screen and clear of the field and the name plate: [sprite, x, y, height, flip]
 const GCUP_PROPS = { gully: [['crates', 0.085, 0.94, 50, false], ['chairs', 0.77, 0.998, 50, true], ['scooter', 0.915, 0.985, 62, true]] };
@@ -31510,17 +31510,21 @@ function drawGullyPaintedGround() {
     drawGullyDust();
     return;
   }
-  // Gully v11: the painting was made for this layout. The plate is the street (one painted sand floor + the
-  // far band of buildings, crowd, chai stall and rickshaw), scaled evenly to the screen width and lined up so
-  // the far crowd stands just behind the far kerb. The kerb is drawn on the game's oval; the spectators and
+  // Gully v12: the pulled-back city street (art/grounds/gully/v12). The plate is scaled evenly to the screen
+  // width and lined up so the street mouth sits just behind the far kerb; its square is one flat sand colour. The kerb is drawn on the game's oval; the spectators and
   // props around the edge are separate sprites stood outside it (GULLY_EXTRAS). Cached per screen size.
-  const key = 'gully11' + W + 'x' + H + '@' + DPR;
+  const key = 'gully12' + W + 'x' + H + '@' + DPR;
   if (!window._gPlateCache || window._gPlateKey !== key) {
     const cv = document.createElement('canvas'); cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
     const c = cv.getContext('2d'); c.setTransform(DPR, 0, 0, DPR, 0, 0);
     const P = GULLY_ART.plate, m = gPlateMap(), ph = P.naturalHeight * m.u;
     c.drawImage(P, 0, m.y0, W, ph);
-    if (m.y0 + ph < H) c.drawImage(P, 0, P.naturalHeight - 400, P.naturalWidth, 400, 0, m.y0 + ph - 1, W, 400 * m.u);   // tall screens: more floor
+    // rows 1255-1959 of the plate are the repeated square-and-pavement band, so the corner props can be
+    // re-anchored to the bottom of short or tall screens with the seam inside that band
+    const sF = P.naturalHeight / 2532, cut = 1700;
+    if (Math.abs(m.y0 + ph - H) > 1) c.drawImage(P, 0, cut * sF, P.naturalWidth, P.naturalHeight - cut * sF, 0, H - (2532 - cut) * m.u, W, (2532 - cut) * m.u);
+    if (H - (2532 - cut) * m.u > m.y0 + 1959 * m.u) { const g = H - (2532 - cut) * m.u - (m.y0 + 1959 * m.u);   // very tall: fill the gap from the band
+      c.drawImage(P, 0, 1300 * sF, P.naturalWidth, 600 * sF, 0, m.y0 + 1950 * m.u, W, Math.max(g + 20, 600 * m.u)); }
     const cx = W / 2, cy = H * FIELD_CY, rx = W * FIELD_RX, ry = H * FIELD_RY;
     c.save(); c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.clip();
     // light on the field: sunlit middle, the far buildings' shade along the top, worn earth round the square
@@ -31535,6 +31539,16 @@ function drawGullyPaintedGround() {
     c.save(); c.translate(cx, (PITCH_TOP() + PITCH_BOTTOM()) / 2); c.scale(1, 1.9); c.translate(-cx, -(PITCH_TOP() + PITCH_BOTTOM()) / 2);
     c.fillStyle = sq; c.fillRect(0, 0, W, H); c.restore();
     c.lineWidth = 14; c.strokeStyle = 'rgba(130,60,30,0.13)'; c.beginPath(); c.ellipse(cx, cy, rx - 5, ry - 5, 0, 0, Math.PI * 2); c.stroke();
+    // a few crisp pebbles and hairline cracks in the dried sand
+    let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    c.lineCap = 'round';
+    for (let i = 0; i < 16; i++) { const px = cx + (rnd() - 0.5) * rx * 1.6, py = cy + (rnd() - 0.5) * ry * 1.6;
+      c.fillStyle = '#c98a4a'; c.beginPath(); c.ellipse(px, py, 1.6 + rnd() * 1.6, 1.1 + rnd() * 0.8, 0, 0, 7); c.fill();
+      c.fillStyle = 'rgba(255,240,210,0.7)'; c.beginPath(); c.ellipse(px - 0.5, py - 0.5, 0.8, 0.45, 0, 0, 7); c.fill(); }
+    c.strokeStyle = 'rgba(150,80,40,0.30)'; c.lineWidth = 1.1;
+    for (let i = 0; i < 7; i++) { let px = cx + (rnd() - 0.5) * rx * 1.5, py = cy + (rnd() - 0.5) * ry * 1.5;
+      if (Math.abs(px - cx) < W * 0.09 && py > PITCH_TOP() - 20 && py < PITCH_BOTTOM() + 20) continue;
+      c.beginPath(); c.moveTo(px, py); for (let j = 0; j < 4; j++) { px += (rnd() - 0.5) * 12; py += 3 + rnd() * 4; c.lineTo(px, py); } c.stroke(); }
     c.restore();
     // slim painted kerb: rounded yellow and black blocks on a dark base
     const kw = 7.5, N = Math.round(Math.PI * (rx + ry) / 22) * 2, E = (a, e) => [cx + Math.cos(a) * (rx + e), cy + Math.sin(a) * (ry + e)];
@@ -31565,9 +31579,9 @@ function gPlateMap() {
   return { u, y0 };
 }
 // spectators/props round the edge: [sprite, x, footY, scale, flip, cheers] in plate px. Their places are
-// measured against the oval (fit by art/grounds/gully/v11/layout.py), so they stay outside the kerb on any screen.
+// measured against the oval (fit by art/grounds/gully/v12/layout.py), so they stay outside the kerb on any screen.
 const GULLY_EXTRA_ATLAS = {"cart":[0,0,349,457],"cyclist":[352,0,295,390],"fansL":[649,0,445,388],"fansR":[0,460,479,371],"camp":[482,460,358,346],"wallkids":[842,460,319,326],"vendor":[0,833,252,310],"backrow":[254,833,558,292],"scooter":[815,833,256,281],"chairs":[0,1145,202,280],"dog":[204,1145,123,169],"cow":[329,1145,256,149]};
-const GULLY_EXTRAS = [["cow",87,930,0.95,0,0],["scooter",-28,1150,1.0,0,1],["cyclist",-8,2120,1.1,0,0],["cart",130,2828,1.68,0,0],["dog",330,2525,1.1,0,0],["backrow",600,2676,1.15,0,1],["camp",990,2660,1.68,0,0],["vendor",1196,2170,1.1,1,0],["wallkids",1194,1130,1.0,0,1]];
+const GULLY_EXTRAS = [["fansR",46,2170,0.48,0,1],["fansL",1136,2170,0.48,0,1]];
 function gExtraShadow(c, e) {   // soft contact shadow, thrown left (the sun is on the right)
   const [n, x, fy, sc] = e, A = GULLY_EXTRA_ATLAS[n], u = W / 1170, w = A[2] / 0.6 * 0.5 * sc * u;
   const X = W / 2 + (x - 585) / 538 * W * FIELD_RX, Y = H * FIELD_CY + (fy - 1519) / 848 * H * FIELD_RY;
