@@ -246,3 +246,8 @@ Each ground is NEW: fresh background, own props, own lettering/HUD skin. Only th
 7. **Files**: art in `assets/<ground>/` loaded on demand (`gullyLoadArt` pattern); keep pixel-read or CSS-mask images embedded (batter sprites, words). `npm run build` copies assets into www.
 8. **Check**: layout overlay (debug.py), phone sizes 375×667 / 390×844 / 430×932, a played innings with no console errors, a throttled perf run; then push and note in this file.
 Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing the Gully crew ≈ 2–3.
+
+## Maidan (Oct 26) — on branch maidan-painted, awaiting Joe's review
+- Plate Figma 162:191: Mumbai maidan, Victorian-Gothic buildings + clock tower behind, rain trees, crowds on the sides, peanut cart, scorers' tent, bicycles, coconut seller, kit bags; ring of whitewashed boundary stones. The painted ring was already within ~6% of the coded oval, so `art/grounds/maidan/fit.py` scales evenly (cover) and only nudges the field area (blend band 25%) so the stone ring sits on the boundary — no code field/kerb needed. `assets/maidan/plate.webp`.
+- Code: Gully Cup grounds generalised: `GCUP_PLATES`, `gcupGround()`, `gcupPlate()`; `gullyPainted()` is now true for any painted Gully Cup ground (league skin: HUD, words, crew, sounds shared). Non-Gully grounds draw the cached plate + `gcupLiveCrowd` (crowd strips per ground in `GCUP_CROWD`) + dust; Gully keeps its code field/kerb/props/bunting.
+- Open: the concrete gully pitch is reused on the maidan (a dry clay/turf strip would suit it better).
