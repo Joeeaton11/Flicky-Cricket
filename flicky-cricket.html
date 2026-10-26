@@ -1889,11 +1889,11 @@
   .fxBig .fxRib { font-size:12px; padding:2px 12px; border-width:3px; border-radius:9px; margin-top:2px; box-shadow:0 3px 0 rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.4); }
   .fxBig.out .fxStump { height:46px; width:7px; border-width:3px; }
   .fxBig svg.fxBurst { opacity:.92; }
-  /* painted per-scene words (Gully truck-art): pop, settle, gentle bob */
+  /* painted per-scene words (Gully truck-art): pop in and settle */
   .fxBig.fxPainted { display:flex; align-items:center; justify-content:center; }
   .fxBig.fxPainted .fxPW { max-width:none; width:auto; filter:drop-shadow(0 4px 0 rgba(5,10,20,.35)) drop-shadow(0 8px 10px rgba(0,0,0,.25)); }
-  .fxBig.fxPainted .fxPWBox { animation:fxPWIn .32s cubic-bezier(.2,.9,.3,1) both, fxPWBob .9s ease-in-out .32s infinite; }
-  .fxBig.fxPainted.six .fxPWBox { animation:fxPWIn .34s cubic-bezier(.2,.9,.3,1) both, fxPWBob .6s ease-in-out .34s infinite; }
+  .fxBig.fxPainted .fxPWBox { animation:fxPWIn .32s cubic-bezier(.2,.9,.3,1) both; }   /* pops in and holds still (Joe: no bouncing) */
+  .fxBig.fxPainted.six .fxPWBox { animation:fxPWIn .34s cubic-bezier(.2,.9,.3,1) both; }
   .fxBig.fxPainted.out .fxPWBox { animation:fxPWDrop .45s cubic-bezier(.3,1.6,.6,1) both, fxPWShake .5s ease-in-out .45s 1; }
   @keyframes fxPWIn { 0% { transform:translateX(-60px) scale(1.6) rotate(-3deg); opacity:0; } 35% { transform:translateX(4px) scale(1.08,.94) rotate(-3deg); opacity:1; } 60% { transform:scale(.98,1.02) rotate(-3deg); } 100% { transform:scale(1) rotate(-3deg); } }
   @keyframes fxPWBob { 0%,100% { transform:scale(1) rotate(-3deg); } 50% { transform:scale(1.02) rotate(-3deg); } }
@@ -5077,6 +5077,7 @@ let popTextIsSix = false;
 let popTextType = 'boundary'; // 'boundary' | 'wicket' | 'milestone'
 
 function triggerShake(mag, duration) {
+  if (typeof gullyPainted === 'function' && gullyPainted()) return;   // Joe: the ground must not bounce - the haptics carry the hit
   shake.mag = mag * 0.4;            // Joe: shakes were too much
   shake.t = Math.round(duration * 0.6);
 }
@@ -31151,6 +31152,7 @@ function hideResultScreen() {
 // ---------- BALL PROGRESS UPDATE ----------
 function updateBall() {
   if (!ball.active || ball.hitAnim) return;
+  if (state === 'ready' && gullyPaintedPeople()) return;   // Gully: the ball stays in the bowler's hand until the release
   if (state === 'ballcoming' || state === 'ready') {
     ball.z += ballSpeed;
     if (ball.z >= ball.zoneCenter + 0.23 && state === 'ballcoming') {
@@ -31869,21 +31871,34 @@ function drawGullyUmpireSprite(x, y) {
 }
 
 // ════════ GULLY bowler: runs in during 'ready', releases as the ball sets off, follows through ════════
-function drawGullyBowler() {
+// Bowler's end: the umpire stands ~2 m behind the stumps; a right-arm-over bowler runs in past the umpire's left
+// shoulder (screen right), lands at the popping crease (~1.2 m, 6% of the pitch, in front of the stumps) beside the
+// stumps with the bowling arm nearest them, and follows through away to his left.
+const G_RUN_MS = 400;   // the run-up fills the 420 ms 'ready' window; the ball leaves the hand when 'ballcoming' starts
+function gullyCreaseY() { return PITCH_TOP() + (PITCH_BOTTOM() - PITCH_TOP()) * 0.06; }
+function gullyBowlerPos() {
   const now = performance.now();
   if (state !== window._bwState) { window._bwState = state; window._bwAt = now; }
-  const e = now - window._bwAt; let x = W / 2 - 10;
-  let pose = 'bowl_follow', y = PITCH_TOP() - 4, bob = 0;
+  const e = now - window._bwAt, cy = gullyCreaseY(), x0 = W / 2 + 9;
   if (state === 'ready') {
-    const t = Math.min(1, e / 400);                       // run-up over the 420 ms 'ready' window
-    y = PITCH_TOP() - 62 + t * 56; x = W / 2 - 22 + t * 12;   // runs in past the umpire's left shoulder
-    if (t < 0.72) { pose = 'bowl_run'; bob = Math.abs(Math.sin(e / 55)) * 2.2; } else { pose = 'bowl_leap'; bob = 4 * Math.sin((t - 0.72) / 0.28 * Math.PI); }
-  } else if (state === 'ballcoming') {
-    if (e < 140) { pose = 'bowl_release'; y = PITCH_TOP() - 10; }
-    else { pose = 'bowl_follow'; y = PITCH_TOP() - 10 + Math.min(14, (e - 140) / 30); }
-  } else { pose = 'bowl_follow'; y = PITCH_TOP() + 4; }
-  gpShadow(x, y, 8);
-  gpDraw(pose, x, y - bob, 'bowl', false);
+    const t = Math.min(1, e / G_RUN_MS);
+    const y = PITCH_TOP() - 62 + t * (cy - PITCH_TOP() + 62), x = W / 2 + 24 - t * 15;
+    return t < 0.72 ? { x, y, pose: 'bowl_run', bob: Math.abs(Math.sin(e / 55)) * 2.2 }
+                    : { x, y, pose: 'bowl_leap', bob: 4 * Math.sin((t - 0.72) / 0.28 * Math.PI) };
+  }
+  if (state === 'ballcoming' && e < 140) return { x: x0, y: cy, pose: 'bowl_release', bob: 0 };
+  const f = Math.min(1, (state === 'ballcoming' ? e - 140 : 600) / 600);   // follow through, then veer off the pitch
+  return { x: x0 + f * 12, y: cy + f * 16, pose: 'bowl_follow', bob: 0 };
+}
+// where the ball leaves the hand: high on the bowling-arm side of the release pose
+function gullyReleasePoint() {
+  const u = W / 390;   // bowl_release art: the hand is straight above the feet, 43 px up at 390 wide
+  return { x: W / 2 + 9, y: gullyCreaseY() - 40 * u };
+}
+function drawGullyBowler() {
+  const p = gullyBowlerPos();
+  gpShadow(p.x, p.y, 8);
+  gpDraw(p.pose, p.x, p.y - p.bob, 'bowl', false);
 }
 // which shot the batter plays: from the swipe direction and how far the ball went
 function gullyShotPose() {
@@ -32377,7 +32392,7 @@ function drawField() {
   // pitch), just a little further back, with only a small lateral nudge -
   // not a full pitch-width to the side
   // bowler drawn in depth order with the umpire (behind him during the run-up, in front at the crease)
-  if (gullyPaintedPeople() && state === 'ready' && performance.now() - (window._bwAt || 0) < 230) { drawGullyBowler(); drawUmpire(W/2, PITCH_TOP()-10); }
+  if (gullyPaintedPeople() && gullyBowlerPos().y < PITCH_TOP() - 18) { drawGullyBowler(); drawUmpire(W/2, PITCH_TOP()-10); }   // behind the umpire on the run-up
   else { drawUmpire(W/2, PITCH_TOP()-10); if (gullyPaintedPeople()) drawGullyBowler(); }
 
   // fielders (sorted so ones higher on screen draw first - simple depth)
@@ -56724,6 +56739,11 @@ function drawBall() {
     px = lerp(W/2, W/2 + (ball.targetX-0.5)*PITCH_BOTTOM_W()*2, t);
     py = lerp(PITCH_TOP()+6, PITCH_BOTTOM()-8, Math.min(t,1));
     size = lerp(3, 7, Math.min(t,1));
+    if (gullyPaintedPeople()) {
+      if (state === 'ready') return;                        // still in the bowler's hand
+      const R = gullyReleasePoint(), k = Math.max(0, 1 - t / 0.24);   // first part of the flight: out of the hand, dipping to the pitch line
+      px += (R.x - px) * k; py += (R.y - py) * k * (2 - k) * 0.5 + (R.y - py) * k * 0.5 * k;
+    }
     if (gullyPainted()) gullyNoteBall(px, py, t);
   }
 
@@ -57733,10 +57753,6 @@ function gameLoop() {
   try {
     ctx.save();
     ctx.translate(shake.x, shake.y);
-    if (gullyPainted() && popTextType === 'boundary' && popTextIsSix) {
-      const u = (performance.now() - popTextStartTime) / 650;
-      if (u >= 0 && u < 1) { const z = 1 + 0.045 * Math.sin(u * Math.PI) * (1 - u * 0.3); ctx.translate(W / 2, H * 0.5); ctx.scale(z, z); ctx.translate(-W / 2, -H * 0.5); }
-    }
 
     drawField();
     drawZoneIndicator();
