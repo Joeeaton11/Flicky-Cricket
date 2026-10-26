@@ -31738,11 +31738,31 @@ function gcupWalls(c) {
 function gcupTreeShade(c, sc) {
   const e = sc.sprites.find(s => s[0] === 'treeR'); if (!e) return;
   const k = W / 390, X = W / 2 + (e[1] - 585) / 538 * W * FIELD_RX, Y = H * FIELD_CY + (e[2] - 1519) / 848 * H * FIELD_RY;
-  let seed = 9; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  c.save(); c.fillStyle = 'rgba(40,70,20,0.20)';
-  for (let i = 0; i < 16; i++) { c.beginPath(); c.ellipse(X - (28 + rnd() * 52) * k, Y - (40 + rnd() * 48) * k, (9 + rnd() * 12) * k, (5 + rnd() * 7) * k, rnd() * 0.6, 0, 7); c.fill(); }
-  c.globalCompositeOperation = 'destination-out'; c.fillStyle = 'rgba(0,0,0,0.6)';   // sun flecks through the leaves
-  for (let i = 0; i < 7; i++) { c.beginPath(); c.ellipse(X - (30 + rnd() * 48) * k, Y - (44 + rnd() * 40) * k, (2 + rnd() * 2.5) * k, (1.4 + rnd() * 1.4) * k, 0, 0, 7); c.fill(); }
+  // one clean canopy silhouette (scalloped edge from overlapping lobes, filled once so nothing doubles up),
+  // thrown left of the tree, then a few sun flecks punched through
+  const cx = X - 52 * k, cy = Y - 62 * k; let seed = 9; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  c.save(); c.beginPath();
+  c.ellipse(cx, cy, 34 * k, 20 * k, -0.1, 0, Math.PI * 2);
+  for (let i = 0; i < 11; i++) { const a = i / 11 * Math.PI * 2, r = 0.92 + rnd() * 0.12;
+    const lx = cx + Math.cos(a) * 31 * k * r, ly = cy + Math.sin(a) * 18 * k * r; c.moveTo(lx + 11 * k, ly); c.ellipse(lx, ly, 11 * k, 7 * k, 0, 0, Math.PI * 2); }
+  c.moveTo(X - 4 * k, Y - 30 * k); c.ellipse(X - 10 * k, Y - 30 * k, 9 * k, 3.5 * k, -0.35, 0, Math.PI * 2);   // trunk's shadow joining it to the tree
+  c.fillStyle = 'rgba(40,70,20,0.22)'; c.fill('nonzero');
+  c.globalCompositeOperation = 'destination-out'; c.fillStyle = 'rgba(0,0,0,0.55)';
+  for (let i = 0; i < 6; i++) { c.beginPath(); c.ellipse(cx + (rnd() - 0.5) * 44 * k, cy + (rnd() - 0.5) * 22 * k, (2 + rnd() * 2) * k, (1.2 + rnd()) * k, 0, 0, Math.PI * 2); c.fill(); }
+  c.restore();
+}
+// the bowlers' run-up: grass worn to dirt behind the far stumps, along the right-arm-over line, with foot scuffs
+function gcupRunUp(c) {
+  const k = W / 390, L = PITCH_BOTTOM() - PITCH_TOP(), y0 = PITCH_TOP() - L * 0.075, y1 = PITCH_TOP() - L * 0.62;
+  const xAt = y => W / 2 + 10 * k + (y0 - y) / (y0 - y1) * 14 * k, wAt = y => (11 - 5 * (y0 - y) / (y0 - y1)) * k;
+  let seed = 31; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const N = 14, L1 = [], R1 = [];
+  for (let i = 0; i <= N; i++) { const y = y0 + (y1 - y0) * i / N, j = (rnd() - 0.5) * 2 * k; L1.push([xAt(y) - wAt(y) + j, y]); R1.push([xAt(y) + wAt(y) + j, y]); }
+  c.save(); c.beginPath(); L1.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); R1.reverse().forEach(([x, y]) => c.lineTo(x, y)); c.closePath();
+  const g = c.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, 'rgba(214,170,96,0.85)'); g.addColorStop(1, 'rgba(214,170,96,0)');
+  c.fillStyle = g; c.fill();
+  for (let i = 0; i < 16; i++) { const t = rnd(), y = y0 + (y1 - y0) * t;
+    c.fillStyle = `rgba(150,100,45,${(0.35 * (1 - t)).toFixed(2)})`; c.beginPath(); c.ellipse(xAt(y) + (i % 2 ? 3 : -3) * k, y, 2.2 * k, 1.3 * k, 0.3, 0, Math.PI * 2); c.fill(); }
   c.restore();
 }
 // a bare, worn patch round the square where every game has been played (crisp ragged edge)
@@ -31781,6 +31801,7 @@ function drawGcupScene(gk) {
     c.save(); c.translate(cx, (PITCH_TOP() + PITCH_BOTTOM()) / 2); c.scale(1, 1.9); c.translate(-cx, -(PITCH_TOP() + PITCH_BOTTOM()) / 2);
     c.fillStyle = sq; c.fillRect(0, 0, W, H); c.restore();
     gcupWornSquare(c);
+    gcupRunUp(c);
     c.restore();
     if (sc.boundary === 'stones') gcupStones(c);
     gcupTreeShade(c, sc);
