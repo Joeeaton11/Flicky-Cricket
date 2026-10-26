@@ -31685,10 +31685,10 @@ function gullyLitter(c) {
 // boundary style and pitch art. Sprites flagged 'cheers' bob, faster on a boundary.
 const G_SCENES = {
   maidan: {
-    top: 663, src: { plate: 'assets/maidan/plate.webp', sprites: 'assets/maidan/sprites.webp', pitch: 'assets/maidan/pitch.webp' }, img: {},
-    atlas: {"bigtree":[0,0,272,718],"treeR":[274,0,144,598],"treeL":[422,0,155,331],"umbL":[580,0,128,246],"bags":[710,0,295,208],"cart":[1008,0,178,193],"pairL":[1190,0,112,188],"bench":[0,722,271,184]},
-    pxPerAtlas: 1170 / 768 / 2 / 0.75,
-    sprites: [["treeL",78,1006,1,0,0],["umbL",12,1265,1,0,1],["pairL",-29,1481,1,0,1],["treeR",1164,1278,1,0,1],["bigtree",1280,2009,1,0,0],["bags",188,2434,1,0,0],["cart",1050,2330,1,0,0],["bench",900,2470,1,0,0]],
+    top: 663, src: { plate: 'assets/maidan/plate.webp', sprites: 'assets/maidan/sprites.webp' }, img: {}, pitch: 'mat',
+    atlas: {"treeR":[0,0,146,608],"treeL":[150,0,158,336],"umbL":[312,0,129,250],"sightscreen":[445,0,311,218],"vadapav":[760,0,148,177],"scorer":[912,0,185,175],"coconut":[1101,0,142,164],"kids":[1247,0,141,155],"kit":[1392,0,153,152],"team":[1549,0,219,150],"bikes":[1772,0,187,139]},
+    pxPerAtlas: 1,   // v3: props (Figma 170:191) + the painting's trees/groups, all packed at plate scale
+    sprites: [["treeL",78,1006,1,0,0,0],["umbL",12,1265,1,0,1,0],["treeR",1164,1278,1,0,1,0],["vadapav",1138,1130,1,0,0,1],["kids",1214,1700,1,0,1,1],["team",130,2300,1,0,1,1],["scorer",1060,2300,1,0,0,1],["sightscreen",600,2596,1,0,0,1],["kit",365,2528,1,0,0,1],["coconut",845,2528,1,0,1,1],["bikes",1090,2535,1,0,0,1]],
     boundary: 'stones', birds: [[80, 230], [900, 230]],
   },
 };
@@ -31730,6 +31730,9 @@ function drawGcupScene(gk) {
     c.fillStyle = sq; c.fillRect(0, 0, W, H); c.restore();
     c.restore();
     if (sc.boundary === 'stones') gcupStones(c);
+    sc.sprites.forEach(e => { if (e[6]) {   // soft contact shadow, thrown left (sun on the right)
+      const A = sc.atlas[e[0]], w = A[2] * sc.pxPerAtlas * e[3] * W / 1170, X = W / 2 + (e[1] - 585) / 538 * W * FIELD_RX, Y = H * FIELD_CY + (e[2] - 1519) / 848 * H * FIELD_RY;
+      c.fillStyle = 'rgba(70,50,15,0.28)'; c.beginPath(); c.ellipse(X - w * 0.08, Y - 1, w * 0.47, Math.max(3, w * 0.09), 0, 0, 7); c.fill(); } });
     sc.sprites.forEach(e => { if (!e[5]) gcupSprite(c, sc, e, 0); });
     window._gPlateCache = cv; window._gPlateKey = key;
   }
@@ -31817,8 +31820,63 @@ function gullyPitchPaint(c, P) {
     c.drawImage(P, 0, sy * ihS, iw, 4 * ihS + 0.5, W/2 - w * (235 / 470), y, w, 4 * sk + 0.6); }
   c.restore();
 }
+// Maidan pitch: a terracotta coir mat pegged down on a rolled clay strip - the club-cricket wicket of the maidans.
+// Drawn on the exact pitch geometry: clay runs 6% of the pitch beyond each set of stumps, chalk bowling, popping and
+// return creases at both ends, worn bowlers' footholds.
+function maidanMatPaint(c) {
+  const t = PITCH_TOP(), b = PITCH_BOTTOM(), L = b - t, cx = W / 2, k = W / 390;
+  const wAt = y => PITCH_TOP_W() + (PITCH_BOTTOM_W() - PITCH_TOP_W()) * (y - t) / L;
+  const quad = (y0, y1, f, dx) => { c.beginPath(); c.moveTo(cx - wAt(y0) * f / 2 + (dx || 0), y0); c.lineTo(cx + wAt(y0) * f / 2 + (dx || 0), y0);
+    c.lineTo(cx + wAt(y1) * f / 2 + (dx || 0), y1); c.lineTo(cx - wAt(y1) * f / 2 + (dx || 0), y1); c.closePath(); };
+  const e0 = t - L * 0.075, e1 = b + L * 0.075, m0 = t - L * 0.045, m1 = b + L * 0.045;
+  c.save(); c.lineJoin = 'round';
+  // rolled clay strip with a soft ragged edge and a shadow
+  c.fillStyle = 'rgba(90,50,20,0.22)'; quad(e0 + 3, e1 + 3, 1.36, -2.5); c.fill();
+  const clay = c.createLinearGradient(0, e0, 0, e1); clay.addColorStop(0, '#c99456'); clay.addColorStop(0.5, '#d7a566'); clay.addColorStop(1, '#c48d4e');
+  c.fillStyle = clay; quad(e0, e1, 1.34); c.fill(); c.strokeStyle = 'rgba(110,62,26,0.55)'; c.lineWidth = 1.2 * k; c.stroke();
+  let seed = 21; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 40; i++) { const y = e0 + rnd() * (e1 - e0), side = rnd() < 0.5 ? -1 : 1, x = cx + side * wAt(y) * (0.55 + rnd() * 0.12);
+    c.fillStyle = 'rgba(150,95,45,0.35)'; c.beginPath(); c.ellipse(x, y, 2 * k, 1.1 * k, 0, 0, 7); c.fill(); }
+  // the coir mat: rich terracotta, darker bound edges, a fine woven texture and a sheen down the middle
+  c.fillStyle = 'rgba(60,20,10,0.28)'; quad(m0 + 2, m1 + 2, 1.0, -1.5); c.fill();
+  const mat = c.createLinearGradient(0, m0, 0, m1); mat.addColorStop(0, '#b4532f'); mat.addColorStop(0.5, '#c4623a'); mat.addColorStop(1, '#ad4c29');
+  c.fillStyle = mat; quad(m0, m1, 1.0); c.fill();
+  c.save(); quad(m0, m1, 1.0); c.clip();
+  c.strokeStyle = 'rgba(255,200,150,0.10)'; c.lineWidth = 0.8;
+  for (let y = m0; y < m1; y += 2.2 * k) { c.beginPath(); c.moveTo(cx - wAt(y), y); c.lineTo(cx + wAt(y), y + 1.2 * k); c.stroke(); }
+  c.strokeStyle = 'rgba(80,25,10,0.12)';
+  for (let y = m0 + 1.1 * k; y < m1; y += 2.2 * k) { c.beginPath(); c.moveTo(cx - wAt(y), y + 1.2 * k); c.lineTo(cx + wAt(y), y); c.stroke(); }
+  const sheen = c.createLinearGradient(cx - W * 0.05, 0, cx + W * 0.05, 0);
+  sheen.addColorStop(0, 'rgba(255,220,180,0)'); sheen.addColorStop(0.55, 'rgba(255,220,180,0.13)'); sheen.addColorStop(1, 'rgba(255,220,180,0)');
+  c.fillStyle = sheen; c.fillRect(cx - W * 0.06, m0, W * 0.12, m1 - m0);
+  // worn bowlers' footholds and a scuffed batting crease, both ends
+  [[t, 1], [b, -1]].forEach(([y, dir]) => { for (let i = 0; i < 9; i++) {
+    c.fillStyle = `rgba(120,60,30,${0.18 + rnd() * 0.15})`; c.beginPath();
+    c.ellipse(cx + (rnd() - 0.5) * wAt(y) * 0.7, y + dir * L * (0.02 + rnd() * 0.07), 2.4 * k, 1.4 * k, rnd(), 0, 7); c.fill(); } });
+  c.restore();
+  c.strokeStyle = '#7a2f17'; c.lineWidth = 1.6 * k; quad(m0, m1, 1.0); c.stroke();
+  c.strokeStyle = 'rgba(255,210,170,0.35)'; c.lineWidth = 0.8 * k; quad(m0 + 1.2 * k, m1 - 1.2 * k, 0.94); c.stroke();
+  // pegs along the edges
+  for (let i = 0; i <= 8; i++) { const y = m0 + (m1 - m0) * i / 8; [-1, 1].forEach(sd => { const x = cx + sd * wAt(y) * 0.47;
+    c.fillStyle = '#3a3a40'; c.beginPath(); c.arc(x, y, 1.3 * k, 0, 7); c.fill(); c.fillStyle = '#d8d8e0'; c.beginPath(); c.arc(x - 0.35 * k, y - 0.35 * k, 0.5 * k, 0, 7); c.fill(); }); }
+  // chalk creases
+  c.strokeStyle = 'rgba(255,252,240,0.95)'; c.lineCap = 'round';
+  [[t, 1], [b, -1]].forEach(([y, dir]) => {
+    const pc = y + dir * L * 0.06, wb = wAt(y), wp = wAt(pc);
+    c.lineWidth = 1.5 * k; c.beginPath(); c.moveTo(cx - wb * 0.62, y); c.lineTo(cx + wb * 0.62, y); c.stroke();               // bowling crease
+    c.beginPath(); c.moveTo(cx - wp * 0.62, pc); c.lineTo(cx + wp * 0.62, pc); c.stroke();                                      // popping crease
+    c.lineWidth = 1.2 * k; [-1, 1].forEach(sd => { c.beginPath(); c.moveTo(cx + sd * wb * 0.43, y - dir * L * 0.03); c.lineTo(cx + sd * wp * 0.43, pc + dir * L * 0.02); c.stroke(); });   // return creases
+  });
+  c.restore();
+}
 function drawGullyPitch() {
   const sc = G_SCENES[gcupGround()], P = sc ? sc.img.pitch : GULLY_ART.pitch;
+  if (sc && sc.pitch === 'mat') {
+    const pk = W + 'x' + H + '@' + DPR + 'mat';
+    if (window._gPitchKey !== pk) { const cv = document.createElement('canvas'); cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+      const c = cv.getContext('2d'); c.setTransform(DPR, 0, 0, DPR, 0, 0); maidanMatPaint(c); window._gPitchCv = cv; window._gPitchKey = pk; }
+    ctx.drawImage(window._gPitchCv, 0, 0, W, H); gullyPitchMarks(); return;
+  }
   if (P && P.complete && P.naturalWidth) {
     // art 470×1300 (crop px): slab x50–418, bowling creases at y115 (far) and y1180 (near) → on the stump lines
     const pk = W + 'x' + H + '@' + DPR + (sc ? gcupGround() : '');
