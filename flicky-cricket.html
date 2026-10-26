@@ -31566,6 +31566,7 @@ function drawGullyPaintedGround() {
       c.strokeStyle = yel ? '#f4c21c' : '#34323b'; c.lineWidth = kw; arc(kw / 2); c.stroke();
       c.strokeStyle = yel ? 'rgba(255,240,170,0.85)' : 'rgba(255,255,255,0.20)'; c.lineWidth = 1.1; arc(kw * 0.78); c.stroke();
     }
+    gullyBuildingShadow(c);
     // the spectators and props that keep still are baked in; the cheering ones are drawn live
     if (GULLY_ART.extras.complete && GULLY_ART.extras.naturalWidth) {
       GULLY_EXTRAS.forEach(e => gExtraShadow(c, e));
@@ -31577,6 +31578,19 @@ function drawGullyPaintedGround() {
   ctx.drawImage(window._gPlateCache, 0, 0, W, H);
   gullyLiveBack();
   drawGullyDust();
+}
+// afternoon sun from the right: each right-hand building throws its shadow down and to the left from its base
+// across the street mouth and the top of the square - parallel slanted edges, one length per building height.
+// Plate px. Drawn over the kerb so the kerb is shaded too.
+const G_BLD_BASE = [[640, 420], [780, 500], [900, 585], [1040, 650], [1170, 668]], G_BLD_H = [0.75, 1.0, 0.82, 1.15], G_SUN = [-230, 250];
+function gullyBuildingShadow(c) {
+  const m = gPlateMap(), P = (x, y) => [x * m.u, m.y0 + y * m.u], B = G_BLD_BASE, V = G_SUN;
+  const pts = B.map(p => P(...p)), last = B.length - 1, hl = G_BLD_H[last - 1];
+  pts.push(P(1170, B[last][1] + V[1] * hl));
+  for (let i = last - 1; i >= 0; i--) { const h = G_BLD_H[i];
+    pts.push(P(B[i + 1][0] + V[0] * h, B[i + 1][1] + V[1] * h), P(B[i][0] + V[0] * h, B[i][1] + V[1] * h)); }
+  c.save(); c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath();
+  c.fillStyle = 'rgba(80,30,70,0.24)'; c.fill(); c.restore();
 }
 // plate px (1170x2532 frame) -> screen. u: css px per plate px; y0: where the plate's top lands.
 function gPlateMap() {
