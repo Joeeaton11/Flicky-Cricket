@@ -29766,7 +29766,7 @@ function fxBig(kind, opts) {
   el.className = 'fxBig ' + kind;
   try {
     const r = canvas.getBoundingClientRect(), sy = r.height / H;
-    const top = r.top + H * (gullyPainted() ? 0.145 : 0.135) * sy;   // just under the scoreboard
+    const top = r.top + H * (gullyPainted() ? (window.GULLY_BOARD_TOP || 0.070) + 0.095 : 0.135) * sy;   // just under the scoreboard
     const bottom = r.top + (PITCH_TOP() - 70) * sy;         // clear of the umpire's raised arms
     const h = Math.max(200, bottom - top);
     el.style.setProperty('--fxTop', top + 'px'); el.style.setProperty('--fxH', h + 'px');
@@ -31140,8 +31140,52 @@ function drawGullyBoard(bX, bY, bW, bH) {
     ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.beginPath(); ctx.roundRect(sx + 3*k, sy + 1.2*k, Math.max(0, sw*pct - 6*k), sh*0.32, sh*0.16); ctx.fill();
     ctx.restore();
   }
-  // BEST plaque, bottom centre
-  const pw = W * 0.30, ph = pw * 70/212, px = (W - pw)/2, py = H - ph - H*0.012;
+  const opt = window.GULLY_HUD_OPT || 'now';
+  const bBot = iy + 83.5*k;                          // bottom edge of the board art
+  if (opt === 'A' || opt === 'B') {
+    _gullyBest(bX + 239.75*k - W*0.13, bBot + 4, W*0.26, true);
+    _gullyPause(bX + 4*k + 17, bBot + 22, 17);
+    if (opt === 'B') _gullyBallStrip(bX + 239.75*k - W*0.13 - 8, bBot + 7, (window._ballLog || []).slice(-6));
+  } else if (opt === 'C') {
+    const pw = W*0.27; _gullyBest(W - pw - 10, H - pw*70/212 - Math.max(34, H*0.045), pw, false);
+    _gullyPause(W - 10 - 17, bBot + 22, 17);
+  } else {
+    const pw = W * 0.30; _gullyBest((W - pw)/2, H - pw*70/212 - H*0.012, pw, false);
+  }
+}
+function _gullyPause(cx, cy, r) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.arc(cx + 1, cy + 2, r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#268a8a'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#0b0f24'; ctx.lineWidth = 2; ctx.stroke();
+  const g = ctx.createLinearGradient(0, cy - r, 0, cy + r); g.addColorStop(0, '#ffe36a'); g.addColorStop(1, '#f2a516');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r*0.74, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#e0322c'; [[-0.34],[0.34]].forEach(([d]) => { ctx.beginPath(); ctx.arc(cx + d*r*1.2, cy - r*0.86, 1.6, 0, 7); ctx.fill(); });
+  ctx.fillStyle = '#1b1430'; ctx.beginPath(); ctx.roundRect(cx - r*0.30, cy - r*0.34, r*0.2, r*0.68, 1.5); ctx.roundRect(cx + r*0.10, cy - r*0.34, r*0.2, r*0.68, 1.5); ctx.fill();
+  ctx.restore();
+}
+function _gullyBallStrip(rightX, y, log) {
+  // last six balls as chalk circles, newest on the right, hanging left of the BEST tag
+  const r = 8.5, gap = 3, n = 6; let x = rightX - n*(2*r + gap) + gap;
+  ctx.save(); ctx.font = `${r*1.15}px 'Lilita One', Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(11,15,36,0.62)'; ctx.beginPath(); ctx.roundRect(x - 6, y, n*(2*r + gap) - gap + 12, 2*r + 8, 12); ctx.fill();
+  for (let i = 0; i < n; i++, x += 2*r + gap) {
+    const v = log[log.length - n + i]; const cx = x + r, cy = y + r + 4;
+    if (v === undefined) { ctx.strokeStyle = 'rgba(255,250,235,0.25)'; ctx.lineWidth = 1.2; ctx.setLineDash([2,2]); ctx.beginPath(); ctx.arc(cx, cy, r - 1, 0, 7); ctx.stroke(); ctx.setLineDash([]); continue; }
+    const fill = v === 6 ? '#f2a516' : v === 4 ? '#ffe36a' : '#fff6df';
+    ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#0b0f24'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = v >= 4 ? '#9a1420' : '#1e3a8a'; ctx.fillText(v === 0 ? '•' : String(v), cx, cy + 1);
+  }
+  ctx.restore();
+}
+function _gullyBest(px, py, pw, hang) {
+  const ph = pw * 70/212;
+  if (hang) {   // two strings up to the board
+    ctx.save(); ctx.strokeStyle = '#3a2614'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(px + pw*0.22, py + ph*0.25); ctx.lineTo(px + pw*0.25, py - 6); ctx.moveTo(px + pw*0.78, py + ph*0.25); ctx.lineTo(px + pw*0.75, py - 6); ctx.stroke(); ctx.restore();
+    py += 4;
+  }
   ctx.drawImage(GULLY_ART.plaque, px, py, pw, ph);
   ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
   const my = py + ph*0.5, mx = px + pw*0.5;
@@ -34241,7 +34285,7 @@ function drawSceneScoreboard() {
   if (key === 'gully' && gullyPainted()) {
     const _h = document.getElementById('hud'); if (_h) _h.style.display = 'none';
     const bW = W * 0.84, bH = H * 0.086;
-    drawGullyBoard((W - bW) / 2, H * 0.052, bW, bH);   // top at 5.2% clears the Dynamic Island
+    drawGullyBoard((W - bW) / 2, H * (window.GULLY_BOARD_TOP || 0.070), bW, bH);   // top sits on the iPhone safe area (59pt of 844)
     return;
   }
   if (key === 'maidan' || key === 'gully' || key === 'villagepitch') {
