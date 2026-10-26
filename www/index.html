@@ -31900,7 +31900,8 @@ Object.keys(GP_SRC).forEach(k => { GP[k] = new Image(); });
 if (window._gullyArtLoading) { window._gullyArtLoading = false; gullyLoadArt(); }
 function gpReady() { return Object.keys(GP).every(k => GP[k].complete && GP[k].naturalWidth > 0); }
 // css px per original-sheet px, per group (keeps every pose of a character the same size)
-const GP_SCALE = { kid: 0.102, kidT: 0.159, keeper: 0.13, ump: 0.155, ump2: 0.074, bat: 0.13, shot: 0.165, bowl: 0.068, prop: 0.06, catch: 0.072, react: 0.14 };   // fielders: down 12%, then back up 5% (Joe, 26 Oct)   // v2: older street cricketers
+const GP_SCALE = { kid: 0.102, kidT: 0.159, keeper: 0.13, ump: 0.155, ump2: 0.0666, bat: 0.117, shot: 0.1485, bowl: 0.068, prop: 0.06, catch: 0.072, react: 0.126 };   // umpire + batter down 10% (Joe, 26 Oct)
+//   // fielders: down 12%, then back up 5% (Joe, 26 Oct)   // v2: older street cricketers
 function gpDraw(name, x, y, group, flip, img) {
   const m = GP_SRC[name], im = img || GP[name], sc = GP_SCALE[group] / m.k * (W / 390);
   ctx.save(); ctx.translate(x, y); if (flip) ctx.scale(-1, 1);
@@ -31916,7 +31917,10 @@ function drawGullyKidSprite(x, y, chasing, diving, stridePhase, f) {
   const left = f && f.target && f.target.x < f.x;
   if (window._gCatch && f && f.name === window._gCatch.name) {
     const e = performance.now() - window._gCatch.at, hop = e < 900 ? Math.abs(Math.sin(e / 110)) * 4 : 0;
-    gpShadow(x, y, 9); gpDraw('kid' + id + '_catch', x, y - hop, 'catch', false); return;
+    gpShadow(x, y, 9); gpDraw('kid' + id + '_catch', x, y - hop, 'catch', false);
+    // the taped match ball over the ball in the catch art (hand position per sprite, sprite px)
+    const m = GP_SRC['kid' + id + '_catch'], hand = [[80, 58], [93, 50], [94, 50], [74, 55]][id], sc = GP_SCALE.catch / m.k * (W / 390);
+    gullyBallImg(x + (hand[0] - m.ax) * sc, y - hop + (hand[1] - m.ay) * sc, 11 * sc, 0.6); return;
   }
   if (diving) { gpShadow(x, y + 2, 15); ctx.save(); ctx.translate(x, y + 3); ctx.rotate((left ? 1 : -1) * (id === 2 ? 0.75 : 0.5)); ctx.translate(-x, -(y + 3));
     gpDraw('kid' + id + '_dive', x, y + 3, 'kid', left); ctx.restore(); return; }
@@ -32020,6 +32024,18 @@ function gullyThrowDraw() {
   ctx.fillStyle = 'rgba(40,20,10,0.25)'; ctx.beginPath(); ctx.ellipse(t.x + (kx - t.x) * u, t.y + (ky - t.y) * u, 3, 1.3, 0, 0, 7); ctx.fill();
   gullyBallImg(x, y, 3.6, u * 12);
 }
+// ball spin: rolls along the ground by the distance it travels (angle = distance / radius, turning the way it
+// moves), spins steadily in the air, and stops when the ball stops. Frame-rate independent.
+function gullyBallSpin(px, py, r) {
+  const now = performance.now(), S = window._gSpin || (window._gSpin = { x: px, y: py, a: 0, t: now });
+  const dt = Math.min(50, now - S.t) / 16.67, dx = px - S.x, dy = py - S.y, d = Math.hypot(dx, dy);
+  if (d > 60) { S.x = px; S.y = py; S.t = now; return S.a; }   // new delivery / jump: no spin spike
+  const air = ball.hitAnim ? (ball.arcHeight || 0) > 2 : state === 'ballcoming' && ball.z < (ball.zoneCenter || 0.8) - 0.25;
+  const dir = (Math.abs(dx) > 0.05 ? Math.sign(dx) : 1) * (ball.hitAnim && (ball.shotAngle || 0) < 0 ? -1 : 1);
+  if (air) S.a += dir * 0.30 * dt;                             // seam spin in flight
+  else S.a += dir * d / Math.max(1.5, r);                      // rolling
+  S.x = px; S.y = py; S.t = now; return S.a;
+}
 function gullyBallImg(x, y, r, spin) {
   const im = GP.tapeball; if (!im || !im.complete || !im.naturalWidth) { ctx.fillStyle = '#d7e64a'; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); return; }
   ctx.save(); ctx.translate(x, y); ctx.rotate(spin || 0); ctx.drawImage(im, -r * 1.12, -r * 1.12, r * 2.24, r * 2.24); ctx.restore();
@@ -32100,7 +32116,14 @@ function drawGullyBoardV3(bX, bY, bW, bH) {
   ctx.drawImage(A.pause, pcx - pr * 1.06, pcy - pr * 1.06, pr * 2.12, pr * 2.12 * 145 / 140);
   window._pauseSpot = { x: pcx, y: pcy, r: pr, t: performance.now() };
   // hanging BEST sign under the TARGET panel (sign art 362×282: strings apex y7, panel x60–300 y142–238)
-  const sw2 = W * 0.27, k2 = sw2 / 362, sgx = (X(653) + X(1113)) / 2 - sw2 / 2, sgy = bBot - 7 * k2 - 3;
+  // sized so its marigolds (art y~262) clear the boundary rope under it on every screen
+  let sw2 = W * 0.27, k2, sgx, sgy;
+  const ropeY = x => H * FIELD_CY - H * FIELD_RY * Math.sqrt(Math.max(0, 1 - ((x - W / 2) / (W * FIELD_RX)) ** 2)) - 8;
+  for (let i = 0; i < 12; i++) {
+    k2 = sw2 / 362; sgx = (X(653) + X(1113)) / 2 - sw2 / 2; sgy = bBot - 7 * k2 - 3;
+    if (sgy + 264 * k2 <= Math.min(ropeY(sgx + 50 * k2), ropeY(sgx + 310 * k2))) break;
+    sw2 *= 0.96;
+  }
   ctx.drawImage(A.sign, sgx, sgy, sw2, 282 * k2);
   { const mx = sgx + 180 * k2, my = sgy + 192 * k2, h = 96 * k2;
     ctx.save(); ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#0b0f24';
@@ -56849,7 +56872,10 @@ function drawBall() {
     if (gullyPainted()) gullyNoteBall(px, py, t);
   }
 
-  if (gullyPaintedPeople()) { gullyBallImg(px, py, Math.min(6, Math.max(size, 1) * 0.75), ball.hitAnim ? ball.flightDist * 12 : ball.z * 8); return; }
+  if (gullyPaintedPeople()) {
+    if (window._gCatch) return;                              // caught: it's in the fielder's hands
+    const r = Math.min(6, Math.max(size, 1) * 0.75);
+    gullyBallImg(px, py, r, gullyBallSpin(px, py, r)); return; }
   if (currentTimeOfDay.key === 'beach') {
     // Beach ball: spinning red/white segments
     const r = Math.max(size, 1);
