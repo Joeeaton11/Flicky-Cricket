@@ -2,10 +2,11 @@
 # Each sheet holds [contact, follow-through]. Cut, 320 px tall, size by helmet-to-shoe height vs the stance, anchor at the shoes.
 import cv2, numpy as np, json, sys
 from PIL import Image
-SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0, 'revsweep': 0.85, 'scoop': 0.80, 'drive': 0.95, 'offdrive': 0.93}
+SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0, 'revsweep': 0.85, 'scoop': 0.80, 'drive': 0.95, 'offdrive': 0.93, 'ondrive': 0.93}
 # Joe's picks for the pull: wind-up from the single sketch, contact from the first sheet (mirrored), finish from the second
 # Joe's reverse-sweep refs run backlift (bat up on the leg side) -> contact -> finish (bat swept low out to the off side)
-PICK = {'offdrive': [('od_c_src.png', 0, '_c', False), ('od_f_src.png', 0, '', False)],
+PICK = {'ondrive': [('ond_c_src.png', 0, '_c', False), ('ond_f_src.png', 0, '', False)],
+        'offdrive': [('od_c_src.png', 0, '_c', False), ('od_f_src.png', 0, '', False)],
         'drive': [('drive_c_src.png', 0, '_c', False), ('drive_f_src.png', 0, '', False)],      # straight drive (gpt-image): stepped straight forward, front leg hidden
         'coverdrive': [('cd5_src.png', 0, '_c', False), ('cd5_src.png', 1, '', False)],
         'cut': [('cut_src.png', 0, '_c', False), ('cut_src.png', 1, '', False)],
