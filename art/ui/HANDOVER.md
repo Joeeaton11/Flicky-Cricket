@@ -290,3 +290,10 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Headers v2 (block at the end of the main <style>): `--hdrTop` = max(inset, 6px), `--hdrH` = 46px for Kit/Bags/Shop (#equipHeader), Stats, Player, Leagues; 36px back button centred on the row; 23px titles; 32px pills with 17px tabular numbers and a 34px icon breaking out to the left. Home top bar uses the same edge.
 - Island audit script: scratchpad island_audit.py (swaps env() for 59px and draws an island on every screen).
 
+
+
+## Mascot & logo locked (Oct 27)
+- Flicky final: face A + real seam, five expressions and the app icon in `art/flicky/` (see its README for Figma nodes and rules). Joe chose this detailed 3D finish over the flat sticker redraw.
+- Logo font: **Titan One** (wordmark). UI font stays **Lilita One**. New wordmark swapped into `#homeWordmark` (Player screen and card backs copy it).
+- App icon also set as favicon + apple-touch-icon in the HTML head. Capacitor native icon sets still to generate from `flicky-icon-1024.png`.
+- Flicky is not yet placed on any screen; Joe has said no Flicky in popups.
