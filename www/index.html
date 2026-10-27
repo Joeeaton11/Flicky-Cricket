@@ -2703,13 +2703,23 @@
     -webkit-mask:radial-gradient(closest-side, #000 18%, transparent 72%); mask:radial-gradient(closest-side, #000 18%, transparent 72%);
     animation:sbSpin 14s linear infinite; opacity:0.75; }
   .bagFx .sbSpot { position:absolute; left:50%; bottom:40px; width:300px; height:620px; margin-left:-150px; filter:blur(6px);
-    background:linear-gradient(to top, rgba(255,240,200,0.28), rgba(255,240,200,0) 80%); clip-path:polygon(40% 0, 60% 0, 100% 100%, 0 100%); }
+    background:linear-gradient(to top, rgba(255,240,200,0) 0, rgba(255,240,200,0.28) 14%, rgba(255,240,200,0) 80%); clip-path:polygon(40% 0, 60% 0, 100% 100%, 0 100%); }
   .bagFx .sbPool { position:absolute; left:50%; bottom:-20px; width:320px; height:70px; margin-left:-160px; border-radius:50%;
     background:radial-gradient(closest-side, rgba(255,236,190,0.55), rgba(255,236,190,0)); }
   @keyframes sbSpin { to { transform:rotate(360deg); } }
-  #chestOpenStage .bagFx { top:50%; width:0; height:0; }
-  #chestOpenStage > canvas, #chestOpenStage > #chestOpenTitle { position:relative; z-index:1; }
-  #chestOpenCanvas { width:320px !important; height:288px !important; }
+  /* the bag rests on the changing-room bench (--benchY = bench top in px, set when a bag opens) */
+  #chestOpenStage { position:absolute !important; inset:0; display:block !important; }
+  #chestOpenStage .bagFx { top:calc(var(--benchY, 650px) - 110px); width:0; height:0; }
+  #chestOpenStage .bagFx .sbPool { bottom:auto; top:96px; width:300px; height:46px; margin-left:-150px;
+    background:radial-gradient(closest-side, rgba(0,0,0,0.55), rgba(0,0,0,0)); }
+  #chestOpenStage .bagFx .sbSpot { bottom:-130px; height:900px; }
+  #chestOpenCanvas { position:absolute !important; z-index:1; left:50%; width:340px !important; height:306px !important; margin-left:-170px;
+    top:calc(var(--benchY, 650px) - var(--bagFoot, 236px)); }
+  #chestOpenTitle { position:absolute !important; z-index:1; left:0; right:0; text-align:center; top:calc(var(--benchY, 650px) - 300px);
+    font-size:46px !important; color:#fff !important; letter-spacing:0.02em !important; -webkit-text-stroke:3px #2a1606; paint-order:stroke fill;
+    text-shadow:0 5px 0 #2a1606, 0 0 24px rgba(255,200,90,0.55) !important; }
+  #chestOpenTitle b { font-weight:400; color:var(--tier, #FFC93A); }
+  #chestTapHint { display:none !important; }
   #chestRevealChestArea .bagFx { bottom:150px; width:0; height:0; }
   #chestRevealChestArea .bagFx .sbBeams { width:460px; height:460px; margin:-230px 0 0 -230px; opacity:0.55; }
   #chestRevealChestArea .bagFx .sbSpot { display:none; }
@@ -58317,7 +58327,10 @@ function showChestOpenAnimation(chestType, rewards, onDone) {
   const cfg = CHEST_TYPES[chestType];
   chestOpenOverlay.classList.remove('hidden');
   chestOpenTitle.style.opacity = '0';
-  chestOpenTitle.textContent   = cfg.name + ' BAG';
+  chestOpenTitle.innerHTML     = '<b>' + cfg.name + '</b> BAG';
+  { const sc = Math.max(innerHeight / 1376, innerWidth / 768);          // changing-room art is 768x1376, cover, top-aligned
+    chestOpenOverlay.style.setProperty('--benchY', Math.round(1072 * sc) + 'px');
+    const fx = document.querySelector('#chestOpenStage .bagFx'); if (fx) fx.style.display = ''; }
   chestTapHint.style.display   = 'none';
   chestRevealScreen.classList.remove('active');
   chestRevealScreen.style.display = 'none';
@@ -58423,6 +58436,7 @@ function _spawnParticle(color) {
 }
 
 function _doRevealSequence() {
+  { const fx = document.querySelector('#chestOpenStage .bagFx'); if (fx) fx.style.display = 'none'; }
   // Switch from shake stage to reveal screen
   chestOpenCanvas.style.display = 'none';
   chestOpenTitle.style.display  = 'none';
