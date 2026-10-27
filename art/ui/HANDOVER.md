@@ -296,4 +296,4 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Flicky final: face A + real seam, five expressions and the app icon in `art/flicky/` (see its README for Figma nodes and rules). Joe chose this detailed 3D finish over the flat sticker redraw.
 - Logo font: **Titan One** (wordmark). UI font stays **Lilita One**. New wordmark swapped into `#homeWordmark` (Player screen and card backs copy it).
 - App icon also set as favicon + apple-touch-icon in the HTML head. Capacitor native icon sets still to generate from `flicky-icon-1024.png`.
-- Flicky is not yet placed on any screen; Joe has said no Flicky in popups.
+- Result screen: Flicky peeks over the stats bar bottom-right of the header (`#r2Flicky`, images in `FLICKY_RES`, 260px WebP data URIs): wink on a new-best win, celebrate on a win, shocked on a near miss, dizzy when out. Pops in, then bobs (dizzy wobbles). Player stays the hero. Still no Flicky in popups.
