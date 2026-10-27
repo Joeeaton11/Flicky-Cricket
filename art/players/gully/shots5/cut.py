@@ -2,7 +2,7 @@
 # Each sheet holds [contact, follow-through]. Cut, 320 px tall, size by helmet-to-shoe height vs the stance, anchor at the shoes.
 import cv2, numpy as np, json, sys
 from PIL import Image
-SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0, 'revsweep': 0.85, 'scoop': 0.80}
+SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0, 'revsweep': 0.85, 'scoop': 0.80, 'drive': 0.92}
 # Joe's picks for the pull: wind-up from the single sketch, contact from the first sheet (mirrored), finish from the second
 # Joe's reverse-sweep refs run backlift (bat up on the leg side) -> contact -> finish (bat swept low out to the off side)
 PICK = {'coverdrive': [('cd3_src.png', 0, '_b', False), ('cd3_src.png', 1, '_c', False), ('cdf_src.png', 0, '', False)],
@@ -37,7 +37,8 @@ for name, LOW in SHEETS.items():
         p = rgba.astype(int); pb, pg, pr, pa = p[..., 0], p[..., 1], p[..., 2], p[..., 3]
         navy = (pb > pr + 18) & (pb > pg + 6) & (pa > 128); top = np.nonzero(navy.sum(1) > 3)[0].min()
         band = navy.copy(); band[:top] = False; band[top + 44:] = False          # the helmet: navy in the top ~44 px of the figure
-        nn, ll, ss, _ = cv2.connectedComponentsWithStats(band.astype(np.uint8)); hl = 1 + np.argmax(ss[1:, 4]); hb = ss[hl][:4]
+        nn, ll, ss, _ = cv2.connectedComponentsWithStats(band.astype(np.uint8)); hl = 1 + np.argmax(ss[1:, 4]); hs = [i for i in range(1, nn) if ss[i][4] > 0.3 * ss[hl][4]]          # the gold stripe can split the helmet in two: join the halves
+        hx0 = min(ss[i][0] for i in hs); hy0 = min(ss[i][1] for i in hs); hb = [hx0, hy0, max(ss[i][0] + ss[i][2] for i in hs) - hx0, max(ss[i][1] + ss[i][3] for i in hs) - hy0]
         mx, mn = np.maximum(np.maximum(pr, pg), pb), np.minimum(np.minimum(pr, pg), pb)
         shoe = (pa > 128) & (mn > 150) & (mx - mn < 40); shoe[:int(320 * 0.85)] = False
         fx = np.nonzero(shoe.any(0))[0]; fm = (fx.min() + fx.max()) / 2
