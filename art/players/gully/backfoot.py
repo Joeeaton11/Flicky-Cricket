@@ -28,7 +28,7 @@ def torso(b64):   # centre of the shirt's lower edge (the hips)
     r, g, bb, a = im[..., 0], im[..., 1], im[..., 2], im[..., 3]
     navy = (bb > r + 18) & (bb > g + 6) & (a > 128); rows = np.nonzero(navy.sum(1) > 8)[0]; y = rows.max()
     xs = np.nonzero(navy[max(0, y - 12):y + 1].any(0))[0]; return float((xs.min() + xs.max()) / 2)
-TORSO = {'shot_scoop_c', 'shot_scoop'}   # kneeling: hips stay over the stance's hips (the shin lies back, so the shoe isn't under him)
+TORSO = {'shot_scoop_c', 'shot_scoop', 'shot_revsweep_b', 'shot_revsweep_c', 'shot_revsweep'}   # kneeling: hips stay over the stance's hips (the shin lies back, so the shoe isn't under him)
 tx_s = torso(found['bat_stance'].group(2)); thx = (tx_s - ax0) * scS
 out = {}
 for n, m in found.items():
