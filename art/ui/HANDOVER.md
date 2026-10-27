@@ -309,3 +309,5 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Pipeline scripts were run in the session scratchpad (eye detection, cut, retone); re-create from these notes if more styles are added. All looks are free for now — trophy road can lock some later.
 - Flip v2 (Oct 27, Joe: flip was jittery): `#fcWrap` does the deal (`.deal`) and a gentle lift (`.lift`); `#fcCard` only rotates, as one CSS transition (`.turn`, 0.7s, no overshoot). Glow, foil, art pop and sparkles wait for `.shown` on `#fcFront` (set when the card lands, in `_fcLanded`) so the card is light while it turns.
 
+## Floodlit Series grounds (Oct 27)
+- Dusk Stadium painted ground live (see `art/grounds/floodlit/README.md`). Simple path: one fitted plate per ground via `FLOOD_PLATES`; add more Floodlit grounds by adding a plate + key. Gameplay geometry unchanged.
