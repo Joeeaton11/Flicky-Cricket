@@ -35648,7 +35648,21 @@ const SCENE_LABEL_COLORS = {
 
 
 
+// Phone notch / Dynamic Island height in CSS px (0 on phones without one, and in a normal browser tab)
+let SAFE_TOP = 0;
+function measureSafeTop() {
+  try { const d = document.createElement('div'); d.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top,0px);visibility:hidden;pointer-events:none';
+    document.body.appendChild(d); SAFE_TOP = d.getBoundingClientRect().height || 0; d.remove(); } catch (e) { SAFE_TOP = 0; }
+}
+window.addEventListener('resize', measureSafeTop); window.addEventListener('orientationchange', () => setTimeout(measureSafeTop, 300));
+document.addEventListener('DOMContentLoaded', measureSafeTop); setTimeout(measureSafeTop, 0);
+// every in-match scoreboard is drawn below the notch / Dynamic Island
 function drawSceneScoreboard() {
+  if (SAFE_TOP > 0 && !gullyPainted()) { ctx.save(); ctx.translate(0, SAFE_TOP); try { _drawSceneScoreboard(); } finally { ctx.restore(); } return; }
+  if (SAFE_TOP > 0) { ctx.save(); ctx.translate(0, Math.max(0, SAFE_TOP - H * 0.056 + 4)); try { _drawSceneScoreboard(); } finally { ctx.restore(); } return; }
+  _drawSceneScoreboard();
+}
+function _drawSceneScoreboard() {
   window._sbDrawn = true;
   // Per-scene scoreboard themes: [bg0,bg1,border,runsLabelCol,runsValCol,tgtLabelCol,tgtValCol,leftTint,rightTint]
   const BOARD_THEMES = {
