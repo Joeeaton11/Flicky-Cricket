@@ -2,15 +2,18 @@
 # Each sheet holds [contact, follow-through]. Cut, 320 px tall, size by helmet-to-shoe height vs the stance, anchor at the shoes.
 import cv2, numpy as np, json, sys
 from PIL import Image
-SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0, 'revsweep': 0.85, 'scoop': 0.80, 'drive': 0.92}
+SHEETS = {'coverdrive': 0.86, 'cut': 0.95, 'flick': 0.93, 'pull': 1.0, 'revsweep': 0.85, 'scoop': 0.80, 'drive': 0.95}
 # Joe's picks for the pull: wind-up from the single sketch, contact from the first sheet (mirrored), finish from the second
 # Joe's reverse-sweep refs run backlift (bat up on the leg side) -> contact -> finish (bat swept low out to the off side)
-PICK = {'coverdrive': [('cd3_src.png', 0, '_b', False), ('cd3_src.png', 1, '_c', False), ('cdf_src.png', 0, '', False)],
+PICK = {'drive': [('drive_c_src.png', 0, '_c', False), ('drive_f_src.png', 0, '', False)],      # straight drive v2 (gpt-image): stepped straight forward, front leg hidden
+        'coverdrive': [('cd3_src.png', 0, '_b', False), ('cd3_src.png', 1, '_c', False), ('cdf_src.png', 0, '', False)],
         'cut': [('cd3_src.png', 0, '_b', False), ('cut_src.png', 0, '_c', False), ('cut_src.png', 1, '', False)],
         'flick': [('flickc_src.png', 0, '_c', False), ('flick_src.png', 1, '', False)],
         'scoop': [('scoop_src.png', 0, '_c', False), ('scoop_finish_src.png', 0, '', False)],
                 'pull': [('pull_v1_src.png', 0, '_b', False), ('pull_v1_src.png', 1, '_c', True), ('pull_src.png', 2, '', False)]}
 TAGS = {'pull': ['_b', '_c', ''], 'revsweep': ['_b', '_c', '']}       # three-frame shots: wind-up, contact, follow-through
+HB_ROWS = {'shot_drive': 30}     # helmet depth in px where the shoulders come up close under it
+HB_SET = {'shot_drive_c': [56, 1, 108, 40]}   # helmet box set by hand where it sits down between the shoulders
 FLIP = {'scoop': [1]}          # drawn kneeling on the wrong knee: mirrored = right knee down, swept to the off side                    # frames drawn on the wrong side, mirrored to match the reference          # name: how low the pose sits vs standing (lunge)
 meta = json.load(open('meta.json')) if __import__('os').path.exists('meta.json') else {}
 SC_S = 0.117 / 0.6262; OFF_S = (47 - 66.7) * SC_S; SHOT = 0.1485
@@ -36,7 +39,7 @@ for name, LOW in SHEETS.items():
         if flip: rgba = np.ascontiguousarray(rgba[:, ::-1])
         p = rgba.astype(int); pb, pg, pr, pa = p[..., 0], p[..., 1], p[..., 2], p[..., 3]
         navy = (pb > pr + 18) & (pb > pg + 6) & (pa > 128); top = np.nonzero(navy.sum(1) > 3)[0].min()
-        band = navy.copy(); band[:top] = False; band[top + 44:] = False          # the helmet: navy in the top ~44 px of the figure
+        band = navy.copy(); band[:top] = False; band[top + HB_ROWS.get(key0 := 'shot_' + name + tag, 44):] = False          # the helmet: navy in the top ~44 px of the figure
         nn, ll, ss, _ = cv2.connectedComponentsWithStats(band.astype(np.uint8)); hl = 1 + np.argmax(ss[1:, 4]); hs = [i for i in range(1, nn) if ss[i][4] > 0.3 * ss[hl][4]]          # the gold stripe can split the helmet in two: join the halves
         hx0 = min(ss[i][0] for i in hs); hy0 = min(ss[i][1] for i in hs); hb = [hx0, hy0, max(ss[i][0] + ss[i][2] for i in hs) - hx0, max(ss[i][1] + ss[i][3] for i in hs) - hy0]
         mx, mn = np.maximum(np.maximum(pr, pg), pb), np.minimum(np.minimum(pr, pg), pb)
@@ -45,6 +48,6 @@ for name, LOW in SHEETS.items():
         k = (319 - top) / (403 * LOW); sc = SHOT / k; ax = fm - OFF_S / sc
         key = 'shot_' + name + tag
         Image.fromarray(cv2.cvtColor(rgba, cv2.COLOR_BGRA2RGBA)).save(key + '.webp', quality=92, method=6)
-        meta[key] = {'ax': round(float(ax), 1), 'ay': 319.3, 'k': round(float(k), 4), 'hb': [int(hb[0]), int(hb[1]), int(hb[0] + hb[2]), int(hb[1] + hb[3])]}
+        meta[key] = {'ax': round(float(ax), 1), 'ay': 319.3, 'k': round(float(k), 4), 'hb': list(HB_SET[key]) if key in HB_SET else [int(hb[0]), int(hb[1]), int(hb[0] + hb[2]), int(hb[1] + hb[3])]}
         print(key, rgba.shape, meta[key])
 json.dump(meta, open('meta.json', 'w'))
