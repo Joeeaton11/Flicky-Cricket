@@ -2733,17 +2733,29 @@
   /* ── flip card ── */
   #fcWrap { position:absolute; left:50%; top:43%; width:276px; height:392px; margin:-196px 0 0 -138px; perspective:1100px; z-index:5; pointer-events:none; }
   #fcWrap.on { pointer-events:auto; }
-  #fcCard { position:relative; width:100%; height:100%; transform-style:preserve-3d; opacity:0; }
-  #fcCard.in { animation:fcIn 0.5s cubic-bezier(.2,1.1,.35,1) forwards; }
-  #fcCard.flip { animation:fcFlip 0.62s cubic-bezier(.3,1.25,.45,1) forwards; }
-  #fcCard.out { animation:fcOut 0.22s ease-in forwards; }
+  #fcWrap { opacity:0; will-change:transform, opacity; }
+  #fcWrap.deal { animation:fcDeal 0.5s cubic-bezier(.2,.9,.3,1) forwards; }
+  #fcWrap.deal.lift { animation:fcDealDone 0s forwards, fcLift 0.7s cubic-bezier(.4,0,.3,1) forwards; }
+  #fcWrap.out { animation:fcOut 0.22s ease-in forwards; }
+  #fcCard { position:relative; width:100%; height:100%; transform-style:preserve-3d; -webkit-transform-style:preserve-3d;
+    transform:rotateY(180deg); will-change:transform; }
+  #fcCard.turn { transform:rotateY(0deg); transition:transform 0.7s cubic-bezier(.45,0,.2,1); }
+  @keyframes fcDeal { from { opacity:0; transform:translateY(240px) scale(0.3) rotate(-14deg); } to { opacity:1; transform:none; } }
+  @keyframes fcDealDone { to { opacity:1; } }
+  @keyframes fcLift { 0% { opacity:1; transform:none; } 45% { opacity:1; transform:translateY(-14px) scale(1.06); } 100% { opacity:1; transform:none; } }
+  /* keep the card light while it turns; the glow, foil, art pop and sparkles start once it lands */
+  .fcFront:not(.shown) .fcArt { animation:none; filter:none; }
+  .fcFront:not(.shown) .fcFoil { animation:none !important; opacity:0 !important; }
+  .fcFront:not(.shown) { box-shadow:0 20px 46px rgba(0,0,0,0.75), inset 0 2px 0 rgba(255,255,255,0.65) !important; }
+  .fcFront.shown .fcArt { animation:fcArtPop 0.45s cubic-bezier(.2,1.5,.4,1) both; }
+  .fcFace { transform:translateZ(0.5px); }
   @keyframes fcIn { from { opacity:0; transform:translateY(240px) scale(0.3) rotateY(180deg) rotateZ(-14deg); }
                     to   { opacity:1; transform:translateY(0) scale(1) rotateY(180deg) rotateZ(0); } }
   @keyframes fcFlip { from { opacity:1; transform:rotateY(180deg) scale(1); } 55% { transform:rotateY(70deg) scale(1.1); }
                       to { opacity:1; transform:rotateY(0) scale(1); } }
   @keyframes fcOut { to { opacity:0; transform:translateY(-40px) scale(0.85); } }
   .fcFace { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:22px; }
-  .fcBack { transform:rotateY(180deg); background:linear-gradient(#ffe27a,#e0a52a 50%,#a8700c); border:4px solid #050A14; padding:7px; box-sizing:border-box;
+  .fcBack { transform:rotateY(180deg) translateZ(0.5px); background:linear-gradient(#ffe27a,#e0a52a 50%,#a8700c); border:4px solid #050A14; padding:7px; box-sizing:border-box;
     box-shadow:0 18px 40px rgba(0,0,0,0.7), inset 0 2px 0 rgba(255,255,255,0.6); }
   .fcBackIn { position:relative; height:100%; border-radius:14px; border:3px solid #050A14; box-sizing:border-box; overflow:hidden;
     background:radial-gradient(circle at 50% 42%, #2c5aa8, #0E1C38 70%),
@@ -2781,7 +2793,7 @@
     background:repeating-conic-gradient(from 0deg at 50% 60%, rgba(255,255,255,0.16) 0 8deg, transparent 8deg 22deg); animation:sbSpin 18s linear infinite; opacity:0.6; }
   .fcWin.sun { background:radial-gradient(circle at 50% 58%, color-mix(in srgb, var(--fa) 90%, #fff), var(--fb) 45%, var(--fc)); }
   .fcArt { position:absolute; left:50%; bottom:6px; width:92%; height:118%; transform:translateX(-50%); background-size:contain; background-repeat:no-repeat;
-    background-position:center bottom; filter:drop-shadow(0 8px 0 rgba(0,0,0,0.35)) drop-shadow(0 0 18px var(--glow)); z-index:2; animation:fcArtPop 0.6s cubic-bezier(.2,1.6,.4,1) 0.35s both; }
+    background-position:center bottom; filter:drop-shadow(0 8px 0 rgba(0,0,0,0.35)) drop-shadow(0 0 18px var(--glow)); z-index:2; }
   @keyframes fcArtPop { from { transform:translateX(-50%) scale(0.4); } to { transform:translateX(-50%) scale(1); } }
   .fcPlus { position:absolute; right:-8px; bottom:-10px; z-index:3; font-size:24px; padding:3px 10px 0; border-radius:12px; color:#3a2200;
     background:linear-gradient(#fff6c8,#FFC93A); border:3px solid #050A14; box-shadow:0 3px 0 #050A14; }
@@ -58884,27 +58896,33 @@ function _fcBackdrop(rarity) {
 function fcHide() {
   const c = document.getElementById('fcCard'); if (!c) return;
   if (_fcTimer) { clearTimeout(_fcTimer); _fcTimer = null; }
-  if (c.classList.contains('in') || c.classList.contains('flip')) { c.className = 'out'; }
-  document.getElementById('fcWrap').classList.remove('on');
+  const wr = document.getElementById('fcWrap');
+  if (wr.classList.contains('deal')) wr.className = 'out'; else wr.className = '';
 }
 function _fcDeal(html, rarity, after) {
   const wrap = document.getElementById('fcWrap'), card = document.getElementById('fcCard'), front = document.getElementById('fcFront');
   front.dataset.r = rarity; front.innerHTML = html;
   const w = document.getElementById('fcWinItem'); if (w) w.style.backgroundImage = _fcBackdrop(rarity);
-  card.className = ''; void card.offsetWidth; card.classList.add('in');
-  wrap.classList.add('on');
+  front.classList.remove('shown');
+  card.className = ''; wrap.className = ''; void wrap.offsetWidth;
+  wrap.className = 'on deal';
   try { playTone({ freq:300, duration:0.06, volume:0.1, type:'triangle' }); } catch (e) {}
   if (_fcTimer) clearTimeout(_fcTimer);
   _fcTimer = setTimeout(() => {
-    card.className = 'flip';
+    requestAnimationFrame(() => { card.classList.add('turn'); wrap.classList.add('lift'); });
     try { playTone({ freq:760, duration:0.09, volume:0.12, type:'sine' }); haptic(15); } catch (e) {}
+    _fcTimer = setTimeout(() => { front.classList.add('shown'); _fcLanded(rarity, after); }, 680);
+  }, 520);
+}
+function _fcLanded(rarity, after) {
+  {
     if (rarity === 'legendary' || rarity === 'epic') {
       const n = rarity === 'legendary' ? 8 : 4, f = document.getElementById('fcFront');
       for (let i = 0; i < n; i++) { const sp = document.createElement('i'); sp.className = 'fcSpark';
         sp.style.cssText = `left:${8 + Math.random() * 84}%;top:${6 + Math.random() * 80}%;animation-delay:${(Math.random() * 1.6).toFixed(2)}s`; f.appendChild(sp); }
     }
     after && after();
-  }, 520);
+  }
 }
 function fcShowCoins(item) {
   const gems = item.type === 'gems', amt = item.amount;
@@ -59227,7 +59245,7 @@ function _closeChestAnim() {
   chestOpenCanvas.style.display = 'block';
   const sp = document.getElementById('chestSummaryPanel'); if (sp) sp.style.display = 'none';
   document.getElementById('chestRevealChestArea').style.visibility = '';
-  _setCardRays(null); fcHide(); document.getElementById('fcCard').className = '';
+  _setCardRays(null); fcHide(); document.getElementById('fcCard').className = ''; document.getElementById('fcWrap').className = '';
   if (_chestAnimFrame) { cancelAnimationFrame(_chestAnimFrame); _chestAnimFrame = null; }
   _chestOpenPhase = 'idle';
   if (_chestOpenAfterCallback) { _chestOpenAfterCallback(); _chestOpenAfterCallback = null; }
