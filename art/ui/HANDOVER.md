@@ -290,3 +290,20 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Headers v2 (block at the end of the main <style>): `--hdrTop` = max(inset, 6px), `--hdrH` = 46px for Kit/Bags/Shop (#equipHeader), Stats, Player, Leagues; 36px back button centred on the row; 23px titles; 32px pills with 17px tabular numbers and a 34px icon breaking out to the left. Home top bar uses the same edge.
 - Island audit script: scratchpad island_audit.py (swaps env() for 59px and draws an island on every screen).
 
+
+
+## Mascot & logo locked (Oct 27)
+- Flicky final: face A + real seam, five expressions and the app icon in `art/flicky/` (see its README for Figma nodes and rules). Joe chose this detailed 3D finish over the flat sticker redraw.
+- Logo font: **Titan One** (wordmark). UI font stays **Lilita One**. New wordmark swapped into `#homeWordmark` (Player screen and card backs copy it).
+- App icon also set as favicon + apple-touch-icon in the HTML head. Capacitor native icon sets still to generate from `flicky-icon-1024.png`.
+- **Decision (Oct 27): Flicky is the brand, the player is the game.** Flicky goes on the app icon, store page/screenshots, ads/social, loading screen with the logo and any merch. He stays OUT of gameplay, results, popups and menus (a result-screen version was tried and removed). Joe may give him a bigger in-game role later.
+- Loading screen (`#bootSplash`, first thing in <body>, self-contained styles/script, own small copies of Flicky default + wordmark): floodlit navy with slow rays, wordmark drops in, Flicky pops in and bobs, gold loading bar; shows at least 1.6s, fades out on window load, removed after (failsafe 9s). Capacitor native splash set to navy #01162C / 300ms so there is no green flash before it.
+
+## Player mix-and-match (Oct 27) — TRIED, REVERTED, PARKED (Joe: "not worked, come back to this")
+- Live game is back on the old preset looks (`PLAYER_ART` m1–m4/f1–f4). The work below is kept in `art/player/mixmatch-wip/` (assets + `player_index.json`; code is in commits 9774fab and 1bb6fa0) — not shipped.
+- Joe liked the heads themselves; both ways of joining a separate head to a body looked stuck-on. Next idea when resumed: generate each look as a WHOLE player (head + body in one image, several per sheet, same pose) rather than compositing heads.
+- Heads generated as 4×4 sheets in Figma (gemini-3.1-flash-image): male per skin tone (rows = hair SHORT/CURLY/WAVY/LOCS, cols = beard CLEAN/STUBBLE/GOATEE/BEARD) — nodes 258 fair, 257 light, 261 medium, 260 dark; female 262 (fair+light) and 263 (medium+dark), 8 hairstyles each (PONYTAIL, BRAID, BUN, BOB, CURLS, LONG, BOX BRAIDS, PIXIE). Prompt rules: same face in every cell, cap on, cut at mid-neck, no collar, one flat navy background (gemini otherwise draws cells / goes 2D).
+- Files in `assets/player/` (loaded on demand, ~2.3 MB): `{g}_{tone}.webp` + `_mask.webp` (body, old masks) and `{g}_{tone}_{nn}.webp` + `_mask.webp` (head layer; mask R = cap, G = piping). `PL_INDEX` in the HTML holds body params and each head's x, y, w, h, navyV, goldV.
+- v1 (heads pasted over the old bodies, aligned by the eyes) was rejected by Joe: heads looked stuck on (angle, floating neck, smudged bat). v2: NEW bodies drawn to match the head style (Figma 266:191 male, 267:191 female: same cartoon 3D style, bat standing on the ground so nothing sits behind the head, long visible neck). Each body's own head is removed above the chin and every head is seated by its neck (neck centre/bottom matched, drawn outline at the neck cut faded off). Arm skin re-toned to each head's neck colour (standing bat excluded).
+- Look fields: `skin` 0-3, `hair`, `beard` (male). Old `face` maps to a tone via `plTone`. `renderPlayer` composes body + head and recolours each with `plRecolor`; falls back to `renderPlayerOld` if assets fail. In-match skin uses `plSkinHex`.
+- Pipeline scripts were run in the session scratchpad (eye detection, cut, retone); re-create from these notes if more styles are added. All looks are free for now — trophy road can lock some later.
