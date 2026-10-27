@@ -6,4 +6,5 @@
 - Build: Real-ESRGAN 4× (art/grounds/tools), ONE uniform scale (2.094) + offset so the painted white track line matches the game oval (FIELD_CY .60 / RX .46 / RY .335 at 1170×2532); the white line is inpainted away (the game draws its own rope). Result `plate_final.png` → `assets/floodlit/dusk_stadium.webp`.
 - Code: `FLOOD_PLATES` / `floodPlate()` / `drawFloodPlateScene()` in drawStands — the plate is drawn to fill the screen (exact on 390×844 and 430×932; squashed ~18% vertically on 375×667). Pitch, rope, players and scoreboard are the game's own.
 - Test: `flicky-cricket.html?scene=dusk_stadium`.
-- Not done yet: own HUD skin / words, painted players, tan pitch, crowd animation, the other 6 Floodlit grounds.
+- v2 polish (Oct 27): towers re-placed so the lamp heads sit fully above the scoreboard (`plate_v2`), baked edge vignette; live in code (`FLOOD_INFO`): breathing light beams + lamp halos, camera flashes in the stands, LED ticker on the stand's big screen (league · runs · target), `drawFloodPitch` (tan strip on a lighter square, popping/return creases, worn ends).
+- Not done yet: own HUD skin / words, painted players, the other 6 Floodlit grounds.

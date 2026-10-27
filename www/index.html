@@ -32912,6 +32912,8 @@ function drawField() {
 
   } else if (gullyPainted()) {
     drawGullyPitch();
+  } else if (floodPlate(tod.key)) {
+    drawFloodPitch();
   } else {
   ctx.fillStyle = tod.pitch;
   ctx.beginPath();
@@ -34729,14 +34731,83 @@ function floodPlate(k) {
   let i = _floodImg[k]; if (!i) { i = _floodImg[k] = new Image(); i.src = f; }
   return i.complete && i.naturalWidth ? i : null;
 }
+// per-ground extras: lamp head centres, big-screen rect (fractions of the screen) and stand band for camera flashes
+const FLOOD_INFO = { dusk_stadium: { lamps: [[0.128, 0.042], [0.871, 0.042]], screen: [0.415, 0.199, 0.170, 0.032], stands: [0.02, 0.10, 0.96, 0.15], pitch: '#cdb07a' } };
 function drawFloodPlateScene() {
-  const P = floodPlate(currentTimeOfDay.key), key = currentTimeOfDay.key + W + 'x' + H + '@' + DPR;
+  const k = currentTimeOfDay.key, P = floodPlate(k), I = FLOOD_INFO[k] || {}, key = k + W + 'x' + H + '@' + DPR;
   if (window._floodKey !== key) {
     const cv = document.createElement('canvas'); cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
     const c = cv.getContext('2d'); c.imageSmoothingQuality = 'high'; c.drawImage(P, 0, 0, cv.width, cv.height);
     window._floodCache = cv; window._floodKey = key;
   }
   ctx.drawImage(window._floodCache, 0, 0, W, H);
+  const t = performance.now() / 1000;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  // light beams from each lamp head down onto the field, gently breathing
+  (I.lamps || []).forEach(([lx, ly], i) => {
+    const x0 = W * lx, y0 = H * ly, tx = W * (0.5 + (lx < 0.5 ? -0.12 : 0.12)), ty = H * 0.56, sp = W * 0.34;
+    const a = 0.11 + 0.025 * Math.sin(t * 0.7 + i * 2);
+    const g = ctx.createLinearGradient(x0, y0, tx, ty);
+    g.addColorStop(0, `rgba(255,248,225,${a * 2.2})`); g.addColorStop(0.35, `rgba(255,245,215,${a})`); g.addColorStop(1, 'rgba(255,245,215,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x0 - W * 0.03, y0); ctx.lineTo(x0 + W * 0.03, y0); ctx.lineTo(tx + sp / 2, ty); ctx.lineTo(tx - sp / 2, ty); ctx.closePath(); ctx.fill();
+    const h = ctx.createRadialGradient(x0, y0, 0, x0, y0, W * 0.16);
+    h.addColorStop(0, 'rgba(255,250,230,0.35)'); h.addColorStop(1, 'rgba(255,250,230,0)');
+    ctx.fillStyle = h; ctx.fillRect(x0 - W * 0.16, y0 - W * 0.16, W * 0.32, W * 0.32);
+  });
+  // camera flashes in the crowd
+  if (I.stands) {
+    const [sx, sy, sw, sh] = I.stands;
+    for (let i = 0; i < 26; i++) {
+      const ph = (Math.sin(i * 91.7) * 43758.5) % 1, rate = 0.23 + ((i * 0.37) % 0.3), f = ((t * rate + Math.abs(ph)) % 1);
+      if (f > 0.035) continue;
+      const fx = W * (sx + sw * Math.abs((Math.sin(i * 12.9 + Math.floor(t * rate + Math.abs(ph))) * 9631.3) % 1));
+      const fy = H * (sy + sh * Math.abs((Math.sin(i * 78.2 + Math.floor(t * rate + Math.abs(ph))) * 3157.7) % 1));
+      if (Math.abs(fx - W / 2) < W * 0.42 && fy < H * 0.17) continue;   // keep clear of the scoreboard
+      const r = 1.5 + 6 * (1 - f / 0.035);
+      const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, r * 2.2);
+      g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(1, 'rgba(200,220,255,0)');
+      ctx.fillStyle = g; ctx.fillRect(fx - r * 2.2, fy - r * 2.2, r * 4.4, r * 4.4);
+    }
+  }
+  ctx.restore();
+  // the stand's big screen: a scrolling LED ticker instead of a blank second scoreboard
+  if (I.screen) {
+    const [qx, qy, qw, qh] = I.screen, x = W * qx, y = H * qy, w = W * qw, h = H * qh;
+    ctx.save(); ctx.beginPath(); ctx.rect(x + 2, y + 2, w - 4, h - 4); ctx.clip();
+    ctx.fillStyle = '#05070d'; ctx.fillRect(x, y, w, h);
+    const lg = typeof THEMED_LEAGUES !== 'undefined' && window._activeLeagueIdx != null && THEMED_LEAGUES[window._activeLeagueIdx];
+    const msg = `${lg ? lg.name : 'FLOODLIT SERIES'}  \u2022  ${typeof runs !== 'undefined' ? runs : 0} RUNS  \u2022  TARGET ${typeof target !== 'undefined' ? target : ''}  \u2022  `;
+    ctx.font = `${Math.round(h * 0.62)}px 'Lilita One','Arial Black',sans-serif`; ctx.textBaseline = 'middle';
+    const mw = ctx.measureText(msg).width, off = (t * w * 0.35) % mw;
+    ctx.fillStyle = '#ffc93a'; ctx.shadowColor = 'rgba(255,190,60,0.9)'; ctx.shadowBlur = 6;
+    for (let xx = x - off; xx < x + w; xx += mw) ctx.fillText(msg, xx, y + h / 2 + 1);
+    ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    for (let yy = y; yy < y + h; yy += 2) ctx.fillRect(x, yy, w, 1);   // LED scanlines
+    ctx.restore();
+  }
+}
+function drawFloodPitch() {   // a proper tan strip on a lighter mown square, with creases and worn ends
+  const I = FLOOD_INFO[currentTimeOfDay.key] || {}, tw = PITCH_TOP_W(), bw = PITCH_BOTTOM_W(), pt = PITCH_TOP(), pb = PITCH_BOTTOM(), cx = W / 2;
+  const trap = (k, y0, y1) => { const a = tw + (bw - tw) * ((y0 - pt) / (pb - pt)), b = tw + (bw - tw) * ((y1 - pt) / (pb - pt));
+    ctx.beginPath(); ctx.moveTo(cx - a * k / 2, y0); ctx.lineTo(cx + a * k / 2, y0); ctx.lineTo(cx + b * k / 2, y1); ctx.lineTo(cx - b * k / 2, y1); ctx.closePath(); };
+  ctx.save();
+  trap(2.6, pt - 14, pb + 16); ctx.fillStyle = 'rgba(200,255,150,0.10)'; ctx.fill();   // the square
+  trap(1, pt, pb); const g = ctx.createLinearGradient(0, pt, 0, pb);
+  g.addColorStop(0, I.pitch || '#cdb07a'); g.addColorStop(0.5, '#d9bf8a'); g.addColorStop(1, I.pitch || '#cdb07a');
+  ctx.fillStyle = g; ctx.fill();
+  ctx.strokeStyle = 'rgba(70,50,20,0.35)'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.clip();
+  ctx.fillStyle = 'rgba(255,255,255,0.10)'; trap(0.18, pt, pb); ctx.fill();   // shiny centre line
+  ctx.fillStyle = 'rgba(110,80,40,0.28)';   // worn footmarks
+  ctx.beginPath(); ctx.ellipse(cx, pt + 18, tw * 0.32, 9, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx, pb - 22, bw * 0.30, 12, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx - tw * 0.62, pt + 8); ctx.lineTo(cx + tw * 0.62, pt + 8);   // popping creases
+  ctx.moveTo(cx - bw * 0.64, pb - 4); ctx.lineTo(cx + bw * 0.64, pb - 4);
+  ctx.moveTo(cx - tw * 0.38, pt + 1); ctx.lineTo(cx - tw * 0.38, pt + 14); ctx.moveTo(cx + tw * 0.38, pt + 1); ctx.lineTo(cx + tw * 0.38, pt + 14);   // return creases
+  ctx.moveTo(cx - bw * 0.40, pb - 14); ctx.lineTo(cx - bw * 0.40, pb + 4); ctx.moveTo(cx + bw * 0.40, pb - 14); ctx.lineTo(cx + bw * 0.40, pb + 4);
+  ctx.stroke();
 }
 function drawStands() {
   { const g = !!gullyPainted(); if (document.body.classList.contains('gly') !== g) document.body.classList.toggle('gly', g); }
