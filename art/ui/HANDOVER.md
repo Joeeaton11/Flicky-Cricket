@@ -280,3 +280,7 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Coins and gems use the same card (gold / purple) with heap art sized by amount (`REWARD_HEAP_ART`, Figma 237:191: small/medium/large coins and gems) on a sunburst, and the number counts up. Coins: <250 small, <800 medium; gems: <10 small, <30 medium.
 - Bag name + bench (Oct 27, Joe picked from 6 options): no ribbon; chunky outlined text with the tier word in the tier colour (`<b>GOLD</b> BAG`). The bag rests on the changing-room bench Clash-style: `--benchY` = 1072 × cover scale of the 768×1376 room art, set in `showChestOpenAnimation`; canvas, title and fx are positioned from it. Spotlight/beams show only while the bag shakes (hidden in `_doRevealSequence`), never behind the cards.
 
+## Bags screen: navy lockers (Oct 27)
+- Joe tried a trophy shelf/2×2 layout, blue UI, an IPL-style modern room and modern lockers; none stuck. Kept: the original painted changing room and 5-locker layout (5th peeks under the nav). Changed: the wooden locker frame → navy steel locker with brass corners and rivets (Figma 246:191, 2nd of 4; cut on #00FF00, shortened to the old 814:924 shape). CSS block "Bags: navy steel lockers" at the end of the bagL style block (must come after the old wood `.chestSlot` rule).
+- The "Bags screen v2" commit (trophy shelf, bag-slot button, ring timer, ghost bags) was reverted. Other locker styles generated if wanted later: green steel + brass, cream & green, red leather + studs (246:191).
+
