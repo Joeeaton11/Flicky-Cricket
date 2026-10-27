@@ -284,3 +284,9 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Joe tried a trophy shelf/2×2 layout, blue UI, an IPL-style modern room and modern lockers; none stuck. Kept: the original painted changing room and 5-locker layout (5th peeks under the nav). Changed: the wooden locker frame → navy steel locker with brass corners and rivets (Figma 246:191, 2nd of 4; cut on #00FF00, shortened to the old 814:924 shape). CSS block "Bags: navy steel lockers" at the end of the bagL style block (must come after the old wood `.chestSlot` rule).
 - The "Bags screen v2" commit (trophy shelf, bag-slot button, ring timer, ghost bags) was reverted. Other locker styles generated if wanted later: green steel + brass, cream & green, red leather + studs (246:191).
 
+## Notch / Dynamic Island + headers (Oct 27)
+- `viewport-fit=cover` added so `env(safe-area-inset-top)` works. Controls stay inside the safe area (Apple HIG); background art runs behind the island. Joe asked about putting back/pills either side of the island: not done (status bar + Control/Notification Centre swipe zone, varies by model).
+- In-match scoreboards: `drawSceneScoreboard()` now wraps `_drawSceneScoreboard()` and translates by `SAFE_TOP` (measured from env() by `measureSafeTop`).
+- Headers v2 (block at the end of the main <style>): `--hdrTop` = max(inset, 6px), `--hdrH` = 46px for Kit/Bags/Shop (#equipHeader), Stats, Player, Leagues; 36px back button centred on the row; 23px titles; 32px pills with 17px tabular numbers and a 34px icon breaking out to the left. Home top bar uses the same edge.
+- Island audit script: scratchpad island_audit.py (swaps env() for 59px and draws an island on every screen).
+
