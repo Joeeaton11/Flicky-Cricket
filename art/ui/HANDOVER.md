@@ -280,3 +280,9 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Coins and gems use the same card (gold / purple) with heap art sized by amount (`REWARD_HEAP_ART`, Figma 237:191: small/medium/large coins and gems) on a sunburst, and the number counts up. Coins: <250 small, <800 medium; gems: <10 small, <30 medium.
 - Bag name + bench (Oct 27, Joe picked from 6 options): no ribbon; chunky outlined text with the tier word in the tier colour (`<b>GOLD</b> BAG`). The bag rests on the changing-room bench Clash-style: `--benchY` = 1072 × cover scale of the 768×1376 room art, set in `showChestOpenAnimation`; canvas, title and fx are positioned from it. Spotlight/beams show only while the bag shakes (hidden in `_doRevealSequence`), never behind the cards.
 
+## Bags screen v2 (Oct 27)
+- Joe felt the locker frames blended into the room: the room is dimmed (`box-shadow:inset 0 0 0 3000px rgba(14,6,0,.42)` on `#customiseScreen.cs-chests`) and lockers get a dark outline + deeper drop shadow; ready lockers glow in the tier colour.
+- Trophy shelf (`renderTrophyShelf`, `BAG_TROPHY_ART`, Figma 238:191 — 8 trophy styles cycled by league index): one trophy per league moved up from (`highestLeagueIdx()`), last 6 shown with "+N", "TROPHIES n / 27" plank; tap a trophy for its league name. Empty state: 3 faint trophies + "WIN LEAGUES TO FILL YOUR SHELF".
+- The locked 5th locker is gone from the grid: "+ BAG SLOT 200" button beside the free-bags pill (`.bagSlotBtn`, same buy + confirm). Grid is a clean 2×2 that fits above the nav.
+- Unlocking bags show a ring timer (`.bagRing`, conic fill in the tier colour); the thin bar is hidden. Ready bags hop + glow, OPEN pulses. Empty lockers show a faint bag outline and "Win a match to earn a bag".
+
