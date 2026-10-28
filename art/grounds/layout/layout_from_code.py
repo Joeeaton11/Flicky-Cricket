@@ -127,8 +127,10 @@ No text, letters, numbers or logos anywhere unless asked.
 
 ## 1. Ground — surroundings, themed field, boundary rope
 ```
-Portrait background, exactly {W}x{H} px. It MUST correctly and accurately match the coded game layout below. Positions are exact, not suggestions. % of width (W) / height (H), pixels in brackets.
+Portrait background, exactly {W}x{H} px. It MUST correctly and accurately match the coded game layout below. Positions are exact, not suggestions. None of these measurements or labels are ever written in the image. % of width (W) / height (H), pixels in brackets.
 FIELD: one TALL oval playing surface — themed, not always grass [e.g. raked beach sand, ice, ship's deck, turf] — plain and calm so a small ball shows clearly. The image comes out 9:16, so give the oval in those terms: its height is 1.58 times its width; centre 50% W / {pct(fo['cy'])} H; left edge 12% W, right edge 88% W, top edge {pct(fo['top'])} H, bottom edge {pct(fo['bottom'])} H. The strips outside 12% and 88% W get cropped, so keep only scenery there.
+It is a true smooth ellipse, not a racetrack with straight sides.
+TIGHT STADIUM: the stadium starts right at the field edge. Only a thin ring of boards (or the theme's equivalent) separates the field from the crowd and scenery: no wide band of bare outfield, track, sand or empty ground.
 The field edge is a clean crisp line. NO rope, NO markers, NO inner ring, NO lines on the field: the game draws the themed rope, boundary markers and 30-yard ring markers from the props sheet, exactly on the coded oval.
 EMPTY: no pitch, stumps, players, umpire, ball or text on the field.
 SURROUNDINGS: busy, fun and cool — packed with life, characters and detail, edge to edge and top to bottom, OUTSIDE the oval only. Real-world themes (e.g. an IPL ground) should look like the real thing, in the home team's colours. No empty bands at the top or bottom.

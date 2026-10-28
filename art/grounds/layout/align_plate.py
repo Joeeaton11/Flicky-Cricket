@@ -71,6 +71,8 @@ print(f'painted oval: centre ({cx:.0f},{cy:.0f}) radii ({rx:.0f},{ry:.0f}) of {w
 tcx, tcy, trx, try_ = W * 0.5, H * fo['cy'], W * fo['rx'], H * fo['ry']
 sx = trx / rx                        # uniform x scale
 sy_mid = try_ / ry                   # oval band y scale
+if '--max-stretch' in sys.argv and sy_mid / sx > arg('--max-stretch', 1.08):
+    sx = sy_mid / arg('--max-stretch', 1.08)   # painted field wider than ours: the extra lies beyond the rope at the sides
 top_s, bot_s = cy - ry, cy + ry      # source rope top / bottom
 top_t, bot_t = tcy - try_, tcy + try_
 # y map target -> source (inverse), piecewise: above the oval use sx, inside sy_mid, below sx
