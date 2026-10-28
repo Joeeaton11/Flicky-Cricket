@@ -15,6 +15,10 @@ raw, out = sys.argv[1], sys.argv[2]
 arg = lambda k, d: float(sys.argv[sys.argv.index(k) + 1]) if k in sys.argv else d
 rope_out, tol = arg('--rope-out', 6), arg('--tol', 26)
 img = cv2.imread(raw); h0, w0 = img.shape[:2]
+if '--erase-vlines' in sys.argv:   # guide lines the model drew down the page
+    for xv in [int(v) for v in sys.argv[sys.argv.index('--erase-vlines') + 1].split(',')]:
+        mk = np.zeros((h0, w0), np.uint8); mk[:, max(0, xv - 4):xv + 5] = 255
+        img = cv2.inpaint(img, mk, 6, cv2.INPAINT_TELEA)
 if '--erase-box' in sys.argv:   # a placeholder box the model drew: lift its tint and paint out its border
     x0, y0, x1, y1 = [int(v) for v in sys.argv[sys.argv.index('--erase-box') + 1].split(',')]
     f = img.astype(np.float32)
@@ -29,8 +33,15 @@ if '--erase-box' in sys.argv:   # a placeholder box the model drew: lift its tin
     print('erased box, tint ratio', ratio.round(2))
 # find the rope: rays from the field centre; the rope is the first solid run of non-grass pixels
 hsv = cv2.cvtColor(cv2.GaussianBlur(img, (5, 5), 0), cv2.COLOR_BGR2HSV)
-grass = (hsv[..., 0] >= 28) & (hsv[..., 0] <= 95) & (hsv[..., 1] >= 50) & (hsv[..., 2] >= 40)
 c0x, c0y = w0 / 2, h0 * arg('--cy', 0.58)
+# field = anything close in colour to the middle of the field (grass, sand, ice, deck...)
+labf = cv2.cvtColor(cv2.GaussianBlur(img, (7, 7), 0), cv2.COLOR_BGR2LAB).astype(np.float32)
+ref = np.median(labf[int(c0y) - 60:int(c0y) + 60, int(c0x) - 60:int(c0x) + 60].reshape(-1, 3), 0)
+grass = np.linalg.norm(labf - ref, axis=2) < arg('--fdist', 24)
+if '--edge-white' in sys.argv:   # the boundary is a painted white line on the field
+    lr = cv2.cvtColor(img, cv2.COLOR_BGR2LAB).astype(np.float32)
+    rc = np.hypot(ref[1] - 128, ref[2] - 128)
+    grass = ~((np.hypot(lr[..., 1] - 128, lr[..., 2] - 128) < rc * 0.55) & (lr[..., 0] > ref[0] - 25))
 pts = []
 for ang in np.linspace(0, 2 * np.pi, 720, endpoint=False):
     dx, dy = np.cos(ang), np.sin(ang); run = 0
@@ -38,22 +49,19 @@ for ang in np.linspace(0, 2 * np.pi, 720, endpoint=False):
         x, y = int(c0x + dx * r), int(c0y + dy * r)
         if not (0 <= x < w0 and 0 <= y < h0): break
         run = 0 if grass[y, x] else run + 1
-        if run >= int(arg('--run', 7)): pts.append((c0x + dx * (r - run), c0y + dy * (r - run))); break
+        if run >= int(arg('--run', 7)): pts.append((c0x + dx * (r - run), c0y + dy * (r - run), ang)); break
 pts = np.array(pts)
-def fit(P):   # axis-aligned ellipse: A x^2 + B y^2 + C x + D y = 1
-    X = np.c_[P[:, 0] ** 2, P[:, 1] ** 2, P[:, 0], P[:, 1]]
-    A, B, C, D = np.linalg.lstsq(X, np.ones(len(P)), rcond=None)[0]
-    cx, cy = -C / (2 * A), -D / (2 * B); k = 1 + C * C / (4 * A) + D * D / (4 * B)
-    return cx, cy, np.sqrt(k / A), np.sqrt(k / B)
+# extents along the four axes (works for ovals and racetrack shapes): median hit within ±12° of each axis
+def axis(a0):
+    d = np.abs((pts[:, 2] - a0 + np.pi) % (2 * np.pi) - np.pi)
+    return np.median(pts[d < np.radians(12)][:, :2], 0)
+R, B_, Lf, T = axis(0), axis(np.pi / 2), axis(np.pi), axis(3 * np.pi / 2)
+cx, cy = (Lf[0] + R[0]) / 2, (T[1] + B_[1]) / 2
+rx, ry = (R[0] - Lf[0]) / 2 + rope_out, (B_[1] - T[1]) / 2 + rope_out
 P = pts
-for _ in range(4):   # drop flags, gaps and stray hits, refit
-    cx, cy, rx, ry = fit(P)
-    e = np.abs(np.hypot((P[:, 0] - cx) / rx, (P[:, 1] - cy) / ry) - 1)
-    P = P[e < max(0.02, np.percentile(e, 70))]
-cx, cy, rx, ry = fit(P); rx += rope_out; ry += rope_out
 cv = img.copy()
-for x, y in pts: cv2.circle(cv, (int(x), int(y)), 2, (0, 0, 255), -1)
-for x, y in P: cv2.circle(cv, (int(x), int(y)), 2, (0, 255, 255), -1)
+for x, y, _ in pts: cv2.circle(cv, (int(x), int(y)), 2, (0, 0, 255), -1)
+for x, y, _ in P: cv2.circle(cv, (int(x), int(y)), 2, (0, 255, 255), -1)
 cv2.ellipse(cv, (int(cx), int(cy)), (int(rx), int(ry)), 0, 0, 360, (255, 0, 255), 2)
 cv2.imwrite(os.path.splitext(out)[0] + '_fit.png', cv)
 print(f'painted oval: centre ({cx:.0f},{cy:.0f}) radii ({rx:.0f},{ry:.0f}) of {w0}x{h0}; {len(P)}/{len(pts)} rope points kept')
@@ -77,8 +85,10 @@ if need_top < 0: print('WARNING: top of the image runs out (edge pixels repeated
 if '--clear-inner' in sys.argv:   # erase any painted inner ring / markings inside the field (the game draws its own)
     hs = cv2.cvtColor(res, cv2.COLOR_BGR2HSV)
     yy, xx = np.mgrid[0:H, 0:W]
-    inside = ((xx - tcx) / (trx * 0.88)) ** 2 + ((yy - tcy) / (try_ * 0.88)) ** 2 < 1
-    mk = (inside & (hs[..., 1] < arg('--inner-sat', 70)) & (hs[..., 2] > 140)).astype(np.uint8) * 255
+    zf = arg('--inner-zone', 0.88)
+    inside = ((xx - tcx) / (trx * zf)) ** 2 + ((yy - tcy) / (try_ * zf)) ** 2 < 1
+    v = hs[..., 2]; th = cv2.subtract(v, cv2.morphologyEx(v, cv2.MORPH_OPEN, np.ones((17, 17), np.uint8)))
+    mk = (inside & (((hs[..., 1] < arg('--inner-sat', 70)) & (v > 140)) | ((th > 28) & (hs[..., 0] >= 28) & (hs[..., 0] <= 70) & (hs[..., 1] > 60)))).astype(np.uint8) * 255
     mk = cv2.dilate(mk, np.ones((9, 9), np.uint8))
     res = cv2.inpaint(res, mk, 9, cv2.INPAINT_TELEA)
     print('cleared inner markings:', int((mk > 0).sum()), 'px')

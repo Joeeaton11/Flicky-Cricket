@@ -3566,7 +3566,7 @@ function setNavActive(tab) {
   }
 }
 function setNavBack(show) { const b = document.getElementById('navBackBtn'); if (b) b.classList.toggle('hidden', !show); }
-function showNav(tab) { if (bottomNav) { bottomNav.classList.remove('hidden'); setNavActive(tab || ''); } setNavBack(!!tab && tab !== 'league');
+function showNav(tab) { if (window._scenePreview) return; if (bottomNav) { bottomNav.classList.remove('hidden'); setNavActive(tab || ''); } setNavBack(!!tab && tab !== 'league');
   if (window._pendingBagFly) { const t = window._pendingBagFly; window._pendingBagFly = null;
     if (tab !== 'chests' && typeof flyBagToTab === 'function') setTimeout(() => flyBagToTab(t), 450); } }
 function hideNav()    { if (bottomNav) bottomNav.classList.add('hidden'); setNavBack(false); }
@@ -5232,6 +5232,175 @@ function themedWords() {
   if (typeof gullyPainted === 'function' && gullyPainted()) return GULLY_WORDS;
   try { return THEMED_WORDS[currentTimeOfDay.key] || null; } catch (e) { return null; }
 }
+// ════════ THEMED GROUNDS (painted pilots): art registry + drawing ════════
+// Each theme lists its art folder and where things sit inside its HUD pieces (fractions of each image).
+// The field layout itself always comes from the code (FIELD_*, PITCH_*, THEMED_HUD).
+const THEME_ART = {
+  pirate_cove: { dir: 'assets/themes/pirate/', lightX: -1, ropeT: 0.011, flags: 8, ringN: 28, ringS: 0.026, fielderH: 0.044,
+    pitch: { ct: 56, cb: 336, wb: 166 },
+    board: { slices: [[0, .1, 0], [.1, .4, 1], [.4, .6, 0], [.6, .9, 1], [.9, 1, 0]], L: [.103, .412, .452, .782], R: [.548, .415, .897, .785], lL: [.157, .26, .393, .39], lR: [.613, .26, .849, .39] },
+    energy: { cap: .06, ch: [.058, .237, .942, .684] }, six: { cy: .43, r: .05, xs: [.124, .275, .425, .575, .725, .877] }, best: { p: [.113, .423, .897, .869] } },
+  t20_night: { dir: 'assets/themes/t20/', lightX: 1, ropeT: 0.012, flags: 0, ringN: 30, ringS: 0.022, fielderH: 0.044,
+    pitch: { ct: 28, cb: 386, wb: 151 },
+    board: { slices: [[0, .05, 0], [.05, .44, 1], [.44, .56, 0], [.56, .95, 1], [.95, 1, 0]], L: [.052, .36, .461, .84], R: [.539, .36, .947, .84], lL: [.156, .24, .37, .39], lR: [.639, .24, .855, .39] },
+    energy: { cap: .05, ch: [.039, .19, .953, .81] }, six: { cy: .427, r: .05, xs: [.1135, .2665, .421, .575, .729, .8835] }, best: { p: [.223, .183, .928, .757] } },
+};
+Object.keys(THEME_ART).forEach(k => {
+  const d = THEME_ART[k].dir;
+  THEMED_WORDS[k] = { four: d + 'w_four.webp', six: d + 'w_six.webp', caught: d + 'w_caught.webp', bowled: d + 'w_bowled.webp', out: d + 'w_out.webp' };
+});
+function themeArt() { const k = currentTimeOfDay && currentTimeOfDay.key; return (k && THEME_ART[k]) || null; }
+const _tImgs = {};
+function tImg(name) {
+  const A = themeArt(); if (!A) return null;
+  const src = A.dir + name + '.webp'; let i = _tImgs[src];
+  if (!i) { i = _tImgs[src] = new Image(); i.src = src; }
+  return i.complete && i.naturalWidth ? i : null;
+}
+// draw an image inside a box, keeping its shape; returns the box it used
+function tFit(img, x, y, w, h) {
+  const s = Math.min(w / img.naturalWidth, h / img.naturalHeight), dw = img.naturalWidth * s, dh = img.naturalHeight * s;
+  const bx = x + (w - dw) / 2, by = y + (h - dh) / 2; ctx.drawImage(img, bx, by, dw, dh); return { x: bx, y: by, w: dw, h: dh };
+}
+// draw an image to a box of any width: fixed slices keep their shape, stretch slices share the rest. Returns fx -> screen x.
+function tSliced(img, slices, x, y, w, h) {
+  const iw = img.naturalWidth, ih = img.naturalHeight, k = h / ih;
+  const fixed = slices.filter(s => !s[2]).reduce((a, s) => a + (s[1] - s[0]) * iw * k, 0);
+  const str = slices.filter(s => s[2]).reduce((a, s) => a + (s[1] - s[0]), 0);
+  const sk = Math.max(0, w - fixed) / (str || 1);
+  let cx = x; const seg = [];
+  slices.forEach(([a, b, st]) => { const dw = st ? (b - a) * sk : (b - a) * iw * k; ctx.drawImage(img, a * iw, 0, (b - a) * iw, ih, cx, y, dw + 0.5, h); seg.push([a, b, cx, dw]); cx += dw; });
+  return fx => { for (const [a, b, sx, dw] of seg) if (fx <= b) return sx + (fx - a) / (b - a) * dw; return x + w; };
+}
+// a number from the theme's painted digits, centred in a box
+function tNumber(n, x, y, w, h) {
+  const s = String(Math.max(0, Math.floor(n))), gl = [...s].map(c => tImg('d' + c));
+  if (gl.some(g => !g)) return;
+  let gh = h, tw = gl.reduce((a, g) => a + g.naturalWidth * gh / g.naturalHeight, 0) * 0.94;
+  if (tw > w) { gh *= w / tw; tw = w; }
+  let cx = x + (w - tw) / 2; const cy = y + (h - gh) / 2;
+  gl.forEach(g => { const gw = g.naturalWidth * gh / g.naturalHeight; ctx.drawImage(g, cx, cy, gw, gh); cx += gw * 0.94; });
+}
+function tShadow(x, y, rx, ry) {
+  const A = themeArt(); ctx.fillStyle = 'rgba(20,10,0,0.28)';
+  ctx.beginPath(); ctx.ellipse(x - (A ? A.lightX : 0) * rx * 0.45, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+}
+
+// the boundary rope (tiled painted rope along the coded oval), flag markers and the inner-ring markers
+function drawThemedBoundary() {
+  const A = themeArt(), rope = tImg('rope'), mk = tImg('ring'), cx = W / 2, cy = H * FIELD_CY, rx = W * FIELD_RX, ry = H * FIELD_RY;
+  if (mk) {
+    const icy = H * (FIELD_CY - 0.024), irx = W * FIELD_RX * 0.478, iry = H * FIELD_RY * 0.535, s = W * A.ringS;
+    for (let i = 0; i < A.ringN; i++) { const a = i / A.ringN * Math.PI * 2; tFit(mk, cx + Math.cos(a) * irx - s / 2, icy + Math.sin(a) * iry - s / 2, s, s); }
+  }
+  if (rope) {
+    const T = Math.max(3, W * A.ropeT), iw = rope.naturalWidth, ih = rope.naturalHeight, per = ih / T, N = 220;
+    let u = 0;
+    for (let i = 0; i < N; i++) {
+      const a0 = i / N * Math.PI * 2, a1 = (i + 1) / N * Math.PI * 2;
+      const x0 = cx + Math.cos(a0) * rx, y0 = cy + Math.sin(a0) * ry, x1 = cx + Math.cos(a1) * rx, y1 = cy + Math.sin(a1) * ry;
+      const len = Math.hypot(x1 - x0, y1 - y0), sw = Math.min(len * per, iw - 2);
+      if (u + sw > iw - 1) u = 0;
+      ctx.save(); ctx.translate(x0, y0); ctx.rotate(Math.atan2(y1 - y0, x1 - x0));
+      ctx.drawImage(rope, u, 0, sw, ih, 0, -T / 2, len + 0.8, T); ctx.restore(); u += sw;
+    }
+  }
+  const fl = A.flags && tImg('flag');
+  if (fl) {
+    const fh = H * 0.032, fw = fl.naturalWidth * fh / fl.naturalHeight;
+    for (let i = 0; i < A.flags; i++) {
+      const a = (i + 0.5) / A.flags * Math.PI * 2, x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry;
+      if (y < H * 0.30) continue;   // keep the far end clear under the HUD
+      tShadow(x, y, fw * 0.35, fw * 0.12); ctx.drawImage(fl, x - fw * 0.2, y - fh, fw, fh);
+    }
+  }
+}
+function drawThemedPitch() {
+  const A = themeArt(), img = tImg('pitch'); if (!img) return false;
+  const P = A.pitch, sy = (PITCH_BOTTOM() - PITCH_TOP()) / (P.cb - P.ct), sx = PITCH_BOTTOM_W() / P.wb;
+  const w = img.naturalWidth * sx, h = img.naturalHeight * sy;
+  ctx.drawImage(img, W / 2 - w / 2, PITCH_TOP() - P.ct * sy, w, h); return true;
+}
+function drawThemedStumps(cx, cy, w) {
+  const st = tImg('stump'), bl = tImg('bail'); if (!st) return false;
+  const h = w * 1.05, sw = st.naturalWidth * h / st.naturalHeight, gap = sw * 1.15;
+  tShadow(cx, cy, gap * 1.8, Math.max(1.5, h * 0.06));
+  for (let i = -1; i <= 1; i++) ctx.drawImage(st, cx + i * gap - sw / 2, cy - h, sw, h);
+  if (bl) { const bw = gap * 1.05, bh = bl.naturalHeight * bw / bl.naturalWidth; [-0.5, 0.5].forEach(o => ctx.drawImage(bl, cx + o * gap - bw / 2, cy - h - bh * 0.45, bw, bh)); }
+  return true;
+}
+function drawThemedBall(px, py, r) {
+  const img = tImg('ball'); if (!img) return false;
+  ctx.save(); ctx.translate(px, py); ctx.rotate((ball.hitAnim ? ball.flightDist * 12 : ball.z * 8) || 0);
+  ctx.drawImage(img, -r * 1.1, -r * 1.1, r * 2.2, r * 2.2); ctx.restore(); return true;
+}
+// fielders: 5 painted views (towards camera … away), mirrored for the other side; they face the batter, or where they're running
+function drawThemedFielder(x, y, chasing, diving, stridePhase, f) {
+  const A = themeArt(); if (!tImg('f_s')) return false;
+  let tx = W / 2 - x, ty = PITCH_BOTTOM() - y;
+  if (f) { const vx = x - (f._tpx ?? x), vy = y - (f._tpy ?? y); f._tpx = x; f._tpy = y; if (chasing && Math.hypot(vx, vy) > 0.8) { tx = vx; ty = vy; } }
+  const ang = Math.abs(Math.atan2(tx, ty)) * 180 / Math.PI;   // 0 = towards camera, 180 = away
+  const view = ang < 22.5 ? 'f_s' : ang < 67.5 ? 'f_se' : ang < 112.5 ? 'f_e' : ang < 157.5 ? 'f_ne' : 'f_n';
+  const img = tImg(view) || tImg('f_s'), fh = H * A.fielderH, fw = img.naturalWidth * fh / img.naturalHeight;
+  const bob = stridePhase > 0 ? Math.abs(Math.sin(stridePhase)) * (chasing ? 2.2 : 1) : 0;
+  tShadow(x, y, fw * 0.42, fh * 0.07);
+  ctx.save(); ctx.translate(x, y - bob);
+  if (diving) ctx.rotate((tx < 0 ? -1 : 1) * 1.2);
+  if (view !== 'f_s' && view !== 'f_n' && tx < 0) ctx.scale(-1, 1);
+  ctx.drawImage(img, -fw / 2, -fh, fw, fh); ctx.restore(); return true;
+}
+// the HUD: painted pieces placed in THEMED_HUD (code layout), numbers in the painted digits
+function drawThemedHud(off) {
+  const A = themeArt(), R = k => { const r = THEMED_HUD[k]; return [W * r.l, H * r.t, W * (r.r - r.l), H * (r.b - r.t)]; };
+  const _h = document.getElementById('hud'); if (_h) _h.style.display = 'none';
+  const T = Math.max(target, window._leagueTargetFloor || 0);
+  const bd = tImg('board');
+  if (bd) {
+    const [x, y, w, h] = R('scoreboard'), B = A.board, mx = tSliced(bd, B.slices, x, y, w, h);
+    const box = (q, f) => f(mx(q[0]), y + q[1] * h, mx(q[2]) - mx(q[0]), (q[3] - q[1]) * h);
+    box(B.L, (bx, by, bw, bh) => tNumber(runs, bx + bw * 0.06, by + bh * 0.1, bw * 0.88, bh * 0.8));
+    box(B.R, (bx, by, bw, bh) => tNumber(T, bx + bw * 0.06, by + bh * 0.1, bw * 0.88, bh * 0.8));
+    const lr = tImg('lbl_runs'), lt = tImg('lbl_target');
+    if (lr) box(B.lL, (bx, by, bw, bh) => tFit(lr, bx + bw * 0.08, by + bh * 0.12, bw * 0.84, bh * 0.76));
+    if (lt) box(B.lR, (bx, by, bw, bh) => tFit(lt, bx + bw * 0.08, by + bh * 0.12, bw * 0.84, bh * 0.76));
+  }
+  const en = tImg('energy');
+  if (en) {
+    const [x, y, w, h] = R('energy_bar'), E = A.energy, c = E.cap;
+    const mx = tSliced(en, [[0, c, 0], [c, 1 - c, 1], [1 - c, 1, 0]], x, y, w, h);
+    const pct = Math.max(0, Math.min(1, energy / MAX_ENERGY));
+    if (pct > 0) {
+      const cx0 = mx(E.ch[0]), cw = mx(E.ch[2]) - cx0, cy0 = y + E.ch[1] * h, ch = (E.ch[3] - E.ch[1]) * h;
+      const col = pct > 0.6 ? ['#7dff6a', '#22b33a'] : pct > ENERGY_LOW_THRESHOLD / MAX_ENERGY ? ['#ffe45c', '#e8a10c'] : ['#ff7a6a', '#d0221c'];
+      const g = ctx.createLinearGradient(0, cy0, 0, cy0 + ch); g.addColorStop(0, col[0]); g.addColorStop(1, col[1]);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(cx0, cy0, Math.max(ch, cw * pct), ch, ch / 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(cx0 + 2, cy0 + ch * 0.15, Math.max(0, cw * pct - 4), ch * 0.25);
+    }
+  }
+  const pa = tImg('pause');
+  if (pa) { const [x, y, w, h] = R('pause_button'), b = tFit(pa, x, y, w, h); window._pauseSpot = { x: b.x + b.w / 2, y: b.y + b.h / 2 + (off || 0), r: b.w / 2, t: performance.now() }; }
+  const sx = tImg('six');
+  if (sx) {
+    const [x, y, w, h] = R('last_six_balls'), b = tFit(sx, x, y, w, h), S = A.six, log = (window._ballLog || []).slice(-6);
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let i = 0; i < 6; i++) {
+      const v = log[log.length - 6 + i]; if (v === undefined) continue;
+      const cx = b.x + S.xs[i] * b.w, cy = b.y + S.cy * b.h, r = S.r * b.w * 0.95;
+      ctx.fillStyle = v === 'W' ? '#d42a2a' : v === 6 ? '#f2a516' : v === 4 ? '#ffe36a' : '#fff6df';
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill(); ctx.strokeStyle = '#0b0f24'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.font = `${Math.round(r * 1.3)}px 'Lilita One', Impact, sans-serif`;
+      ctx.fillStyle = v === 'W' ? '#fff' : v >= 4 ? '#9a1420' : '#1e3a8a'; ctx.fillText(v === 0 ? '•' : String(v), cx, cy + 1);
+    }
+    ctx.restore();
+  }
+  const bs = tImg('best');
+  if (bs) {
+    const [x, y, w, h] = R('best_score_sign'), b = tFit(bs, x, y, w, h), p = A.best.p;
+    const px = b.x + p[0] * b.w, py = b.y + p[1] * b.h, pw = (p[2] - p[0]) * b.w, ph = (p[3] - p[1]) * b.h, lb = tImg('lbl_best');
+    if (lb) tFit(lb, px + pw * 0.04, py + ph * 0.18, pw * 0.5, ph * 0.64);
+    tNumber(best, px + pw * 0.56, py + ph * 0.12, pw * 0.4, ph * 0.76);
+  }
+}
 
 // fielding team kit - one bright T20-style colour scheme for all fielders
 const FIELDING_KIT = {
@@ -5707,6 +5876,7 @@ if (new URLSearchParams(location.search).get('scene')) {
     shareBtn.classList.add('hidden');
     overlay.classList.add('hidden');
     muteBtn.classList.add('hidden');
+    window._scenePreview = true; hideNav();   // preview: gameplay only, no menus
     runs = 0; ballsBowled = 0; thisRunFours = 0; thisRunSixes = 0; window._ballLog = []; window._gOutAt = 0; window._gCatch = null; window._gRaiseAt = 0; window._gBowledAt = 0; flyingStumps = []; try { _gl.marks = []; _gl.petals = []; } catch (e) {}
     shotHistory = []; energy = MAX_ENERGY;
     rollStadiumConditions();
@@ -32937,6 +33107,7 @@ function drawField() {
 
   } else if (gullyPainted()) {
     drawGullyPitch();
+  } else if (themeArt() && drawThemedPitch()) {
   } else if (floodPlate(tod.key)) {
     drawFloodPitch();
   } else {
@@ -34750,7 +34921,6 @@ function drawMaidanScene() {
 //    the screen so its field sits on the game's oval (FIELD_CY/RX/RY). The pitch, rope, players and scoreboard are
 //    still drawn by the game on top. Source art and notes: art/grounds/floodlit/.
 const FLOOD_PLATES = { dusk_stadium: 'assets/floodlit/dusk_stadium.webp', pirate_cove: 'assets/themes/pirate_cove.webp', t20_night: 'assets/themes/t20_night.webp' };
-const THEMED_ROPE = { pirate_cove: 1, t20_night: 1 };   // boundary rope is painted into the plate
 const _floodImg = {};
 function floodPlate(k) {
   const f = FLOOD_PLATES[k]; if (!f) return null;
@@ -35893,6 +36063,10 @@ window.addEventListener('resize', measureSafeTop); window.addEventListener('orie
 document.addEventListener('DOMContentLoaded', measureSafeTop); setTimeout(measureSafeTop, 0);
 // every in-match scoreboard is drawn below the notch / Dynamic Island
 function drawSceneScoreboard() {
+  if (themeArt() && tImg('board')) {
+    const off = SAFE_TOP > 0 ? Math.max(0, SAFE_TOP - H * 0.056 + 4) : 0;
+    window._sbDrawn = true; ctx.save(); ctx.translate(0, off); try { drawThemedHud(off); } finally { ctx.restore(); } return;
+  }
   if (SAFE_TOP > 0 && !gullyPainted()) { ctx.save(); ctx.translate(0, SAFE_TOP); try { _drawSceneScoreboard(); } finally { ctx.restore(); } return; }
   if (SAFE_TOP > 0) { ctx.save(); ctx.translate(0, Math.max(0, SAFE_TOP - H * 0.056 + 4)); try { _drawSceneScoreboard(); } finally { ctx.restore(); } return; }
   _drawSceneScoreboard();
@@ -56717,7 +56891,8 @@ function drawShipwreckScene() {
 }
 
 function drawBoundary() {
-  if (gullyPainted()) { drawGullyRing(); return; }   // kerb ring is painted into the plate
+  if (gullyPainted()) { drawGullyRing(); return; }
+  if (themeArt()) { drawThemedBoundary(); return; }   // kerb ring is painted into the plate
   // 30-yard circle
   const is30Carnival = currentTimeOfDay.key === 'carnival';
   if (is30Carnival) {
@@ -56744,7 +56919,6 @@ function drawBoundary() {
   }
 
   // boundary rope
-  if (THEMED_ROPE[currentTimeOfDay.key]) return;
   ctx.save();
   const key = currentTimeOfDay.key;
   ctx.beginPath();
@@ -57099,6 +57273,7 @@ const STUMP_COLORS = {
 };
 const GULLY_STUMPS_OL = 'data:image/webp;base64,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';
 function drawStumps(cx, cy, w) {
+  if (themeArt() && drawThemedStumps(cx, cy, w)) return;
   if (gullyPaintedPeople()) {
     // real-looking stumps drawn crisply in code: three thin, straight, polished stumps almost touching,
     // two short turned bails on top, a strip of red tape on the middle one (gully touch), thin dark outline
@@ -57169,6 +57344,7 @@ function drawStumps(cx, cy, w) {
 function drawFielder(x,y,chasing,diving,stridePhase,f) {
   if (gullyPaintedPeople()) return drawGullyKidSprite(x, y, chasing, diving, stridePhase, f);
   if (gullyPainted()) return drawGullyKid(x, y, chasing, diving, stridePhase, f);
+  if (themeArt() && drawThemedFielder(x, y, chasing, diving, stridePhase, f)) return;
   const kit = THEME_FIELDING_KITS[currentTimeOfDay.key] || FIELDING_KIT;
   const s = 0.85;
 
@@ -57493,6 +57669,7 @@ function drawBall() {
     if (window._gCatch) return;                              // caught: it's in the fielder's hands
     const r = Math.min(6, Math.max(size, 1) * 0.75);
     gullyBallImg(px, py, r, gullyBallSpin(px, py, r)); return; }
+  if (themeArt() && tImg('ball')) { if (window._gCatch) return; drawThemedBall(px, py, Math.max(size, 1)); return; }
   if (currentTimeOfDay.key === 'beach') {
     // Beach ball: spinning red/white segments
     const r = Math.max(size, 1);

@@ -128,11 +128,10 @@ No text, letters, numbers or logos anywhere unless asked.
 ## 1. Ground — surroundings, themed field, boundary rope
 ```
 Portrait background, exactly {W}x{H} px. It MUST correctly and accurately match the coded game layout below. Positions are exact, not suggestions. % of width (W) / height (H), pixels in brackets.
-FIELD: one oval of themed grass, centre 50% W / {pct(fo['cy'])} H ({px(.5,'x')}, {px(fo['cy'],'y')}). Left edge {pct(fo['left'])} W ({px(fo['left'],'x')}), right edge {pct(fo['right'])} W ({px(fo['right'],'x')}), top {pct(fo['top'])} H ({px(fo['top'],'y')}), bottom {pct(fo['bottom'])} H ({px(fo['bottom'],'y')}). Grass themed [e.g. lush tropical turf, mown stripes] but plain and low-contrast so a small ball stays visible.
-BOUNDARY ROPE: a themed rope [e.g. thick ship's rope with small flag markers] laid exactly on that oval edge, all the way round.
-INNER RING: a faint themed dotted ring, centre 50% W / {pct(ir['cy'])} H, from {pct(ir['left'])} to {pct(ir['right'])} W and {pct(ir['top'])} to {pct(ir['bottom'])} H.
+FIELD: one TALL oval playing surface — themed, not always grass [e.g. raked beach sand, ice, ship's deck, turf] — plain and calm so a small ball shows clearly. The image comes out 9:16, so give the oval in those terms: its height is 1.58 times its width; centre 50% W / {pct(fo['cy'])} H; left edge 12% W, right edge 88% W, top edge {pct(fo['top'])} H, bottom edge {pct(fo['bottom'])} H. The strips outside 12% and 88% W get cropped, so keep only scenery there.
+The field edge is a clean crisp line. NO rope, NO markers, NO inner ring, NO lines on the field: the game draws the themed rope, boundary markers and 30-yard ring markers from the props sheet, exactly on the coded oval.
 EMPTY: no pitch, stumps, players, umpire, ball or text on the field.
-SURROUNDINGS: fill the whole canvas edge to edge, top to bottom, with themed stands, crowd and scenery, OUTSIDE the oval only. No empty bands at the top or bottom.
+SURROUNDINGS: busy, fun and cool — packed with life, characters and detail, edge to edge and top to bottom, OUTSIDE the oval only. Real-world themes (e.g. an IPL ground) should look like the real thing, in the home team's colours. No empty bands at the top or bottom.
 The game draws these on top, so keep the scenery behind them simple (no faces or key props hidden under them): scoreboard {area(sb)}; energy bar {area(en)}; pause button {area(ps)}; last-six-balls strip {area(st)}; BEST score sign {area(bs)}; name plate {area(nm)}.
 ```
 
@@ -154,6 +153,9 @@ On the flat key background, each piece separate, evenly spaced, nothing touching
 - ONE themed stump [e.g. carved wooden post, brass cap], upright, 3/4 view.
 - ONE themed bail.
 - ONE themed ball [e.g. dark red leather, gold seam], seen from above.
+- ROPE SEGMENT: a straight horizontal length of the themed boundary rope, evenly thick, both ends cut square so it tiles.
+- BOUNDARY MARKER (optional): a small themed marker [e.g. skull flag on a post].
+- RING MARKER: one small themed marker seen from above [e.g. a seashell, a white disc] — repeated by the game round the 30-yard circle.
 - MOVING EXTRAS (3–5 small separate pieces the game animates): [e.g. a skull flag, a waving pirate fan, a parrot with wings up and wings down, a lantern flame].
 ```
 The game rotates, throws and spins the stump, bail and ball itself: no falling or spinning frames needed.
