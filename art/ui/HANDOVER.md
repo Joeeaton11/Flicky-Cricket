@@ -5,6 +5,13 @@ Joe wants every screen of Flicky Cricket redesigned, **one screen per chat**, de
 ## RULE #1 FOR EVERY GROUND / SCENE (Joe, Oct 28) — never break this
 Every ground design follows the game's layout EXACTLY, always: field oval (centre 0.50W / 0.60H, radii 0.46W / 0.335H → top 26.5%, bottom 93.5%), pitch (0.50–0.665H, widths 0.076W top / 0.116W bottom), scoreboard box (0.107–0.893W, 7.3–14%H), BEST pill (bottom centre) and name plate (bottom left). Template: `art/grounds/layout/layout_1170x2532.png`. Paint only AROUND the oval; the field interior is plain empty grass (no painted pitch, stumps, players); nothing important under the scoreboard/HUD boxes. Never show Joe free concept art — check every image against the template and only ever present it as an in-game screenshot at 390×844 with the real HUD.
 
+## Themed grounds — asset plan (Joe, Oct 28)
+- Layout source of truth = the game code. `art/grounds/layout/layout_from_code.py` reads FIELD_*, PITCH_*, the inner ring, stumps, umpire and `THEMED_HUD` from flicky-cricket.html and writes `layout.json`, `layout_1170x2532.png` and `PROMPTS.md`. `--check img.png` overlays the template. It stops if a value can't be found or HUD boxes overlap.
+- Art fills the whole canvas, top to bottom (no empty header/footer bands). No fielder positions on the template (they move).
+- Per theme, 10 generations: ground · HUD sheet · props (pitch, stump, bail, ball — game rotates/throws them) · fielder ×4 (one base fielder, 5 directions drawn + 3 mirrored; standing, running 4 frames, pick up, catch; 4 players made by shirt recolour/headwear) · bowler (own run) · keeper + umpire · words.
+- **Pop-ups: NO starburst ever again.** Painted words per ground (`THEMED_WORDS[sceneKey]`, Gully = `GULLY_WORDS`); `fxBig` shows the painted word with no burst/rays/ribbon when `themedWords()` returns a set. A themed backing/props/effect is fine.
+- Sharing: Joe is open to leagues sharing a theme's players/HUD/props/words (then a new ground = 1 background). **Flag every chance to share as we go.**
+
 ## The screens, in order
 
 1. **Home** — `#overlay`: logo, the pitch scene behind, best score / current league / chest line, PLAY, Remove Ads, and the bottom nav (`#bottomNav`: Kit, Chests, League, Stats). ← start here

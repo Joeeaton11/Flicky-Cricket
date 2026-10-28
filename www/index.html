@@ -5219,6 +5219,14 @@ const THEMED_HUD = {
   best_score_sign: { l:0.58, t:0.180, r:0.93, b:0.240 },
   name_plate:      { l:0.026, t:0.943, r:0.318, b:0.976 },
 };
+// Pop-ups on themed (painted) grounds: the ground's own painted words ONLY. No starburst, rays, bang or ribbon
+// (Joe, Oct 28 — the burst is gone). A themed backing/props/effect around the word is fine.
+// Register a ground: THEMED_WORDS[sceneKey] = { four, six, caught, bowled, out } (image URLs). Gully uses GULLY_WORDS.
+const THEMED_WORDS = {};
+function themedWords() {
+  if (typeof gullyPainted === 'function' && gullyPainted()) return GULLY_WORDS;
+  try { return THEMED_WORDS[currentTimeOfDay.key] || null; } catch (e) { return null; }
+}
 
 // fielding team kit - one bright T20-style colour scheme for all fielders
 const FIELDING_KIT = {
@@ -30105,20 +30113,21 @@ function fxBig(kind, opts) {
   el.className = 'fxBig ' + kind;
   try {
     const r = canvas.getBoundingClientRect(), sy = r.height / H;
-    const top = r.top + H * (gullyPainted() ? 0.262 : 0.135) * sy;   // Gully: in the open field above the umpire, clear of the HUD
+    const top = r.top + H * (themedWords() ? 0.262 : 0.135) * sy;   // Gully: in the open field above the umpire, clear of the HUD
     const bottom = r.top + (PITCH_TOP() - 70) * sy;         // clear of the umpire's raised arms
     const h = Math.min(150, Math.max(110, (PITCH_TOP() - 48) * sy + r.top - top));   // compact: a small stamp just under the scoreboard (Joe: too big and intrusive)
     el.style.setProperty('--fxTop', top + 'px'); el.style.setProperty('--fxH', h + 'px');
     el.style.setProperty('--sq', Math.min(1, (h + 10) / K.burst).toFixed(2));  // squash the burst to fit the band
   } catch (e) {}
   // Gully: hand-painted truck-art word, no burst or banner behind it
-  const _pw = gullyPainted() && GULLY_WORDS[kind === 'out' ? ((opts && opts.caught) ? 'caught' : 'bowled') : kind];
+  const _tw = themedWords();
+  const _pw = _tw && (_tw[kind === 'out' ? ((opts && opts.caught) ? 'caught' : 'bowled') : kind] || (kind === 'out' && _tw.out));
   if (_pw) {
     el.classList.add('fxPainted');
     const _ph = kind === 'six' ? 104 : kind === 'four' ? 78 : 70;
     el.innerHTML = `<span class="fxPWBox"><img class="fxPW" src="${_pw}" alt="${K.word}" style="height:${_ph}px"><i class="fxShine" style="-webkit-mask-image:url(${_pw});mask-image:url(${_pw})"></i></span>`;
     layer.appendChild(el); _fxBigEl = el;
-    fxBurstSound(kind); gullySfx(kind, opts);
+    fxBurstSound(kind); if (gullyPainted()) gullySfx(kind, opts);
     // (no flying +4/+6 on painted grounds — Joe)
     setTimeout(() => { el.classList.add('leave'); setTimeout(() => { el.remove(); if (_fxBigEl === el) _fxBigEl = null; }, 360); }, K.life);
     return;

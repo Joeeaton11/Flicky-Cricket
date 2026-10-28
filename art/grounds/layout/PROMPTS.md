@@ -31,49 +31,52 @@ On flat #00FF00 green, each piece separate, nothing touching. All blank: no text
 ```
 A themed display font is chosen per ground; the game draws RUNS, TARGET, the numbers, the energy fill and BEST in it.
 
-## 3. Pitch
+## 3. Props sheet: pitch, stump, bail, ball (one generation)
 ```
-On flat #00FF00. A themed cricket pitch strip [e.g. ship's deck planks], top-down, trapezoid: 89 px wide at the top, 136 px at the bottom, 418 px tall. Painted crease lines at each end. Nothing on it.
+On flat #00FF00, each piece separate, evenly spaced, nothing touching:
+- PITCH: a themed cricket pitch strip [e.g. ship's deck planks], top-down, trapezoid 89 px wide at the top, 136 px at the bottom, 418 px tall, painted crease lines at each end, nothing on it.
+- ONE themed stump [e.g. carved wooden post, brass cap], upright, 3/4 view.
+- ONE themed bail.
+- ONE themed ball [e.g. dark red leather, gold seam], seen from above.
+```
+The game rotates, throws and spins the stump, bail and ball itself: no falling or spinning frames needed.
+
+## 4. Fielders: one base fielder, 4 sheets
+The game makes 4 players from this one fielder by recolouring the shirt (and later swapping headwear). If they look too alike, add a second body shape (4 more sheets).
+Draw 5 directions; the game mirrors 3 of them for the other side.
+```
+On flat #00FF00, ONE row of evenly spaced cells, nothing touching. The same themed fielder [e.g. pirate deckhand in a red bandana] with a shirt in ONE flat plain colour (no stripes or pattern, so the game can recolour it), in the pose [POSE].
+Feet at the bottom centre of every cell, all cells the same scale.
+```
+- Sheet 1, STANDING ready crouch, 5 cells: facing camera · 3/4 towards camera-left · side-on left · 3/4 away-left · away from camera.
+- Sheet 2, RUNNING, 4-frame cycle × 5 directions, as a 5-row grid (rows = the 5 directions above, columns = frames 1–4).
+- Sheet 3, PICK UP (bending to scoop the ball one-handed), 3 cells: facing camera · side-on left · away from camera.
+- Sheet 4, CATCH (hands cupped up high), 3 cells: facing camera · side-on left · away from camera.
+
+## 5. Bowler (own sheet)
+```
+On flat #00FF00, one row, same scale as the fielder. A themed bowler [e.g. pirate captain] seen from the batter's end, facing down-screen towards the camera: run-up 4 frames · gather/leap · delivery stride (arm high) · release · follow-through.
 ```
 
-## 4. Stumps, bails, ball
+## 6. Keeper and umpire (one sheet)
 ```
-On flat #00FF00, evenly spaced, nothing touching:
-- ONE themed stump on its own [e.g. carved wooden post, brass cap], upright, 3/4 view
-- ONE themed bail on its own
-- the same stump tilted/falling at 3 angles
-- the themed ball [e.g. dark red leather, gold seam] from above, 4 rotation frames
+On flat #00FF00, same scale as the fielder.
+KEEPER (from behind, facing up-screen), themed gloves and pads: crouch · standing up · catching · appeal.
+UMPIRE (facing down-screen), themed outfit: idle · OUT (one finger up) · FOUR (arm sweep, 3 frames) · SIX (both arms straight up).
 ```
 
-## 5. Fielders — 4 themed players, 8 directions each
-One prompt per player per pose (4 players × 6 poses = 24 sheets). Swap [PLAYER] and [POSE].
+## 7. Pop-up words (one generation) — NO starburst
+Painted lettering in the ground's own style, like the Gully truck-art words. No burst, rays, bang or ribbon behind them. A small themed backing or props are fine if they suit the theme [e.g. a torn scroll, coins, a cannon puff].
 ```
-On flat #00FF00, ONE row of 8 cells, evenly spaced, nothing touching. The same themed fielder [PLAYER — e.g. 1: tall pirate in a striped shirt and red bandana; 2: stocky pirate with an eyepatch; 3: young deckhand in a blue bandana; 4: bearded pirate in a tricorn hat] in the pose [POSE], drawn facing 8 directions, in this order: towards camera (S), towards camera-left (SW), left (W), away-left (NW), away from camera (N), away-right (NE), right (E), towards camera-right (SE).
-Feet at the bottom centre of every cell, all cells the same scale. Each player looks clearly different from the other three.
-```
-Poses: ready crouch · running (4-frame cycle — one sheet per frame) · dive · catch (hands up) · throw · celebrate.
-
-## 6. Keeper, bowler, umpire
-```
-On flat #00FF00, same scale as the fielders.
-KEEPER (from behind, facing up-screen): crouch · standing up · catching · appeal.
-BOWLER (facing down-screen): run-up 4 frames · delivery stride · follow-through · appeal.
-UMPIRE (facing down-screen): idle · OUT (one finger up) · FOUR (arm sweep, 3 frames) · SIX (both arms straight up).
+On flat #00FF00, each word separate, nothing touching. Big chunky hand-painted 3D lettering in the theme's style [e.g. gold pirate lettering with rope outline], spelled exactly:
+FOUR!   SIX!   CAUGHT!   BOWLED!   OUT!
+and for the result screen:   YOU WON!   SO CLOSE!   NEW BEST!
+SIX! the biggest and boldest. Each word on one line, letters fully visible, nothing cropped.
 ```
 
-## 7. Pop-ups — FOUR, SIX, OUT and the rest
-```
-On flat #00FF00, each piece separate, nothing touching. Themed burst-style banner plates [e.g. torn treasure-map scroll with a cannon-smoke burst and gold coins], each about 878 px wide, with a BLANK centre panel for the word (the game writes it in the ground's font) and a small blank strip underneath for a subtitle:
-- FOUR! — energetic, gold
-- SIX! — the biggest and loudest, with extra flourish
-- BOWLED! — stumps-and-bails motif, red
-- CAUGHT! — hands/glove motif, red
-- OUT — plain red plate (run out, LBW and other dismissals)
-- TARGET! — target reached / win, green and gold
-- small DOT BALL tag — quiet, about 410 px wide
-No text or numbers.
-```
+## Generations per theme
+Ground 1 · HUD 1 · props 1 · fielder 4 · bowler 1 · keeper + umpire 1 · words 1 = **10**. A second ground in the same theme: **1** (just the background).
 
 ## Where things stand in the game (for checking)
-- HUD (measured from the live game): scoreboard 7.0%–93.0% W, 5.6%–15.0% H; energy bar 20.0%–80.0% W, 15.6%–17.2% H; BEST sign 58.0%–93.0% W, 18.0%–24.0% H; pause 7.0%–18.0% W, 18.2%–23.3% H; last six 21.0%–55.0% W, 18.8%–22.7% H; name plate 2.6%–31.8% W, 94.3%–97.6% H.
+- HUD (THEMED_HUD in the code): scoreboard 7.0%–93.0% W, 5.6%–15.0% H; energy bar 20.0%–80.0% W, 15.6%–17.2% H; BEST sign 58.0%–93.0% W, 18.0%–24.0% H; pause 7.0%–18.0% W, 18.2%–23.3% H; last six 21.0%–55.0% W, 18.8%–22.7% H; name plate 2.6%–31.8% W, 94.3%–97.6% H.
 - Far stumps 50.0% H, batter's stumps 66.5% H, umpire 48.8% H, all at 50% W.
