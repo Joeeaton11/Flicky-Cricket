@@ -114,6 +114,13 @@ if '--clear-inner' in sys.argv:   # erase any painted inner ring / markings insi
     mk = cv2.dilate(mk, np.ones((9, 9), np.uint8))
     res = cv2.inpaint(res, mk, 9, cv2.INPAINT_TELEA)
     print('cleared inner markings:', int((mk > 0).sum()), 'px')
+if '--clear-ring-text' in sys.argv:   # white lettering the model painted on the boards just outside the rope
+    hs = cv2.cvtColor(res, cv2.COLOR_BGR2HSV); v = hs[..., 2]
+    th = cv2.subtract(v, cv2.morphologyEx(v, cv2.MORPH_OPEN, np.ones((15, 15), np.uint8)))
+    yy, xx = np.mgrid[0:H, 0:W]; rr = np.hypot((xx - tcx) / trx, (yy - tcy) / try_)
+    mk = ((rr > 0.96) & (rr < arg('--clear-ring-text', 1.2)) & (th > 35) & (hs[..., 1] < 90)).astype(np.uint8) * 255
+    mk = cv2.dilate(mk, np.ones((7, 7), np.uint8)); res = cv2.inpaint(res, mk, 7, cv2.INPAINT_TELEA)
+    print('cleared ring text:', int((mk > 0).sum()), 'px')
 Image.fromarray(cv2.cvtColor(res, cv2.COLOR_BGR2RGB)).save(out, 'WEBP', quality=88, method=6)
 os.system(f'python3 {os.path.join(HERE, "layout_from_code.py")} --check {out} >/dev/null')
 print('wrote', out)
