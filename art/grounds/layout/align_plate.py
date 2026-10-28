@@ -58,6 +58,8 @@ def axis(a0):
 R, B_, Lf, T = axis(0), axis(np.pi / 2), axis(np.pi), axis(3 * np.pi / 2)
 cx, cy = (Lf[0] + R[0]) / 2, (T[1] + B_[1]) / 2
 rx, ry = (R[0] - Lf[0]) / 2 + rope_out, (B_[1] - T[1]) / 2 + rope_out
+if '--ellipse' in sys.argv:   # measured by eye when the field edge is too subtle to detect
+    cx, cy, rx, ry = [float(v) for v in sys.argv[sys.argv.index('--ellipse') + 1].split(',')]
 P = pts
 cv = img.copy()
 for x, y, _ in pts: cv2.circle(cv, (int(x), int(y)), 2, (0, 0, 255), -1)
@@ -78,7 +80,19 @@ src_y = np.where(ty < top_t, top_s - (top_t - ty) / sx,
 tx = np.arange(W, dtype=np.float32)
 src_x = cx + (tx - tcx) / sx
 mx, my = np.meshgrid(src_x, src_y)
-res = cv2.remap(img, mx.astype(np.float32), my.astype(np.float32), cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+if '--radial' in sys.argv:
+    # field: exact ellipse fit; beyond the rope blend smoothly back to one uniform scale, so the stands
+    # are never stretched (the ring just outside the field is gently squeezed instead)
+    out_r = arg('--radial', 1.7)
+    px_, py_ = np.meshgrid(np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32))
+    rho = np.hypot((px_ - tcx) / trx, (py_ - tcy) / try_)
+    t = np.clip((rho - 1) / (out_r - 1), 0, 1); wgt = 1 - t * t * (3 - 2 * t)
+    qe_x, qe_y = cx + (px_ - tcx) * rx / trx, cy + (py_ - tcy) * ry / try_
+    su = sx * arg('--outer-scale', 1.0)
+    qu_x, qu_y = cx + (px_ - tcx) / su, cy + (py_ - tcy) / su
+    mx, my = wgt * qe_x + (1 - wgt) * qu_x, wgt * qe_y + (1 - wgt) * qu_y
+    print(f'radial warp: uniform scale {su:.3f}, rows used {my.min():.0f}..{my.max():.0f} of {h0}')
+res = cv2.remap(img, mx.astype(np.float32), my.astype(np.float32), cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
 need_top = top_s - top_t / sx
 print(f'x scale {sx:.3f}, oval-band y scale {sy_mid:.3f} (stretch {sy_mid/sx:.2f}x); source rows used {need_top:.0f}..{bot_s + (H-bot_t)/sx:.0f} of {h0}; cols {src_x[0]:.0f}..{src_x[-1]:.0f} of {w0}')
 if need_top < 0: print('WARNING: top of the image runs out (edge pixels repeated)')
