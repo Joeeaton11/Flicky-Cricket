@@ -10,6 +10,8 @@ Every ground design follows the game's layout EXACTLY, always: field oval (centr
 - Art fills the whole canvas, top to bottom (no empty header/footer bands). No fielder positions on the template (they move).
 - Per theme, 10 generations: ground · HUD sheet · props (pitch, stump, bail, ball — game rotates/throws them) · fielder ×4 (one base fielder, 5 directions drawn + 3 mirrored; standing, running 4 frames, pick up, catch; 4 players made by shirt recolour/headwear) · bowler (own run) · keeper + umpire · words.
 - **Pop-ups: NO starburst ever again.** Painted words per ground (`THEMED_WORDS[sceneKey]`, Gully = `GULLY_WORDS`); `fxBig` shows the painted word with no burst/rays/ribbon when `themedWords()` returns a set. A themed backing/props/effect is fine.
+- Light/shadows: each ground picks its own light direction (whatever looks best); every asset for that ground uses it. Background ground/stadium may have painted shadows; sprites, props and HUD have none — the game draws shadows in that ground's direction (to build). Key colour #00FF00, or #FF00FF when the theme has green.
+- Fielders also need dive + throw (game animates both); scoreboard digits 0–9 painted on the words sheet; 3–5 moving extras on the props sheet; league card + result backdrop cut from the background. All grounds will be redone in this style.
 - Sharing: Joe is open to leagues sharing a theme's players/HUD/props/words (then a new ground = 1 background). **Flag every chance to share as we go.**
 
 ## The screens, in order
