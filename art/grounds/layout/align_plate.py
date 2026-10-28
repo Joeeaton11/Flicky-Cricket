@@ -90,12 +90,18 @@ if '--radial' in sys.argv:
     qe_x, qe_y = cx + (px_ - tcx) * rx / trx, cy + (py_ - tcy) * ry / try_
     su = sx * arg('--outer-scale', 1.0)
     qu_x, qu_y = cx + (px_ - tcx) / su, cy + (py_ - tcy) / su
+    if '--cut' in sys.argv:   # no blend: scenery at one scale, field cut in exactly (its plain surface can stretch unseen)
+        wgt = np.clip((1.0 - rho) / 0.004, 0, 1)
     mx, my = wgt * qe_x + (1 - wgt) * qu_x, wgt * qe_y + (1 - wgt) * qu_y
+    _rho = rho
     print(f'radial warp: uniform scale {su:.3f}, rows used {my.min():.0f}..{my.max():.0f} of {h0}')
 res = cv2.remap(img, mx.astype(np.float32), my.astype(np.float32), cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
 need_top = top_s - top_t / sx
 print(f'x scale {sx:.3f}, oval-band y scale {sy_mid:.3f} (stretch {sy_mid/sx:.2f}x); source rows used {need_top:.0f}..{bot_s + (H-bot_t)/sx:.0f} of {h0}; cols {src_x[0]:.0f}..{src_x[-1]:.0f} of {w0}')
 if need_top < 0: print('WARNING: top of the image runs out (edge pixels repeated)')
+if '--cut' in sys.argv and '--radial' in sys.argv:   # seat the field: a soft contact shadow just outside the rope
+    sh = np.clip(1 - (_rho - 1) / 0.035, 0, 1) * (_rho > 1)
+    res = (res.astype(np.float32) * (1 - 0.35 * sh[..., None])).astype(np.uint8)
 if '--clear-inner' in sys.argv:   # erase any painted inner ring / markings inside the field (the game draws its own)
     hs = cv2.cvtColor(res, cv2.COLOR_BGR2HSV)
     yy, xx = np.mgrid[0:H, 0:W]
