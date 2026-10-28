@@ -17,17 +17,17 @@ BOUNDARY ROPE: a themed rope [e.g. thick ship's rope with small flag markers] la
 INNER RING: a faint themed dotted ring, centre 50% W / 57.6% H, from 28.0% to 72.0% W and 39.7% to 75.5% H.
 EMPTY: no pitch, stumps, players, umpire, ball or text on the field.
 SURROUNDINGS: fill the whole canvas edge to edge, top to bottom, with themed stands, crowd and scenery, OUTSIDE the oval only. No empty bands at the top or bottom.
-The game draws these on top, so keep the scenery behind them simple (no faces or key props hidden under them): scoreboard 7.0%–93.0% W, 5.6%–18.1% H; pause button 7.7%–19.6% W, 18.3%–24.0% H; last-six-balls strip 21.3%–52.5% W, 19.1%–22.9% H; BEST score sign 54.1%–80.0% W, 17.1%–26.4% H; name plate 2.6%–31.8% W, 94.3%–97.6% H.
+The game draws these on top, so keep the scenery behind them simple (no faces or key props hidden under them): scoreboard 7.0%–93.0% W, 5.6%–15.0% H; energy bar 20.0%–80.0% W, 15.6%–17.2% H; pause button 7.0%–18.0% W, 18.2%–23.3% H; last-six-balls strip 21.0%–55.0% W, 18.8%–22.7% H; BEST score sign 58.0%–93.0% W, 18.0%–24.0% H; name plate 2.6%–31.8% W, 94.3%–97.6% H.
 ```
 
 ## 2. HUD layer: scoreboard, energy bar, BEST score sign, pause, last-six strip
 ```
 On flat #00FF00 green, each piece separate, nothing touching. All blank: no text or numbers.
-- SCOREBOARD, 1007x318 px: two equal blank number panels, left (RUNS) and right (TARGET), each with a blank label strip above. A small themed crest may rise from the top centre.
-- ENERGY BAR: an empty themed bar track built into the bottom of the scoreboard, 547x25 px, centred under the two panels (the game fills it).
-- BEST SCORE SIGN, 303x236 px: a themed hanging sign with a blank panel, hangs under the TARGET panel.
-- PAUSE BUTTON, 140 px round: themed badge with a pause symbol.
-- LAST-SIX-BALLS STRIP, 365x96 px: themed holder with 6 empty round sockets in a row.
+- SCOREBOARD, 1006x238 px: two equal blank number panels, left (RUNS) and right (TARGET), each with a blank label strip above. A small themed crest may rise from the top centre.
+- ENERGY BAR: an empty themed bar track, its own piece that sits just under the scoreboard, 702x41 px, centred under the two panels (the game fills it).
+- BEST SCORE SIGN, 410x152 px: a themed hanging sign with a blank panel, hangs under the TARGET panel.
+- PAUSE BUTTON, 129 px round: themed badge with a pause symbol.
+- LAST-SIX-BALLS STRIP, 398x99 px: themed holder with 6 empty round sockets in a row.
 ```
 A themed display font is chosen per ground; the game draws RUNS, TARGET, the numbers, the energy fill and BEST in it.
 
@@ -45,12 +45,13 @@ On flat #00FF00, evenly spaced, nothing touching:
 - the themed ball [e.g. dark red leather, gold seam] from above, 4 rotation frames
 ```
 
-## 5. Fielders — 8 facing directions
+## 5. Fielders — 4 themed players, 8 directions each
+One prompt per player per pose (4 players × 6 poses = 24 sheets). Swap [PLAYER] and [POSE].
 ```
-On flat #00FF00, a grid. The same themed fielder [e.g. pirate deckhand] in each pose, drawn facing 5 directions: towards camera, 3/4 towards camera-left, side-on left, 3/4 away-left, away from camera (the game mirrors for the right = 8 directions).
-Rows: ready crouch · run cycle 4 frames · dive · catch (hands up) · throw · celebrate.
-Feet at the bottom centre of every cell, all the same scale.
+On flat #00FF00, ONE row of 8 cells, evenly spaced, nothing touching. The same themed fielder [PLAYER — e.g. 1: tall pirate in a striped shirt and red bandana; 2: stocky pirate with an eyepatch; 3: young deckhand in a blue bandana; 4: bearded pirate in a tricorn hat] in the pose [POSE], drawn facing 8 directions, in this order: towards camera (S), towards camera-left (SW), left (W), away-left (NW), away from camera (N), away-right (NE), right (E), towards camera-right (SE).
+Feet at the bottom centre of every cell, all cells the same scale. Each player looks clearly different from the other three.
 ```
+Poses: ready crouch · running (4-frame cycle — one sheet per frame) · dive · catch (hands up) · throw · celebrate.
 
 ## 6. Keeper, bowler, umpire
 ```
@@ -60,7 +61,19 @@ BOWLER (facing down-screen): run-up 4 frames · delivery stride · follow-throug
 UMPIRE (facing down-screen): idle · OUT (one finger up) · FOUR (arm sweep, 3 frames) · SIX (both arms straight up).
 ```
 
+## 7. Pop-ups — FOUR, SIX, OUT and the rest
+```
+On flat #00FF00, each piece separate, nothing touching. Themed burst-style banner plates [e.g. torn treasure-map scroll with a cannon-smoke burst and gold coins], each about 878 px wide, with a BLANK centre panel for the word (the game writes it in the ground's font) and a small blank strip underneath for a subtitle:
+- FOUR! — energetic, gold
+- SIX! — the biggest and loudest, with extra flourish
+- BOWLED! — stumps-and-bails motif, red
+- CAUGHT! — hands/glove motif, red
+- OUT — plain red plate (run out, LBW and other dismissals)
+- TARGET! — target reached / win, green and gold
+- small DOT BALL tag — quiet, about 410 px wide
+No text or numbers.
+```
+
 ## Where things stand in the game (for checking)
-- HUD (measured from the live game): scoreboard 7.0%–93.0% W, 5.6%–18.1% H; energy bar 26.7%–73.4% W, 15.2%–16.2% H; BEST sign 54.1%–80.0% W, 17.1%–26.4% H; pause 7.7%–19.6% W, 18.3%–24.0% H; last six 21.3%–52.5% W, 19.1%–22.9% H; name plate 2.6%–31.8% W, 94.3%–97.6% H.
+- HUD (measured from the live game): scoreboard 7.0%–93.0% W, 5.6%–15.0% H; energy bar 20.0%–80.0% W, 15.6%–17.2% H; BEST sign 58.0%–93.0% W, 18.0%–24.0% H; pause 7.0%–18.0% W, 18.2%–23.3% H; last six 21.0%–55.0% W, 18.8%–22.7% H; name plate 2.6%–31.8% W, 94.3%–97.6% H.
 - Far stumps 50.0% H, batter's stumps 66.5% H, umpire 48.8% H, all at 50% W.
-- Fielder spots — 17 places the game can put a fielder (10 on the field at once: keeper + 4 infield + 5 boundary, plus the bowler): mid-off (27.4%, 48.5%), cover (34.7%, 44.1%), extra-cover (43.5%, 42.2%), mid-wicket-in (56.5%, 42.2%), mid-on (65.3%, 44.1%), square-leg-in (73.4%, 48.1%), short-cover (27.8%, 55.7%), slip (62.7%, 76.0%), keeper (51.3%, 70.7%), long-off (31.3%, 30.9%), long-on (68.7%, 30.9%), point (6.8%, 60.0%), third-man (16.9%, 80.2%), square-leg (93.2%, 60.0%), fine-leg (83.1%, 80.2%), cover-boundary (14.6%, 41.9%), mid-wicket-boundary (85.4%, 41.9%).

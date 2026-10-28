@@ -34,39 +34,22 @@ ump_off, = find(r'drawUmpire\(W/2, PITCH_TOP\(\)-' + N + r'\)', 'umpire position
 s_far, = find(r'drawStumps\(W/2, PITCH_TOP\(\), ' + N + r'\)', 'far stumps size')
 s_near, = find(r'drawStumps\(W/2, PITCH_BOTTOM\(\), ' + N + r'\)', 'near stumps size')
 
-def slots(name):
-    m = re.search(name + r'\s*=\s*\[(.*?)\];', src, re.S)
-    if not m: sys.exit(f'LAYOUT NOT FOUND in code: {name}')
-    return [dict(angle=float(a), dist=float(d), name=n) for a, d, n in
-            re.findall(r"angle:\s*(-?[0-9.]+),\s*dist:\s*([0-9.]+),\s*name:'([^']+)'", m.group(1))]
-fielders = slots('INFIELD_SLOTS') + slots('BOUNDARY_SLOTS')
 import math
-for f in fielders:
-    a = math.radians(f['angle'])
-    f['x'] = 0.5 + math.sin(a) * rx * f['dist']
-    f['y'] = cy - math.cos(a) * ry * f['dist']
 
-# ---------- HUD: measured from the running game (Gully Cup, the signed-off HUD layout) ----------
-e_x0, e_y0, e_x1, e_y1 = find(r'sx = X\(' + N + r'\), sy = Y\(' + N + r'\), sw = X\(' + N + r'\) - sx, sh = Y\(' + N + r'\)', 'energy bar')
-def measure_hud():
-    from playwright.sync_api import sync_playwright
-    hook = """(()=>{const o=CanvasRenderingContext2D.prototype.drawImage;window._hud={};
-      CanvasRenderingContext2D.prototype.drawImage=function(img,...a){try{if(typeof GULLY_ART!=='undefined')for(const k of ['board3','pause','sign','strip'])if(GULLY_ART[k]===img&&a.length>=4)window._hud[k]=a.slice(-4)}catch(e){}return o.call(this,img,...a)}})()"""
-    with sync_playwright() as p:
-        b = p.chromium.launch(); pg = b.new_page(viewport={'width': 390, 'height': 844}); pg.add_init_script(hook)
-        pg.goto('file://' + os.path.abspath(GAME) + '?scene=gully'); pg.wait_for_timeout(5000)
-        hud = pg.evaluate("JSON.parse(JSON.stringify(window._hud))")
-        nm = pg.evaluate("(()=>{const m=document.getElementById('matchName');m.textContent='PLAYERNAME';m.classList.remove('hidden');const r=m.getBoundingClientRect();return [r.left,r.top,r.width,r.height]})()")
-        b.close()
-    for k in ('board3', 'pause', 'sign', 'strip'):
-        if k not in hud: sys.exit(f'HUD NOT FOUND in running game: {k}')
-    f = lambda r: dict(left=r[0]/390, top=r[1]/844, right=(r[0]+r[2])/390, bottom=(r[1]+r[3])/844)
-    bd = hud['board3']; k = bd[2] / 1265
-    energy = [bd[0] + e_x0*k, bd[1] + e_y0*(bd[3]/455), bd[0] + e_x1*k, bd[1] + e_y1*(bd[3]/455)]
-    return dict(scoreboard=f(bd), energy_bar=f([energy[0], energy[1], energy[2]-energy[0], energy[3]-energy[1]]),
-                pause_button=f(hud['pause']), last_six_balls=f(hud['strip']), best_score_sign=f(hud['sign']),
-                name_plate=dict(f(nm), note='bottom inset 0 in test; sits ~14px higher on iPhones with a home bar'))
-HUD = measure_hud()
+# ---------- HUD for themed grounds: THEMED_HUD in the game code ----------
+m = re.search(r'const THEMED_HUD\s*=\s*\{(.*?)\n\};', src, re.S)
+if not m: sys.exit('LAYOUT NOT FOUND in code: THEMED_HUD')
+HUD = {k: dict(left=float(l), top=float(t), right=float(r), bottom=float(b_)) for k, l, t, r, b_ in
+       re.findall(r'(\w+):\s*\{\s*l:([0-9.]+),\s*t:([0-9.]+),\s*r:([0-9.]+),\s*b:([0-9.]+)', m.group(1))}
+for k in ('scoreboard', 'energy_bar', 'pause_button', 'last_six_balls', 'best_score_sign', 'name_plate'):
+    if k not in HUD: sys.exit(f'THEMED_HUD missing {k}')
+ks = list(HUD)
+for i in range(len(ks)):
+    for j in range(i + 1, len(ks)):
+        A, B = HUD[ks[i]], HUD[ks[j]]
+        if A['left'] < B['right'] and B['left'] < A['right'] and A['top'] < B['bottom'] and B['top'] < A['bottom']:
+            sys.exit(f'HUD OVERLAP: {ks[i]} and {ks[j]} — fix THEMED_HUD in the game code')
+
 
 L = {
   'size': [W, H],
@@ -77,7 +60,6 @@ L = {
   'stumps_far': dict(x=0.5, y=p_top, height_px=s_far*SCALE), 'stumps_near': dict(x=0.5, y=p_bot, height_px=s_near*SCALE),
   'umpire': dict(x=0.5, y=p_top - ump_off/844),
   **HUD,
-  'fielder_spots': fielders,
 }
 json.dump(L, open(os.path.join(HERE, 'layout.json'), 'w'), indent=1)
 
@@ -98,8 +80,6 @@ def draw_template(img, alpha=255, labels=True):
         x, y, h = px(L[s]['x'],'x'), px(L[s]['y'],'y'), L[s]['height_px']
         d.rectangle([x-h*.35, y-h, x+h*.35, y], outline=(255,80,200,alpha), width=4)
     u = L['umpire']; d.ellipse([px(u['x'],'x')-18, px(u['y'],'y')-18, px(u['x'],'x')+18, px(u['y'],'y')+18], fill=(255,255,255,alpha))
-    for f in fielders:
-        x, y = px(f['x'],'x'), px(f['y'],'y'); d.ellipse([x-16, y-16, x+16, y+16], outline=(255,230,0,alpha), width=5)
     if labels:
         try: ft = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 30)
         except Exception: ft = None
@@ -148,14 +128,14 @@ BOUNDARY ROPE: a themed rope [e.g. thick ship's rope with small flag markers] la
 INNER RING: a faint themed dotted ring, centre 50% W / {pct(ir['cy'])} H, from {pct(ir['left'])} to {pct(ir['right'])} W and {pct(ir['top'])} to {pct(ir['bottom'])} H.
 EMPTY: no pitch, stumps, players, umpire, ball or text on the field.
 SURROUNDINGS: fill the whole canvas edge to edge, top to bottom, with themed stands, crowd and scenery, OUTSIDE the oval only. No empty bands at the top or bottom.
-The game draws these on top, so keep the scenery behind them simple (no faces or key props hidden under them): scoreboard {area(sb)}; pause button {area(ps)}; last-six-balls strip {area(st)}; BEST score sign {area(bs)}; name plate {area(nm)}.
+The game draws these on top, so keep the scenery behind them simple (no faces or key props hidden under them): scoreboard {area(sb)}; energy bar {area(en)}; pause button {area(ps)}; last-six-balls strip {area(st)}; BEST score sign {area(bs)}; name plate {area(nm)}.
 ```
 
 ## 2. HUD layer: scoreboard, energy bar, BEST score sign, pause, last-six strip
 ```
 On flat #00FF00 green, each piece separate, nothing touching. All blank: no text or numbers.
 - SCOREBOARD, {px(sb['right']-sb['left'],'x')}x{px(sb['bottom']-sb['top'],'y')} px: two equal blank number panels, left (RUNS) and right (TARGET), each with a blank label strip above. A small themed crest may rise from the top centre.
-- ENERGY BAR: an empty themed bar track built into the bottom of the scoreboard, {px(en['right']-en['left'],'x')}x{px(en['bottom']-en['top'],'y')} px, centred under the two panels (the game fills it).
+- ENERGY BAR: an empty themed bar track, its own piece that sits just under the scoreboard, {px(en['right']-en['left'],'x')}x{px(en['bottom']-en['top'],'y')} px, centred under the two panels (the game fills it).
 - BEST SCORE SIGN, {px(bs['right']-bs['left'],'x')}x{px(bs['bottom']-bs['top'],'y')} px: a themed hanging sign with a blank panel, hangs under the TARGET panel.
 - PAUSE BUTTON, {px(ps['right']-ps['left'],'x')} px round: themed badge with a pause symbol.
 - LAST-SIX-BALLS STRIP, {px(st['right']-st['left'],'x')}x{px(st['bottom']-st['top'],'y')} px: themed holder with 6 empty round sockets in a row.
@@ -176,12 +156,13 @@ On flat #00FF00, evenly spaced, nothing touching:
 - the themed ball [e.g. dark red leather, gold seam] from above, 4 rotation frames
 ```
 
-## 5. Fielders — 8 facing directions
+## 5. Fielders — 4 themed players, 8 directions each
+One prompt per player per pose (4 players × 6 poses = 24 sheets). Swap [PLAYER] and [POSE].
 ```
-On flat #00FF00, a grid. The same themed fielder [e.g. pirate deckhand] in each pose, drawn facing 5 directions: towards camera, 3/4 towards camera-left, side-on left, 3/4 away-left, away from camera (the game mirrors for the right = 8 directions).
-Rows: ready crouch · run cycle 4 frames · dive · catch (hands up) · throw · celebrate.
-Feet at the bottom centre of every cell, all the same scale.
+On flat #00FF00, ONE row of 8 cells, evenly spaced, nothing touching. The same themed fielder [PLAYER — e.g. 1: tall pirate in a striped shirt and red bandana; 2: stocky pirate with an eyepatch; 3: young deckhand in a blue bandana; 4: bearded pirate in a tricorn hat] in the pose [POSE], drawn facing 8 directions, in this order: towards camera (S), towards camera-left (SW), left (W), away-left (NW), away from camera (N), away-right (NE), right (E), towards camera-right (SE).
+Feet at the bottom centre of every cell, all cells the same scale. Each player looks clearly different from the other three.
 ```
+Poses: ready crouch · running (4-frame cycle — one sheet per frame) · dive · catch (hands up) · throw · celebrate.
 
 ## 6. Keeper, bowler, umpire
 ```
@@ -191,10 +172,22 @@ BOWLER (facing down-screen): run-up 4 frames · delivery stride · follow-throug
 UMPIRE (facing down-screen): idle · OUT (one finger up) · FOUR (arm sweep, 3 frames) · SIX (both arms straight up).
 ```
 
+## 7. Pop-ups — FOUR, SIX, OUT and the rest
+```
+On flat #00FF00, each piece separate, nothing touching. Themed burst-style banner plates [e.g. torn treasure-map scroll with a cannon-smoke burst and gold coins], each about {round(W*0.75)} px wide, with a BLANK centre panel for the word (the game writes it in the ground's font) and a small blank strip underneath for a subtitle:
+- FOUR! — energetic, gold
+- SIX! — the biggest and loudest, with extra flourish
+- BOWLED! — stumps-and-bails motif, red
+- CAUGHT! — hands/glove motif, red
+- OUT — plain red plate (run out, LBW and other dismissals)
+- TARGET! — target reached / win, green and gold
+- small DOT BALL tag — quiet, about {round(W*0.35)} px wide
+No text or numbers.
+```
+
 ## Where things stand in the game (for checking)
 - HUD (measured from the live game): scoreboard {area(sb)}; energy bar {area(en)}; BEST sign {area(bs)}; pause {area(ps)}; last six {area(st)}; name plate {area(nm)}.
 - Far stumps {pct(pi['top'])} H, batter's stumps {pct(pi['bottom'])} H, umpire {pct(u['y'])} H, all at 50% W.
-- Fielder spots — 17 places the game can put a fielder (10 on the field at once: keeper + 4 infield + 5 boundary, plus the bowler): {', '.join(f"{f['name']} ({pct(f['x'])}, {pct(f['y'])})" for f in fielders)}.
 """
 open(os.path.join(HERE, 'PROMPTS.md'), 'w').write(P)
 print('ok: layout.json, layout_1170x2532.png, PROMPTS.md')
