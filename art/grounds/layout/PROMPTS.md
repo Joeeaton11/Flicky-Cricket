@@ -16,15 +16,20 @@ FIELD: one oval of themed grass, centre 50% W / 60.0% H (585, 1519). Left edge 4
 BOUNDARY ROPE: a themed rope [e.g. thick ship's rope with small flag markers] laid exactly on that oval edge, all the way round.
 INNER RING: a faint themed dotted ring, centre 50% W / 57.6% H, from 28.0% to 72.0% W and 39.7% to 75.5% H.
 EMPTY: no pitch, stumps, players, umpire, ball or text on the field.
-SCOREBOARD AREA: 8.0%–92.0% W, 9.1%–17.7% H: calm, low-detail scenery only (the board is a separate layer).
-TOP 5% H: plain sky/scenery (phone notch). BOTTOM 94–100% H: low detail (BEST sign centre, name plate left).
-SURROUNDINGS: all themed stands, crowd and scenery OUTSIDE the oval only.
+SURROUNDINGS: fill the whole canvas edge to edge, top to bottom, with themed stands, crowd and scenery, OUTSIDE the oval only. No empty bands at the top or bottom.
+The game draws these on top, so keep the scenery behind them simple (no faces or key props hidden under them): scoreboard 7.0%–93.0% W, 5.6%–18.1% H; pause button 7.7%–19.6% W, 18.3%–24.0% H; last-six-balls strip 21.3%–52.5% W, 19.1%–22.9% H; BEST score sign 54.1%–80.0% W, 17.1%–26.4% H; name plate 2.6%–31.8% W, 94.3%–97.6% H.
 ```
 
-## 2. Scoreboard + BEST sign (separate layer)
+## 2. HUD layer: scoreboard, energy bar, BEST score sign, pause, last-six strip
 ```
-On flat #00FF00 green. A themed empty scoreboard, 983x218 px. Two equal blank number panels, left (RUNS) and right (TARGET), each with a blank label strip above, and a blank thin energy bar along the bottom. A small themed crest may rise from the top centre. Separately: a small themed BEST sign plate, blank. No text or numbers.
+On flat #00FF00 green, each piece separate, nothing touching. All blank: no text or numbers.
+- SCOREBOARD, 1007x318 px: two equal blank number panels, left (RUNS) and right (TARGET), each with a blank label strip above. A small themed crest may rise from the top centre.
+- ENERGY BAR: an empty themed bar track built into the bottom of the scoreboard, 547x25 px, centred under the two panels (the game fills it).
+- BEST SCORE SIGN, 303x236 px: a themed hanging sign with a blank panel, hangs under the TARGET panel.
+- PAUSE BUTTON, 140 px round: themed badge with a pause symbol.
+- LAST-SIX-BALLS STRIP, 365x96 px: themed holder with 6 empty round sockets in a row.
 ```
+A themed display font is chosen per ground; the game draws RUNS, TARGET, the numbers, the energy fill and BEST in it.
 
 ## 3. Pitch
 ```
@@ -56,5 +61,6 @@ UMPIRE (facing down-screen): idle · OUT (one finger up) · FOUR (arm sweep, 3 f
 ```
 
 ## Where things stand in the game (for checking)
+- HUD (measured from the live game): scoreboard 7.0%–93.0% W, 5.6%–18.1% H; energy bar 26.7%–73.4% W, 15.2%–16.2% H; BEST sign 54.1%–80.0% W, 17.1%–26.4% H; pause 7.7%–19.6% W, 18.3%–24.0% H; last six 21.3%–52.5% W, 19.1%–22.9% H; name plate 2.6%–31.8% W, 94.3%–97.6% H.
 - Far stumps 50.0% H, batter's stumps 66.5% H, umpire 48.8% H, all at 50% W.
-- Fielder spots: mid-off (27.4%, 48.5%), cover (34.7%, 44.1%), extra-cover (43.5%, 42.2%), mid-wicket-in (56.5%, 42.2%), mid-on (65.3%, 44.1%), square-leg-in (73.4%, 48.1%), short-cover (27.8%, 55.7%), slip (62.7%, 76.0%), keeper (51.3%, 70.7%), long-off (31.3%, 30.9%), long-on (68.7%, 30.9%), point (6.8%, 60.0%), third-man (16.9%, 80.2%), square-leg (93.2%, 60.0%), fine-leg (83.1%, 80.2%), cover-boundary (14.6%, 41.9%), mid-wicket-boundary (85.4%, 41.9%).
+- Fielder spots — 17 places the game can put a fielder (10 on the field at once: keeper + 4 infield + 5 boundary, plus the bowler): mid-off (27.4%, 48.5%), cover (34.7%, 44.1%), extra-cover (43.5%, 42.2%), mid-wicket-in (56.5%, 42.2%), mid-on (65.3%, 44.1%), square-leg-in (73.4%, 48.1%), short-cover (27.8%, 55.7%), slip (62.7%, 76.0%), keeper (51.3%, 70.7%), long-off (31.3%, 30.9%), long-on (68.7%, 30.9%), point (6.8%, 60.0%), third-man (16.9%, 80.2%), square-leg (93.2%, 60.0%), fine-leg (83.1%, 80.2%), cover-boundary (14.6%, 41.9%), mid-wicket-boundary (85.4%, 41.9%).

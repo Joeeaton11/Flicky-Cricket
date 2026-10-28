@@ -30,8 +30,6 @@ p_bot, = find(r'const PITCH_BOTTOM\s*=\s*\(\)\s*=>\s*H\s*\*\s*' + N, 'PITCH_BOTT
 p_tw, = find(r'const PITCH_TOP_W\s*=\s*\(\)\s*=>\s*W\s*\*\s*' + N, 'PITCH_TOP_W')
 p_bw, = find(r'const PITCH_BOTTOM_W\s*=\s*\(\)\s*=>\s*W\s*\*\s*' + N, 'PITCH_BOTTOM_W')
 r_dy, r_fx, r_fy = find(r'ctx\.ellipse\(W/2,\s*H\*\(FIELD_CY-' + N + r'\),\s*W\*FIELD_RX\*' + N + r',\s*H\*FIELD_RY\*' + N, 'inner ring')
-b_w, b_h = find(r'const bW\s*=\s*W \* ' + N + r', bH = H \* ' + N, 'scoreboard size')
-b_top, = find(r'GULLY_BOARD_TOP \|\| ' + N + r'\)', 'scoreboard top (Gully standard)')
 ump_off, = find(r'drawUmpire\(W/2, PITCH_TOP\(\)-' + N + r'\)', 'umpire position')
 s_far, = find(r'drawStumps\(W/2, PITCH_TOP\(\), ' + N + r'\)', 'far stumps size')
 s_near, = find(r'drawStumps\(W/2, PITCH_BOTTOM\(\), ' + N + r'\)', 'near stumps size')
@@ -48,6 +46,28 @@ for f in fielders:
     f['x'] = 0.5 + math.sin(a) * rx * f['dist']
     f['y'] = cy - math.cos(a) * ry * f['dist']
 
+# ---------- HUD: measured from the running game (Gully Cup, the signed-off HUD layout) ----------
+e_x0, e_y0, e_x1, e_y1 = find(r'sx = X\(' + N + r'\), sy = Y\(' + N + r'\), sw = X\(' + N + r'\) - sx, sh = Y\(' + N + r'\)', 'energy bar')
+def measure_hud():
+    from playwright.sync_api import sync_playwright
+    hook = """(()=>{const o=CanvasRenderingContext2D.prototype.drawImage;window._hud={};
+      CanvasRenderingContext2D.prototype.drawImage=function(img,...a){try{if(typeof GULLY_ART!=='undefined')for(const k of ['board3','pause','sign','strip'])if(GULLY_ART[k]===img&&a.length>=4)window._hud[k]=a.slice(-4)}catch(e){}return o.call(this,img,...a)}})()"""
+    with sync_playwright() as p:
+        b = p.chromium.launch(); pg = b.new_page(viewport={'width': 390, 'height': 844}); pg.add_init_script(hook)
+        pg.goto('file://' + os.path.abspath(GAME) + '?scene=gully'); pg.wait_for_timeout(5000)
+        hud = pg.evaluate("JSON.parse(JSON.stringify(window._hud))")
+        nm = pg.evaluate("(()=>{const m=document.getElementById('matchName');m.textContent='PLAYERNAME';m.classList.remove('hidden');const r=m.getBoundingClientRect();return [r.left,r.top,r.width,r.height]})()")
+        b.close()
+    for k in ('board3', 'pause', 'sign', 'strip'):
+        if k not in hud: sys.exit(f'HUD NOT FOUND in running game: {k}')
+    f = lambda r: dict(left=r[0]/390, top=r[1]/844, right=(r[0]+r[2])/390, bottom=(r[1]+r[3])/844)
+    bd = hud['board3']; k = bd[2] / 1265
+    energy = [bd[0] + e_x0*k, bd[1] + e_y0*(bd[3]/455), bd[0] + e_x1*k, bd[1] + e_y1*(bd[3]/455)]
+    return dict(scoreboard=f(bd), energy_bar=f([energy[0], energy[1], energy[2]-energy[0], energy[3]-energy[1]]),
+                pause_button=f(hud['pause']), last_six_balls=f(hud['strip']), best_score_sign=f(hud['sign']),
+                name_plate=dict(f(nm), note='bottom inset 0 in test; sits ~14px higher on iPhones with a home bar'))
+HUD = measure_hud()
+
 L = {
   'size': [W, H],
   'field_oval': dict(cx=0.5, cy=cy, rx=rx, ry=ry, left=0.5-rx, right=0.5+rx, top=cy-ry, bottom=cy+ry),
@@ -56,9 +76,7 @@ L = {
   'pitch': dict(top=p_top, bottom=p_bot, top_w=p_tw, bottom_w=p_bw),
   'stumps_far': dict(x=0.5, y=p_top, height_px=s_far*SCALE), 'stumps_near': dict(x=0.5, y=p_bot, height_px=s_near*SCALE),
   'umpire': dict(x=0.5, y=p_top - ump_off/844),
-  'scoreboard': dict(left=(1-b_w)/2, right=(1+b_w)/2, top=b_top, bottom=b_top+b_h),
-  'notch_clear': dict(top=0, bottom=0.05),
-  'hud_bottom_clear': dict(top=0.94, bottom=1.0, note='BEST sign centre, name plate bottom-left'),
+  **HUD,
   'fielder_spots': fielders,
 }
 json.dump(L, open(os.path.join(HERE, 'layout.json'), 'w'), indent=1)
@@ -69,11 +87,10 @@ def px(v, axis): return round(v * (W if axis == 'x' else H))
 # ---------- template image ----------
 def draw_template(img, alpha=255, labels=True):
     d = ImageDraw.Draw(img, 'RGBA')
-    fo, ir, pi, sb = L['field_oval'], L['inner_ring'], L['pitch'], L['scoreboard']
+    fo, ir, pi = L['field_oval'], L['inner_ring'], L['pitch']
     def oval(o, col, w): d.ellipse([px(o['left'],'x'), px(o['top'],'y'), px(o['right'],'x'), px(o['bottom'],'y')], outline=col, width=w)
-    d.rectangle([0, 0, W, px(0.05,'y')], fill=(255,0,0,70))
-    d.rectangle([0, px(0.94,'y'), W, H], fill=(255,0,0,50))
-    d.rectangle([px(sb['left'],'x'), px(sb['top'],'y'), px(sb['right'],'x'), px(sb['bottom'],'y')], outline=(255,200,0,alpha), width=6)
+    def box(r, col): d.rectangle([px(r['left'],'x'), px(r['top'],'y'), px(r['right'],'x'), px(r['bottom'],'y')], outline=col+(alpha,), width=6)
+    for k, col in HUD_BOXES: box(L[k], col)
     oval(fo, (255,255,255,alpha), 8); oval(ir, (255,255,255,int(alpha*.6)), 4)
     tl, tr = 0.5 - pi['top_w']/2, 0.5 + pi['top_w']/2; bl, br = 0.5 - pi['bottom_w']/2, 0.5 + pi['bottom_w']/2
     d.polygon([(px(tl,'x'),px(pi['top'],'y')),(px(tr,'x'),px(pi['top'],'y')),(px(br,'x'),px(pi['bottom'],'y')),(px(bl,'x'),px(pi['bottom'],'y'))], outline=(0,200,255,alpha), width=5)
@@ -86,13 +103,17 @@ def draw_template(img, alpha=255, labels=True):
     if labels:
         try: ft = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 30)
         except Exception: ft = None
-        d.text((20, px(0.012,'y')), 'NOTCH - KEEP CLEAR', fill=(255,255,255,alpha), font=ft)
-        d.text((px(sb['left'],'x')+16, px(sb['top'],'y')+12), 'SCOREBOARD LAYER', fill=(255,200,0,alpha), font=ft)
-        d.text((20, px(0.95,'y')), 'HUD - KEEP LOW DETAIL', fill=(255,255,255,alpha), font=ft)
+        try: fs = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 24)
+        except Exception: fs = ft
+        for k, col in HUD_BOXES:
+            r = L[k]; d.text((px(r['left'],'x')+8, px(r['bottom'],'y')+4), k.replace('_',' ').upper(), fill=col+(alpha,), font=fs)
         d.text((px(fo['right'],'x')-330, px(fo['cy'],'y')), 'BOUNDARY ROPE', fill=(255,255,255,alpha), font=ft)
         d.text((px(0.5,'x')+60, px(u['y'],'y')-20), 'UMPIRE', fill=(255,255,255,alpha), font=ft)
         d.text((px(0.5,'x')+80, px((pi['top']+pi['bottom'])/2,'y')), 'PITCH', fill=(0,200,255,alpha), font=ft)
     return img
+
+HUD_BOXES = [('scoreboard',(255,200,0)), ('energy_bar',(80,255,80)), ('pause_button',(255,140,0)),
+             ('last_six_balls',(255,140,0)), ('best_score_sign',(255,90,90)), ('name_plate',(255,90,90))]
 
 if '--check' in sys.argv:
     p = sys.argv[sys.argv.index('--check') + 1]
@@ -105,6 +126,8 @@ draw_template(tpl).convert('RGB').save(os.path.join(HERE, 'layout_1170x2532.png'
 
 # ---------- prompts ----------
 fo, ir, pi, sb, u = L['field_oval'], L['inner_ring'], L['pitch'], L['scoreboard'], L['umpire']
+en, bs, ps, st, nm = L['energy_bar'], L['best_score_sign'], L['pause_button'], L['last_six_balls'], L['name_plate']
+def area(r): return f"{pct(r['left'])}–{pct(r['right'])} W, {pct(r['top'])}–{pct(r['bottom'])} H"
 pitch_h = px(pi['bottom'],'y') - px(pi['top'],'y')
 P = f"""# Ground prompts — generated from the game code
 Do not edit by hand. Re-run `python3 art/grounds/layout/layout_from_code.py` after any layout change.
@@ -124,15 +147,20 @@ FIELD: one oval of themed grass, centre 50% W / {pct(fo['cy'])} H ({px(.5,'x')},
 BOUNDARY ROPE: a themed rope [e.g. thick ship's rope with small flag markers] laid exactly on that oval edge, all the way round.
 INNER RING: a faint themed dotted ring, centre 50% W / {pct(ir['cy'])} H, from {pct(ir['left'])} to {pct(ir['right'])} W and {pct(ir['top'])} to {pct(ir['bottom'])} H.
 EMPTY: no pitch, stumps, players, umpire, ball or text on the field.
-SCOREBOARD AREA: {pct(sb['left'])}–{pct(sb['right'])} W, {pct(sb['top'])}–{pct(sb['bottom'])} H: calm, low-detail scenery only (the board is a separate layer).
-TOP 5% H: plain sky/scenery (phone notch). BOTTOM 94–100% H: low detail (BEST sign centre, name plate left).
-SURROUNDINGS: all themed stands, crowd and scenery OUTSIDE the oval only.
+SURROUNDINGS: fill the whole canvas edge to edge, top to bottom, with themed stands, crowd and scenery, OUTSIDE the oval only. No empty bands at the top or bottom.
+The game draws these on top, so keep the scenery behind them simple (no faces or key props hidden under them): scoreboard {area(sb)}; pause button {area(ps)}; last-six-balls strip {area(st)}; BEST score sign {area(bs)}; name plate {area(nm)}.
 ```
 
-## 2. Scoreboard + BEST sign (separate layer)
+## 2. HUD layer: scoreboard, energy bar, BEST score sign, pause, last-six strip
 ```
-On flat #00FF00 green. A themed empty scoreboard, {px(sb['right']-sb['left'],'x')}x{px(sb['bottom']-sb['top'],'y')} px. Two equal blank number panels, left (RUNS) and right (TARGET), each with a blank label strip above, and a blank thin energy bar along the bottom. A small themed crest may rise from the top centre. Separately: a small themed BEST sign plate, blank. No text or numbers.
+On flat #00FF00 green, each piece separate, nothing touching. All blank: no text or numbers.
+- SCOREBOARD, {px(sb['right']-sb['left'],'x')}x{px(sb['bottom']-sb['top'],'y')} px: two equal blank number panels, left (RUNS) and right (TARGET), each with a blank label strip above. A small themed crest may rise from the top centre.
+- ENERGY BAR: an empty themed bar track built into the bottom of the scoreboard, {px(en['right']-en['left'],'x')}x{px(en['bottom']-en['top'],'y')} px, centred under the two panels (the game fills it).
+- BEST SCORE SIGN, {px(bs['right']-bs['left'],'x')}x{px(bs['bottom']-bs['top'],'y')} px: a themed hanging sign with a blank panel, hangs under the TARGET panel.
+- PAUSE BUTTON, {px(ps['right']-ps['left'],'x')} px round: themed badge with a pause symbol.
+- LAST-SIX-BALLS STRIP, {px(st['right']-st['left'],'x')}x{px(st['bottom']-st['top'],'y')} px: themed holder with 6 empty round sockets in a row.
 ```
+A themed display font is chosen per ground; the game draws RUNS, TARGET, the numbers, the energy fill and BEST in it.
 
 ## 3. Pitch
 ```
@@ -164,8 +192,9 @@ UMPIRE (facing down-screen): idle · OUT (one finger up) · FOUR (arm sweep, 3 f
 ```
 
 ## Where things stand in the game (for checking)
+- HUD (measured from the live game): scoreboard {area(sb)}; energy bar {area(en)}; BEST sign {area(bs)}; pause {area(ps)}; last six {area(st)}; name plate {area(nm)}.
 - Far stumps {pct(pi['top'])} H, batter's stumps {pct(pi['bottom'])} H, umpire {pct(u['y'])} H, all at 50% W.
-- Fielder spots: {', '.join(f"{f['name']} ({pct(f['x'])}, {pct(f['y'])})" for f in fielders)}.
+- Fielder spots — 17 places the game can put a fielder (10 on the field at once: keeper + 4 infield + 5 boundary, plus the bowler): {', '.join(f"{f['name']} ({pct(f['x'])}, {pct(f['y'])})" for f in fielders)}.
 """
 open(os.path.join(HERE, 'PROMPTS.md'), 'w').write(P)
 print('ok: layout.json, layout_1170x2532.png, PROMPTS.md')
