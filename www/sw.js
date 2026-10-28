@@ -1,5 +1,5 @@
 // Flicky Cricket service worker — cache-first for assets, network-first for HTML
-const CACHE = 'flicky-v1';
+const CACHE = 'flicky-v3';
 const PRECACHE = ['./', './manifest.json'];
 
 self.addEventListener('install', e => {
