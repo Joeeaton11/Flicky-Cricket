@@ -3674,9 +3674,30 @@ let fieldersReady = false;
 let DPR = 1;
 function gameW() { return W; }
 function gameH() { return H; }
+// iOS 26.0 bug: a Home Screen (full-screen) web app reports a viewport shorter than the screen, leaving a blank
+// band at the bottom (fixed in 26.1). When that happens, size the page to the real screen and make <body> the
+// containing block for every fixed element (via a transform), so screens, nav and canvas reach the bottom edge.
+function appGap() {
+  const sa = (navigator.standalone === true) || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  if (!sa || !window.screen) return 0;
+  const portrait = innerHeight >= innerWidth, sh = portrait ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width);
+  const g = Math.round(sh - innerHeight);
+  return g > 12 && g < 140 ? g : 0;
+}
+function fixAppHeight() {
+  const g = appGap(), b = document.body, r = document.documentElement;
+  if (g) {
+    const h = innerHeight + g;
+    r.style.height = h + 'px';
+    Object.assign(b.style, { position: 'fixed', left: '0', top: '0', width: '100%', height: h + 'px', transform: 'translateZ(0)' });
+  } else if (b.style.transform) {
+    r.style.height = ''; Object.assign(b.style, { position: '', left: '', top: '', width: '', height: '', transform: '' });
+  }
+  return g;
+}
 function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);   // 2× is sharp on phones and keeps the frame rate up
-  W = window.innerWidth; H = window.innerHeight;
+  W = window.innerWidth; H = window.innerHeight + fixAppHeight();
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
