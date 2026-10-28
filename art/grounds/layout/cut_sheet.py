@@ -9,10 +9,19 @@ src = sys.argv[1]
 arg = lambda k, d: float(sys.argv[sys.argv.index(k) + 1]) if k in sys.argv else d
 im = np.array(Image.open(src).convert('RGB')).astype(np.float32)
 r, g, b = im[..., 0], im[..., 1], im[..., 2]
-spill = g - np.maximum(r, b)
+if '--magenta' in sys.argv:   # key #FF00FF instead: swap channels so magenta behaves like green
+    r, g, b = r, np.minimum(r, b), g
+    spill = np.minimum(im[..., 0], im[..., 2]) - im[..., 1]
+else:
+    spill = g - np.maximum(r, b)
 alpha = np.clip(1 - (spill - 40) / 60, 0, 1)          # strong green -> 0, little green -> 1
 fg = im.copy(); m = spill > 0
-fg[..., 1] = np.where(m, np.maximum(r, b) + np.minimum(spill, 0), g)   # despill: pull green down to max(r,b)
+if '--magenta' in sys.argv:
+    lim = im[..., 1] + 0
+    fg[..., 0] = np.where(m, np.minimum(fg[..., 0], np.maximum(lim, fg[..., 0] - spill)), fg[..., 0])
+    fg[..., 2] = np.where(m, np.minimum(fg[..., 2], np.maximum(lim, fg[..., 2] - spill)), fg[..., 2])
+else:
+    fg[..., 1] = np.where(m, np.maximum(r, b) + np.minimum(spill, 0), g)   # despill: pull green down to max(r,b)
 rgba = np.dstack([fg, alpha * 255]).clip(0, 255).astype(np.uint8)
 mask = (alpha > 0.5).astype(np.uint8)
 mg = int(arg('--merge', 10))

@@ -21,3 +21,14 @@
 - UMPIRE: black shirt, grey trousers, wide black sun hat, sunglasses.
 - Ball: white T20 ball with a black seam. Stumps: LED stumps that glow red. Pitch: dry golden-brown with sharp white creases.
 - Words: bold glossy 3D lettering, gold with a purple outline and a sparkle.
+
+## Gully Cup — 1a `gully` (Mumbai neighbourhood)
+- THEME: the neighbourhood IS the stadium — pastel chawl tenements with packed balconies, washing lines, rooftop kids with kites and water tanks, chai stall, auto-rickshaws, scooters, fruit cart, marigolds, bunting, banyan tree; Mumbai skyline and sea beyond.
+- LIGHT: hot afternoon sun from picture-right. Field: sun-baked red-brown earth. Boundary: low painted kerb.
+- F1: skinny teen boy, orange sleeveless vest, blue shorts, flip-flops, messy black hair.
+- F2: chubby boy, white school shirt, navy shorts, red cap worn backwards.
+- F3: girl, long black plait, bright pink kurta top, white leggings, white sneakers.
+- F4: moustached uncle, white vest, blue-and-white checked lungi tucked up at the knee, brown sandals.
+- KEEPER: small kid in a yellow T-shirt with huge mismatched keeping gloves. BOWLER: lanky teen, purple T-shirt, red headband. UMPIRE: moustached auto-rickshaw driver in khaki uniform with sunglasses.
+- Props: concrete strip pitch with chalk creases; taped wooden-stick stumps; tennis ball wrapped in red tape; boundary of painted old tyres; ring marker small orange brick.
+- HUD: Mumbai truck-art — bright painted tin with flowers, mirrors and tassels. Words: truck-art hand lettering.
