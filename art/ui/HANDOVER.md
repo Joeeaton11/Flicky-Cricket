@@ -2,6 +2,9 @@
 
 Joe wants every screen of Flicky Cricket redesigned, **one screen per chat**, designed visually first and only then built into the game. The 27 animated league cards are finished (see `art/league-cards/HANDOVER.md`); the redesigned UI should feel like it belongs with them: rich, polished, premium.
 
+## RULE #1 FOR EVERY GROUND / SCENE (Joe, Oct 28) — never break this
+Every ground design follows the game's layout EXACTLY, always: field oval (centre 0.50W / 0.60H, radii 0.46W / 0.335H → top 26.5%, bottom 93.5%), pitch (0.50–0.665H, widths 0.076W top / 0.116W bottom), scoreboard box (0.107–0.893W, 7.3–14%H), BEST pill (bottom centre) and name plate (bottom left). Template: `art/grounds/layout/layout_1170x2532.png`. Paint only AROUND the oval; the field interior is plain empty grass (no painted pitch, stumps, players); nothing important under the scoreboard/HUD boxes. Never show Joe free concept art — check every image against the template and only ever present it as an in-game screenshot at 390×844 with the real HUD.
+
 ## The screens, in order
 
 1. **Home** — `#overlay`: logo, the pitch scene behind, best score / current league / chest line, PLAY, Remove Ads, and the bottom nav (`#bottomNav`: Kit, Chests, League, Stats). ← start here
