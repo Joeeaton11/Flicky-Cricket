@@ -3631,6 +3631,11 @@ const GAME_CONFIG = {
     // index = level reached. Cards grow with the level, same ladder for every rarity (rarer cards only drop in later
     // leagues, where bags are bigger). Coins are the blueprint's. Tune with the economy sim.
     upgrade: { cards: [0, 0, 2, 3, 5, 7, 10, 14, 18, 24, 30], coins: [0, 0, 10, 40, 100, 250, 600, 1500, 3000, 6000, 12000] },
+    // each tier costs more than the one below (×these on the ladders above), so you finish a tier before the next
+    // one matters. Set with tools/sim_economy.js: free player maxes a common in ~2 weeks, the whole common tier in
+    // ~4, a first rare in ~6–7 weeks; epics and legendaries are the long game (a spender gets epics in ~2 months).
+    tierCost: { cards: { common: 0.15, rare: 0.25, epic: 0.4, legendary: 0.6 }, coins: { common: 0.12, rare: 0.5, epic: 1.6, legendary: 5 } },
+    tierUnlockLeague: { common: 0, rare: 9, epic: 16, legendary: 21 },   // league index: ICL, Witches' Ashes, Neon Series
     maxStatGain: 0.15,
     spareCardCoins: { common: 5, rare: 25, epic: 100, legendary: 500 },
     boosters: {
@@ -4844,12 +4849,14 @@ function kitSetBonus(itemId) {
 const RARITY_MAX_LEVEL    = GAME_CONFIG.kit.maxLevelNow;
 const RARITY_UNLOCK_SEASON = { common:1, rare:2, epic:4, legendary:7 };   // legacy, unused
 // kit rarities unlock by league reached (replaces seasons): rare at Coastal Cup, epic at ECL, legendary at ICL
-const RARITY_UNLOCK_LEAGUE = { common:0, rare:2, epic:4, legendary:8 };
+const RARITY_UNLOCK_LEAGUE = GAME_CONFIG.kit.tierUnlockLeague;   // tiers open as you climb (tools/sim_economy.js)
 
 // Coin cost to upgrade per rarity, indexed by current level (0 = L1→L2)
-// Coin cost to upgrade, indexed by current level (index 0 = L1→L2) — same ladder for every rarity (sprint 4)
+// Coin cost to upgrade, indexed by current level (index 0 = L1→L2): the ladder × each tier's cost (sprint 4)
 const _UPC = GAME_CONFIG.kit.upgrade.coins.slice(2);   // [to L2 … to L10]
-const UPGRADE_COIN_COST = { common: _UPC, rare: _UPC, epic: _UPC, legendary: _UPC };
+const _r5 = v => Math.max(5, Math.round(v / 5) * 5);
+const UPGRADE_COIN_COST = {};
+['common', 'rare', 'epic', 'legendary'].forEach(r => { UPGRADE_COIN_COST[r] = _UPC.map(c => _r5(c * GAME_CONFIG.kit.tierCost.coins[r])); });
 
 // Match entry fee and win prize by season
 const MATCH_ECONOMY = [
@@ -4942,8 +4949,8 @@ const _RARITY_BASE_AVG = {};   // average starting stat per rarity, so each item
 (function () { const t = {}; EQUIP_SLOTS.forEach(sl => EQUIPMENT[sl].forEach(it => { const st = Object.values(it.stats); (t[it.rarity] = t[it.rarity] || []).push(st.reduce((a, b) => a + b, 0) / st.length); }));
   for (const r in t) _RARITY_BASE_AVG[r] = t[r].reduce((a, b) => a + b, 0) / t[r].length; })();
 EQUIP_SLOTS.forEach(slot => EQUIPMENT[slot].forEach(item => {
-  const C = GAME_CONFIG.kit.upgrade.cards;   // cardsToLevel[L-1] = cards to go from L to L+1
-  item.cardsToLevel = Array.from({ length: 10 }, (_, i) => C[Math.min(10, i + 2)] || C[10]);
+  const C = GAME_CONFIG.kit.upgrade.cards, m = GAME_CONFIG.kit.tierCost.cards[item.rarity] || 1;   // cardsToLevel[L-1] = cards to go from L to L+1
+  item.cardsToLevel = Array.from({ length: 10 }, (_, i) => Math.max(1, Math.round((C[Math.min(10, i + 2)] || C[10]) * m)));
 }));
 // one-time migration to the tier system: each owned item moves to the lowest level that keeps at least its
 // current total stats (from the original 8/6/5/4 system or from the first sprint-4 version)

@@ -142,7 +142,8 @@ if (process.argv[2] === '--search') {
   process.exit(0);
 }
 if (require.main === module && process.argv[2] !== '--search') {
-  const M = JSON.parse(process.argv[2] || 'null') || { cards: { common: .3, rare: .6, epic: 1, legendary: 1.6 }, coins: { common: .12, rare: .6, epic: 2.5, legendary: 8 } };
+  // default = the numbers in GAME_CONFIG.kit.tierCost / tierUnlockLeague (Oct 29)
+  const M = JSON.parse(process.argv[2] || 'null') || { cards: { common: .15, rare: .25, epic: .4, legendary: .6 }, coins: { common: .12, rare: .5, epic: 1.6, legendary: 5 }, unlock: { rare: 9, epic: 16, legendary: 21 } };
   console.log(JSON.stringify(M));
   for (const [k, P] of Object.entries(PLAYERS)) console.log(summary(k, avg(P, M)));
 }
