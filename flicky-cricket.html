@@ -3621,10 +3621,16 @@ const GAME_CONFIG = {
   kit: {
     maxLevelNow: { common: 10, rare: 10, epic: 10, legendary: 10 },                                     // (live) every item reaches 10 (sprint 4)
     oldMaxLevel: { common: 8, rare: 6, epic: 5, legendary: 4 },                                         // before sprint 4, for the one-time migration
-    maxLevel: 10, startLevel: { common: 1, rare: 3, epic: 6, legendary: 8 },                           // (live) rarer items start higher
-    // index = level reached. Coins are the blueprint's; cards are scaled to our bag drop rates (the blueprint's
-    // 2…800 card ladder is Clash Royale's and would take years with ~1 card per item per day). Tune with the economy sim.
-    upgrade: { cards: [0, 0, 2, 3, 4, 6, 8, 10, 14, 18, 24], coins: [0, 0, 10, 40, 100, 250, 600, 1500, 3000, 6000, 12000] },
+    maxLevel: 10,
+    // TIERS (Joe, Oct 29): every item is level 1–10. Each rarity is a tier with its own stat band; a better tier
+    // unlocks as you climb leagues (RARITY_UNLOCK_LEAGUE) and overlaps the one below — a maxed common ≈ a level-2/3
+    // legendary. Values are the rarity's AVERAGE main stat at level 1 and level 10; each item keeps its own style
+    // (its stats sit above/below the average as they always did). Each level adds a little less than the last.
+    bands: { common: [32, 52], rare: [40, 66], epic: [45, 77], legendary: [47, 92] },
+    luckyNextTier: 0.04,   // chance a bag also holds one card from the next (still locked) tier — "you got lucky!"
+    // index = level reached. Cards grow with the level, same ladder for every rarity (rarer cards only drop in later
+    // leagues, where bags are bigger). Coins are the blueprint's. Tune with the economy sim.
+    upgrade: { cards: [0, 0, 2, 3, 5, 7, 10, 14, 18, 24, 30], coins: [0, 0, 10, 40, 100, 250, 600, 1500, 3000, 6000, 12000] },
     maxStatGain: 0.15,
     spareCardCoins: { common: 5, rare: 25, epic: 100, legendary: 500 },
     boosters: {
@@ -4930,38 +4936,48 @@ let itemCards = _equipState.itemCards;
 let itemLevels = _equipState.itemLevels;
 let gems = _equipState.gems;
 
-// ---------- SPRINT 4: every item levels to 10 (Oct 29) ----------
-// Levels are absolute 1–10; rarer items start higher (common 1, rare 3, epic 6, legendary 8). Each item keeps the
-// total stat gain it always had, spread from its start level to 10 with each level adding a little less than the last.
-function kitStartLevel(item) { return GAME_CONFIG.kit.startLevel[item.rarity] || 1; }
-function _kitTotalGain(item, stat) { return (item.gains || []).reduce((t, g) => t + (g[stat] || 0), 0); }
+// ---------- SPRINT 4: kit tiers, every item levels 1–10 (Oct 29, reworked with Joe) ----------
+function kitStartLevel(item) { return 1; }
+const _RARITY_BASE_AVG = {};   // average starting stat per rarity, so each item's style offset is kept
+(function () { const t = {}; EQUIP_SLOTS.forEach(sl => EQUIPMENT[sl].forEach(it => { const st = Object.values(it.stats); (t[it.rarity] = t[it.rarity] || []).push(st.reduce((a, b) => a + b, 0) / st.length); }));
+  for (const r in t) _RARITY_BASE_AVG[r] = t[r].reduce((a, b) => a + b, 0) / t[r].length; })();
 EQUIP_SLOTS.forEach(slot => EQUIPMENT[slot].forEach(item => {
-  // cardsToLevel[L-1] = cards to go from L to L+1 (unused below the start level)
-  const C = GAME_CONFIG.kit.upgrade.cards;
+  const C = GAME_CONFIG.kit.upgrade.cards;   // cardsToLevel[L-1] = cards to go from L to L+1
   item.cardsToLevel = Array.from({ length: 10 }, (_, i) => C[Math.min(10, i + 2)] || C[10]);
 }));
-// one-time migration: old levels (capped 8/6/5/4) → new levels that keep at least the same total stats
-(function migrateKitTo10() {
+// one-time migration to the tier system: each owned item moves to the lowest level that keeps at least its
+// current total stats (from the original 8/6/5/4 system or from the first sprint-4 version)
+(function migrateKitTiers() {
   const ks = SAVE.section('kit');
-  if (ks.levels10) return;
-  const oldMax = GAME_CONFIG.kit.oldMaxLevel;
+  if (ks.tiers) return;
+  const oldMax = GAME_CONFIG.kit.oldMaxLevel, s4Start = { common: 1, rare: 3, epic: 6, legendary: 8 };
+  const tg = (item, st) => (item.gains || []).reduce((t, g) => t + (g[st] || 0), 0);
+  const oldStat = (item, st, k) => {
+    if (ks.levels10) { const s0 = s4Start[item.rarity] || 1, x = Math.max(0, Math.min(1, (k - s0) / Math.max(1, 10 - s0))); return item.stats[st] + Math.round(tg(item, st) * (1 - Math.pow(1 - x, 1.5))); }
+    let v = item.stats[st]; for (let i = 0; i < Math.min(k - 1, (oldMax[item.rarity] || 5) - 1, item.gains.length); i++) v += (item.gains[i][st] || 0); return v;
+  };
   EQUIP_SLOTS.forEach(slot => EQUIPMENT[slot].forEach(item => {
     const k = itemLevels[item.id] || 0; if (!k) return;
+    // never levelled (fresh starter kit, or a just-unlocked card): it simply starts at level 1 in its tier
+    if (k <= (ks.levels10 ? (s4Start[item.rarity] || 1) : 1)) { itemLevels[item.id] = 1; return; }
     const stats = Object.keys(item.stats);
-    const oldSum = stats.reduce((t, st) => { let v = item.stats[st]; for (let i = 0; i < Math.min(k - 1, (oldMax[item.rarity] || 5) - 1, item.gains.length); i++) v += (item.gains[i][st] || 0); return t + v; }, 0);
-    let L = kitStartLevel(item);
-    while (L < 10 && stats.reduce((t, st) => t + statAtLevel(item, st, L), 0) < oldSum) L++;
+    const before = stats.reduce((t, st) => t + oldStat(item, st, k), 0);
+    let L = 1;
+    while (L < 10 && stats.reduce((t, st) => t + statAtLevel(item, st, L), 0) < before) L++;
     itemLevels[item.id] = L;
   }));
-  ks.levels10 = Date.now();
-  const b = SAVE.section('boosters'); b.power_bat = (b.power_bat || 0) + 1; b.fresh_legs = (b.fresh_legs || 0) + 1;   // a taste of boosters
+  if (!ks.levels10) { const b = SAVE.section('boosters'); b.power_bat = (b.power_bat || 0) + 1; b.fresh_legs = (b.fresh_legs || 0) + 1; }   // a taste of boosters
+  ks.tiers = Date.now(); ks.levels10 = ks.levels10 || ks.tiers;
   SAVE.save(); saveEquipmentState();
 })();
 
 function statAtLevel(item, stat, lvl) {
   if (item.stats[stat] === undefined) return 0;
-  const start = kitStartLevel(item), x = Math.max(0, Math.min(1, ((lvl || start) - start) / Math.max(1, 10 - start)));
-  return item.stats[stat] + Math.round(_kitTotalGain(item, stat) * (1 - Math.pow(1 - x, 1.5)));   // each level adds a bit less
+  const band = GAME_CONFIG.kit.bands[item.rarity] || [35, 55];
+  const style = item.stats[stat] - (_RARITY_BASE_AVG[item.rarity] || item.stats[stat]);   // this item's lean, e.g. a power bat
+  const x = Math.max(0, Math.min(1, ((lvl || 1) - 1) / 9));
+  const v = band[0] + style * 0.6 + (band[1] - band[0]) * (1 - Math.pow(1 - x, 1.5));   // each level adds a bit less
+  return Math.max(5, Math.min(99, Math.round(v)));
 }
 
 function getEquipStat(slot, stat) {
@@ -5049,6 +5065,16 @@ function openChestRewards(typeName) {
       itemLevels[picked.id] = kitStartLevel(picked);
     }
   }
+  // lucky: now and then a bag holds one card from the next tier that isn't unlocked yet
+  { const order = ['common', 'rare', 'epic', 'legendary'], hi = highestLeagueIdx();
+    const next = order.find(r => hi < RARITY_UNLOCK_LEAGUE[r]);
+    if (next && Math.random() < GAME_CONFIG.kit.luckyNextTier) {
+      const pool = []; EQUIP_SLOTS.forEach(sl => EQUIPMENT[sl].forEach(it => { if (it.rarity === next && !it.gemOnly) pool.push(it); }));
+      const it = pool[Math.floor(Math.random() * pool.length)];
+      if (it) { itemCards[it.id] = (itemCards[it.id] || 0) + 1; if (!itemLevels[it.id]) itemLevels[it.id] = 1; rewards.cards.push({ id: it.id, rarity: it.rarity, lucky: true });
+        rewards.lucky = it.id; track('lucky_card', { item: it.id, rarity: next });
+        setTimeout(() => showMessage('LUCKY! A ' + next.toUpperCase() + ' CARD!', '#FFC93A', 2600), 600); }
+    } }
   // bags can hold a booster (silver and up more often); Golden Ball comes from the calendar, Pass and shop
   { const ch = { wooden: 0, bronze: 0.15, silver: 0.35, gold: 0.6, platinum: 1 }[typeName] || 0;
     rewards.boosters = [];
