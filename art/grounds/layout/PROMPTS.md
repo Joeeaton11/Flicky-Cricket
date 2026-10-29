@@ -23,22 +23,28 @@ TIGHT STADIUM (very important): the field's edge IS the foot of the stands. The 
 The field edge is a clean crisp line. NO rope, NO markers, NO inner ring, NO lines on the field: the game draws the themed rope, boundary markers and 30-yard ring markers from the props sheet, exactly on the coded oval.
 EMPTY: no pitch, stumps, players, umpire, ball or text on the field.
 SURROUNDINGS: busy, fun and cool — packed with life, characters and detail, edge to edge and top to bottom, OUTSIDE the oval only. Real-world themes (e.g. an IPL ground) should look like the real thing, in the home team's colours. No empty bands at the top or bottom.
-Keep the top quarter of the picture calm (sky, skyline, roofs; no faces or key props there) and the bottom-left corner simple. This is a background only: never paint any game interface, buttons, icons, panels or scoreboards.
+SCREEN ZONES (the game's interface sits on top of these; paint scenery there, just keep it simple):
+- TOP-LEFT BLOCK: from the left edge to just over three fifths of the way across, and from the top down to about 19 percent of the height: a scoreboard covers it. Simple background only here (sky, roofs, plain stand tops); no faces, landmarks or key props.
+- TOP-RIGHT CORNER: a small round button sits in the very top-right corner. Keep that small spot plain.
+- THE REST OF THE TOP (right of the scoreboard and below it, down to the stands): this stays on show the whole match. Put the ground's showpiece here: its landmark, skyline highlight or most fun detail [e.g. a lighthouse, a ship's mast, a giant tree with kids in it].
+- BOTTOM-LEFT CORNER: a small name tag sits there. Keep it simple.
+- Nothing is ever drawn on the field, so the field stays fully visible.
+This is a background only: never paint any game interface, buttons, icons, panels or scoreboards.
 ```
 
-## 2. HUD layer: corner scorebug + pause (layout locked Oct 29, option 11)
-Ball-limited chase (12 balls, 2 wickets). One compact scorebug top-left (x 12–242 of 390, top 62; 230 px wide), pause top-right, nothing else above the rope.
+## 2. HUD layer: corner scoreboard + pause (locked Oct 29, option 11)
+Ball-limited chase (12 balls, 2 wickets). One compact scoreboard top-left, pause top-right, nothing else above the rope, nothing on the field.
 ```
 On the flat key background, each piece separate, nothing touching. All blank: no text or numbers.
-- SCOREBUG, 690x252 px, three stacked bands in one themed frame:
-  · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line ("14 TO WIN · OFF 9 BALLS"), with TWO empty wicket slots at its right end (the game draws stumps, greyed when lost).
-  · middle band (about 35%): blank area for score + target on the left, then 6 empty round sockets in a row (this over) on the right.
-  · bottom band (about 10%): an empty thin energy track across the full width, with a small icon slot at its left end for a themed energy symbol.
+- SCOREBOARD, 690x296 px, three stacked bands in one themed frame:
+  · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line, with TWO empty wicket slots at its right end.
+  · middle band (about 35%): a blank area on the left for score and target, then 6 empty round sockets in a row on the right (this over).
+  · bottom band (about 10%): a thin empty energy track across the full width, with a small icon slot at its left end for a themed energy symbol.
 - PAUSE BUTTON, 132 px round: themed badge with a pause symbol.
 ```
-A themed display font is chosen per ground; the game draws the chase line, score, target, ball results, stumps and energy fill in it.
-Last over / close finish is done by code, not art: a pulsing glow round the scorebug and the chase panel tinted to an alert colour. Paint the frame so a glow round its outline reads well.
-BEST score is no longer on the match screen; it shows on the result screen.
+A themed display font is chosen per ground; the game draws the chase line ("14 TO WIN · OFF 9 BALLS"), score, target, ball results, stumps (greyed when lost) and energy fill in it.
+Last over / close finish is done by code, not art: a pulsing glow round the scoreboard and the chase panel tinted to an alert colour. Paint the frame so a glow round its outline reads well.
+BEST score is not on the match screen; it shows on the result screen.
 
 ## 3. Props sheet: pitch, stump, bail, ball (one generation)
 ```
@@ -96,5 +102,5 @@ SIX! the biggest and boldest. Each word on one line, letters fully visible, noth
 Ground 1 · HUD 1 · props 1 · fielder 4 · bowler 1 · keeper + umpire 1 · words 1 = **10**. A second ground in the same theme: **1** (just the background).
 
 ## Where things stand in the game (for checking)
-- HUD (THEMED_HUD in the code): scoreboard 7.0%–93.0% W, 5.6%–15.0% H; energy bar 20.0%–80.0% W, 15.6%–17.2% H; BEST sign 58.0%–93.0% W, 18.0%–24.0% H; pause 7.0%–18.0% W, 18.2%–23.3% H; last six 21.0%–55.0% W, 18.8%–22.7% H; name plate 2.6%–31.8% W, 94.3%–97.6% H.
+- HUD (MATCH_HUD in the code): scoreboard 3.1%–62.1% W, 7.3%–19.0% H; pause 85.1%–96.4% W, 7.6%–12.8% H; name plate 2.6%–32.8% W, 94.3%–98.1% H.
 - Far stumps 50.0% H, batter's stumps 66.5% H, umpire 48.8% H, all at 50% W.

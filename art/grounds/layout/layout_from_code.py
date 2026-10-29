@@ -36,20 +36,20 @@ s_near, = find(r'drawStumps\(W/2, PITCH_BOTTOM\(\), ' + N + r'\)', 'near stumps 
 
 import math
 
-# ---------- HUD for themed grounds: THEMED_HUD in the game code ----------
-m = re.search(r'const THEMED_HUD\s*=\s*\{(.*?)\n\};', src, re.S)
-if not m: sys.exit('LAYOUT NOT FOUND in code: THEMED_HUD')
+# ---------- HUD: MATCH_HUD in the game code (locked Oct 29, option 11 corner scorebug) ----------
+m = re.search(r'const MATCH_HUD\s*=\s*\{(.*?)\n\};', src, re.S)
+if not m: sys.exit('LAYOUT NOT FOUND in code: MATCH_HUD')
 HUD = {k: dict(left=float(l), top=float(t), right=float(r), bottom=float(b_)) for k, l, t, r, b_ in
        re.findall(r'(\w+):\s*\{\s*l:([0-9.]+),\s*t:([0-9.]+),\s*r:([0-9.]+),\s*b:([0-9.]+)', m.group(1))}
-for k in ('scoreboard', 'energy_bar', 'pause_button', 'last_six_balls', 'best_score_sign', 'name_plate'):
-    if k not in HUD: sys.exit(f'THEMED_HUD missing {k}')
+for k in ('scorebug', 'pause_button', 'name_plate'):
+    if k not in HUD: sys.exit(f'MATCH_HUD missing {k}')
 ks = list(HUD)
 for i in range(len(ks)):
     for j in range(i + 1, len(ks)):
         A, B = HUD[ks[i]], HUD[ks[j]]
         if A['left'] < B['right'] and B['left'] < A['right'] and A['top'] < B['bottom'] and B['top'] < A['bottom']:
-            sys.exit(f'HUD OVERLAP: {ks[i]} and {ks[j]} — fix THEMED_HUD in the game code')
-
+            sys.exit(f'HUD OVERLAP: {ks[i]} and {ks[j]} — fix MATCH_HUD in the game code')
+if HUD['scorebug']['bottom'] >= cy - ry: sys.exit('HUD covers the field: scorebug reaches the rope')
 
 L = {
   'size': [W, H],
@@ -92,8 +92,7 @@ def draw_template(img, alpha=255, labels=True):
         d.text((px(0.5,'x')+80, px((pi['top']+pi['bottom'])/2,'y')), 'PITCH', fill=(0,200,255,alpha), font=ft)
     return img
 
-HUD_BOXES = [('scoreboard',(255,200,0)), ('energy_bar',(80,255,80)), ('pause_button',(255,140,0)),
-             ('last_six_balls',(255,140,0)), ('best_score_sign',(255,90,90)), ('name_plate',(255,90,90))]
+HUD_BOXES = [('scorebug',(255,200,0)), ('pause_button',(255,140,0)), ('name_plate',(255,90,90))]
 
 if '--check' in sys.argv:
     p = sys.argv[sys.argv.index('--check') + 1]
@@ -105,8 +104,12 @@ tpl = Image.new('RGBA', (W, H), (40, 110, 50, 255))
 draw_template(tpl).convert('RGB').save(os.path.join(HERE, 'layout_1170x2532.png'))
 
 # ---------- prompts ----------
-fo, ir, pi, sb, u = L['field_oval'], L['inner_ring'], L['pitch'], L['scoreboard'], L['umpire']
-en, bs, ps, st, nm = L['energy_bar'], L['best_score_sign'], L['pause_button'], L['last_six_balls'], L['name_plate']
+fo, ir, pi, sb, u = L['field_oval'], L['inner_ring'], L['pitch'], L['scorebug'], L['umpire']
+ps, nm = L['pause_button'], L['name_plate']
+def frac(v):
+    for n, w in ((0.5,'half'),(0.6,'three fifths'),(0.62,'just over three fifths'),(0.66,'two thirds')):
+        if abs(v-n) < 0.015: return w
+    return f'{round(v*100)} percent'
 def area(r): return f"{pct(r['left'])}–{pct(r['right'])} W, {pct(r['top'])}–{pct(r['bottom'])} H"
 pitch_h = px(pi['bottom'],'y') - px(pi['top'],'y')
 P = f"""# Ground prompts — generated from the game code
@@ -134,19 +137,28 @@ TIGHT STADIUM (very important): the field's edge IS the foot of the stands. The 
 The field edge is a clean crisp line. NO rope, NO markers, NO inner ring, NO lines on the field: the game draws the themed rope, boundary markers and 30-yard ring markers from the props sheet, exactly on the coded oval.
 EMPTY: no pitch, stumps, players, umpire, ball or text on the field.
 SURROUNDINGS: busy, fun and cool — packed with life, characters and detail, edge to edge and top to bottom, OUTSIDE the oval only. Real-world themes (e.g. an IPL ground) should look like the real thing, in the home team's colours. No empty bands at the top or bottom.
-Keep the top quarter of the picture calm (sky, skyline, roofs; no faces or key props there) and the bottom-left corner simple. This is a background only: never paint any game interface, buttons, icons, panels or scoreboards.
+SCREEN ZONES (the game's interface sits on top of these; paint scenery there, just keep it simple):
+- TOP-LEFT BLOCK: from the left edge to {frac(sb['right'])} of the way across, and from the top down to about {round(sb['bottom']*100)} percent of the height: a scoreboard covers it. Simple background only here (sky, roofs, plain stand tops); no faces, landmarks or key props.
+- TOP-RIGHT CORNER: a small round button sits in the very top-right corner. Keep that small spot plain.
+- THE REST OF THE TOP (right of the scoreboard and below it, down to the stands): this stays on show the whole match. Put the ground's showpiece here: its landmark, skyline highlight or most fun detail [e.g. a lighthouse, a ship's mast, a giant tree with kids in it].
+- BOTTOM-LEFT CORNER: a small name tag sits there. Keep it simple.
+- Nothing is ever drawn on the field, so the field stays fully visible.
+This is a background only: never paint any game interface, buttons, icons, panels or scoreboards.
 ```
 
-## 2. HUD layer: scoreboard, energy bar, BEST score sign, pause, last-six strip
+## 2. HUD layer: corner scoreboard + pause (locked Oct 29, option 11)
+Ball-limited chase (12 balls, 2 wickets). One compact scoreboard top-left, pause top-right, nothing else above the rope, nothing on the field.
 ```
 On the flat key background, each piece separate, nothing touching. All blank: no text or numbers.
-- SCOREBOARD, {px(sb['right']-sb['left'],'x')}x{px(sb['bottom']-sb['top'],'y')} px: two equal blank number panels, left (RUNS) and right (TARGET), each with a blank label strip above. A small themed crest may rise from the top centre.
-- ENERGY BAR: an empty themed bar track, its own piece that sits just under the scoreboard, {px(en['right']-en['left'],'x')}x{px(en['bottom']-en['top'],'y')} px, centred under the two panels (the game fills it).
-- BEST SCORE SIGN, {px(bs['right']-bs['left'],'x')}x{px(bs['bottom']-bs['top'],'y')} px: a themed hanging sign with a blank panel, hangs under the TARGET panel.
+- SCOREBOARD, {px(sb['right']-sb['left'],'x')}x{px(sb['bottom']-sb['top'],'y')} px, three stacked bands in one themed frame:
+  · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line, with TWO empty wicket slots at its right end.
+  · middle band (about 35%): a blank area on the left for score and target, then 6 empty round sockets in a row on the right (this over).
+  · bottom band (about 10%): a thin empty energy track across the full width, with a small icon slot at its left end for a themed energy symbol.
 - PAUSE BUTTON, {px(ps['right']-ps['left'],'x')} px round: themed badge with a pause symbol.
-- LAST-SIX-BALLS STRIP, {px(st['right']-st['left'],'x')}x{px(st['bottom']-st['top'],'y')} px: themed holder with 6 empty round sockets in a row.
 ```
-A themed display font is chosen per ground; the game draws RUNS, TARGET, the numbers, the energy fill and BEST in it.
+A themed display font is chosen per ground; the game draws the chase line ("14 TO WIN · OFF 9 BALLS"), score, target, ball results, stumps (greyed when lost) and energy fill in it.
+Last over / close finish is done by code, not art: a pulsing glow round the scoreboard and the chase panel tinted to an alert colour. Paint the frame so a glow round its outline reads well.
+BEST score is not on the match screen; it shows on the result screen.
 
 ## 3. Props sheet: pitch, stump, bail, ball (one generation)
 ```
@@ -204,7 +216,7 @@ SIX! the biggest and boldest. Each word on one line, letters fully visible, noth
 Ground 1 · HUD 1 · props 1 · fielder 4 · bowler 1 · keeper + umpire 1 · words 1 = **10**. A second ground in the same theme: **1** (just the background).
 
 ## Where things stand in the game (for checking)
-- HUD (THEMED_HUD in the code): scoreboard {area(sb)}; energy bar {area(en)}; BEST sign {area(bs)}; pause {area(ps)}; last six {area(st)}; name plate {area(nm)}.
+- HUD (MATCH_HUD in the code): scoreboard {area(sb)}; pause {area(ps)}; name plate {area(nm)}.
 - Far stumps {pct(pi['top'])} H, batter's stumps {pct(pi['bottom'])} H, umpire {pct(u['y'])} H, all at 50% W.
 """
 open(os.path.join(HERE, 'PROMPTS.md'), 'w').write(P)
