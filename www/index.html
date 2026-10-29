@@ -4436,6 +4436,9 @@ function getDailyAdWatches() {
   } catch(e) { return 0; }
 }
 function recordAdWatch() {
+  setTimeout(() => { try { if (!adsRemoved && getDailyAdWatches() === GAME_CONFIG.shop.offers.noAds.triggerAfterAdsToday && !window._offerShownThisSession) { window._offerShownThisSession = true;
+    const el = document.getElementById('offerPop'); el.querySelector('.ofT').textContent = 'NO ADS'; el.querySelector('.ofC').textContent = 'No ads ever + 100 gems'; el.querySelector('.ofB').textContent = '£' + GAME_CONFIG.shop.offers.noAds.price.toFixed(2);
+    el.dataset.kind = 'noads'; el.classList.add('show'); track('offer_shown', { offer: 'no_ads', trigger: 'third_ad' }); } } catch (e) {} }, 1200);
   const today = todayKey();
   const count = getDailyAdWatches() + 1;
   SAVE.setItem('flickyAdWatches', JSON.stringify({ date: today, count }));
@@ -29434,6 +29437,7 @@ function updateEquipTopBar() {
 function updateMenuHUD() {
   try { updateHomeStreak(); } catch (e) {}
   try { updateTodayBadge(); } catch (e) {}
+  setTimeout(() => { try { maybeOfferPopup(); } catch (e) {} }, 600);
   try { updateStatsNavBadge(); } catch (e) {}
   try { updatePlayerNavBadge(); } catch (e) {}
   const gc = document.getElementById('menuGemCount');
@@ -29542,14 +29546,15 @@ function openEquipTab(tab) {
   if (chestTimerInterval) { clearInterval(chestTimerInterval); chestTimerInterval = null; }
   kbCloseAll();
   const title = document.getElementById('equipTitle');
-  if (title) title.textContent = tab === 'chests' ? 'BAGS' : tab === 'shop' ? 'GEM SHOP' : 'KIT BAG';
+  if (title) title.textContent = tab === 'chests' ? 'BAGS' : tab === 'shop' ? 'SHOP' : 'KIT BAG';
   const content = document.getElementById('equipContent');
   content.innerHTML = '';
   content.scrollTop = 0;
   if (tab === 'chests') {
     renderChestTab(content);
+    content.insertAdjacentHTML('afterbegin', '<button class="oddsBtn" aria-label="Bag odds">i&nbsp; BAG ODDS</button>');
   } else if (tab === 'shop') {
-    renderGemShopTab(content);
+    renderShopV2(content);
   } else {
     if (tab !== 'kit') kbSlot = tab;
     renderKitBag(content);
@@ -31727,6 +31732,7 @@ function endGame() {
   showInterstitialIfDue();
 
   const _chaseDone = window.chase; window.chase = null;
+  if (_chaseDone && _chaseDone.mode === 'league') { try { offerTriggers({ won: beatTarget, newLeague: window._newLeagueUnlocked }); } catch (e) {} }
   let _stars = null;
   if (_chaseDone && _chaseDone.mode === 'league') {
     const spare = Math.max(0, _chaseDone.balls - _chaseDone.used);
@@ -60088,8 +60094,8 @@ function chaseBall(runsScored) {
   const c = window.chase; if (!c) return;
   c.used++; c.log.push(runsScored);
   if (c.mode === 'nets') trackMission('nets_ball');
-  else if (runsScored === 6) { trackMission('six'); trackMission('boundary'); }
-  else if (runsScored === 4) { trackMission('four'); trackMission('boundary'); }
+  else if (runsScored === 6) { trackMission('six'); trackMission('boundary'); gemJarAdd(6); }
+  else if (runsScored === 4) { trackMission('four'); trackMission('boundary'); gemJarAdd(4); }
   chaseBuzz();
 }
 // after the scoring ball has played out: won, out of balls, a pressure moment, or the next ball
@@ -60756,6 +60762,173 @@ document.addEventListener('click', e => {
   else if (t.closest('#roadClaim')) { const l = claimTrophyRoad(); if (l) { showMessage('TROPHY ROAD: ' + (l.length > 3 ? l.length + ' REWARDS' : l.join(' · ')), '#FFC93A', 2600); try { renderLeagueScreen(); } catch (err) {} } return; }
   else return;
   if (label) { showMessage('+ ' + label, '#FFC93A', 2200); try { hapticBig(); playAchievementChime(); } catch (err) {} renderToday(); }
+});
+
+// ===================================================================================================
+// SPRINT 6: SHOP v2 + OFFERS (Oct 29). Real payments and ads come later (sprint 7, native app):
+// buyRealMoney() grants straight away in local testing and otherwise says purchases arrive with the app.
+// ===================================================================================================
+function shopState() { const s = SAVE.section('shop'); s.firstBuy = s.firstBuy || {}; s.deals = s.deals || {}; s.jar = s.jar || 0; return s; }
+function buyRealMoney(productId, price, grant) {
+  const local = location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '';
+  const IAP = window.Capacitor && window.Capacitor.Plugins && (window.Capacitor.Plugins.Purchases || window.Capacitor.Plugins.InAppPurchase);
+  if (!local && !IAP) { showMessage('Purchases arrive with the app', '#7fd0ff', 2000); return false; }
+  const label = grant();
+  SAVE.data.purchases.push({ id: productId, price, at: Date.now(), test: local }); SAVE.save();
+  track('purchase', { product: productId, price, currency: 'GBP', test: local });
+  if (label) showMessage('+ ' + label, '#FFC93A', 2400);
+  try { hapticBig(); playAchievementChime(); } catch (e) {}
+  return true;
+}
+// ---------- Gem Jar: fills as you hit boundaries in league matches, break it open for £2.99 ----------
+function gemJarAdd(runs) { const j = GAME_CONFIG.shop.offers.gemJar, s = shopState(); const add = runs === 6 ? j.perSix : runs === 4 ? j.perFour : 0; if (!add) return; s.jar = Math.min(j.cap, s.jar + add); SAVE.save(); }
+// ---------- kit deals: 3 card deals that change every 8 hours ----------
+function dealWindow() { return Math.floor((Date.now() + (window._dayOffset || 0) * 864e5) / (GAME_CONFIG.shop.kitDealsRefreshHours * 3600e3)); }
+function kitDeals() {
+  const w = dealWindow(), r = _seeded('deal' + w), hi = highestLeagueIdx();
+  const tiers = ['common', 'rare', 'epic', 'legendary'].filter(t => hi >= RARITY_UNLOCK_LEAGUE[t]);
+  const pool = []; EQUIP_SLOTS.forEach(sl => EQUIPMENT[sl].forEach(it => { if (tiers.includes(it.rarity) && !it.gemOnly && (itemLevels[it.id] || 0) < 10) pool.push(it); }));
+  const out = []; const used = new Set();
+  const P = { common: { n: 5, coins: 150 }, rare: { n: 3, coins: 450 }, epic: { n: 2, gems: 50 }, legendary: { n: 1, gems: 80 } };
+  for (let k = 0; k < 3 && pool.length; k++) { let it, g = 0; do { it = pool[Math.floor(r() * pool.length)]; } while (used.has(it.id) && ++g < 20); used.add(it.id); out.push(Object.assign({ item: it, key: w + ':' + it.id }, P[it.rarity])); }
+  return out;
+}
+function buyDeal(i) {
+  const d = kitDeals()[i], s = shopState(); if (!d || s.deals[d.key]) return;
+  if (d.coins && career.coins < d.coins) { showMessage('Not enough coins!', '#ff6b6b', 1500); return; }
+  if (d.gems && gems < d.gems) { showMessage('Not enough gems!', '#ff6b6b', 1500); return; }
+  if (d.coins) career.coins -= d.coins; else gems -= d.gems;
+  itemCards[d.item.id] = (itemCards[d.item.id] || 0) + d.n; if (!itemLevels[d.item.id]) itemLevels[d.item.id] = 1;
+  s.deals[d.key] = 1; SAVE.save(); saveEquipmentState(); saveCareerStats();
+  track('offer_bought', { offer: 'kit_deal', item: d.item.id, price: d.coins || d.gems, currency: d.coins ? 'coins' : 'gems' });
+  showMessage(`+${d.n} ${d.item.name} CARD${d.n === 1 ? '' : 'S'}`, '#FFC93A', 2000);
+}
+// ---------- timed offers: Starter Pack (first win, 48 h, once) and League Unlock Pack (new league, 24 h) ----------
+function activeOffer() {
+  const s = shopState(), now = Date.now(), O = GAME_CONFIG.shop.offers;
+  if (s.starterUntil && now < s.starterUntil && !s.starterBought) return { id: 'starter', title: 'STARTER PACK', price: O.starter.price, until: s.starterUntil, contents: O.starter.contents, label: 'SILVER BAG · 100 GEMS · 1,000 COINS · 3 POWER BATS' };
+  if (s.leagueUntil && now < s.leagueUntil && !s.leagueBought) { const lg = THEMED_LEAGUES[s.leagueIdx] || {}; const coins = Math.min(10000, 3000 + (s.leagueIdx || 0) * 250);
+    return { id: 'league', title: `${lg.name || 'LEAGUE'} PACK`, price: (s.leagueIdx || 0) >= O.leagueUnlock.priceFromLeague ? O.leagueUnlock.price[1] : O.leagueUnlock.price[0], until: s.leagueUntil, contents: { bag: lg.winChest || 'silver', coins }, label: `${(lg.winChest || 'silver').toUpperCase()} BAG · ${coins.toLocaleString()} COINS` }; }
+  return null;
+}
+function buyOffer() {
+  const o = activeOffer(); if (!o) return;
+  buyRealMoney('offer_' + o.id, o.price, () => { const s = shopState(); if (o.id === 'starter') s.starterBought = 1; else s.leagueBought = 1; SAVE.save();
+    track('offer_bought', { offer: o.id, price: o.price }); return grantReward(Object.assign({}, o.contents, { boosterCount: (o.contents.boosters && o.contents.boosters.power_bat) || 1, booster: o.contents.boosters ? 'power_bat' : undefined })); });
+  try { document.getElementById('offerPop').classList.remove('show'); } catch (e) {}
+  if (currentEquipTab === 'shop') openEquipTab('shop');
+}
+function offerTriggers(d) {   // called from endGame
+  const s = shopState();
+  if (d.won && !s.starterUntil && (career.matchesWon || 0) >= 1) { s.starterUntil = Date.now() + GAME_CONFIG.shop.offers.starter.hours * 3600e3; }
+  if (d.newLeague != null && d.newLeague >= 2) { s.leagueUntil = Date.now() + GAME_CONFIG.shop.offers.leagueUnlock.hours * 3600e3; s.leagueIdx = d.newLeague; s.leagueBought = 0; }
+  SAVE.save();
+}
+// at most one pop-up offer a session, only on Home, never during a match
+function maybeOfferPopup() {
+  if (window._offerShownThisSession || state !== 'menu') return;
+  const ov = document.getElementById('overlay'); if (!ov || ov.classList.contains('hidden')) return;
+  const o = activeOffer(); if (!o) return;
+  window._offerShownThisSession = true;
+  const el = document.getElementById('offerPop');
+  el.querySelector('.ofT').textContent = o.title; el.querySelector('.ofC').textContent = o.label; el.querySelector('.ofB').textContent = `£${o.price.toFixed(2)}`;
+  el.classList.add('show');
+  track('offer_shown', { offer: o.id, price: o.price, trigger: 'home' });
+}
+function fmtLeft(ms) { const h = Math.max(0, Math.floor(ms / 3600e3)), m = Math.max(0, Math.floor(ms % 3600e3 / 60e3)); return h ? `${h}h ${m}m` : `${m}m`; }
+
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `
+  .sh2{display:flex;flex-direction:column;gap:12px;padding:4px 2px 24px;font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  .sh2 h4{margin:4px 2px 0;font-size:14px;font-weight:400;letter-spacing:.1em;color:#FFC93A}
+  .sh2 .card{border-radius:16px;background:#0E1C38;border:3px solid #050A14;padding:12px;display:flex;align-items:center;gap:10px}
+  .sh2 .card .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .sh2 .card small{color:#B4C2DD;font-size:11px}
+  .sh2 .btn{min-width:84px;height:44px;border-radius:12px;border:3px solid #050A14;background:#FFC93A;color:#5a3300;font:16px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;padding:0 10px}
+  .sh2 .btn.gem{background:linear-gradient(#c58bff,#8a3df0);color:#fff}
+  .sh2 .btn.buy{background:linear-gradient(#5fe07a,#22a046);color:#04310f}
+  .sh2 .btn[disabled]{background:#14203a;color:#7f8fb0;cursor:default}
+  .sh2 .offer{background:linear-gradient(135deg,#3a1a6a,#0E1C38);border-color:#FFC93A}
+  .sh2 .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .sh2 .deal{border-radius:14px;background:#0E1C38;border:3px solid #050A14;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;font-size:13px}
+  .sh2 .deal .r{font-size:10px;letter-spacing:.08em}
+  .sh2 .packs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .sh2 .pack{position:relative;border-radius:14px;background:#0E1C38;border:3px solid #050A14;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+  .sh2 .pack b{font-weight:400;font-size:20px}
+  .sh2 .pack .tag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);padding:2px 8px;border-radius:8px;background:#e8283c;font-size:10px;white-space:nowrap}
+  .sh2 .pack .x2{position:absolute;top:6px;right:6px;padding:1px 6px;border-radius:6px;background:#FFC93A;color:#5a3300;font-size:10px}
+  .sh2 .jar{height:10px;border-radius:5px;background:#050A14;overflow:hidden;margin-top:4px}
+  .sh2 .jar i{display:block;height:100%;background:linear-gradient(90deg,#c58bff,#8a3df0)}
+  #offerPop,#oddsPop{position:fixed;inset:0;z-index:310;display:none;align-items:center;justify-content:center;background:rgba(5,10,20,.66);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #offerPop.show,#oddsPop.show{display:flex}
+  #offerPop .c,#oddsPop .c{width:min(330px,88vw);max-height:86vh;overflow:auto;padding:18px;border-radius:22px;background:linear-gradient(160deg,#3a1a6a,#0E1C38);border:3px solid #FFC93A;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:mmIn .35s cubic-bezier(.2,1.6,.4,1) both}
+  #offerPop button,#oddsPop button{width:100%;height:50px;border-radius:14px;border:3px solid #050A14;font:19px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
+  #oddsPop table{width:100%;border-collapse:collapse;font-size:12px}
+  #oddsPop td,#oddsPop th{padding:5px 3px;border-bottom:1px solid #26386a;font-weight:400}
+  .oddsBtn{align-self:flex-end;margin:0 4px 8px auto;display:block;height:30px;padding:0 12px;border-radius:10px;border:2px solid #050A14;background:#14203a;color:#cfe0ff;font:13px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
+  `;
+  document.head.appendChild(css);
+  const op = document.createElement('div'); op.id = 'offerPop'; op.setAttribute('role', 'dialog');
+  op.innerHTML = `<div class="c"><span style="font-size:12px;letter-spacing:.14em;color:#FFC93A">LIMITED OFFER</span><span class="ofT" style="font-size:30px;line-height:1"></span><span class="ofC" style="font-size:14px;color:#e4d8ff"></span><button id="ofBuy" style="background:linear-gradient(#5fe07a,#22a046);color:#04310f"><span class="ofB"></span></button><button id="ofNo" style="background:transparent;border:none;color:#B4C2DD;height:36px;font-size:15px">NOT NOW</button></div>`;
+  document.body.appendChild(op);
+  const od = document.createElement('div'); od.id = 'oddsPop'; od.setAttribute('role', 'dialog'); od.innerHTML = '<div class="c"></div>'; document.body.appendChild(od);
+})();
+function showBagOdds() {
+  const rows = ['wooden', 'bronze', 'silver', 'gold', 'platinum'].map(k => { const c = CHEST_TYPES[k]; const p = c.rarity.map(x => Math.round(x * 1000) / 10 + '%');
+    return `<tr><td style="text-align:left">${c.name}</td><td>${c.cards.min}–${c.cards.max}</td><td>${p[0]}</td><td>${p[1]}</td><td>${p[2]}</td><td>${p[3]}</td><td>${c.coins.min}–${c.coins.max}</td><td>${c.gems.min}–${c.gems.max}</td></tr>`; }).join('');
+  document.querySelector('#oddsPop .c').innerHTML = `<span style="font-size:24px">BAG ODDS</span><span style="font-size:12px;color:#B4C2DD">Chance each card is that rarity. Rarities you haven't unlocked yet are shared out among the ones you have, except the occasional lucky card (4%).</span>
+    <table><tr><th></th><th>CARDS</th><th>COM</th><th>RARE</th><th>EPIC</th><th>LEG</th><th>COINS</th><th>GEMS</th></tr>${rows}</table>
+    <span style="font-size:12px;color:#B4C2DD">Bags can also hold a booster: bronze 15%, silver 35%, gold 60%, platinum 2 every time.</span><button id="oddsClose" style="background:#FFC93A;color:#5a3300">OK</button>`;
+  document.getElementById('oddsPop').classList.add('show');
+}
+function renderShopV2(container) {
+  const s = shopState(), O = GAME_CONFIG.shop, off = activeOffer(), deals = kitDeals();
+  const jar = s.jar, J = O.offers.gemJar;
+  const rot = GAME_CONFIG.daily.giftRotation, gift = rot[giftIndex(0)];
+  const nextDeal = (dealWindow() + 1) * O.kitDealsRefreshHours * 3600e3 - (Date.now() + (window._dayOffset || 0) * 864e5);
+  container.innerHTML = `<div class="sh2">
+    ${off ? `<h4>TODAY'S OFFER · ENDS IN ${fmtLeft(off.until - Date.now())}</h4><div class="card offer"><div class="t"><b style="font-weight:400;font-size:19px">${off.title}</b><small style="color:#e4d8ff">${off.label}</small></div><button class="btn buy" data-act="offer">£${off.price.toFixed(2)}</button></div>` : ''}
+    <h4>DAILY GIFT</h4><div class="card"><div class="t"><b style="font-weight:400;font-size:17px">${rewardLabel(gift)}</b><small>Free every day · tomorrow: ${rewardLabel(rot[giftIndex(1)])}</small></div><button class="btn" data-act="gift" ${giftReady() ? '' : 'disabled'}>${giftReady() ? 'FREE' : 'CLAIMED'}</button></div>
+    <h4>KIT DEALS · NEW IN ${fmtLeft(nextDeal)}</h4><div class="grid3">${deals.map((d, i) => { const got = s.deals[d.key];
+      return `<div class="deal"><span class="r" style="color:${rarityColor(d.item.rarity)}">${d.item.rarity.toUpperCase()}</span><span>${d.item.name}</span><span style="font-size:18px">×${d.n}</span><button class="btn ${d.gems ? 'gem' : ''}" data-deal="${i}" ${got ? 'disabled' : ''}>${got ? 'BOUGHT' : d.coins ? d.coins + ' C' : d.gems + ' G'}</button></div>`; }).join('')}</div>
+    <h4>BOOSTERS</h4><div class="grid3" style="grid-template-columns:repeat(2,minmax(0,1fr))">${['power_bat', 'lucky_grip', 'golden_ball', 'fresh_legs'].map(id => `<div class="deal"><span style="color:${BOOSTER_INFO[id].col}">${BOOSTER_INFO[id].short}</span><small style="color:#B4C2DD;font-size:11px">${BOOSTER_INFO[id].desc}</small><span>×3 · YOU HAVE ${boosterCount(id)}</span><button class="btn gem" data-boost="${id}">${GAME_CONFIG.kit.boosterPack.gems} GEMS</button></div>`).join('')}</div>
+    <h4>GEM JAR</h4><div class="card"><div class="t"><b style="font-weight:400;font-size:17px">${jar} / ${J.cap} GEMS INSIDE</b><small>Fills by ${J.perSix} per six and ${J.perFour} per four in league matches. Break it open from ${J.buyableFrom}.</small><div class="jar"><i style="width:${jar / J.cap * 100}%"></i></div></div><button class="btn buy" data-act="jar" ${jar >= J.buyableFrom ? '' : 'disabled'}>£${J.price.toFixed(2)}</button></div>
+    <h4>GEMS</h4><div class="packs">${O.gemPacks.map((p, i) => { const first = O.firstBuyDoubled && !s.firstBuy['g' + i];
+      return `<div class="pack" data-pack="${i}">${p.tag ? `<span class="tag">${p.tag}</span>` : ''}${first ? '<span class="x2">×2 FIRST BUY</span>' : ''}<i class="hIco hi-gem" style="width:34px;height:34px"></i><b>${(first ? p.gems * 2 : p.gems).toLocaleString()}</b><button class="btn buy">£${p.price.toFixed(2)}</button></div>`; }).join('')}</div>
+    <h4>COINS</h4><div class="grid3">${[[30, 500], [150, 3000], [500, 12000]].map(([g, c]) => `<div class="deal"><i class="hIco hi-coin" style="width:30px;height:30px"></i><span style="font-size:17px">${c.toLocaleString()}</span><button class="btn gem" data-coins="${g}:${c}">${g} GEMS</button></div>`).join('')}</div>
+    ${!adsRemoved ? `<h4>NO ADS</h4><div class="card"><div class="t"><b style="font-weight:400;font-size:17px">NO ADS + 100 GEMS</b><small>No ads, ever. Rewarded ads you choose still work.</small></div><button class="btn buy" data-act="noads">£${O.offers.noAds.price.toFixed(2)}</button></div>` : ''}
+    <h4>MORE</h4>
+    <div class="card"><div class="t"><b style="font-weight:400;font-size:16px">WATCH AN AD · +${GEM_AD_REWARD} GEMS</b><small>${getDailyAdWatches()}/${GEM_AD_DAILY_MAX} today</small></div><button class="btn" data-act="ad">FREE</button></div>
+    ${!hasExtraChestSlot() ? `<div class="card"><div class="t"><b style="font-weight:400;font-size:16px">5TH BAG SLOT</b><small>Hold one extra bag</small></div><button class="btn gem" data-act="slot">${GEM_EXTRA_SLOT_COST} GEMS</button></div>` : ''}
+    <div class="card"><div class="t"><b style="font-weight:400;font-size:16px">BAG ODDS</b><small>Exactly what's in every bag</small></div><button class="btn" data-act="odds">VIEW</button></div>
+  </div>`;
+}
+document.addEventListener('click', e => {
+  const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+  if (t.closest('#ofBuy')) { const el = document.getElementById('offerPop');
+    if (el.dataset.kind === 'noads') { el.dataset.kind = ''; el.classList.remove('show'); buyRealMoney('no_ads_gems', GAME_CONFIG.shop.offers.noAds.price, () => { grantRemoveAds(); return grantReward({ gems: GAME_CONFIG.shop.offers.noAds.gems }) + ' · ADS REMOVED'; }); return; }
+    buyOffer(); return; }
+  if (t.closest('#ofNo')) { document.getElementById('offerPop').classList.remove('show'); return; }
+  if (t.closest('#oddsClose') || t.id === 'oddsPop') { document.getElementById('oddsPop').classList.remove('show'); return; }
+  if (t.closest('.oddsBtn')) { showBagOdds(); return; }
+  const sh = t.closest('.sh2'); if (!sh) return;
+  const refresh = () => { try { updateEquipTopBar(); updateMenuHUD(); } catch (err) {} openEquipTab('shop'); };
+  const a = t.closest('[data-act]'), deal = t.closest('[data-deal]'), boost = t.closest('[data-boost]'), pack = t.closest('[data-pack]'), coins = t.closest('[data-coins]');
+  try { hapticTap(); } catch (err) {}
+  if (deal) { buyDeal(+deal.dataset.deal); refresh(); return; }
+  if (boost) { const g = GAME_CONFIG.kit.boosterPack.gems; if (gems < g) { showMessage('Not enough gems!', '#ff6b6b', 1500); return; } gems -= g; boosterAdd(boost.dataset.boost, GAME_CONFIG.kit.boosterPack.count); saveEquipmentState(); track('offer_bought', { offer: 'boosters', booster: boost.dataset.boost, price: g, currency: 'gems' }); showMessage(`+3 ${BOOSTER_INFO[boost.dataset.boost].short}`, '#7fd0ff', 1800); refresh(); return; }
+  if (pack) { const i = +pack.dataset.pack, p = GAME_CONFIG.shop.gemPacks[i], st = shopState(); buyRealMoney('gems_' + p.gems, p.price, () => { const n = GAME_CONFIG.shop.firstBuyDoubled && !st.firstBuy['g' + i] ? p.gems * 2 : p.gems; st.firstBuy['g' + i] = 1; SAVE.save(); return grantReward({ gems: n }); }); refresh(); return; }
+  if (coins) { const [g, c] = coins.dataset.coins.split(':').map(Number); if (gems < g) { showMessage('Not enough gems!', '#ff6b6b', 1500); return; } gems -= g; career.coins += c; saveEquipmentState(); saveCareerStats(); showMessage(`+${c.toLocaleString()} COINS`, '#FFC93A', 1800); refresh(); return; }
+  if (!a) return;
+  const act = a.dataset.act;
+  if (act === 'offer') { buyOffer(); refresh(); }
+  else if (act === 'gift') { const l = claimGift(); if (l) showMessage('+ ' + l, '#FFC93A', 2000); refresh(); }
+  else if (act === 'jar') { const st = shopState(); if (st.jar < GAME_CONFIG.shop.offers.gemJar.buyableFrom) return; const n = st.jar; buyRealMoney('gem_jar', GAME_CONFIG.shop.offers.gemJar.price, () => { st.jar = 0; SAVE.save(); return grantReward({ gems: n }); }); refresh(); }
+  else if (act === 'noads') { buyRealMoney('no_ads_gems', GAME_CONFIG.shop.offers.noAds.price, () => { grantRemoveAds(); return grantReward({ gems: GAME_CONFIG.shop.offers.noAds.gems }) + ' · ADS REMOVED'; }); refresh(); }
+  else if (act === 'ad') { watchAdForGems(); setTimeout(refresh, 300); }
+  else if (act === 'slot') { buyExtraChestSlot(); refresh(); }
+  else if (act === 'odds') showBagOdds();
 });
 
 // ---------- ANALYTICS HOOKS (sprint 1) ----------
