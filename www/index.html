@@ -3637,7 +3637,7 @@ const GAME_CONFIG = {
     // each tier costs more than the one below (×these on the ladders above), so you finish a tier before the next
     // one matters. Set with tools/sim_economy.js: free player maxes a common in ~2 weeks, the whole common tier in
     // ~4, a first rare in ~6–7 weeks; epics and legendaries are the long game (a spender gets epics in ~2 months).
-    tierCost: { cards: { common: 0.15, rare: 0.25, epic: 0.4, legendary: 0.6 }, coins: { common: 0.12, rare: 0.5, epic: 1.6, legendary: 5 } },
+    tierCost: { cards: { common: 0.15, rare: 0.25, epic: 0.4, legendary: 0.6 }, coins: { common: 0.5, rare: 2.5, epic: 10, legendary: 30 } },   // re-run with all daily rewards + coin kit deals (Oct 29)
     tierUnlockLeague: { common: 0, rare: 9, epic: 16, legendary: 21 },   // league index: ICL, Witches' Ashes, Neon Series
     maxStatGain: 0.15,
     spareCardCoins: { common: 5, rare: 25, epic: 100, legendary: 500 },
@@ -3658,6 +3658,9 @@ const GAME_CONFIG = {
   },
   shop: {                                                                                              // sprints 6–7
     kitDealsRefreshHours: 8,
+    // 3 card deals every 8 h, all for coins: the main coin sink, and the way to turn spare coins into progress
+    kitDeals: { common: { n: 5, coins: 80 }, rare: { n: 3, coins: 400 }, epic: { n: 2, coins: 2000 }, legendary: { n: 1, coins: 8000 } },   // coins per card
+    bagGemScale: 0.3,   // bags give 30% of the old gem amounts, so free gems land near ~30 a day (sim)
     offers: {
       starter:      { price: 0.99, trigger: 'first_win', hours: 48, once: true, contents: { bag: 'silver', gems: 100, coins: 1000, boosters: { power_bat: 3 } } },
       leagueUnlock: { price: [2.99, 4.99], priceFromLeague: 11, trigger: 'league_unlocked', hours: 24 },
@@ -5008,6 +5011,8 @@ const CHEST_TYPES = {
   gold:      { name:'GOLD',      color:'#f4d03f', openTime:12*3600,   slots:3, cards:{min:5,max:10},  gems:{min:8,max:25},  coins:{min:200, max:500},  rarity:[0.40,0.35,0.20,0.05] },
   platinum:  { name:'PLATINUM',  color:'#d6e4f0', openTime:24*3600,   slots:4, cards:{min:10,max:18}, gems:{min:25,max:70}, coins:{min:700, max:2000}, rarity:[0.15,0.33,0.34,0.18] },
 };
+// bag gems scaled down (sprint 6 economy pass) so free gems land near ~30 a day
+for (const k of ['wooden', 'bronze', 'silver', 'gold', 'platinum']) { const g = CHEST_TYPES[k].gems; g.min = Math.round(g.min * GAME_CONFIG.shop.bagGemScale); g.max = Math.max(1, Math.round(g.max * GAME_CONFIG.shop.bagGemScale)); }
 // Old saves may hold elite/legendary chests: they become platinum
 CHEST_TYPES.elite = CHEST_TYPES.platinum;
 CHEST_TYPES.legendary = CHEST_TYPES.platinum;
@@ -28799,7 +28804,7 @@ function renderLeagueScreen() {
       </div>
       <div class="lgRow"><span><span>${nets ? 'NETS' : 'TARGET'}</span> ${nets ? 'NO LIMIT &middot; 1 WKT' : `${leagueTarget(lg)} OFF ${band.balls} &middot; ${band.wickets} WKTS`}</span>&nbsp;<span><span>DIFFICULTY</span><span class="lgBalls">${[1,2,3,4,5].map(n => `<i class="${n <= balls ? 'on' : ''}"></i>`).join('')}</span></span></div>
       ${notes.length ? `<div class="lgNote">${unlocked ? '' : 'UNLOCKS: '}${notes.join(' &middot; ')}</div>` : ''}
-      ${!nets && unlocked ? boosterChipsHtml() : ''}
+      ${!nets && unlocked && featureOn('boosters') ? boosterChipsHtml() : ''}
       <button class="leaguePlayBtn ${btnClass}${nets && unlocked ? ' nets' : ''}" data-idx="${idx}" ${unlocked ? '' : 'disabled'}>${btnHtml}</button>`;
     card.appendChild(info);
 
@@ -29436,6 +29441,7 @@ function updateEquipTopBar() {
 
 function updateMenuHUD() {
   try { updateHomeStreak(); } catch (e) {}
+  try { checkFeatureUnlocks(); } catch (e) {}
   try { updateTodayBadge(); } catch (e) {}
   setTimeout(() => { try { maybeOfferPopup(); } catch (e) {} }, 600);
   try { updateStatsNavBadge(); } catch (e) {}
@@ -60781,7 +60787,7 @@ function buyRealMoney(productId, price, grant) {
   return true;
 }
 // ---------- Gem Jar: fills as you hit boundaries in league matches, break it open for £2.99 ----------
-function gemJarAdd(runs) { const j = GAME_CONFIG.shop.offers.gemJar, s = shopState(); const add = runs === 6 ? j.perSix : runs === 4 ? j.perFour : 0; if (!add) return; s.jar = Math.min(j.cap, s.jar + add); SAVE.save(); }
+function gemJarAdd(runs) { const j = GAME_CONFIG.shop.offers.gemJar, s = shopState(); if (runs === 6 && !s.jarSeen) s.jarSeen = Date.now(); const add = runs === 6 ? j.perSix : runs === 4 ? j.perFour : 0; if (!add) return; s.jar = Math.min(j.cap, s.jar + add); SAVE.save(); }
 // ---------- kit deals: 3 card deals that change every 8 hours ----------
 function dealWindow() { return Math.floor((Date.now() + (window._dayOffset || 0) * 864e5) / (GAME_CONFIG.shop.kitDealsRefreshHours * 3600e3)); }
 function kitDeals() {
@@ -60789,7 +60795,7 @@ function kitDeals() {
   const tiers = ['common', 'rare', 'epic', 'legendary'].filter(t => hi >= RARITY_UNLOCK_LEAGUE[t]);
   const pool = []; EQUIP_SLOTS.forEach(sl => EQUIPMENT[sl].forEach(it => { if (tiers.includes(it.rarity) && !it.gemOnly && (itemLevels[it.id] || 0) < 10) pool.push(it); }));
   const out = []; const used = new Set();
-  const P = { common: { n: 5, coins: 150 }, rare: { n: 3, coins: 450 }, epic: { n: 2, gems: 50 }, legendary: { n: 1, gems: 80 } };
+  const P = {}; for (const r in GAME_CONFIG.shop.kitDeals) { const k = GAME_CONFIG.shop.kitDeals[r]; P[r] = { n: k.n, coins: k.n * k.coins }; }
   for (let k = 0; k < 3 && pool.length; k++) { let it, g = 0; do { it = pool[Math.floor(r() * pool.length)]; } while (used.has(it.id) && ++g < 20); used.add(it.id); out.push(Object.assign({ item: it, key: w + ':' + it.id }, P[it.rarity])); }
   return out;
 }
@@ -60890,10 +60896,10 @@ function renderShopV2(container) {
   container.innerHTML = `<div class="sh2">
     ${off ? `<h4>TODAY'S OFFER · ENDS IN ${fmtLeft(off.until - Date.now())}</h4><div class="card offer"><div class="t"><b style="font-weight:400;font-size:19px">${off.title}</b><small style="color:#e4d8ff">${off.label}</small></div><button class="btn buy" data-act="offer">£${off.price.toFixed(2)}</button></div>` : ''}
     <h4>DAILY GIFT</h4><div class="card"><div class="t"><b style="font-weight:400;font-size:17px">${rewardLabel(gift)}</b><small>Free every day · tomorrow: ${rewardLabel(rot[giftIndex(1)])}</small></div><button class="btn" data-act="gift" ${giftReady() ? '' : 'disabled'}>${giftReady() ? 'FREE' : 'CLAIMED'}</button></div>
-    <h4>KIT DEALS · NEW IN ${fmtLeft(nextDeal)}</h4><div class="grid3">${deals.map((d, i) => { const got = s.deals[d.key];
-      return `<div class="deal"><span class="r" style="color:${rarityColor(d.item.rarity)}">${d.item.rarity.toUpperCase()}</span><span>${d.item.name}</span><span style="font-size:18px">×${d.n}</span><button class="btn ${d.gems ? 'gem' : ''}" data-deal="${i}" ${got ? 'disabled' : ''}>${got ? 'BOUGHT' : d.coins ? d.coins + ' C' : d.gems + ' G'}</button></div>`; }).join('')}</div>
+    ${featureOn('deals') ? `<h4>KIT DEALS · NEW IN ${fmtLeft(nextDeal)}</h4><div class="grid3">${deals.map((d, i) => { const got = s.deals[d.key];
+      return `<div class="deal"><span class="r" style="color:${rarityColor(d.item.rarity)}">${d.item.rarity.toUpperCase()}</span><span>${d.item.name}</span><span style="font-size:18px">×${d.n}</span><button class="btn ${d.gems ? 'gem' : ''}" data-deal="${i}" ${got ? 'disabled' : ''}>${got ? 'BOUGHT' : d.coins ? d.coins.toLocaleString() + ' C' : d.gems + ' G'}</button></div>`; }).join('')}</div>` : ''}
     <h4>BOOSTERS</h4><div class="grid3" style="grid-template-columns:repeat(2,minmax(0,1fr))">${['power_bat', 'lucky_grip', 'golden_ball', 'fresh_legs'].map(id => `<div class="deal"><span style="color:${BOOSTER_INFO[id].col}">${BOOSTER_INFO[id].short}</span><small style="color:#B4C2DD;font-size:11px">${BOOSTER_INFO[id].desc}</small><span>×3 · YOU HAVE ${boosterCount(id)}</span><button class="btn gem" data-boost="${id}">${GAME_CONFIG.kit.boosterPack.gems} GEMS</button></div>`).join('')}</div>
-    <h4>GEM JAR</h4><div class="card"><div class="t"><b style="font-weight:400;font-size:17px">${jar} / ${J.cap} GEMS INSIDE</b><small>Fills by ${J.perSix} per six and ${J.perFour} per four in league matches. Break it open from ${J.buyableFrom}.</small><div class="jar"><i style="width:${jar / J.cap * 100}%"></i></div></div><button class="btn buy" data-act="jar" ${jar >= J.buyableFrom ? '' : 'disabled'}>£${J.price.toFixed(2)}</button></div>
+    ${featureOn('jar') ? `<h4>GEM JAR</h4><div class="card"><div class="t"><b style="font-weight:400;font-size:17px">${jar} / ${J.cap} GEMS INSIDE</b><small>Fills by ${J.perSix} per six and ${J.perFour} per four in league matches. Break it open from ${J.buyableFrom}.</small><div class="jar"><i style="width:${jar / J.cap * 100}%"></i></div></div><button class="btn buy" data-act="jar" ${jar >= J.buyableFrom ? '' : 'disabled'}>£${J.price.toFixed(2)}</button></div>` : ''}
     <h4>GEMS</h4><div class="packs">${O.gemPacks.map((p, i) => { const first = O.firstBuyDoubled && !s.firstBuy['g' + i];
       return `<div class="pack" data-pack="${i}">${p.tag ? `<span class="tag">${p.tag}</span>` : ''}${first ? '<span class="x2">×2 FIRST BUY</span>' : ''}<i class="hIco hi-gem" style="width:34px;height:34px"></i><b>${(first ? p.gems * 2 : p.gems).toLocaleString()}</b><button class="btn buy">£${p.price.toFixed(2)}</button></div>`; }).join('')}</div>
     <h4>COINS</h4><div class="grid3">${[[30, 500], [150, 3000], [500, 12000]].map(([g, c]) => `<div class="deal"><i class="hIco hi-coin" style="width:30px;height:30px"></i><span style="font-size:17px">${c.toLocaleString()}</span><button class="btn gem" data-coins="${g}:${c}">${g} GEMS</button></div>`).join('')}</div>
@@ -60931,6 +60937,25 @@ document.addEventListener('click', e => {
   else if (act === 'odds') showBagOdds();
 });
 
+// ---------- FEATURE UNLOCKS (Oct 29): new players meet one system at a time, each as a small "new!" moment ----------
+const FEATURE_UNLOCKS = {
+  today:    { when: () => (career.matchesPlayed || 0) >= 3, msg: 'NEW! TODAY · DAILY REWARDS' },
+  boosters: { when: () => highestLeagueIdx() >= 2, msg: 'NEW! BOOSTERS UNLOCKED' },
+  deals:    { when: () => !!SAVE.section('kit').firstUpgrade, msg: 'NEW! KIT DEALS IN THE SHOP' },
+  jar:      { when: () => !!shopState().jarSeen, msg: 'NEW! GEM JAR IN THE SHOP' },
+};
+function featureOn(id) { const u = SAVE.section('unlocks'); return !!u[id]; }
+function checkFeatureUnlocks() {
+  const u = SAVE.section('unlocks'), fresh = [];
+  for (const id in FEATURE_UNLOCKS) if (!u[id] && FEATURE_UNLOCKS[id].when()) { u[id] = Date.now(); fresh.push(id); }
+  if (fresh.length) { SAVE.save(); fresh.forEach((id, i) => setTimeout(() => showMessage(FEATURE_UNLOCKS[id].msg, '#FFC93A', 2600), 800 + i * 2800)); track('feature_unlocked', { features: fresh.join(',') }); }
+  const tb = document.getElementById('todayBtn'); if (tb) tb.style.display = featureOn('today') ? '' : 'none';
+}
+// existing players already know everything: switch it all on once
+(function () { const u = SAVE.section('unlocks'); if (u._init) return; u._init = 1;
+  if ((career.matchesPlayed || 0) >= 10) for (const id in FEATURE_UNLOCKS) u[id] = u[id] || Date.now();
+  SAVE.save(); })();
+
 // ---------- ANALYTICS HOOKS (sprint 1) ----------
 // Wrap the existing functions so each key moment calls track() without touching their insides.
 (function () {
@@ -60938,6 +60963,7 @@ document.addEventListener('click', e => {
   wrap('openChestRewards', (r, a) => r && trackMission('bag'));
   wrap('openChestRewards', (r, a) => r && track('bag_open', { type: a[0], cards: (r.cards || []).length, coins: r.coins || 0, gems: r.gems || 0 }));
   wrap('upgradeItem', (ok, a) => ok && trackMission('upgrade'));
+  wrap('upgradeItem', (ok) => { if (ok) { const k = SAVE.section('kit'); if (!k.firstUpgrade) { k.firstUpgrade = Date.now(); SAVE.save(); } } });
   wrap('upgradeItem', (ok, a) => ok && track('kit_upgrade', { item: a[0], newLevel: itemLevels[a[0]], coinsSpent: null }));
   wrap('claimDailyChest', (ok) => ok && track('daily_claim', { reward: 'bronze bag' }));
   wrap('purchaseGemPack', (r, a) => track('purchase', { product: 'gems_' + (a[0] && a[0].gems), price: a[0] && a[0].price, currency: 'GBP', placeholder: true }));
