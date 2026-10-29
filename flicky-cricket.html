@@ -3538,6 +3538,150 @@
 </div>
 
 <script>
+// ===================================================================================================
+// SPRINT 1 FOUNDATIONS (Oct 29) — one config, one save, one analytics call. Everything later plugs in here.
+// ===================================================================================================
+
+// ---------- SAVE DATA v2 ----------
+// One saved object (localStorage 'flickySave', versioned) replaces the ~30 scattered 'flicky*' keys.
+// The game still reads and writes values by their old names through SAVE.getItem / setItem / removeItem,
+// which live in SAVE.data.kv; new features use the named sections (match, streak, daily, …).
+// Migration: on the first load after this update every old key is copied in once. The old keys are left
+// in place, untouched, as a backup; if the new save is ever unreadable it is rebuilt from them.
+const SAVE = (function () {
+  const KEY = 'flickySave', VERSION = 2;
+  const SECTIONS = { match:{}, streak:{}, daily:{}, missions:{}, stars:{}, shop:{}, season:{}, purchases:[], boosters:{}, trophyRoad:{} };
+  let ls = null; try { ls = window.localStorage; ls.getItem('x'); } catch (e) { ls = null; }   // private mode / blocked
+  const fresh = () => Object.assign({ v: VERSION, createdAt: Date.now(), migratedAt: 0, kv: {} }, JSON.parse(JSON.stringify(SECTIONS)));
+  function legacyKeys() {
+    const out = {}; if (!ls) return out;
+    for (let i = 0; i < ls.length; i++) { const k = ls.key(i); if (k && k !== KEY && k.indexOf('flicky') === 0) out[k] = ls.getItem(k); }
+    return out;
+  }
+  let data = null;
+  try { const raw = ls && ls.getItem(KEY); if (raw) data = JSON.parse(raw); } catch (e) { data = null; }
+  if (!data || typeof data !== 'object' || !data.kv) {            // first run on v2, or unreadable save
+    data = fresh(); data.kv = legacyKeys(); data.migratedAt = Date.now();
+    data.migratedKeys = Object.keys(data.kv).length;
+  }
+  for (const s in SECTIONS) if (data[s] == null) data[s] = JSON.parse(JSON.stringify(SECTIONS[s]));   // newer sections
+  data.v = VERSION;
+  let memOnly = !ls;
+  function persist() {
+    if (memOnly) return;
+    try { ls.setItem(KEY, JSON.stringify(data)); } catch (e) { console.warn('[save] could not write', e); }
+  }
+  persist();
+  return {
+    get data() { return data; },
+    getItem(k) { k = String(k); return Object.prototype.hasOwnProperty.call(data.kv, k) ? data.kv[k] : null; },
+    setItem(k, v) { data.kv[String(k)] = String(v); persist(); },
+    removeItem(k) { delete data.kv[String(k)]; persist(); },
+    section(name) { if (data[name] == null) data[name] = {}; return data[name]; },
+    save: persist,
+    // debugging: export / import the whole save (e.g. to move a player between devices in testing)
+    export() { return JSON.stringify(data); },
+    import(json) { const d = JSON.parse(json); if (!d || !d.kv) throw new Error('not a Flicky save'); data = d; persist(); },
+  };
+})();
+
+// ---------- GAME CONFIG ----------
+// Every tunable number in the Build Blueprint, in one place. Values marked (live) are already used by the
+// game; the rest are read by the sprint that builds that feature. Later: loadRemoteConfig(url) merges a
+// remote JSON over this so prices and balance change without an app update.
+const GAME_CONFIG = {
+  version: 1,
+  energy: { max: 100, drainRate: 14, passiveRegen: 6, gentleBonus: 16, lowThreshold: 30 },          // (live)
+  match: {
+    bands: [                                                                                           // sprint 2
+      { leagues: [1, 8],   balls: 12, wickets: 2 },
+      { leagues: [9, 18],  balls: 18, wickets: 2 },
+      { leagues: [19, 28], balls: 24, wickets: 3 },
+    ],
+    winRateTarget: [0.55, 0.65],          // simulator aim for an average player in their own league
+    perfectTimingDistance: 0.08,          // PERFECT adds 8% distance
+    nets: { balls: Infinity, wickets: 1 },
+    extraOver: { needWithin: 15, balls: 3, prices: [{ gems: 25, adAllowed: true }, { gems: 50, adAllowed: false }], timerSec: 8 },   // sprint 3
+  },
+  streak: {                                                                                            // sprint 3
+    tiers: [ { from: 1, coinMult: 1, bagTierUp: 0 }, { from: 3, coinMult: 1.2, bagTierUp: 1 },
+             { from: 5, coinMult: 1.5, bagTierUp: 1 }, { from: 10, coinMult: 2, bagTierUp: 2 } ],
+    saver: { minStreak: 3, gems: 30, perDay: 1 },
+  },
+  kit: {
+    maxLevelNow: { common: 8, rare: 6, epic: 5, legendary: 4 },                                         // (live) until sprint 4
+    maxLevel: 10, startLevel: { common: 1, rare: 3, epic: 6, legendary: 8 },                           // sprint 4
+    upgrade: { cards: [0, 0, 2, 4, 10, 20, 50, 100, 200, 400, 800], coins: [0, 0, 10, 40, 100, 250, 600, 1500, 3000, 6000, 12000] },   // index = level reached
+    maxStatGain: 0.15,
+    spareCardCoins: { common: 5, rare: 25, epic: 100, legendary: 500 },
+    boosters: {
+      power_bat:   { label: 'Power Bat',   effect: { distance: 0.10 } },
+      lucky_grip:  { label: 'Lucky Grip',  effect: { firstEdgeSafe: true } },
+      golden_ball: { label: 'Golden Ball', effect: { coinMult: 2 } },
+      fresh_legs:  { label: 'Fresh Legs',  effect: { energyDrain: -0.30 } },
+    },
+    boostersPerMatch: 2, boosterPack: { count: 3, gems: 60 },
+  },
+  daily: {                                                                                             // sprint 5
+    calendar: [ { coins: 100 }, { booster: 'power_bat' }, { coins: 200 }, { gems: 20 }, { bag: 'silver' }, { coins: 400 }, { bag: 'gold', gems: 50 } ],
+    giftRotation: [ { coins: 150 }, { booster: 'random' }, { gems: 5 }, { bag: 'wooden' } ],
+    missions: { dailyCount: 3, weeklyCount: 5, dailyCoins: [50, 150], dailyAllBag: 'bronze', weeklyCoins: [300, 800], weeklyAllBag: 'gold' },
+    stars: { ballsSpareFor2: 3, ballsSpareFor3: 6, coinsPer10Stars: 100 },
+    trophyRoadEvery: 2,
+  },
+  shop: {                                                                                              // sprints 6–7
+    kitDealsRefreshHours: 8,
+    offers: {
+      starter:      { price: 0.99, trigger: 'first_win', hours: 48, once: true, contents: { bag: 'silver', gems: 100, coins: 1000, boosters: { power_bat: 3 } } },
+      leagueUnlock: { price: [2.99, 4.99], priceFromLeague: 11, trigger: 'league_unlocked', hours: 24 },
+      gemJar:       { price: 2.99, perSix: 5, perFour: 3, cap: 600, buyableFrom: 300 },
+      outOfCoins:   { gems: 30, coins: 500 },
+      noAds:        { price: 2.99, gems: 100, triggerAfterAdsToday: 3 },
+    },
+    gemPacks: [ { price: 0.99, gems: 80 }, { price: 4.99, gems: 450 }, { price: 9.99, gems: 1000, tag: 'MOST POPULAR' }, { price: 19.99, gems: 2200 }, { price: 49.99, gems: 6000 } ],
+    firstBuyDoubled: true, maxPopupOffersPerSession: 1,
+    ads: { interstitialEvery: 3, noInterstitialFirstMatches: 3, rewardedGemsPerDay: 3, rewardedGems: 5 },
+  },
+  season: {                                                                                            // sprint 8
+    dailyChallenge: { freeAttempts: 1, extraAttemptGems: 10, streakBagAt: 3 },
+    tournament: { bands: [[1, 8], [9, 18], [19, 28]], rewards: { top1: { bag: 'gold', gems: 200 }, top10: { bag: 'gold' }, top50: { bag: 'silver' }, all: { bag: 'bronze' } } },
+    endless: { wickets: 1, ticketGems: 20, secondLifeGems: 30, milestones: [50, 100, 200] },
+    ranked: { resetFraction: 0.5 },
+    pass: { tiers: 30, xpPerTier: 100, xp: { match: 10, win: 20, dailyMission: 50, weeklyMission: 200, dailyChallenge: 30 }, premium: 4.99, plus: 9.99 },
+    eventDays: [7, 14],
+  },
+};
+function _deepMerge(into, from) {
+  for (const k in from) {
+    const v = from[k];
+    if (v && typeof v === 'object' && !Array.isArray(v) && into[k] && typeof into[k] === 'object' && !Array.isArray(into[k])) _deepMerge(into[k], v);
+    else into[k] = v;
+  }
+  return into;
+}
+// Not called yet (sprint 7+): fetch a JSON of overrides and merge it over GAME_CONFIG.
+async function loadRemoteConfig(url) {
+  try { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) return false; _deepMerge(GAME_CONFIG, await r.json()); track('config_loaded', { version: GAME_CONFIG.version }); return true; }
+  catch (e) { return false; }
+}
+function matchBand(leagueNo) { return GAME_CONFIG.match.bands.find(b => leagueNo >= b.leagues[0] && leagueNo <= b.leagues[1]) || GAME_CONFIG.match.bands[0]; }
+
+// ---------- ANALYTICS ----------
+// track(name, data) at every key moment. Logs to the console now (filter on "[track]"); sprint 7 sends the
+// same calls to an analytics service. The last 200 events are kept in memory for testing (window._trackLog).
+window._trackLog = [];
+function track(name, data) {
+  const ev = Object.assign({ t: Date.now() }, data || {});
+  try { window._trackLog.push([name, ev]); if (window._trackLog.length > 200) window._trackLog.shift(); console.log('[track]', name, ev); } catch (e) {}
+  return ev;
+}
+(function sessionStart() {
+  const s = SAVE.section('match');
+  if (!s.installedAt) s.installedAt = Date.now();
+  s.sessions = (s.sessions || 0) + 1; SAVE.save();
+  track('session_start', { daysSinceInstall: Math.floor((Date.now() - s.installedAt) / 864e5), payer: (SAVE.data.purchases || []).length > 0, session: s.sessions, migratedKeys: SAVE.data.migratedKeys || 0 });
+})();
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 // Polyfill ctx.roundRect for older iOS/Safari (<16)
@@ -3660,7 +3804,7 @@ const leagueDoneBtn = document.getElementById('leagueDoneBtn');
 const leagueSeasonInfo = document.getElementById('leagueSeasonInfo');
 const leagueTableEl = document.getElementById('leagueTable');
 
-muteBtn.textContent = (localStorage.getItem('flickyMuted') === 'true') ? '🔇' : '🔊';
+muteBtn.textContent = (SAVE.getItem('flickyMuted') === 'true') ? '🔇' : '🔊';
 muteBtn.addEventListener('click', () => {
   setMuted(!audioMuted);
   muteBtn.textContent = audioMuted ? '🔇' : '🔊';
@@ -3711,7 +3855,7 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', resi
 let state = 'menu'; // menu, ready, ballcoming, hit, result
 let runs = 0;
 let ballsBowled = 0;
-let best = parseInt(localStorage.getItem('flickyBest') || '0');
+let best = parseInt(SAVE.getItem('flickyBest') || '0');
 hudBest.textContent = 'BEST: ' + best; if(menuBestVal) menuBestVal.textContent = best;
 requestAnimationFrame(() => { drawMenuLogo(); updateMenuHUD(); showNav(''); updateKitUpgradeArrow(); });
 
@@ -3731,14 +3875,14 @@ function loadCareerStats() {
     fastestTo: {},   // { "50": 12, "100": 28, ... } balls taken to reach each milestone
   };
   try {
-    const saved = JSON.parse(localStorage.getItem('flickyCareer') || '{}');
+    const saved = JSON.parse(SAVE.getItem('flickyCareer') || '{}');
     return Object.assign({}, defaults, saved);
   } catch(e) {
     return defaults;
   }
 }
 function saveCareerStats() {
-  localStorage.setItem('flickyCareer', JSON.stringify(career));
+  SAVE.setItem('flickyCareer', JSON.stringify(career));
 }
 let career = loadCareerStats();
 
@@ -3761,8 +3905,8 @@ function daysBetween(a, b) {
 
 function updateDailyStreak() {
   const today = todayKey();
-  const last = localStorage.getItem('flickyLastPlayDate');
-  let streak = parseInt(localStorage.getItem('flickyStreak') || '0');
+  const last = SAVE.getItem('flickyLastPlayDate');
+  let streak = parseInt(SAVE.getItem('flickyStreak') || '0');
 
   if (last === today) {
     // already played today - no change
@@ -3784,8 +3928,8 @@ function updateDailyStreak() {
     saveCareerStats();
   }
 
-  localStorage.setItem('flickyStreak', String(streak));
-  localStorage.setItem('flickyLastPlayDate', today);
+  SAVE.setItem('flickyStreak', String(streak));
+  SAVE.setItem('flickyLastPlayDate', today);
   return streak;
 }
 let dailyStreak = updateDailyStreak();
@@ -3827,20 +3971,20 @@ const ACHIEVEMENTS = [
 
 function loadUnlockedAchievements() {
   try {
-    const saved = JSON.parse(localStorage.getItem('flickyAchievements') || '[]');
+    const saved = JSON.parse(SAVE.getItem('flickyAchievements') || '[]');
     return Array.isArray(saved) ? saved : [];
   } catch(e) { return []; }
 }
 function saveUnlockedAchievements() {
-  localStorage.setItem('flickyAchievements', JSON.stringify(unlockedAchievements));
+  SAVE.setItem('flickyAchievements', JSON.stringify(unlockedAchievements));
 }
 let unlockedAchievements = loadUnlockedAchievements();
 
 function loadClaimedAchievementGems() {
-  try { return JSON.parse(localStorage.getItem('flickyAchGemsClaimed') || '[]'); } catch(e) { return []; }
+  try { return JSON.parse(SAVE.getItem('flickyAchGemsClaimed') || '[]'); } catch(e) { return []; }
 }
 function saveClaimedAchievementGems() {
-  localStorage.setItem('flickyAchGemsClaimed', JSON.stringify(claimedAchievementGems));
+  SAVE.setItem('flickyAchGemsClaimed', JSON.stringify(claimedAchievementGems));
 }
 let claimedAchievementGems = loadClaimedAchievementGems();
 
@@ -3882,7 +4026,7 @@ function defaultLeagueState() {
 
 function loadLeagueState() {
   try {
-    const saved = JSON.parse(localStorage.getItem('flickyLeague') || 'null');
+    const saved = JSON.parse(SAVE.getItem('flickyLeague') || 'null');
     if (saved && saved.teams && saved.teams.length === RIVAL_NAMES.length + 1) return saved;
   } catch(e) {}
   return defaultLeagueState();
@@ -3902,23 +4046,23 @@ let league = loadLeagueState();
 // target (and difficulty) for next time; the current target is persisted.
 const STARTING_TARGET = 60;
 const TARGET_STEP = 20; // how much the target rises each time you beat it
-let target = parseInt(localStorage.getItem('flickyTarget') || String(STARTING_TARGET));
+let target = parseInt(SAVE.getItem('flickyTarget') || String(STARTING_TARGET));
 
 // ---------- ENERGY BAR ----------
 // big swings drain energy proportional to swipe power; gentle shots and
 // passive regen between balls bring it back. Low energy reduces effective
 // power on big swings AND increases mistiming/edge chance.
-const MAX_ENERGY = 100;
-const ENERGY_DRAIN_RATE = 14;   // energy lost per unit of raw swipe power (power maxes ~3)
-const ENERGY_PASSIVE_REGEN = 6; // regen each ball regardless of shot
-const ENERGY_GENTLE_BONUS = 16; // extra regen for gentle shots (dot/single)
-const ENERGY_LOW_THRESHOLD = 30; // below this, big swings start being penalised
+const MAX_ENERGY = GAME_CONFIG.energy.max;
+const ENERGY_DRAIN_RATE = GAME_CONFIG.energy.drainRate;   // energy lost per unit of raw swipe power (power maxes ~3)
+const ENERGY_PASSIVE_REGEN = GAME_CONFIG.energy.passiveRegen; // regen each ball regardless of shot
+const ENERGY_GENTLE_BONUS = GAME_CONFIG.energy.gentleBonus; // extra regen for gentle shots (dot/single)
+const ENERGY_LOW_THRESHOLD = GAME_CONFIG.energy.lowThreshold; // below this, big swings start being penalised
 let energy = MAX_ENERGY;
 
 // ---------- TUTORIAL ----------
 // the very first ball ever bowled (across all matches) is slowed down and
 // guided, so new players learn the timing window before normal play begins
-let tutorialSeen = localStorage.getItem('flickyTutorialSeen') === 'true';
+let tutorialSeen = SAVE.getItem('flickyTutorialSeen') === 'true';
 let tutorialActive = false; // true only during the guided first ball
 let tutorialPrompt = null;  // text shown during the tutorial ball
 
@@ -3927,7 +4071,7 @@ let tutorialPrompt = null;  // text shown during the tutorial ball
 // audio is muted by default until the user interacts (browser autoplay
 // policy) and can be toggled via a mute button.
 let audioCtx = null;
-let audioMuted = localStorage.getItem('flickyMuted') === 'true';
+let audioMuted = SAVE.getItem('flickyMuted') === 'true';
 
 function getAudioCtx() {
   if (!audioCtx) {
@@ -4132,7 +4276,7 @@ function capPlatform() { try { return window.Capacitor && window.Capacitor.getPl
 function admobId(kind) { const p = capPlatform() === 'ios' ? 'ios' : 'android'; return ADMOB_CONFIG[kind][p]; }
 const IAP_REMOVE_ADS_ID = 'remove_ads'; // must match App Store Connect / Google Play product ID
 
-let adsRemoved = localStorage.getItem('flickyAdsRemoved') === 'true';
+let adsRemoved = SAVE.getItem('flickyAdsRemoved') === 'true';
 let gamesPlayedSinceAd = 0;
 const AD_FREQUENCY = 3; // show interstitial every N games
 
@@ -4187,7 +4331,7 @@ async function purchaseRemoveAds() {
 
 function grantRemoveAds() {
   adsRemoved = true;
-  localStorage.setItem('flickyAdsRemoved', 'true');
+  SAVE.setItem('flickyAdsRemoved', 'true');
   removeAdsBtn.classList.add('hidden');
   const bundleBtn = document.getElementById('removeAdsGemBundleBtn');
   if (bundleBtn) bundleBtn.classList.add('hidden');
@@ -4259,7 +4403,7 @@ async function purchaseRemoveAdsGemBundle() {
 
 function getDailyAdWatches() {
   try {
-    const saved = JSON.parse(localStorage.getItem('flickyAdWatches') || '{}');
+    const saved = JSON.parse(SAVE.getItem('flickyAdWatches') || '{}');
     const today = todayKey();
     return saved.date === today ? (saved.count || 0) : 0;
   } catch(e) { return 0; }
@@ -4267,7 +4411,7 @@ function getDailyAdWatches() {
 function recordAdWatch() {
   const today = todayKey();
   const count = getDailyAdWatches() + 1;
-  localStorage.setItem('flickyAdWatches', JSON.stringify({ date: today, count }));
+  SAVE.setItem('flickyAdWatches', JSON.stringify({ date: today, count }));
 }
 
 async function watchAdForGems() {
@@ -4309,12 +4453,12 @@ function buyCoinsWithGems() {
 }
 
 function buyExtraChestSlot() {
-  const currentSlots = parseInt(localStorage.getItem('flickyExtraChestSlot') || '0');
+  const currentSlots = parseInt(SAVE.getItem('flickyExtraChestSlot') || '0');
   if (currentSlots >= 1) { showMessage('Already unlocked!', '#f4d03f', 1500); return; }
   if (gems < GEM_EXTRA_SLOT_COST) { showMessage('Not enough gems!', '#ff6b6b', 1500); return; }
   gems -= GEM_EXTRA_SLOT_COST;
   saveEquipmentState();
-  localStorage.setItem('flickyExtraChestSlot', '1');
+  SAVE.setItem('flickyExtraChestSlot', '1');
   // Expand chestSlots array
   if (chestSlots.length < 5) { chestSlots.push(null); saveChestSlots(); }
   showMessage('5TH CABINET UNLOCKED!', '#a855f7', 2500);
@@ -4324,7 +4468,7 @@ function buyExtraChestSlot() {
 }
 
 function hasExtraChestSlot() {
-  return parseInt(localStorage.getItem('flickyExtraChestSlot') || '0') >= 1;
+  return parseInt(SAVE.getItem('flickyExtraChestSlot') || '0') >= 1;
 }
 
 function unlockPremiumItem(item) {
@@ -4469,9 +4613,9 @@ function renderGemShopTab(container) {
 // First-win-of-day gem reward (called after a match win)
 function checkFirstWinOfDay() {
   const today = todayKey();
-  const lastWin = localStorage.getItem('flickyLastWinDate');
+  const lastWin = SAVE.getItem('flickyLastWinDate');
   if (lastWin !== today) {
-    localStorage.setItem('flickyLastWinDate', today);
+    SAVE.setItem('flickyLastWinDate', today);
     grantGems(FIRST_WIN_GEM_REWARD);
     return FIRST_WIN_GEM_REWARD;
   }
@@ -4490,7 +4634,7 @@ initAds();
 
 function setMuted(muted) {
   audioMuted = muted;
-  localStorage.setItem('flickyMuted', muted ? 'true' : 'false');
+  SAVE.setItem('flickyMuted', muted ? 'true' : 'false');
   if (!muted) getAudioCtx(); // unlock audio context on user interaction
 }
 
@@ -4678,7 +4822,7 @@ function kitSetBonus(itemId) {
   if (!set || !EQUIP_SLOTS.some(sl => equippedItems[sl] === itemId)) return 0;
   return SET_BONUS[Math.min(kitSetCount(set), 5)] || 0;
 }
-const RARITY_MAX_LEVEL    = { common:8, rare:6, epic:5, legendary:4 };
+const RARITY_MAX_LEVEL    = GAME_CONFIG.kit.maxLevelNow;
 const RARITY_UNLOCK_SEASON = { common:1, rare:2, epic:4, legendary:7 };   // legacy, unused
 // kit rarities unlock by league reached (replaces seasons): rare at Coastal Cup, epic at ECL, legendary at ICL
 const RARITY_UNLOCK_LEAGUE = { common:0, rare:2, epic:4, legendary:8 };
@@ -4710,14 +4854,14 @@ function getMatchEconomy() {
 // Daily free chests — 2 per day, resets at midnight
 function loadDailyChests() {
   try {
-    const saved = JSON.parse(localStorage.getItem('flickyDailyChests') || '{}');
+    const saved = JSON.parse(SAVE.getItem('flickyDailyChests') || '{}');
     const today = new Date().toDateString();
     if (saved.date !== today) return { date: today, claimed: 0 };
     return saved;
   } catch(e) { return { date: new Date().toDateString(), claimed: 0 }; }
 }
 function saveDailyChests(state) {
-  localStorage.setItem('flickyDailyChests', JSON.stringify(state));
+  SAVE.setItem('flickyDailyChests', JSON.stringify(state));
 }
 function claimDailyChest() {
   const state = loadDailyChests();
@@ -4757,7 +4901,7 @@ function loadEquipmentState() {
     });
   });
   try {
-    const saved = JSON.parse(localStorage.getItem('flickyEquipment') || '{}');
+    const saved = JSON.parse(SAVE.getItem('flickyEquipment') || '{}');
     if (saved.equippedItems) defaults.equippedItems = Object.assign(defaults.equippedItems, saved.equippedItems);
     if (saved.itemCards) defaults.itemCards = Object.assign(defaults.itemCards, saved.itemCards);
     if (saved.itemLevels) defaults.itemLevels = Object.assign(defaults.itemLevels, saved.itemLevels);
@@ -4767,7 +4911,7 @@ function loadEquipmentState() {
 }
 
 function saveEquipmentState() {
-  localStorage.setItem('flickyEquipment', JSON.stringify({ equippedItems, itemCards, itemLevels, gems }));
+  SAVE.setItem('flickyEquipment', JSON.stringify({ equippedItems, itemCards, itemLevels, gems }));
 }
 
 let _equipState = loadEquipmentState();
@@ -4803,10 +4947,10 @@ CHEST_TYPES.elite = CHEST_TYPES.platinum;
 CHEST_TYPES.legendary = CHEST_TYPES.platinum;
 
 function loadChestSlots() {
-  const hasExtra = parseInt(localStorage.getItem('flickyExtraChestSlot') || '0') >= 1;
+  const hasExtra = parseInt(SAVE.getItem('flickyExtraChestSlot') || '0') >= 1;
   const slotCount = hasExtra ? 5 : 4;
   try {
-    const saved = JSON.parse(localStorage.getItem('flickyChests') || 'null');
+    const saved = JSON.parse(SAVE.getItem('flickyChests') || 'null');
     if (Array.isArray(saved) && (saved.length === 4 || saved.length === 5)) {
       saved.forEach(c => { if (c && (c.type === 'elite' || c.type === 'legendary')) c.type = 'platinum'; });
       while (saved.length < slotCount) saved.push(null);
@@ -4816,7 +4960,7 @@ function loadChestSlots() {
   return new Array(slotCount).fill(null);
 }
 function saveChestSlots() {
-  localStorage.setItem('flickyChests', JSON.stringify(chestSlots));
+  SAVE.setItem('flickyChests', JSON.stringify(chestSlots));
 }
 let chestSlots = loadChestSlots();
 
@@ -4941,7 +5085,7 @@ function upgradeItem(itemId) {
 
 function loadCustomisation() {
   try {
-    const saved = JSON.parse(localStorage.getItem('flickyCustom') || '{}');
+    const saved = JSON.parse(SAVE.getItem('flickyCustom') || '{}');
     const result = {};
     CUSTOM_CATEGORIES.forEach(cat => {
       const idx = saved[cat.key];
@@ -4963,7 +5107,7 @@ function loadUnlockedCosmetics() {
   const defaults = {};
   CUSTOM_CATEGORIES.forEach(cat => defaults[cat.key] = [0]);
   try {
-    const saved = JSON.parse(localStorage.getItem('flickyUnlockedCosmetics') || '{}');
+    const saved = JSON.parse(SAVE.getItem('flickyUnlockedCosmetics') || '{}');
     CUSTOM_CATEGORIES.forEach(cat => {
       if (Array.isArray(saved[cat.key])) {
         defaults[cat.key] = Array.from(new Set([0, ...saved[cat.key]]));
@@ -6096,6 +6240,10 @@ function startGame() {
   rollStadiumConditions();
   updateHud();
   startBallSequence();
+  try {
+    const _li = window._activeLeagueIdx;
+    track('match_start', { league: _li != null ? _li + 1 : null, ground: currentTimeOfDay && currentTimeOfDay.key, mode: 'league', balls: null, wickets: 1, target: Math.max(target, window._leagueTargetFloor || 0) });
+  } catch (e) {}
 }
 
 // PLAY button → open league screen so every match goes through a league
@@ -6108,7 +6256,7 @@ startBtn.addEventListener('click', () => {
 function _hasKitUpgradeAvailable() {
   // Check all owned items for: new unlocks not yet seen, or upgrade ready
   const seenKey = 'flickyKitUpgradeSeen';
-  const seen = JSON.parse(localStorage.getItem(seenKey) || '{}');
+  const seen = JSON.parse(SAVE.getItem(seenKey) || '{}');
   return EQUIP_SLOTS.some(slot => EQUIPMENT[slot].some(item => {
     const lvl   = itemLevels[item.id] || 0;
     if (lvl === 0) return false; // not owned
@@ -6138,7 +6286,7 @@ function _markKitUpgradesSeen() {
     const needed = lvl < maxLvl ? item.cardsToLevel[lvl - 1] : null;
     if ((needed && cards >= needed) || lvl === 1) seen[item.id] = true;
   }));
-  localStorage.setItem('flickyKitUpgradeSeen', JSON.stringify(seen));
+  SAVE.setItem('flickyKitUpgradeSeen', JSON.stringify(seen));
   updateKitUpgradeArrow();
 }
 
@@ -28437,10 +28585,10 @@ const THEMED_LEAGUES = [
 
 // Trophy state for themed leagues
 function loadTrophies() {
-  try { const s = JSON.parse(localStorage.getItem('flickyTrophies') || 'null'); if (s && typeof s.count === 'number') return s; } catch(e) {}
+  try { const s = JSON.parse(SAVE.getItem('flickyTrophies') || 'null'); if (s && typeof s.count === 'number') return s; } catch(e) {}
   return { count: 0 };
 }
-function saveTrophies() { localStorage.setItem('flickyTrophies', JSON.stringify(trophyState)); }
+function saveTrophies() { SAVE.setItem('flickyTrophies', JSON.stringify(trophyState)); }
 let trophyState = loadTrophies();
 // ── Game loop (Oct 25): targets set by the league, trophies by margin, one league = "your league" ──
 if (typeof trophyState.best !== 'number') trophyState.best = trophyState.count;
@@ -28457,12 +28605,12 @@ function leagueTarget(lg) { const i = THEMED_LEAGUES.indexOf(lg); return i >= 0 
 THEMED_LEAGUES.forEach(lg => { lg.winCoins = lg.entry * 2; });
 function selectedLeagueIdx() {
   const hi = highestLeagueIdx();
-  let s = parseInt(localStorage.getItem('flickySelectedLeague'));
+  let s = parseInt(SAVE.getItem('flickySelectedLeague'));
   if (isNaN(s) || s > hi) s = hi;
   return s;
 }
 target = leagueTarget(THEMED_LEAGUES[Math.min(THEMED_LEAGUES.length - 1, leagueIdxForTrophies(trophyState.count))]);
-function setSelectedLeague(i) { try { localStorage.setItem('flickySelectedLeague', String(i)); } catch (e) {} }
+function setSelectedLeague(i) { try { SAVE.setItem('flickySelectedLeague', String(i)); } catch (e) {} }
 // trophies for a result: win +winTrophy+1 (+1 more at 20+ margin, +2 at 40+); loss −1, never below your highest league's floor;
 // older leagues (below the one your trophies put you in) give coins and bags but no trophies either way
 function trophyChangeFor(lgIdx, beatTarget, beatBy) {
@@ -28653,11 +28801,11 @@ const PLAYER_FLAGS = ['\u{1F1EC}\u{1F1E7}','\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}
   '\u{1F1EE}\u{1F1EA}','\u{1F1EE}\u{1F1F3}','\u{1F1F5}\u{1F1F0}','\u{1F1E6}\u{1F1FA}','\u{1F1F3}\u{1F1FF}','\u{1F1FF}\u{1F1E6}','\u{1F1F1}\u{1F1F0}','\u{1F1E7}\u{1F1E9}','\u{1F1E6}\u{1F1EB}','\u{1F1FF}\u{1F1FC}',
   '\u{1F1EF}\u{1F1F2}','\u{1F1F9}\u{1F1F9}','\u{1F1E7}\u{1F1E7}','\u{1F1F3}\u{1F1F1}','\u{1F1FA}\u{1F1F8}','\u{1F1E8}\u{1F1E6}','\u{1F1E6}\u{1F1EA}','\u{1F1F3}\u{1F1F5}','\u{1F1FA}\u{1F1EC}','\u{1F1F0}\u{1F1EA}',
   '\u{1F1F8}\u{1F1EC}','\u{1F1ED}\u{1F1F0}','\u{1F1E9}\u{1F1EA}','\u{1F1EB}\u{1F1F7}'];
-function loadPlayerLook() { try { const v = JSON.parse(localStorage.getItem('flickyPlayer') || 'null'); return v && v.g ? v : null; } catch (e) { return null; } }
+function loadPlayerLook() { try { const v = JSON.parse(SAVE.getItem('flickyPlayer') || 'null'); return v && v.g ? v : null; } catch (e) { return null; } }
 let playerLook = loadPlayerLook();
 function curLook() { return playerLook || { g:'m', shirt:'navy', trim:'gold', name:'PLAYER', flag:PLAYER_FLAGS[0] }; }
-function savePlayerLook() { try { localStorage.setItem('flickyPlayer', JSON.stringify(playerLook)); } catch (e) {} }
-function loadOwnedCos() { try { return JSON.parse(localStorage.getItem('flickyCosmetics') || '[]'); } catch (e) { return []; } }
+function savePlayerLook() { try { SAVE.setItem('flickyPlayer', JSON.stringify(playerLook)); } catch (e) {} }
+function loadOwnedCos() { try { return JSON.parse(SAVE.getItem('flickyCosmetics') || '[]'); } catch (e) { return []; } }
 let ownedCos = loadOwnedCos();
 function cosUnlocked(it, kind) {
   if (!it.unlock) return true;
@@ -28747,8 +28895,8 @@ function plUnlockedKeys() {
     .concat(PLAYER_PANTS.filter(x => x.unlock && cosUnlocked(x, 'pants')).map(x => x.id + ':pants'));
 }
 function plSeen() {
-  let v = null; try { v = JSON.parse(localStorage.getItem('flickyPlSeen') || 'null'); } catch (e) {}
-  if (!Array.isArray(v)) { v = plUnlockedKeys(); try { localStorage.setItem('flickyPlSeen', JSON.stringify(v)); } catch (e) {} }
+  let v = null; try { v = JSON.parse(SAVE.getItem('flickyPlSeen') || 'null'); } catch (e) {}
+  if (!Array.isArray(v)) { v = plUnlockedKeys(); try { SAVE.setItem('flickyPlSeen', JSON.stringify(v)); } catch (e) {} }
   return v;
 }
 function plNewKeys() { const seen = plSeen(); return plUnlockedKeys().filter(k => !seen.includes(k)); }
@@ -28756,7 +28904,7 @@ let plShownNew = [];
 function plMarkSeen() {
   const nw = plNewKeys(); if (!nw.length) return;
   plShownNew = plShownNew.concat(nw);
-  try { localStorage.setItem('flickyPlSeen', JSON.stringify(plSeen().concat(nw))); } catch (e) {}
+  try { SAVE.setItem('flickyPlSeen', JSON.stringify(plSeen().concat(nw))); } catch (e) {}
 }
 function updatePlayerNavBadge() {
   const b = document.getElementById('menuPlayerBadge'); if (!b) return;
@@ -28883,8 +29031,8 @@ function plRenderTry() {
     bagConfirm(it.unlock.gems, `Unlock ${it.name} ${kind === 'shirt' ? 'kit' : kind === 'pants' ? 'trousers' : 'trim'}?`, () => {
       if (gems < it.unlock.gems) { showMessage('Not enough gems!', '#ff6b6b', 1500); return; }
       gems -= it.unlock.gems; saveEquipmentState();
-      ownedCos.push(it.id + ':' + kind); try { localStorage.setItem('flickyCosmetics', JSON.stringify(ownedCos)); } catch (e) {}
-      try { localStorage.setItem('flickyPlSeen', JSON.stringify(plSeen().concat(it.id + ':' + kind))); } catch (e) {}
+      ownedCos.push(it.id + ':' + kind); try { SAVE.setItem('flickyCosmetics', JSON.stringify(ownedCos)); } catch (e) {}
+      try { SAVE.setItem('flickyPlSeen', JSON.stringify(plSeen().concat(it.id + ':' + kind))); } catch (e) {}
       plPreview = null; playerLook[kind] = it.id; plCommit(); hapticBig && hapticBig();
     });
   };
@@ -28946,15 +29094,15 @@ function statsClaim(a) {
 // "NEW" record flags: set when a record is beaten, shown (and cleared) the next time that Stats tab is opened
 let statsShown = {};
 let statsShowDone = false;
-function statsLoadNew() { try { return JSON.parse(localStorage.getItem('flickyStatsNew') || '{}') || {}; } catch (e) { return {}; } }
+function statsLoadNew() { try { return JSON.parse(SAVE.getItem('flickyStatsNew') || '{}') || {}; } catch (e) { return {}; } }
 function statsMarkNew(key) {
   const n = statsLoadNew(); n[key] = 1;
-  try { localStorage.setItem('flickyStatsNew', JSON.stringify(n)); } catch (e) {}
+  try { SAVE.setItem('flickyStatsNew', JSON.stringify(n)); } catch (e) {}
 }
 function statsTakeNew(prefixTest) {
   const n = statsLoadNew(); let changed = false;
   Object.keys(n).forEach(k => { if (prefixTest(k)) { statsShown[k] = 1; delete n[k]; changed = true; } });
-  if (changed) { try { localStorage.setItem('flickyStatsNew', JSON.stringify(n)); } catch (e) {} }
+  if (changed) { try { SAVE.setItem('flickyStatsNew', JSON.stringify(n)); } catch (e) {} }
 }
 function updateStatsNavBadge() {
   const b = document.getElementById('menuStatsBadge'); if (!b) return;
@@ -29367,11 +29515,11 @@ function kbBreak(name) { return kbEsc(name).split(' ').map(w => KB_BREAKS[w] || 
 // "NEW" tags: an item is new once you have it (or its cards) until you open it in the showroom
 const KB_SEEN = (function () {
   let seen = null;
-  try { seen = JSON.parse(localStorage.getItem('flickySeenKit') || 'null'); } catch (e) {}
+  try { seen = JSON.parse(SAVE.getItem('flickySeenKit') || 'null'); } catch (e) {}
   if (!Array.isArray(seen)) {          // first run: everything already owned counts as seen
     seen = [];
     EQUIP_SLOTS.forEach(sl => EQUIPMENT[sl].forEach(it => { if ((itemLevels[it.id] || 0) >= 1 || (itemCards[it.id] || 0) > 0) seen.push(it.id); }));
-    try { localStorage.setItem('flickySeenKit', JSON.stringify(seen)); } catch (e) {}
+    try { SAVE.setItem('flickySeenKit', JSON.stringify(seen)); } catch (e) {}
   }
   return new Set(seen);
 })();
@@ -29379,7 +29527,7 @@ function kbIsNew(item) { return !KB_SEEN.has(item.id) && ((itemLevels[item.id] |
 function kbMarkSeen(item) {
   if (KB_SEEN.has(item.id)) return;
   KB_SEEN.add(item.id);
-  try { localStorage.setItem('flickySeenKit', JSON.stringify([...KB_SEEN])); } catch (e) {}
+  try { SAVE.setItem('flickySeenKit', JSON.stringify([...KB_SEEN])); } catch (e) {}
 }
 function kbSetLine(item) {
   if (!KIT_SETS_ON) return '';
@@ -31210,7 +31358,7 @@ function completeTutorialIfActive() {
     tutorialActive = false;
     tutorialPrompt = null;
     tutorialSeen = true;
-    localStorage.setItem('flickyTutorialSeen', 'true');
+    SAVE.setItem('flickyTutorialSeen', 'true');
   }
 }
 
@@ -31344,7 +31492,7 @@ function endGame() {
   state = 'menu';
   if (runs > best) {
     best = runs;
-    localStorage.setItem('flickyBest', best);
+    SAVE.setItem('flickyBest', best);
   }
   hudBest.textContent = 'BEST: ' + best; if(menuBestVal) menuBestVal.textContent = best;
 
@@ -31358,13 +31506,18 @@ function endGame() {
   const NEAR_MISS_MARGIN = 10;
   const nearMiss = !beatTarget && beatBy >= -NEAR_MISS_MARGIN;
   const isNewBest = runs > career.bestScore;
+  try {
+    const _li = window._activeLeagueIdx;
+    track('match_end', { league: _li != null ? _li + 1 : null, ground: currentTimeOfDay && currentTimeOfDay.key, mode: window._scenePreview ? 'preview' : 'league',
+      won: beatTarget, runs, target: effectiveTarget, ballsUsed: ballsBowled, wickets: 1, margin: beatBy, streak: (SAVE.data.streak && SAVE.data.streak.current) || 0 });
+  } catch (e) {}
 
   if (beatTarget) {
     // targets are set by the league now (no ever-rising personal target)
   } else if (nearMiss) {
     setTimeout(playNearMissSound, 400);
   }
-  localStorage.setItem('flickyTarget', String(target));
+  SAVE.setItem('flickyTarget', String(target));
 
   // award coins
   const eco = getMatchEconomy();
@@ -31717,10 +31870,10 @@ function r2Fly(fromId, toId, valId, cls, from, to) {
 }
 const R2_DOUBLE_MAX = 5;   // double-coin ads per day
 function r2DoubleLeft() {
-  try { const s = JSON.parse(localStorage.getItem('flickyDoubleAds') || '{}'); return R2_DOUBLE_MAX - (s.date === todayKey() ? s.n || 0 : 0); } catch (e) { return R2_DOUBLE_MAX; }
+  try { const s = JSON.parse(SAVE.getItem('flickyDoubleAds') || '{}'); return R2_DOUBLE_MAX - (s.date === todayKey() ? s.n || 0 : 0); } catch (e) { return R2_DOUBLE_MAX; }
 }
 function r2DoubleUse() {
-  try { const used = R2_DOUBLE_MAX - r2DoubleLeft() + 1; localStorage.setItem('flickyDoubleAds', JSON.stringify({ date: todayKey(), n: used })); } catch (e) {}
+  try { const used = R2_DOUBLE_MAX - r2DoubleLeft() + 1; SAVE.setItem('flickyDoubleAds', JSON.stringify({ date: todayKey(), n: used })); } catch (e) {}
 }
 // rewarded video: native AdMob plugin in the app; in a browser on file/localhost it just grants (for testing)
 async function showRewardedVideo(onReward, onFail) {
@@ -58893,8 +59046,8 @@ try { updateStreakDisplay(); } catch(e) {}
 
 // grant welcome wooden chest on very first load (opens immediately)
 (function grantWelcomeChest() {
-  if (localStorage.getItem('flickyWelcomeChest')) return;
-  localStorage.setItem('flickyWelcomeChest', '1');
+  if (SAVE.getItem('flickyWelcomeChest')) return;
+  SAVE.setItem('flickyWelcomeChest', '1');
   const emptySlot = chestSlots.findIndex(s => s === null);
   if (emptySlot !== -1) {
     // openingStarted set so timer is already "done" (openTime is 0)
@@ -59773,6 +59926,17 @@ function _closeChestAnim() {
   if (_chestOpenAfterCallback) { _chestOpenAfterCallback(); _chestOpenAfterCallback = null; }
   updateKitUpgradeArrow();
 }
+
+// ---------- ANALYTICS HOOKS (sprint 1) ----------
+// Wrap the existing functions so each key moment calls track() without touching their insides.
+(function () {
+  const wrap = (name, after) => { const f = window[name]; if (typeof f !== 'function') return; window[name] = function () { const r = f.apply(this, arguments); try { after(r, arguments); } catch (e) {} return r; }; };
+  wrap('openChestRewards', (r, a) => r && track('bag_open', { type: a[0], cards: (r.cards || []).length, coins: r.coins || 0, gems: r.gems || 0 }));
+  wrap('upgradeItem', (ok, a) => ok && track('kit_upgrade', { item: a[0], newLevel: itemLevels[a[0]], coinsSpent: null }));
+  wrap('claimDailyChest', (ok) => ok && track('daily_claim', { reward: 'bronze bag' }));
+  wrap('purchaseGemPack', (r, a) => track('purchase', { product: 'gems_' + (a[0] && a[0].gems), price: a[0] && a[0].price, currency: 'GBP', placeholder: true }));
+  wrap('updateDailyStreak', (streak) => { if (typeof streakBonusAwarded !== 'undefined' && streakBonusAwarded > 0) track('daily_claim', { day: streak, reward: streakBonusAwarded + ' coins' }); });
+})();
 
 </script>
 </body>
