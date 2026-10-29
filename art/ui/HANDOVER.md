@@ -332,3 +332,5 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 ## Floodlit Series grounds (Oct 27)
 - Dusk Stadium painted ground live (see `art/grounds/floodlit/README.md`). Simple path: one fitted plate per ground via `FLOOD_PLATES`; add more Floodlit grounds by adding a plate + key. Gameplay geometry unchanged.
 - First-ball tutorial prompt (GET READY / SWIPE UP NOW): new pill style now used on every ground (Oct 28); the old plain green canvas text only remains as dead code after the early return.
+
+- Match HUD locked (Oct 29): option 11 corner scorebug for the 12-ball / 2-wicket chase — chase line first (NEED x OFF y), score + target + this-over sockets + two wicket slots second, thin energy track with icon slot along the bottom, 44pt pause top-right, nothing on the field, BEST moves to the result screen. Last over = code-drawn glow pulse + alert tint. Art brief: PROMPTS.md section 2. Wireframe: Design canvas Opt11/Opt11b.

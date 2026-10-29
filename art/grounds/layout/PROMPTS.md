@@ -26,16 +26,19 @@ SURROUNDINGS: busy, fun and cool — packed with life, characters and detail, ed
 Keep the top quarter of the picture calm (sky, skyline, roofs; no faces or key props there) and the bottom-left corner simple. This is a background only: never paint any game interface, buttons, icons, panels or scoreboards.
 ```
 
-## 2. HUD layer: scoreboard, energy bar, BEST score sign, pause, last-six strip
+## 2. HUD layer: corner scorebug + pause (layout locked Oct 29, option 11)
+Ball-limited chase (12 balls, 2 wickets). One compact scorebug top-left (x 12–242 of 390, top 62), pause top-right, nothing else above the rope.
 ```
 On the flat key background, each piece separate, nothing touching. All blank: no text or numbers.
-- SCOREBOARD, 1006x238 px: two equal blank number panels, left (RUNS) and right (TARGET), each with a blank label strip above. A small themed crest may rise from the top centre.
-- ENERGY BAR: an empty themed bar track, its own piece that sits just under the scoreboard, 702x41 px, centred under the two panels (the game fills it).
-- BEST SCORE SIGN, 410x152 px: a themed hanging sign with a blank panel, hangs under the TARGET panel.
-- PAUSE BUTTON, 129 px round: themed badge with a pause symbol.
-- LAST-SIX-BALLS STRIP, 398x99 px: themed holder with 6 empty round sockets in a row.
+- SCOREBUG, 690x252 px, three stacked bands in one themed frame:
+  · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line ("14 TO WIN · OFF 9 BALLS").
+  · middle band (about 35%): blank area for score + target on the left, then 6 empty round sockets in a row (this over), then TWO small empty wicket slots on the right (the game draws stumps, greyed when lost).
+  · bottom band (about 10%): an empty thin energy track across the full width, with a small icon slot at its left end for a themed energy symbol.
+- PAUSE BUTTON, 132 px round: themed badge with a pause symbol.
 ```
-A themed display font is chosen per ground; the game draws RUNS, TARGET, the numbers, the energy fill and BEST in it.
+A themed display font is chosen per ground; the game draws the chase line, score, target, ball results, stumps and energy fill in it.
+Last over / close finish is done by code, not art: a pulsing glow round the scorebug and the chase panel tinted to an alert colour. Paint the frame so a glow round its outline reads well.
+BEST score is no longer on the match screen; it shows on the result screen.
 
 ## 3. Props sheet: pitch, stump, bail, ball (one generation)
 ```
