@@ -56,20 +56,6 @@ for grp in ([k for k in HUD if not k.startswith('sb_')], [k for k in HUD if k.st
 if not inside(HUD['sb_wickets'], HUD['sb_chase_line']) and HUD['sb_wickets']['left'] < HUD['sb_chase_line']['right']:
     pass
 if HUD['scorebug']['bottom'] >= cy - ry: sys.exit('HUD covers the field: scorebug reaches the rope')
-mw = re.search(r'const MATCH_HUD_WIDE\s*=\s*\{(.*?)\n\};', src, re.S)
-if not mw: sys.exit('LAYOUT NOT FOUND in code: MATCH_HUD_WIDE')
-HUD_WIDE = {k: dict(left=float(l), top=float(t), right=float(r), bottom=float(b_)) for k, l, t, r, b_ in
-            re.findall(r'(\w+):\s*\{\s*l:([0-9.]+),\s*t:([0-9.]+),\s*r:([0-9.]+),\s*b:([0-9.]+)', mw.group(1))}
-if set(HUD_WIDE) != set(HUD): sys.exit('MATCH_HUD_WIDE must have the same parts as MATCH_HUD')
-for k in HUD_WIDE:
-    if k.startswith('sb_') and not inside(HUD_WIDE[k], HUD_WIDE['scorebug']): sys.exit(f'wide {k} sits outside the wide scorebug')
-wk_ = [k for k in HUD_WIDE if k.startswith('sb_') and k != 'sb_wickets']
-for i in range(len(wk_)):
-    for j in range(i+1, len(wk_)):
-        A, B = HUD_WIDE[wk_[i]], HUD_WIDE[wk_[j]]
-        if A['left'] < B['right'] and B['left'] < A['right'] and A['top'] < B['bottom'] and B['top'] < A['bottom']:
-            sys.exit(f'WIDE HUD OVERLAP: {wk_[i]} and {wk_[j]}')
-if HUD_WIDE['scorebug']['right'] >= HUD_WIDE['pause_button']['left']: sys.exit('wide scorebug runs into the pause button')
 
 # text spec + scaling rule (MATCH_HUD_TEXT / MATCH_HUD_SCALE in the code), evaluated with node
 import subprocess
@@ -141,11 +127,6 @@ def draw_template(img, alpha=255, labels=True):
         x, y, h = px(L[st]['x'],'x'), px(L[st]['y'],'y'), L[st]['height_px']
         d.rectangle([x-h*.35, y-h, x+h*.35, y], outline=(255,80,200,alpha), width=4)
     u = L['umpire']; d.ellipse([px(u['x'],'x')-18, px(u['y'],'y')-18, px(u['x'],'x')+18, px(u['y'],'y')+18], fill=(255,255,255,alpha))
-    wsb = HUD_WIDE['scorebug']; dashed_rect(d, px(wsb['left'],'x')-2, px(wsb['top'],'y')-2, px(wsb['right'],'x')+2, px(wsb['bottom'],'y')+2, (255,200,0,int(alpha*.8)), 3, 10)
-    if labels:
-        try: fw = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 20)
-        except Exception: fw = None
-        d.text((px(HUD['scorebug']['right'],'x')+10, px(wsb['top'],'y')+6), '3-DIGIT WIDTH', fill=(255,200,0,alpha), font=fw)
     for k, r in all_boxes():
         c = COL[k] + (alpha,); x0, y0, x1, y1 = px(r['left'],'x'), px(r['top'],'y'), px(r['right'],'x'), px(r['bottom'],'y')
         if k in DASHED: dashed_rect(d, x0, y0, x1, y1, c, 4)
@@ -219,12 +200,6 @@ def write_svg(path):
                     o.append(f'<text id="{k} · {part["text"]} · {part["px"]}px" x="{cx:.0f}" y="{(y0+y1)/2 + fs_*0.35:.0f}" font-family="Lilita One, Arial" font-size="{fs_:.0f}" fill="#fff">{part["text"]}</text>')
                     cx += fs_ * 0.6 * len(part['text']) + 14
         o.append('</g>')
-    o.append('<g id="SCOREBOARD WIDE (3-digit leagues)" opacity="0.6">')
-    for k, r in HUD_WIDE.items():
-        if k == 'pause_button': continue
-        x0, y0, x1, y1 = px(r['left'],'x'), px(r['top'],'y'), px(r['right'],'x'), px(r['bottom'],'y')
-        o.append(f'<rect id="wide · {NAMES[k] or k}" x="{x0}" y="{y0}" width="{x1-x0}" height="{y1-y0}" fill="none" stroke="{hx(COL[k])}" stroke-width="3" stroke-dasharray="10 8"/>')
-    o.append('</g>')
     o.append('</svg>')
     open(path, 'w').write('\n'.join(o))
 
@@ -297,10 +272,9 @@ Ball-limited chase (12 balls, 2 wickets). One compact scoreboard top-left, pause
 ```
 On the flat key background, each piece separate, nothing touching. All blank: no text or numbers.
 - SCOREBOARD, {px(sb['right']-sb['left'],'x')}x{px(sb['bottom']-sb['top'],'y')} px, three stacked bands in one themed frame:
-  · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line, with an empty wicket slot at its right end wide enough for THREE small stump sets (the game shows 2 or 3).
+  · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line, with TWO empty wicket slots at its right end.
   · middle band (about 35%): a blank area on the left for score and target, then 6 empty round sockets in a row on the right (this over).
   · bottom band (about 10%): a thin empty energy track across the full width, with a small icon slot at its left end for a themed energy symbol.
-- STRETCH: leagues with 3-digit targets use the same scoreboard {round((HUD_WIDE['scorebug']['right']-HUD_WIDE['scorebug']['left'])/(sb['right']-sb['left'])*100-100)}% wider. Paint the frame so its middle can be stretched sideways: plain, repeatable sections in the chase panel and the score row; the badge, the wicket slot, the ball sockets and the frame's ends stay unstretched.
 - PAUSE BUTTON, {px(ps['right']-ps['left'],'x')} px round: themed badge with a pause symbol.
 ```
 A themed display font is chosen per ground; the game draws the chase line ("14 TO WIN · OFF 9 BALLS"), score, target, ball results, stumps (greyed when lost) and energy fill in it.
@@ -365,7 +339,7 @@ SIX! the biggest and boldest. Each word on one line, letters fully visible, noth
 Ground 1 · HUD 1 · props 1 · fielder 4 · bowler 1 · keeper + umpire 1 · words 1 = **10**. A second ground in the same theme: **1** (just the background).
 
 ## Where things stand in the game (for checking)
-- HUD (MATCH_HUD in the code): scoreboard {area(sb)}; wide 3-digit scoreboard {area(HUD_WIDE['scorebug'])}; pause {area(ps)}.
+- HUD (MATCH_HUD in the code): scoreboard {area(sb)}; pause {area(ps)}.
 - Far stumps {pct(pi['top'])} H, batter's stumps {pct(pi['bottom'])} H, umpire {pct(u['y'])} H, all at 50% W.
 """
 open(os.path.join(HERE, 'PROMPTS.md'), 'w').write(P)

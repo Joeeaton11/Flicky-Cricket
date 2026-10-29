@@ -36,10 +36,9 @@ Ball-limited chase (12 balls, 2 wickets). One compact scoreboard top-left, pause
 ```
 On the flat key background, each piece separate, nothing touching. All blank: no text or numbers.
 - SCOREBOARD, 690x296 px, three stacked bands in one themed frame:
-  · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line, with an empty wicket slot at its right end wide enough for THREE small stump sets (the game shows 2 or 3).
+  · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line, with TWO empty wicket slots at its right end.
   · middle band (about 35%): a blank area on the left for score and target, then 6 empty round sockets in a row on the right (this over).
   · bottom band (about 10%): a thin empty energy track across the full width, with a small icon slot at its left end for a themed energy symbol.
-- STRETCH: leagues with 3-digit targets use the same scoreboard 16% wider. Paint the frame so its middle can be stretched sideways: plain, repeatable sections in the chase panel and the score row; the badge, the wicket slot, the ball sockets and the frame's ends stay unstretched.
 - PAUSE BUTTON, 132 px round: themed badge with a pause symbol.
 ```
 A themed display font is chosen per ground; the game draws the chase line ("14 TO WIN · OFF 9 BALLS"), score, target, ball results, stumps (greyed when lost) and energy fill in it.
@@ -51,9 +50,9 @@ Scaling: the scoreboard keeps its shape on every phone — width 59% of the scre
 
 | Slot | Content (size) | Alignment | Longest / states |
 |---|---|---|---|
-| Chase line | 14 (28px) + TO WIN (12px) + OFF 9 BALLS (13px) | left, vertically centred, the two small lines stacked right of the big number | 24 TO WIN · OFF 24 BALLS (leagues 19–28 play 24 balls) · 3-digit: 142 TO WIN · OFF 24 BALLS uses the wide scorebug · normal: league colour · close (≤6 balls left or ≤6 needed): alert colour + scorebug glow · last ball: LAST BALL replaces OFF 1 BALLS · won: WON! |
-| Wickets | 2 stumps (22px) | right, vertically centred; 2 sets (leagues 1–18) or 3 sets at 80% size (leagues 19–28) | standing = wicket in hand · lost = knocked over / 30% opacity, lost from the left |
-| Score + target | 10-1 (20px) + TGT 24 (13px) | left, baseline aligned | 99-1 TGT 99 · 3-digit: 148-2 TGT 150 uses the wide scorebug (MATCH_HUD_WIDE), same sizes |
+| Chase line | 14 (28px) + TO WIN (12px) + OFF 9 BALLS (13px) | left, vertically centred, the two small lines stacked right of the big number | 102 TO WIN · OFF 24 BALLS · normal: league colour · close (≤6 balls left or ≤6 needed): alert colour + scorebug glow · last ball: LAST BALL replaces OFF 1 BALLS · won: WON! |
+| Wickets | 2 stumps (22px) | right, vertically centred; always 2 sets | standing = wicket in hand · lost = knocked over / 30% opacity, lost from the left |
+| Score + target | 10-1 (20px) + TGT 24 (13px) | left, baseline aligned | 98-1 TGT 102 |
 | This over | 6 sockets (14px) | right, evenly spaced | empty = outline · dot = • · 1/2/3 = cream · 4 = gold · 6 = orange · W = red with white W · resets after 6 balls (12 balls = 2 overs) |
 | Energy icon | bolt icon (13px) | left | pulses red when energy < 25% |
 | Energy bar | fill (6px) | fills left to right | green > 50% · amber 25–50% · red < 25% with pulse |
@@ -116,5 +115,5 @@ SIX! the biggest and boldest. Each word on one line, letters fully visible, noth
 Ground 1 · HUD 1 · props 1 · fielder 4 · bowler 1 · keeper + umpire 1 · words 1 = **10**. A second ground in the same theme: **1** (just the background).
 
 ## Where things stand in the game (for checking)
-- HUD (MATCH_HUD in the code): scoreboard 3.1%–62.1% W, 7.3%–19.0% H; wide 3-digit scoreboard 3.1%–71.3% W, 7.3%–19.0% H; pause 85.1%–96.4% W, 7.6%–12.8% H.
+- HUD (MATCH_HUD in the code): scoreboard 3.1%–62.1% W, 7.3%–19.0% H; pause 85.1%–96.4% W, 7.6%–12.8% H.
 - Far stumps 50.0% H, batter's stumps 66.5% H, umpire 48.8% H, all at 50% W.

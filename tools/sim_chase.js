@@ -4,7 +4,7 @@
 const fs = require('fs');
 const src = fs.readFileSync(__dirname + '/../flicky-cricket.html', 'utf8');
 const leagues = [...src.slice(src.indexOf('const THEMED_LEAGUES')).matchAll(/name: "([^"]+)"[\s\S]*?difficulty: ([\d.]+)/g)].slice(0, 28).map(m => ({ name: m[1], diff: +m[2] }));
-const bands = [{ a: 1, b: 8, balls: 12, wk: 2 }, { a: 9, b: 18, balls: 18, wk: 2 }, { a: 19, b: 28, balls: 24, wk: 3 }];
+const bands = [{ a: 1, b: 8, balls: 12, wk: 2 }, { a: 9, b: 18, balls: 18, wk: 2 }, { a: 19, b: 28, balls: 24, wk: 2 }];
 const lerp = (a, b, t) => a + (b - a) * t;
 let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
 const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };

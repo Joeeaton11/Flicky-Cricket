@@ -351,3 +351,4 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
   - Trophy bonus now by balls to spare (3+ = +1, 6+ = +2). Result screen shows balls to spare, name and best.
   - Targets from `tools/sim_chase.js` (calibrated so a player who belonged in a league under the old format wins 60% now). They're a starting point — playtest and tune in GAME_CONFIG.
   - Haptics use navigator.vibrate (Android/web); iPhone needs the Capacitor Haptics plugin (sprint 7).
+- Oct 29 change (Joe): 2 wickets in every league (19–27 now 24 balls, 2 wickets; targets 92–102 re-simulated) and NO wide scoreboard — one 230-wide size everywhere. With two stump slots, 3-digit chases (102 TO WIN · OFF 24 BALLS, 98-1 TGT 102) fit the normal board. MATCH_HUD_WIDE and the stretch note in the art prompt are gone.
