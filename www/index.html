@@ -3589,6 +3589,7 @@ const SAVE = (function () {
     // debugging: export / import the whole save (e.g. to move a player between devices in testing)
     export() { return JSON.stringify(data); },
     import(json) { const d = JSON.parse(json); if (!d || !d.kv) throw new Error('not a Flicky save'); data = d; persist(); },
+    lock() { memOnly = true; },   // settings reset: stop writing so nothing is saved back before the reload
   };
 })();
 
@@ -3681,6 +3682,10 @@ const GAME_CONFIG = {
             xp: { match: 10, win: 20, dailyMission: 50, weeklyMission: 200, dailyChallenge: 30 }, premium: 4.99, plus: 9.99 },
     eventDays: [7, 14],
   },
+  // phone notifications (app build only): never more than 2 a day, nothing between 9 pm and 9 am (moved to 9 am)
+  notify: { maxPerDay: 2, quietFrom: 21, quietTo: 9, reminderHour: 18, lapsedDays: [2, 5], eventStartHour: 10 },
+  // settings screen links: fill in before release (empty = "coming with the app")
+  app: { version: '0.9.0', privacyUrl: '', termsUrl: '', supportEmail: '' },
 };
 function _deepMerge(into, from) {
   for (const k in from) {
@@ -4277,6 +4282,7 @@ function playUiTap() {
 
 // ── HAPTIC FEEDBACK ──
 function haptic(pattern) {
+  if (SAVE.getItem('flickyHapticsOff') === 'true') return;
   if (navigator.vibrate) navigator.vibrate(pattern);
 }
 function hapticTap()     { haptic(18); }
@@ -4493,8 +4499,7 @@ function buyExtraChestSlot() {
   gems -= GEM_EXTRA_SLOT_COST;
   saveEquipmentState();
   SAVE.setItem('flickyExtraChestSlot', '1');
-  // Expand chestSlots array
-  if (chestSlots.length < 5) { chestSlots.push(null); saveChestSlots(); }
+  syncBagSlots();
   showMessage('5TH CABINET UNLOCKED!', '#a855f7', 2500);
   hapticBig();
   updateEquipTopBar();
@@ -5023,13 +5028,24 @@ function loadChestSlots() {
   const slotCount = hasExtra ? 5 : 4;
   try {
     const saved = JSON.parse(SAVE.getItem('flickyChests') || 'null');
-    if (Array.isArray(saved) && (saved.length === 4 || saved.length === 5)) {
+    if (Array.isArray(saved) && saved.length >= 4 && saved.length <= 6) {   // 6 = gem slot + Flicky Pass slot
       saved.forEach(c => { if (c && (c.type === 'elite' || c.type === 'legendary')) c.type = 'platinum'; });
       while (saved.length < slotCount) saved.push(null);
-      return saved.slice(0, slotCount);
+      return saved;   // syncBagSlots() trims an empty Pass slot once the Pass has ended
     }
   } catch(e) {}
   return new Array(slotCount).fill(null);
+}
+// bag slots = 4, +1 bought with gems, +1 while Flicky Pass Premium is active. When the Pass ends, its slot goes
+// once it is empty: a bag already in it stays until opened, so nothing is ever lost.
+function bagSlotTarget() { let n = 4 + (hasExtraChestSlot() ? 1 : 0); try { if (passPremiumActive()) n++; } catch (e) {} return n; }
+function isPassBagSlot(idx) { return idx >= 4 + (hasExtraChestSlot() ? 1 : 0); }
+function syncBagSlots() {
+  const t = bagSlotTarget(); let ch = false;
+  while (chestSlots.length < t) { chestSlots.push(null); ch = true; }
+  while (chestSlots.length > t && chestSlots[chestSlots.length - 1] === null) { chestSlots.pop(); ch = true; }
+  if (ch) saveChestSlots();
+  return ch;
 }
 function saveChestSlots() {
   SAVE.setItem('flickyChests', JSON.stringify(chestSlots));
@@ -5123,13 +5139,13 @@ function openChest(slotIdx) {
     const rewards = openChestRewards(chest.type);
     chestSlots[slotIdx] = null;
     saveChestSlots();
-    cancelBagReadyNotice(slotIdx);
+    planNotifications();
     return { rewards };
   } else {
     if (cfg.openTime > 0 && bagUnlockingIdx() !== -1) return { error: 'busy' };
     chestSlots[slotIdx] = Object.assign({}, chest, { openingStarted: Date.now() - (passPremiumActive() ? cfg.openTime * 100 : 0) });   // Pass: 10% faster
     saveChestSlots();
-    scheduleBagReadyNotice(slotIdx);
+    planNotifications(true);
     return { started: true };
   }
 }
@@ -30448,8 +30464,10 @@ function renderChestTab(container) {
     }
     renderFreeBar(freeBar);
     slotsDiv.innerHTML = '';
+    syncBagSlots();
     chestSlots.forEach((chest, idx) => {
       const slot = document.createElement('div');
+      if (isPassBagSlot(idx)) slot.dataset.pass = '1';
 
       // ── TOP zone: art + name ──
       const top = document.createElement('div');
@@ -30848,7 +30866,8 @@ function startBallSequence() {
 
   // tutorial: the very first ball this player ever faces is slowed down and
   // guided with on-screen prompts
-  tutorialActive = (!tutorialSeen && ballsBowled === 0 && career.matchesPlayed === 0);
+  tutorialActive = (!tutorialSeen && ballsBowled === 0 && (career.matchesPlayed === 0 || window._tutorialReplay));
+  window._tutorialReplay = false;
   if (tutorialActive) {
     ballSpeed = baseSpeed * 0.45; // much slower so the player has time to react, ignore variance
     ball.zoneCenter = 0.92; // fixed, predictable zone for the tutorial ball
@@ -60919,7 +60938,7 @@ function renderShopV2(container) {
   const rot = GAME_CONFIG.daily.giftRotation, gift = rot[giftIndex(0)];
   const nextDeal = (dealWindow() + 1) * O.kitDealsRefreshHours * 3600e3 - (Date.now() + (window._dayOffset || 0) * 864e5);
   container.innerHTML = `<div class="sh2">
-    ${featureOn('pass') ? `<h4>FLICKY PASS · ${passDaysLeft()} DAYS LEFT</h4><div class="card" style="background:linear-gradient(135deg,#5a3a0a,#0E1C38);border-color:#e08a12"><div class="t"><b style="font-weight:400;font-size:19px">TIER ${passTier()} / 30</b><small>${passPremiumActive() ? 'Premium active' : "This month's kit, 600 gems, gold bags, faster bags"}</small></div><button class="btn" data-act="pass">${passPremiumActive() ? 'VIEW' : '£' + GAME_CONFIG.season.pass.premium.toFixed(2)}</button></div>` : ''}
+    ${featureOn('pass') ? `<h4>FLICKY PASS · ${passDaysLeft()} DAYS LEFT</h4><div class="card" style="background:linear-gradient(135deg,#5a3a0a,#0E1C38);border-color:#e08a12"><div class="t"><b style="font-weight:400;font-size:19px">TIER ${passTier()} / 30</b><small>${passPremiumActive() ? 'Premium active' : "This month's kit, 600 gems, gold bags, +1 bag slot, faster bags"}</small></div><button class="btn" data-act="pass">${passPremiumActive() ? 'VIEW' : '£' + GAME_CONFIG.season.pass.premium.toFixed(2)}</button></div>` : ''}
     ${off ? `<h4>TODAY'S OFFER · ENDS IN ${fmtLeft(off.until - Date.now())}</h4><div class="card offer"><div class="t"><b style="font-weight:400;font-size:19px">${off.title}</b><small style="color:#e4d8ff">${off.label}</small></div><button class="btn buy" data-act="offer">£${off.price.toFixed(2)}</button></div>` : ''}
     <h4>DAILY GIFT</h4><div class="card"><div class="t"><b style="font-weight:400;font-size:17px">${rewardLabel(gift)}</b><small>Free every day · tomorrow: ${rewardLabel(rot[giftIndex(1)])}</small></div><button class="btn" data-act="gift" ${giftReady() ? '' : 'disabled'}>${giftReady() ? 'FREE' : 'CLAIMED'}</button></div>
     ${featureOn('deals') ? `<h4>KIT DEALS · NEW IN ${fmtLeft(nextDeal)}</h4><div class="grid3">${deals.map((d, i) => { const got = s.deals[d.key];
@@ -61035,7 +61054,7 @@ function claimPassTier(tier, premium) {
 function buyPass(plus) {
   const P = GAME_CONFIG.season.pass, price = plus ? P.plus : P.premium;
   buyRealMoney(plus ? 'pass_plus' : 'pass_premium', price, () => {
-    const p = passState(); p.premium = true; if (plus) { p.plus = true; p.xp += 10 * P.xpPerTier; } SAVE.save();
+    const p = passState(); p.premium = true; if (plus) { p.plus = true; p.xp += 10 * P.xpPerTier; } SAVE.save(); syncBagSlots();
     track('offer_bought', { offer: plus ? 'pass_plus' : 'pass', price });
     return plus ? 'PASS+ ACTIVE · +10 TIERS' : 'FLICKY PASS ACTIVE';
   });
@@ -61084,9 +61103,9 @@ function renderPass() {
     <div style="display:flex;justify-content:space-between;font-size:13px;color:#B4C2DD"><span>TIER ${t} / ${P.tiers}</span><span>${passDaysLeft()} DAYS LEFT</span></div>
     <div class="psXP"><i style="width:${t >= P.tiers ? 100 : into / P.xpPerTier * 100}%"></i></div>
     <span style="font-size:11px;color:#B4C2DD">XP: ${P.xp.match} a match · ${P.xp.win} a win · ${P.xp.dailyMission} a daily mission · ${P.xp.weeklyMission} a weekly mission</span>
-    ${p.premium ? `<div style="text-align:center;color:#FFC93A">${p.plus ? 'PASS+' : 'PREMIUM'} ACTIVE · BAGS OPEN 10% FASTER</div>${p.plus ? '' : `<div class="psBuy" style="grid-template-columns:1fr"><button data-buypass="plus" style="background:linear-gradient(#c58bff,#8a3df0);color:#fff">UPGRADE TO PASS+ · +10 TIERS</button></div>`}`
+    ${p.premium ? `<div style="text-align:center;color:#FFC93A">${p.plus ? 'PASS+' : 'PREMIUM'} ACTIVE · +1 BAG SLOT · BAGS OPEN 10% FASTER</div>${p.plus ? '' : `<div class="psBuy" style="grid-template-columns:1fr"><button data-buypass="plus" style="background:linear-gradient(#c58bff,#8a3df0);color:#fff">UPGRADE TO PASS+ · +10 TIERS</button></div>`}`
       : `<div class="psBuy"><button data-buypass="prem" style="background:linear-gradient(#ffcf4a,#e08a12);color:#3a2300">PREMIUM<br>£${P.premium.toFixed(2)}</button><button data-buypass="plus" style="background:linear-gradient(#c58bff,#8a3df0);color:#fff">PASS+ · +10 TIERS<br>£${P.plus.toFixed(2)}</button></div>
-      <span style="font-size:11px;color:#B4C2DD;text-align:center">Premium: this month's kit, 600 gems, gold bags, a platinum bag at tier 30 and 10% faster bags. Pass+ also jumps 10 tiers and adds a gold trim.</span>`}
+      <span style="font-size:11px;color:#B4C2DD;text-align:center">Premium: this month's kit, 600 gems, gold bags, a platinum bag at tier 30, an extra bag slot and 10% faster bags. Pass+ also jumps 10 tiers and adds a gold trim.</span>`}
     <div class="psRow" style="font-size:11px;color:#B4C2DD"><span></span><span style="text-align:center">FREE</span><span style="text-align:center;color:#c9b8ff">PREMIUM</span></div>
     ${rows.join('')}`;
   updatePassBtn();
@@ -61342,6 +61361,176 @@ document.addEventListener('click', e => {
   const ev = t.closest('[data-ev]'); if (ev) { if (ev.dataset.ev === 'claim') { const l = eventClaim(); if (l) showMessage('+ ' + l.join(' · '), '#FFC93A', 2600); renderCompete(); } else buyEventBundle(); return; }
 }, true);
 FEATURE_UNLOCKS.compete = { when: () => (career.matchesPlayed || 0) >= 8, msg: 'NEW! COMPETE · CHALLENGES & TOURNAMENTS' };
+
+
+// ---------- NOTIFICATIONS (app build with @capacitor/local-notifications; the browser just keeps the plan) ----------
+// One planner decides every local notification: bag ready, today's/tomorrow's calendar reward, event start and
+// last day, and two "come back" nudges if the player stops (day 2 and day 5). At most GAME_CONFIG.notify.maxPerDay
+// a day, highest priority first; quiet hours move a notice to 9 am. Re-planned when a bag timer starts or a bag
+// opens, when the app goes to the background and on launch, so it is always right for the current save.
+// Permission is only asked the first time a bag timer starts (the moment the value is obvious), never on launch.
+const NOTIFY_IDS = [7100, 7200, 7201, 7300, 7301, 7400, 7401];
+function notifyOn() { return SAVE.getItem('flickyNotifyOff') !== 'true'; }
+function _atHour(base, addDays, hour) { const d = new Date(base); d.setDate(d.getDate() + addDays); d.setHours(hour, 0, 0, 0); return d; }
+function _quiet(d) {
+  const N = GAME_CONFIG.notify, h = d.getHours(), out = new Date(d);
+  if (h >= N.quietFrom) { out.setDate(out.getDate() + 1); out.setHours(N.quietTo, 0, 0, 0); }
+  else if (h < N.quietTo) out.setHours(N.quietTo, 0, 0, 0);
+  return out;
+}
+function notifyPlan() {
+  const N = GAME_CONFIG.notify, off = (window._dayOffset || 0) * 864e5, now = new Date(Date.now() + off), c = [];
+  // 1. the bag whose timer is running
+  const bi = bagUnlockingIdx();
+  if (bi >= 0) { const b = chestSlots[bi], cfg = CHEST_TYPES[b.type];
+    c.push({ id: 7100, pri: 1, at: new Date(b.openingStarted + cfg.openTime * 1000 + off), title: `Your ${cfg.name.toLowerCase()} kit bag is ready!`, body: 'Tap to open it and grab your kit.' }); }
+  // 2. calendar reward: this evening if not claimed yet, and tomorrow evening
+  try { const d = dailyState(), cal = GAME_CONFIG.daily.calendar;
+    const ready = calendarReady(), dayNo = (d.calDay % cal.length) + 1, next = ready ? dayNo : (dayNo % cal.length) + 1;
+    if (ready) c.push({ id: 7200, pri: 2, at: _atHour(now, 0, N.reminderHour), title: `Day ${dayNo} reward waiting`, body: `${rewardLabel(cal[dayNo - 1])} is ready to collect.` });
+    c.push({ id: 7201, pri: 2, at: _atHour(now, 1, N.reminderHour), title: `Day ${ready ? dayNo : next} reward waiting`, body: `${rewardLabel(cal[(ready ? dayNo : next) - 1])} and a free daily gift are ready.` });
+  } catch (e) {}
+  // 3. events: the day one starts, and the last day of the one that's on
+  try { const nx = nextEvent(); if (nx) c.push({ id: 7300, pri: 2, at: _atHour(new Date(nx.start + 'T00:00'), 0, N.eventStartHour), title: `${nx.name} starts today!`, body: `Earn ${nx.currency} in every match for exclusive rewards.` });
+    const ev = activeEvent(); if (ev) c.push({ id: 7301, pri: 2, at: _atHour(new Date(ev.end + 'T00:00'), 0, N.reminderHour), title: `Last day of the ${ev.name}`, body: `Spend your ${ev.currency} before it ends at midnight.` });
+  } catch (e) {}
+  // 4. come back nudges
+  N.lapsedDays.forEach((n, i) => c.push({ id: 7400 + i, pri: 3, at: _atHour(now, n, N.reminderHour),
+    title: i === 0 ? 'Your free bags are waiting' : 'The nets are open', body: i === 0 ? 'Two free kit bags every day. Come and grab them.' : 'Your kit, your league, your best score. One more match?' }));
+  // quiet hours, drop the past, then at most maxPerDay a day by priority
+  const soon = now.getTime() + 60e3, perDay = {};
+  return c.map(n => Object.assign(n, { at: _quiet(n.at) })).filter(n => n.at.getTime() > soon)
+    .sort((a, b) => a.pri - b.pri || a.at - b.at)
+    .filter(n => { const k = n.at.toDateString(); perDay[k] = (perDay[k] || 0) + 1; return perDay[k] <= N.maxPerDay; })
+    .sort((a, b) => a.at - b.at)
+    .map(n => Object.assign(n, { at: new Date(n.at.getTime() - off) }));   // back to real time for the phone
+}
+let _notifyBusy = false;
+async function planNotifications(ask) {
+  const plan = notifyOn() ? notifyPlan() : [];
+  window._notifyPlan = plan;
+  const LN = _bagNotifier(); if (!LN || _notifyBusy) return plan;
+  _notifyBusy = true;
+  try {
+    await LN.cancel({ notifications: NOTIFY_IDS.map(id => ({ id })) });
+    if (plan.length) {
+      let perm = await LN.checkPermissions();
+      if (perm.display !== 'granted' && ask && !SAVE.getItem('flickyNotifyAsked')) { SAVE.setItem('flickyNotifyAsked', '1'); perm = await LN.requestPermissions(); }
+      if (perm.display === 'granted') await LN.schedule({ notifications: plan.map(n => ({ id: n.id, title: n.title, body: n.body, schedule: { at: n.at } })) });
+    }
+  } catch (e) {} finally { _notifyBusy = false; }
+  return plan;
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) planNotifications(); });
+setTimeout(() => planNotifications(), 3000);
+
+// ---------- SETTINGS ----------
+function playerId() {
+  let id = SAVE.getItem('flickyPlayerId');
+  if (!id) { const r = () => Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, '0'); id = `FC-${r()}-${r()}`; SAVE.setItem('flickyPlayerId', id); }
+  return id;
+}
+function resetAllProgress() {
+  track('progress_reset', {}); SAVE.lock();
+  try { const ls = window.localStorage, ks = [];
+    for (let i = 0; i < ls.length; i++) { const k = ls.key(i); if (k && k.indexOf('flicky') === 0) ks.push(k); }
+    ks.forEach(k => ls.removeItem(k)); } catch (e) {}
+  try { const LN = _bagNotifier(); if (LN) LN.cancel({ notifications: NOTIFY_IDS.map(id => ({ id })) }); } catch (e) {}
+  setTimeout(() => location.reload(), 150);
+}
+async function restorePurchases() {
+  // sprint 7 (RevenueCat): replace with Purchases.restorePurchases() and re-grant anything owned
+  if (window.FlickyStore && window.FlickyStore.restore) { try { const n = await window.FlickyStore.restore(); showMessage(n ? `${n} PURCHASE${n > 1 ? 'S' : ''} RESTORED` : 'NOTHING TO RESTORE', '#FFC93A', 2200); } catch (e) { showMessage('RESTORE FAILED · TRY AGAIN', '#ff6b6b', 2200); } return; }
+  showMessage('RESTORE WORKS IN THE APP VERSION', '#FFC93A', 2200);
+}
+function replayTutorial() {
+  tutorialSeen = false; SAVE.setItem('flickyTutorialSeen', 'false'); window._tutorialReplay = true;
+  document.getElementById('settingsPanel').classList.remove('show');
+  if (typeof playNets === 'function') playNets(); else showMessage('TUTORIAL ON YOUR NEXT MATCH', '#FFC93A', 2000);
+}
+function renderSettings() {
+  const A = GAME_CONFIG.app, sh = document.querySelector('#settingsPanel .sheet');
+  const tg = (key, on, label, sub) => `<div class="stRow"><div><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</div><button class="stTog${on ? ' on' : ''}" data-tog="${key}" role="switch" aria-checked="${on}" aria-label="${label}"><i></i></button></div>`;
+  const link = (act, label, ok) => `<button class="stLink" data-st="${act}">${label}<span${ok ? '' : ' class="soon"'}>${ok ? '›' : 'SOON'}</span></button>`;
+  sh.innerHTML = `<h2>SETTINGS<button class="x" data-st="close" aria-label="Close">✕</button></h2>
+    <div class="stCard">
+      ${tg('sound', !audioMuted, 'SOUND')}
+      ${tg('haptics', SAVE.getItem('flickyHapticsOff') !== 'true', 'VIBRATION')}
+      ${tg('notify', notifyOn(), 'NOTIFICATIONS', 'Bag ready and daily rewards · never more than 2 a day')}
+    </div>
+    <div class="stCard">
+      ${link('tutorial', 'REPLAY TUTORIAL', true)}
+      ${link('restore', 'RESTORE PURCHASES', true)}
+    </div>
+    <div class="stCard">
+      ${link('privacy', 'PRIVACY POLICY', !!A.privacyUrl)}
+      ${link('terms', 'TERMS OF SERVICE', !!A.termsUrl)}
+      ${link('support', 'CONTACT SUPPORT', !!A.supportEmail)}
+      <div class="stRow"><div><b>PLAYER ID</b><small>Quote this if you contact support</small></div><button class="stId" data-st="copyid">${playerId()}</button></div>
+    </div>
+    <button class="stReset" data-st="reset">RESET ALL PROGRESS</button>
+    <div class="stFoot">FLICKY CRICKET · v${A.version}</div>`;
+}
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `
+  #settingsBtn{position:absolute;left:12px;top:calc(44% - 120px);z-index:3;width:48px;height:48px;border-radius:50%;border:3px solid #050A14;background:linear-gradient(#3a4a6a,#1d2a44);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 #0a1224;cursor:pointer;padding:0}
+  #settingsBtn:active{transform:translateY(2px);box-shadow:0 2px 0 #0a1224}
+  #settingsBtn svg{width:26px;height:26px}
+  #settingsPanel{position:fixed;inset:0;z-index:300;display:none;background:rgba(5,10,20,.7);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #settingsPanel.show{display:flex;align-items:flex-end;justify-content:center}
+  #settingsPanel .sheet{width:min(440px,100%);max-height:94%;overflow:auto;background:#0E1C38;border:3px solid #050A14;border-bottom:none;border-radius:22px 22px 0 0;padding:14px 12px calc(18px + env(safe-area-inset-bottom,0px));box-sizing:border-box;display:flex;flex-direction:column;gap:12px}
+  #settingsPanel h2{margin:0;font-size:24px;font-weight:400;display:flex;align-items:center;justify-content:space-between}
+  #settingsPanel .x{width:40px;height:40px;border-radius:50%;border:2px solid #050A14;background:#14203a;color:#fff;font-size:18px;cursor:pointer}
+  .stCard{border-radius:16px;background:#14203a;border:3px solid #050A14;padding:4px 12px;display:flex;flex-direction:column}
+  .stRow{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px}
+  .stRow+.stRow,.stLink+.stLink,.stLink+.stRow{border-top:1px solid rgba(255,255,255,.08)}
+  .stRow b,.stLink{font-weight:400;font-size:17px}
+  .stRow small{display:block;color:#B4C2DD;font:12px system-ui,Arial,sans-serif;margin-top:2px}
+  .stTog{flex:none;width:58px;height:32px;border-radius:16px;border:3px solid #050A14;background:#3a4560;position:relative;cursor:pointer;padding:0;transition:background .15s}
+  .stTog i{position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .15s}
+  .stTog.on{background:#22c55e}.stTog.on i{left:28px}
+  .stLink{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:52px;background:none;border:none;color:#fff;font-family:inherit;cursor:pointer;padding:0;text-align:left}
+  .stLink span{color:#B4C2DD;font-size:20px;min-width:20px;text-align:right}.stLink span.soon{font-size:12px;color:#6f7f9f}
+  .stId{flex:none;height:36px;border-radius:10px;border:2px solid #050A14;background:#0b1528;color:#FFC93A;font:14px ui-monospace,Menlo,monospace;padding:0 10px;cursor:pointer}
+  .stReset{height:48px;border-radius:14px;border:3px solid #050A14;background:#3a1418;color:#ff8a8a;font:16px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
+  .stReset.arm{background:linear-gradient(#ff5a5a,#c8222c);color:#fff}
+  .stFoot{text-align:center;color:#6f7f9f;font-size:12px}
+  .chestSlot[data-pass]::after{content:'PASS';position:absolute;top:22px;right:-4px;transform:rotate(8deg);padding:2px 9px;border-radius:9px;border:2px solid #050A14;background:linear-gradient(#ffcf4a,#e08a12);color:#3a2300;font:11px 'Lilita One','Arial Black',Arial,sans-serif;letter-spacing:.5px;z-index:2}
+  `;
+  document.head.appendChild(css);
+  const home = document.getElementById('overlay');
+  if (home) { const b = document.createElement('button'); b.id = 'settingsBtn'; b.setAttribute('aria-label', 'Settings');
+    b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#E8EEF8" stroke="#050A14" stroke-width="1.4" d="M10.3 2h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9L2 13.7v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z"/><circle cx="12" cy="12" r="3.4" fill="#1d2a44" stroke="#050A14" stroke-width="1.4"/></svg>`;
+    home.appendChild(b); }
+  const p = document.createElement('div'); p.id = 'settingsPanel'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Settings'); p.innerHTML = '<div class="sheet"></div>'; document.body.appendChild(p);
+  let armT = null;
+  document.addEventListener('click', e => {
+    const t = e.target;
+    if (t.closest('#settingsBtn')) { renderSettings(); p.classList.add('show'); try { playUiTap(); } catch (err) {} return; }
+    if (!p.classList.contains('show')) return;
+    if (t === p) { p.classList.remove('show'); return; }
+    const tog = t.closest('[data-tog]');
+    if (tog) { const k = tog.dataset.tog;
+      if (k === 'sound') { setMuted(!audioMuted); try { muteBtn.textContent = audioMuted ? '🔇' : '🔊'; } catch (err) {} }
+      if (k === 'haptics') { const off = SAVE.getItem('flickyHapticsOff') === 'true'; SAVE.setItem('flickyHapticsOff', off ? 'false' : 'true'); if (off) hapticTap(); }
+      if (k === 'notify') { SAVE.setItem('flickyNotifyOff', notifyOn() ? 'true' : 'false'); planNotifications(notifyOn()); }
+      track('setting_changed', { key: k }); try { playUiTap(); } catch (err) {} renderSettings(); return; }
+    const b = t.closest('[data-st]'); if (!b) return;
+    const A = GAME_CONFIG.app, act = b.dataset.st; try { playUiTap(); } catch (err) {}
+    if (act === 'close') p.classList.remove('show');
+    else if (act === 'tutorial') replayTutorial();
+    else if (act === 'restore') restorePurchases();
+    else if (act === 'privacy' || act === 'terms') { const u = act === 'privacy' ? A.privacyUrl : A.termsUrl; if (u) window.open(u, '_blank', 'noopener'); else showMessage('COMING WITH THE APP', '#FFC93A', 1800); }
+    else if (act === 'support') { if (A.supportEmail) location.href = `mailto:${A.supportEmail}?subject=${encodeURIComponent('Flicky Cricket help · ' + playerId())}`; else showMessage('COMING WITH THE APP', '#FFC93A', 1800); }
+    else if (act === 'copyid') { try { navigator.clipboard.writeText(playerId()); } catch (err) {} showMessage('PLAYER ID COPIED', '#22c55e', 1500); }
+    else if (act === 'reset') {
+      if (!b.classList.contains('arm')) { b.classList.add('arm'); b.textContent = 'TAP AGAIN TO WIPE EVERYTHING'; clearTimeout(armT);
+        armT = setTimeout(() => { b.classList.remove('arm'); b.textContent = 'RESET ALL PROGRESS'; }, 4000); }
+      else resetAllProgress();
+    }
+  });
+})();
 
 // ---------- ANALYTICS HOOKS (sprint 1) ----------
 // Wrap the existing functions so each key moment calls track() without touching their insides.
