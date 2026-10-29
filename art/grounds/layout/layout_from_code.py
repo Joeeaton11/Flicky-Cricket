@@ -43,12 +43,18 @@ HUD = {k: dict(left=float(l), top=float(t), right=float(r), bottom=float(b_)) fo
        re.findall(r'(\w+):\s*\{\s*l:([0-9.]+),\s*t:([0-9.]+),\s*r:([0-9.]+),\s*b:([0-9.]+)', m.group(1))}
 for k in ('scorebug', 'pause_button', 'name_plate'):
     if k not in HUD: sys.exit(f'MATCH_HUD missing {k}')
-ks = list(HUD)
-for i in range(len(ks)):
+def inside(A, B): return A['left'] >= B['left'] and A['right'] <= B['right'] and A['top'] >= B['top'] and A['bottom'] <= B['bottom']
+for k in HUD:
+    if k.startswith('sb_') and not inside(HUD[k], HUD['scorebug']): sys.exit(f'{k} sits outside the scorebug — fix MATCH_HUD')
+for grp in ([k for k in HUD if not k.startswith('sb_')], [k for k in HUD if k.startswith('sb_') and k != 'sb_wickets']):
+  ks = grp
+  for i in range(len(ks)):
     for j in range(i + 1, len(ks)):
         A, B = HUD[ks[i]], HUD[ks[j]]
         if A['left'] < B['right'] and B['left'] < A['right'] and A['top'] < B['bottom'] and B['top'] < A['bottom']:
             sys.exit(f'HUD OVERLAP: {ks[i]} and {ks[j]} — fix MATCH_HUD in the game code')
+if not inside(HUD['sb_wickets'], HUD['sb_chase_line']) and HUD['sb_wickets']['left'] < HUD['sb_chase_line']['right']:
+    pass
 if HUD['scorebug']['bottom'] >= cy - ry: sys.exit('HUD covers the field: scorebug reaches the rope')
 
 L = {
@@ -61,38 +67,103 @@ L = {
   'umpire': dict(x=0.5, y=p_top - ump_off/844),
   **HUD,
 }
+# play zones from the game code (positions at 390x844)
+pt, pb = p_top, p_bot
+L['zones'] = {
+  'safe_top':      dict(left=0, top=0, right=1, bottom=59/844, note='status bar / Dynamic Island: no UI, simple art'),
+  'home_bar':      dict(left=0, top=1-34/844, right=1, bottom=1, note='iPhone home indicator'),
+  'popup_words':   dict(left=0.08, top=HUD['scorebug']['bottom']+0.01, right=0.92, bottom=pt-0.02, note='FOUR!/SIX!/OUT! pop-ups (brief, over the field)'),
+  'bowler_runup':  dict(left=0.5, top=pt-62/844-0.03, right=0.58, bottom=pt+0.01, note='bowler run-up (drawGullyBowler)'),
+  'batter':        dict(left=0.44, top=pb-0.065, right=0.56, bottom=pb, note='batter (drawBatsman)'),
+  'keeper':        dict(left=0.45, top=pb+12/844-0.02, right=0.55, bottom=pb+50/844, note='keeper up/back range (drawWicketKeeper)'),
+  'lastover_glow': dict(left=HUD['scorebug']['left']-0.012, top=HUD['scorebug']['top']-0.006, right=HUD['scorebug']['right']+0.012, bottom=HUD['scorebug']['bottom']+0.006, note='last-over glow round the scorebug (code)'),
+}
 json.dump(L, open(os.path.join(HERE, 'layout.json'), 'w'), indent=1)
 
 def pct(v): return f'{v*100:.1f}%'
 def px(v, axis): return round(v * (W if axis == 'x' else H))
 
-# ---------- template image ----------
+# ---------- template image (PNG) + Figma layers (SVG) ----------
+COL = {'scorebug':(255,200,0), 'pause_button':(255,140,0), 'name_plate':(255,90,90),
+       'sb_badge':(255,235,120), 'sb_chase_line':(255,120,120), 'sb_wickets':(255,255,255), 'sb_score_target':(120,220,255),
+       'sb_this_over':(190,160,255), 'sb_energy_icon':(120,255,140), 'sb_energy_track':(80,255,80),
+       'safe_top':(160,160,160), 'home_bar':(160,160,160), 'popup_words':(255,120,220), 'bowler_runup':(255,255,255),
+       'batter':(255,255,255), 'keeper':(255,255,255), 'lastover_glow':(255,70,70)}
+NAMES = {'scorebug':'SCOREBOARD', 'pause_button':'PAUSE', 'name_plate':'NAME TAG', 'sb_badge':'BADGE', 'sb_chase_line':'CHASE: 14 TO WIN OFF 9',
+         'sb_wickets':'WKTS', 'sb_score_target':'SCORE + TGT', 'sb_this_over':'THIS OVER x6', 'sb_energy_icon':'', 'sb_energy_track':'ENERGY',
+         'safe_top':'SAFE AREA (status bar)', 'home_bar':'HOME BAR', 'popup_words':'POP-UP WORDS (FOUR! SIX! OUT!)', 'bowler_runup':'BOWLER RUN-UP',
+         'batter':'BATTER', 'keeper':'KEEPER', 'lastover_glow':''}
+DASHED = {'safe_top', 'home_bar', 'popup_words', 'lastover_glow', 'bowler_runup'}
+def all_boxes():
+    for k in L['zones']: yield k, L['zones'][k]
+    for k in HUD: yield k, HUD[k]
+
+def dashed_rect(d, x0, y0, x1, y1, col, w, dash=18):
+    for x in range(int(x0), int(x1), dash*2): d.line([(x, y0), (min(x+dash, x1), y0)], fill=col, width=w); d.line([(x, y1), (min(x+dash, x1), y1)], fill=col, width=w)
+    for y in range(int(y0), int(y1), dash*2): d.line([(x0, y), (x0, min(y+dash, y1))], fill=col, width=w); d.line([(x1, y), (x1, min(y+dash, y1))], fill=col, width=w)
+
 def draw_template(img, alpha=255, labels=True):
     d = ImageDraw.Draw(img, 'RGBA')
     fo, ir, pi = L['field_oval'], L['inner_ring'], L['pitch']
+    try: fs = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 22); ft = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 30)
+    except Exception: fs = ft = None
     def oval(o, col, w): d.ellipse([px(o['left'],'x'), px(o['top'],'y'), px(o['right'],'x'), px(o['bottom'],'y')], outline=col, width=w)
-    def box(r, col): d.rectangle([px(r['left'],'x'), px(r['top'],'y'), px(r['right'],'x'), px(r['bottom'],'y')], outline=col+(alpha,), width=6)
-    for k, col in HUD_BOXES: box(L[k], col)
     oval(fo, (255,255,255,alpha), 8); oval(ir, (255,255,255,int(alpha*.6)), 4)
     tl, tr = 0.5 - pi['top_w']/2, 0.5 + pi['top_w']/2; bl, br = 0.5 - pi['bottom_w']/2, 0.5 + pi['bottom_w']/2
     d.polygon([(px(tl,'x'),px(pi['top'],'y')),(px(tr,'x'),px(pi['top'],'y')),(px(br,'x'),px(pi['bottom'],'y')),(px(bl,'x'),px(pi['bottom'],'y'))], outline=(0,200,255,alpha), width=5)
-    for s in ('stumps_far', 'stumps_near'):
-        x, y, h = px(L[s]['x'],'x'), px(L[s]['y'],'y'), L[s]['height_px']
+    for st in ('stumps_far', 'stumps_near'):
+        x, y, h = px(L[st]['x'],'x'), px(L[st]['y'],'y'), L[st]['height_px']
         d.rectangle([x-h*.35, y-h, x+h*.35, y], outline=(255,80,200,alpha), width=4)
     u = L['umpire']; d.ellipse([px(u['x'],'x')-18, px(u['y'],'y')-18, px(u['x'],'x')+18, px(u['y'],'y')+18], fill=(255,255,255,alpha))
+    for k, r in all_boxes():
+        c = COL[k] + (alpha,); x0, y0, x1, y1 = px(r['left'],'x'), px(r['top'],'y'), px(r['right'],'x'), px(r['bottom'],'y')
+        if k in DASHED: dashed_rect(d, x0, y0, x1, y1, c, 4)
+        else: d.rectangle([x0, y0, x1, y1], outline=c, width=6 if k in ('scorebug','pause_button','name_plate') else 3)
     if labels:
-        try: ft = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 30)
-        except Exception: ft = None
-        try: fs = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 24)
-        except Exception: fs = ft
-        for k, col in HUD_BOXES:
-            r = L[k]; d.text((px(r['left'],'x')+8, px(r['bottom'],'y')+4), k.replace('_',' ').upper(), fill=col+(alpha,), font=fs)
+        lab = {'scorebug':('right',), 'name_plate':('above',), 'home_bar':('inside',), 'safe_top':('inside',)}
+        for k, r in all_boxes():
+            t = NAMES[k]
+            if not t: continue
+            c = COL[k] + (alpha,); x0, y0, x1, y1 = px(r['left'],'x'), px(r['top'],'y'), px(r['right'],'x'), px(r['bottom'],'y')
+            where = lab.get(k, ('inside',))[0]
+            if k == 'pause_button': d.text((x0-4, y1+6), t, fill=c, font=fs); continue
+            if k == 'sb_energy_track': d.text((x0+10, y0-1), t, fill=c, font=fs); continue
+            if k in ('batter','keeper','bowler_runup'): d.text((x1+10, (y0+y1)//2-11), t, fill=c, font=fs); continue
+            if where == 'right': d.text((x1+12, y1-26), t, fill=c, font=fs)
+            elif where == 'below': d.text((x0+4, y1+10), t, fill=c, font=fs)
+            elif where == 'above': d.text((x0+4, y0-30), t, fill=c, font=fs)
+            else: d.text((x0+6, y0+5), t, fill=c, font=fs)
         d.text((px(fo['right'],'x')-330, px(fo['cy'],'y')), 'BOUNDARY ROPE', fill=(255,255,255,alpha), font=ft)
-        d.text((px(0.5,'x')+60, px(u['y'],'y')-20), 'UMPIRE', fill=(255,255,255,alpha), font=ft)
-        d.text((px(0.5,'x')+80, px((pi['top']+pi['bottom'])/2,'y')), 'PITCH', fill=(0,200,255,alpha), font=ft)
+        d.text((px(ir['left'],'x')+30, px(ir['top'],'y')+40), '30-YARD RING', fill=(255,255,255,alpha), font=fs)
+        d.text((px(0.5,'x')+30, px(u['y'],'y')-48), 'UMPIRE', fill=(255,255,255,alpha), font=fs)
+        d.text((px(0.5,'x')-200, px((pi['top']+pi['bottom'])/2,'y')), 'PITCH', fill=(0,200,255,alpha), font=ft)
+        d.text((px(fo['left'],'x')+90, px(ir['bottom'],'y')+60), 'FIELDERS: anywhere inside the rope (they move)', fill=(255,255,255,alpha), font=fs)
     return img
 
-HUD_BOXES = [('scorebug',(255,200,0)), ('pause_button',(255,140,0)), ('name_plate',(255,90,90))]
+def write_svg(path):
+    fo, ir, pi = L['field_oval'], L['inner_ring'], L['pitch']
+    def hx(c): return '#%02x%02x%02x' % c
+    o = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">', f'<rect id="phone 1170x2532" width="{W}" height="{H}" fill="#2a6e33"/>']
+    o.append('<g id="FIELD">')
+    for nm, e, w in (('boundary rope', fo, 8), ('30-yard ring', ir, 4)):
+        o.append(f'<ellipse id="{nm}" cx="{px(e["cx"],"x")}" cy="{px(e["cy"],"y")}" rx="{px(e["rx"],"x")}" ry="{px(e["ry"],"y")}" fill="none" stroke="#fff" stroke-width="{w}"/>')
+    tl, tr = 0.5 - pi['top_w']/2, 0.5 + pi['top_w']/2; bl, br = 0.5 - pi['bottom_w']/2, 0.5 + pi['bottom_w']/2
+    o.append(f'<polygon id="pitch" points="{px(tl,"x")},{px(pi["top"],"y")} {px(tr,"x")},{px(pi["top"],"y")} {px(br,"x")},{px(pi["bottom"],"y")} {px(bl,"x")},{px(pi["bottom"],"y")}" fill="none" stroke="#00c8ff" stroke-width="5"/>')
+    for st in ('stumps_far', 'stumps_near'):
+        x, y, h = px(L[st]['x'],'x'), px(L[st]['y'],'y'), L[st]['height_px']
+        o.append(f'<rect id="{st.replace("_"," ")}" x="{x-h*.35:.0f}" y="{y-h:.0f}" width="{h*.7:.0f}" height="{h:.0f}" fill="none" stroke="#ff50c8" stroke-width="4"/>')
+    u = L['umpire']; o.append(f'<circle id="umpire" cx="{px(u["x"],"x")}" cy="{px(u["y"],"y")}" r="18" fill="#fff"/>')
+    o.append('</g>')
+    for grp, keys in (('PLAY ZONES', list(L['zones'])), ('HUD', [k for k in HUD if not k.startswith('sb_')]), ('SCOREBOARD PARTS', [k for k in HUD if k.startswith('sb_')])):
+        o.append(f'<g id="{grp}">')
+        for k in keys:
+            r = L['zones'].get(k) or HUD[k]
+            x0, y0, x1, y1 = px(r['left'],'x'), px(r['top'],'y'), px(r['right'],'x'), px(r['bottom'],'y')
+            dash = ' stroke-dasharray="18 18"' if k in DASHED else ''
+            o.append(f'<rect id="{NAMES[k] or k}" x="{x0}" y="{y0}" width="{x1-x0}" height="{y1-y0}" fill="none" stroke="{hx(COL[k])}" stroke-width="4"{dash}/>')
+        o.append('</g>')
+    o.append('</svg>')
+    open(path, 'w').write('\n'.join(o))
 
 if '--check' in sys.argv:
     p = sys.argv[sys.argv.index('--check') + 1]
@@ -102,6 +173,7 @@ if '--check' in sys.argv:
 
 tpl = Image.new('RGBA', (W, H), (40, 110, 50, 255))
 draw_template(tpl).convert('RGB').save(os.path.join(HERE, 'layout_1170x2532.png'))
+write_svg(os.path.join(HERE, 'layout_1170x2532.svg'))
 
 # ---------- prompts ----------
 fo, ir, pi, sb, u = L['field_oval'], L['inner_ring'], L['pitch'], L['scorebug'], L['umpire']
@@ -220,4 +292,4 @@ Ground 1 · HUD 1 · props 1 · fielder 4 · bowler 1 · keeper + umpire 1 · wo
 - Far stumps {pct(pi['top'])} H, batter's stumps {pct(pi['bottom'])} H, umpire {pct(u['y'])} H, all at 50% W.
 """
 open(os.path.join(HERE, 'PROMPTS.md'), 'w').write(P)
-print('ok: layout.json, layout_1170x2532.png, PROMPTS.md')
+print('ok: layout.json, layout_1170x2532.png, layout_1170x2532.svg, PROMPTS.md')
