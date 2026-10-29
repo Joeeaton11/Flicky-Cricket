@@ -2101,6 +2101,10 @@
     border:none; cursor:pointer; transition:transform 80ms, box-shadow 80ms;
   }
   .leaguePlayBtn:active { transform:scale(0.96); }
+  #leagueModeTabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; padding:4px; margin:8px 16px 0; border-radius:16px; background:#050A14; align-self:stretch; width:auto; max-width:420px; box-sizing:border-box; }
+  #leagueModeTabs button { height:40px; min-width:0; padding:0 6px; white-space:nowrap; border-radius:12px; border:none; background:transparent; color:#B4C2DD; font:16px 'Lilita One','Arial Black',Arial,sans-serif; cursor:pointer; }
+  #leagueModeTabs button[aria-selected="true"] { background:#FFC93A; color:#5a3300; }
+  #leagueScreen .leaguePlayBtn.active.nets { background:linear-gradient(#7fd0ff,#2f7fd6) !important; color:#06203f !important; box-shadow:0 5px 0 #154a86 !important; }
   .leaguePlayBtn.locked {
     background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.25);
     border:1px solid rgba(255,255,255,0.08); cursor:default; letter-spacing:1.5px; font-size:12px;
@@ -3447,6 +3451,7 @@
     <div id="leaguePills"><span class="lgPill"><i class="hIco hi-trophy"></i><span id="leagueTrophyCount">0</span></span><span class="lgPill"><i class="hIco hi-coin"></i><span id="leagueHeaderCoinVal">0</span></span></div>
   </div>
   <div id="leagueRoad"><i id="leagueRoadFill"></i><span id="leagueRoadTxt"></span></div>
+  <div id="leagueModeTabs" role="tablist" aria-label="Mode"><button role="tab" data-mode="league" aria-selected="true">LEAGUE</button><button role="tab" data-mode="nets" aria-selected="false">NETS · FREE</button></div>
   <div id="leagueCardsTrack"></div>
   <div id="leagueDotsRow"></div>
 </div>
@@ -3599,6 +3604,9 @@ const GAME_CONFIG = {
       { leagues: [19, 28], balls: 24, wickets: 3 },
     ],
     winRateTarget: [0.55, 0.65],          // simulator aim for an average player in their own league
+    // chase targets by league index (0 = SCENE TEST, 1 = Gully Cup … 27 = Eternal Cup), from tools/sim_chase.js
+    // (calibrated to the old balance, smoothed to rise steadily). Re-run the simulator after any shot-maths change.
+    targets: [34, 34, 34, 35, 36, 38, 39, 40, 42, 64, 65, 66, 67, 67, 68, 69, 69, 70, 71, 95, 97, 99, 100, 101, 102, 103, 103, 104],
     perfectTimingDistance: 0.08,          // PERFECT adds 8% distance
     nets: { balls: Infinity, wickets: 1 },
     extraOver: { needWithin: 15, balls: 3, prices: [{ gems: 25, adAllowed: true }, { gems: 50, adAllowed: false }], timerSec: 8 },   // sprint 3
@@ -6209,6 +6217,7 @@ if (new URLSearchParams(location.search).get('scene')) {
     runs = 0; ballsBowled = 0; thisRunFours = 0; thisRunSixes = 0; window._ballLog = []; window._gOutAt = 0; window._gCatch = null; window._gRaiseAt = 0; window._gBowledAt = 0; flyingStumps = []; try { _gl.marks = []; _gl.petals = []; } catch (e) {}
     shotHistory = []; energy = MAX_ENERGY;
     rollStadiumConditions();
+    setupChase('league', 1);
     updateHud();
     startBallSequence();
   }, 500);
@@ -6238,11 +6247,18 @@ function startGame() {
     // Name shows on the intro card and result screen instead.
     if (mn) { mn.innerHTML = `${L.flag} ${L.name}${L.team ? ` <small>${L.team}</small>` : ''}`; mn.classList.add('hidden'); } }
   rollStadiumConditions();
+  if (!window.chase) setupChase('league', window._activeLeagueIdx != null ? window._activeLeagueIdx : selectedLeagueIdx());
+  window._hudNeedShown = null; hideMoment();
   updateHud();
-  startBallSequence();
+  if (window.chase.mode === 'league') {
+    // intro moment: NEED x OFF y big in the pop-up area, then it shrinks into the scoreboard
+    state = 'intro'; ball.active = false;
+    showMoment('intro');
+    setTimeout(() => { if (state === 'intro') startBallSequence(); }, 2200);
+  } else startBallSequence();
   try {
-    const _li = window._activeLeagueIdx;
-    track('match_start', { league: _li != null ? _li + 1 : null, ground: currentTimeOfDay && currentTimeOfDay.key, mode: 'league', balls: null, wickets: 1, target: Math.max(target, window._leagueTargetFloor || 0) });
+    const c = window.chase, _li = c.leagueIdx;
+    track('match_start', { league: _li, ground: currentTimeOfDay && currentTimeOfDay.key, mode: c.mode, balls: c.balls === Infinity ? null : c.balls, wickets: c.wickets, target: c.target });
   } catch (e) {}
 }
 
@@ -28600,7 +28616,7 @@ function leagueIdxForTrophies(t) {
 function currentLeagueIdx() { return leagueIdxForTrophies(trophyState.count); }        // the league your trophies put you in
 function highestLeagueIdx() { return leagueIdxForTrophies(Math.max(trophyState.best || 0, trophyState.count)); }
 // targets climb evenly from 20 (Gully Cup) to 100 (Eternal Cup) — balance pass Oct 25
-function leagueTarget(lg) { const i = THEMED_LEAGUES.indexOf(lg); return i >= 0 ? Math.round(20 + i * 3.1) : (lg.targetFloor || STARTING_TARGET); }
+function leagueTarget(lg) { const i = THEMED_LEAGUES.indexOf(lg); const t = GAME_CONFIG.match.targets; return i >= 0 && t[i] != null ? t[i] : (lg.targetFloor || STARTING_TARGET); }
 // prize = 2x entry so winning about half your games keeps you level on coins
 THEMED_LEAGUES.forEach(lg => { lg.winCoins = lg.entry * 2; });
 function selectedLeagueIdx() {
@@ -28616,7 +28632,9 @@ function setSelectedLeague(i) { try { SAVE.setItem('flickySelectedLeague', Strin
 function trophyChangeFor(lgIdx, beatTarget, beatBy) {
   if (lgIdx < currentLeagueIdx()) return 0;
   const lg = THEMED_LEAGUES[lgIdx];
-  if (beatTarget) return (lg.winTrophy || 1) + 1 + (beatBy >= 40 ? 2 : beatBy >= 20 ? 1 : 0);
+  // bonus for winning with balls to spare (the chase stops on the winning ball, so run margins are tiny now)
+  const spare = window.chase ? Math.max(0, window.chase.balls - window.chase.used) : 0, st = GAME_CONFIG.daily.stars;
+  if (beatTarget) return (lg.winTrophy || 1) + 1 + (spare >= st.ballsSpareFor3 ? 2 : spare >= st.ballsSpareFor2 ? 1 : 0);
   const floor = THEMED_LEAGUES[highestLeagueIdx()].unlock;
   return -Math.min(1, Math.max(0, trophyState.count - floor));
 }
@@ -28629,6 +28647,7 @@ function playLeague(idx) {
     window._activeLeagueIdx = idx;
     target = leagueTarget(lg);
     window._leagueTargetFloor = target;
+    setupChase('league', idx);
     leagueScreen.classList.add('hidden');
     startGame();
   };
@@ -28690,7 +28709,9 @@ function renderLeagueScreen() {
     info.className = 'leagueCardInfo';
     const canAfford = career.coins >= lg.entry;
     const btnClass = !unlocked ? 'locked' : canAfford ? 'active' : 'active costly';
-    const btnHtml = !unlocked ? `UNLOCKS AT ${lg.unlock} <i class="hIco hi-trophy"></i>` : `PLAY &middot; <i class="hIco hi-coin"></i>${lg.entry.toLocaleString()}`;
+    const nets = window._leagueMode === 'nets';
+    const btnHtml = !unlocked ? `UNLOCKS AT ${lg.unlock} <i class="hIco hi-trophy"></i>` : nets ? 'PRACTISE &middot; FREE' : `PLAY &middot; <i class="hIco hi-coin"></i>${lg.entry.toLocaleString()}`;
+    const band = matchBand(Math.max(1, idx));
     const balls = idx < 4 ? 2 : idx < 8 ? 3 : idx < 14 ? 4 : 5;
     const prev = THEMED_LEAGUES[idx - 1];
     const notes = [];
@@ -28701,14 +28722,14 @@ function renderLeagueScreen() {
     info.innerHTML = `
       <div><div class="leagueCardName" style="color:${lg.textColor || '#fff'}">${lg.name}</div></div>
       <div class="leagueCardSubtitle">${lg.subtitle}</div>
-      <div class="lgRew">
+      ${nets ? `<div class="lgRew"><div style="grid-column:1/-1"><b style="color:#7fd0ff">PRACTICE ONLY</b><small>NO ENTRY FEE · NO COINS, TROPHIES OR BAGS</small></div></div><div class="lgRew" style="display:none">` : '<div class="lgRew">'}
         <div><i class="hIco hi-coin"></i><b style="color:#FFE27A">+${fmtCoins(lg.winCoins)}</b><small>WIN COINS</small></div>
         <div><i class="hIco hi-trophy" style="${older ? 'filter:grayscale(1);opacity:.5' : ''}"></i><b>${older ? '&mdash;' : `+${tr}&ndash;${tr + 2}`}</b><small>${older ? 'NO TROPHIES' : 'TROPHIES'}</small></div>
         <div>${bagSrc ? `<img src="${bagSrc}" alt="">` : ''}<b>${lg.winChest.toUpperCase()}</b><small>BAG</small></div>
       </div>
-      <div class="lgRow"><span><span>TARGET</span> ${leagueTarget(lg)} RUNS</span><span><span>DIFFICULTY</span><span class="lgBalls">${[1,2,3,4,5].map(n => `<i class="${n <= balls ? 'on' : ''}"></i>`).join('')}</span></span></div>
+      <div class="lgRow"><span><span>${nets ? 'NETS' : 'TARGET'}</span> ${nets ? 'NO LIMIT &middot; 1 WKT' : `${leagueTarget(lg)} OFF ${band.balls} &middot; ${band.wickets} WKTS`}</span>&nbsp;<span><span>DIFFICULTY</span><span class="lgBalls">${[1,2,3,4,5].map(n => `<i class="${n <= balls ? 'on' : ''}"></i>`).join('')}</span></span></div>
       ${notes.length ? `<div class="lgNote">${unlocked ? '' : 'UNLOCKS: '}${notes.join(' &middot; ')}</div>` : ''}
-      <button class="leaguePlayBtn ${btnClass}" data-idx="${idx}" ${unlocked ? '' : 'disabled'}>${btnHtml}</button>`;
+      <button class="leaguePlayBtn ${btnClass}${nets && unlocked ? ' nets' : ''}" data-idx="${idx}" ${unlocked ? '' : 'disabled'}>${btnHtml}</button>`;
     card.appendChild(info);
 
     if (!unlocked) {
@@ -28731,7 +28752,11 @@ function renderLeagueScreen() {
 
   // Set up play buttons
   track.querySelectorAll('.leaguePlayBtn.active').forEach(btn => {
-    btn.addEventListener('click', () => playLeague(parseInt(btn.dataset.idx)));
+    btn.addEventListener('click', () => (window._leagueMode === 'nets' ? playNets : playLeague)(parseInt(btn.dataset.idx)));
+  });
+  document.querySelectorAll('#leagueModeTabs button').forEach(b => {
+    b.setAttribute('aria-selected', String((window._leagueMode || 'league') === b.dataset.mode));
+    b.onclick = () => { if (window._leagueMode === b.dataset.mode) return; window._leagueMode = b.dataset.mode; try { playUiTap(); } catch (e) {} const x = track.scrollLeft; renderLeagueScreen(); track.scrollLeft = x; };
   });
 
   // Scale-driven carousel: active card grows, others shrink
@@ -30650,7 +30675,7 @@ function fxBig(kind, opts) {
   el.className = 'fxBig ' + kind;
   try {
     const r = canvas.getBoundingClientRect(), sy = r.height / H;
-    const top = r.top + H * (themedWords() ? 0.262 : 0.135) * sy;   // Gully: in the open field above the umpire, clear of the HUD
+    const top = r.top + (themedWords() ? H * 0.262 : (!window.OLD_HUD && window._hudBottom) ? window._hudBottom + 10 : H * 0.135) * sy;   // below the corner scoreboard (pop-up zone)
     const bottom = r.top + (PITCH_TOP() - 70) * sy;         // clear of the umpire's raised arms
     const h = Math.min(150, Math.max(110, (PITCH_TOP() - 48) * sy + r.top - top));   // compact: a small stamp just under the scoreboard (Joe: too big and intrusive)
     el.style.setProperty('--fxTop', top + 'px'); el.style.setProperty('--fxH', h + 'px');
@@ -30782,6 +30807,11 @@ function doFlick(swipe) {
   else if (z > zc + 0.13) { bowled(); return; }   // too late
   else timingQuality = 1 - Math.abs(z - zc) / 0.3;
   timingQuality = Math.max(0.15, Math.min(1, timingQuality));
+  // timing feedback word on every shot (sprint 2); PERFECT also adds distance
+  const _tdz = z - zc;
+  const _tWord = z < zc - timingWindow ? 'EARLY' : Math.abs(_tdz) <= 0.04 ? 'PERFECT' : (_tdz < 0 ? (_tdz > -0.12 ? 'GOOD' : 'EARLY') : (_tdz < 0.07 ? 'GOOD' : 'LATE'));
+  window._timingWord = { text: _tWord, at: performance.now() };
+  const _perfect = _tWord === 'PERFECT';
 
   const shotAngle = Math.atan2(swipe.dx, -swipe.dy) * 180/Math.PI;
 
@@ -30842,7 +30872,7 @@ function doFlick(swipe) {
   // bat power scales from 0.592 (stat 32) to 0.964 (stat 94); well-timed big
   // swing with mid-range bat reaches boundary, maxed legendary can clear the rope
   const batPower = 0.40 + (getEquipStat('bat','power') / 100) * 0.60;
-  const distance = effectivePower * batPower * timingQuality;
+  const distance = effectivePower * batPower * timingQuality * (_perfect ? 1 + GAME_CONFIG.match.perfectTimingDistance : 1);
 
   resolveShot(distance, shotAngle, timingQuality, power, fatigued, mismatched);
 }
@@ -30998,6 +31028,7 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
       if (runsScored > 0 && runsScored < 4 && gullyPainted() && ball.screenX !== undefined) window._gThrow = { x: ball.screenX, y: ball.screenY, at: performance.now() + 380 };
       runs += runsScored;
       ballsBowled++;
+      chaseBall(runsScored);
       (window._ballLog = window._ballLog || []).push(runsScored);
       if (outcome === 'FOUR!') { thisRunFours++; playCrowdCheer(false); }
       if (outcome === 'SIX!') { thisRunSixes++; playCrowdCheer(true); }
@@ -31350,7 +31381,7 @@ function bowled() {
   popShockwave = { x: W/2, y: H*0.45, r: 10, maxR: Math.max(W,H)*0.8, alpha: 0.9, color: _wth.data.c };
   popText = { text: 'BOWLED!', x: W/2, y: H*0.38, life: 200, maxLife: 200, big: true, dom: true };
   fxBig('out', { word:'BOWLED!', runs });
-  setTimeout(() => endGame(), 2000);
+  chaseWicket('bowled');
 }
 
 function completeTutorialIfActive() {
@@ -31380,11 +31411,12 @@ function caughtOut() {
   popShockwave = { x: W/2, y: H*0.4, r: 10, maxR: Math.max(W,H)*0.75, alpha: 0.85, color: _wth.data.c };
   popText = { text: 'CAUGHT OUT!', x: W/2, y: H*0.38, life: 200, maxLife: 200, big: true, dom: true };
   fxBig('out', { word:'CAUGHT!', runs, caught:true });
-  setTimeout(() => endGame(), 2000);
+  chaseWicket('caught');
 }
 
 function nextOrEnd() {
   hideMessage();
+  if (chaseAfterBall()) return;
   startBallSequence();
 }
 
@@ -31489,6 +31521,8 @@ function generateShareCard(result) {
 
 
 function endGame() {
+  hideMoment();
+  if (window.chase && window.chase.mode === 'nets') { netsEnd(); return; }
   state = 'menu';
   if (runs > best) {
     best = runs;
@@ -31508,8 +31542,8 @@ function endGame() {
   const isNewBest = runs > career.bestScore;
   try {
     const _li = window._activeLeagueIdx;
-    track('match_end', { league: _li != null ? _li + 1 : null, ground: currentTimeOfDay && currentTimeOfDay.key, mode: window._scenePreview ? 'preview' : 'league',
-      won: beatTarget, runs, target: effectiveTarget, ballsUsed: ballsBowled, wickets: 1, margin: beatBy, streak: (SAVE.data.streak && SAVE.data.streak.current) || 0 });
+    track('match_end', { league: _li, ground: currentTimeOfDay && currentTimeOfDay.key, mode: window._scenePreview ? 'preview' : 'league',
+      won: beatTarget, runs, target: effectiveTarget, ballsUsed: window.chase ? window.chase.used : ballsBowled, wickets: window.chase ? window.chase.wkLost : 1, ballsSpare: window.chase ? chaseBallsLeft() : 0, margin: beatBy, streak: (SAVE.data.streak && SAVE.data.streak.current) || 0 });
   } catch (e) {}
 
   if (beatTarget) {
@@ -31614,9 +31648,11 @@ function endGame() {
   muteBtn.classList.remove('hidden');
   showInterstitialIfDue();
 
+  const _chaseDone = window.chase; window.chase = null;
   showResultScreen({
+    chase: _chaseDone, ballsSpare: _chaseDone ? Math.max(0, _chaseDone.balls - _chaseDone.used) : 0,
     runs, target: effectiveTarget, beatTarget, nearMiss, isNewBest,
-    fours: thisRunFours, sixes: thisRunSixes, balls: ballsBowled,
+    fours: thisRunFours, sixes: thisRunSixes, balls: _chaseDone ? _chaseDone.used : ballsBowled,
     coinsEarned, trophyDelta, trophyTotal: trophyState.count,
     earnedChestType, activeLg, newlyUnlocked,
     seasonSummary, seasonBonus,
@@ -31745,11 +31781,13 @@ function showResultScreen(d) {
   _stopSparkles();   // Joe: bursts were too much; confetti + soft rays only
   const margin = d.runs - d.target;
   $('r2Badge').className = d.beatTarget ? 'win' : 'lose';
-  $('r2Badge').textContent = d.beatTarget ? `TARGET ${d.target} ✔ · WON BY ${margin}` : `TARGET ${d.target} · ${-margin} SHORT`;
+  const _sp = d.ballsSpare || 0, _wl = d.chase ? d.chase.wickets - d.chase.wkLost : 0, _L = curLook();
+  $('r2Badge').textContent = d.beatTarget ? `TARGET ${d.target} ✔ · ${_sp > 0 ? `${_sp} BALL${_sp === 1 ? '' : 'S'} SPARE` : 'LAST BALL'}` : `TARGET ${d.target} · ${-margin} SHORT`;
   rs.classList.toggle('won', !!d.beatTarget);
-  $('r2Line').textContent = d.beatTarget
-    ? (margin >= 40 ? `Won by ${margin} runs — a thrashing!` : margin >= 20 ? `Won by ${margin} runs — comfortable.` : `Won by ${margin} run${margin === 1 ? '' : 's'}.`)
-    : d.nearMiss ? `Just ${-margin} run${margin === -1 ? '' : 's'} short. Go again!` : `${-margin} runs short of the target.`;
+  $('r2Line').textContent = (d.beatTarget
+    ? (_sp >= 6 ? `Chased with ${_sp} balls to spare — a thrashing!` : _sp >= 3 ? `Chased with ${_sp} balls to spare.` : _sp > 0 ? `Got there with ${_sp} ball${_sp === 1 ? '' : 's'} left.` : `Won off the last ball!`)
+    : d.nearMiss ? `Just ${-margin} run${margin === -1 ? '' : 's'} short. Go again!` : `${-margin} runs short of the target.`)
+    + `  ·  ${_L.flag} ${_L.name} · BEST ${Math.max(best, career.bestScore || 0)}`;
   $('r2Fours').textContent = d.fours; $('r2Sixes').textContent = d.sixes; $('r2Balls').textContent = d.balls;
   $('r2SR').textContent = d.balls ? Math.round(d.runs / d.balls * 100) : 0;
   const countUp = (el, to, delay, dur, fmt) => {
@@ -36437,6 +36475,7 @@ window.addEventListener('resize', measureSafeTop); window.addEventListener('orie
 document.addEventListener('DOMContentLoaded', measureSafeTop); setTimeout(measureSafeTop, 0);
 // every in-match scoreboard is drawn below the notch / Dynamic Island
 function drawSceneScoreboard() {
+  if (!window.OLD_HUD) { const _h = document.getElementById('hud'); if (_h && _h.style.display !== 'none') _h.style.display = 'none'; drawMatchHud(); return; }
   if (themeArt() && tImg('board')) {
     const off = SAFE_TOP > 0 ? Math.max(0, SAFE_TOP - H * 0.056 + 4) : 0;
     window._sbDrawn = true; ctx.save(); ctx.translate(0, off); try { drawThemedHud(off); } finally { ctx.restore(); } return;
@@ -59925,6 +59964,281 @@ function _closeChestAnim() {
   _chestOpenPhase = 'idle';
   if (_chestOpenAfterCallback) { _chestOpenAfterCallback(); _chestOpenAfterCallback = null; }
   updateKitUpgradeArrow();
+}
+
+// ===================================================================================================
+// SPRINT 2: THE NEW MATCH (Oct 29) — ball-limited chase, corner scoreboard, match moments, Nets
+// ===================================================================================================
+// window.chase holds one match: mode 'league' (balls + wickets + target) or 'nets' (unlimited balls, 1 wicket,
+// no rewards). It is set by playLeague / playNets just before startGame, and cleared by endGame.
+window.chase = null;
+function setupChase(mode, leagueIdx) {
+  const lg = THEMED_LEAGUES[leagueIdx] || THEMED_LEAGUES[1];
+  if (mode === 'nets') {
+    window.chase = { mode: 'nets', balls: Infinity, wickets: GAME_CONFIG.match.nets.wickets, target: 0, leagueIdx, used: 0, wkLost: 0, log: [], mp: false, won: false };
+  } else {
+    const band = matchBand(Math.max(1, leagueIdx));
+    window.chase = { mode: 'league', balls: band.balls, wickets: band.wickets, target: leagueTarget(lg), leagueIdx, used: 0, wkLost: 0, log: [], mp: false, won: false };
+  }
+  window._hudNeedShown = null;
+  return window.chase;
+}
+function chaseNeed() { const c = window.chase; return c ? Math.max(0, c.target - runs) : 0; }
+function chaseBallsLeft() { const c = window.chase; return c ? Math.max(0, c.balls - c.used) : 0; }
+function chaseClose() { const c = window.chase; return !!c && c.mode === 'league' && !c.won && (chaseBallsLeft() <= 6 || chaseNeed() <= 6); }
+function chaseBuzz() { if (chaseClose() && chaseBallsLeft() <= 6) haptic(20); }
+
+// a ball that scored (or was a dot)
+function chaseBall(runsScored) {
+  const c = window.chase; if (!c) return;
+  c.used++; c.log.push(runsScored);
+  chaseBuzz();
+}
+// after the scoring ball has played out: won, out of balls, a pressure moment, or the next ball
+function chaseAfterBall() {
+  const c = window.chase;
+  if (!c || c.mode === 'nets') return false;
+  if (runs >= c.target) { chaseWon(); return true; }
+  if (c.used >= c.balls) { state = 'result'; setTimeout(() => endGame(), 900); return true; }
+  const left = chaseBallsLeft(), need = chaseNeed();
+  if (left === 1) showMoment('lastball', { need });
+  else if (need <= 6 && !c.mp) { c.mp = true; showMoment('matchpoint', { need, left }); }
+  return false;
+}
+function chaseWon() {
+  const c = window.chase; c.won = true; state = 'result';
+  haptic([60, 40, 60, 40, 120]);
+  try { playCrowdCheer(true); } catch (e) {}
+  showMoment('won', { spare: chaseBallsLeft() });
+  setTimeout(() => endGame(), 2200);
+}
+// called by bowled() and caughtOut() instead of ending the match straight away
+function chaseWicket(kind) {
+  const c = window.chase;
+  if (!c) { setTimeout(() => endGame(), 2000); return; }
+  c.used++; c.wkLost++; c.log.push('W');
+  haptic([80, 30, 80]);
+  const over = c.wkLost >= c.wickets || c.used >= c.balls;
+  if (over) { setTimeout(() => endGame(), 2000); return; }
+  const left = c.wickets - c.wkLost;
+  setTimeout(() => showMoment('wicket', { left, need: chaseNeed(), balls: chaseBallsLeft(), nets: c.mode === 'nets' }), 1250);   // after the OUT word
+  setTimeout(chaseNewBatter, 2900);
+}
+function chaseNewBatter() {
+  if (!window.chase || state === 'menu') return;
+  window._gOutAt = 0; window._gCatch = null; window._gRaiseAt = 0; window._gBowledAt = 0;
+  window._gThrow = null; window._gHitSt = null; window._gHitAt = 0; flyingStumps = [];
+  popText = null; umpireSignal = null;
+  energy = MAX_ENERGY;                                   // the new batter walks in fresh
+  hideMoment();
+  startBallSequence();
+}
+
+// ---------- match moments (DOM, in the pop-up zone above the umpire) ----------
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `
+  #matchMoment{position:fixed;left:0;right:0;z-index:58;pointer-events:none;display:none;flex-direction:column;align-items:center;gap:8px;font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff;text-align:center}
+  #matchMoment.show{display:flex;animation:mmIn .35s cubic-bezier(.2,1.6,.4,1) both}
+  #matchMoment.out{animation:mmOut .3s ease-in both}
+  @keyframes mmIn{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes mmOut{to{transform:scale(.6) translateY(-40px);opacity:0}}
+  #matchMoment .mmCard{padding:12px 18px;border-radius:16px;background:rgba(10,18,40,.9);border:3px solid #050A14;box-shadow:0 5px 0 rgba(0,0,0,.35);display:flex;flex-direction:column;align-items:center;gap:4px}
+  #matchMoment .mmCard.gold{border-color:#FFC93A}
+  #matchMoment .mmBig{line-height:1;text-shadow:0 4px 0 #050A14;transform:rotate(-3deg)}
+  #matchMoment .mmSub{color:#FFC93A}
+  #matchMoment .mmDim{color:#B4C2DD;font-size:13px}
+  #matchMoment.shrink{animation:mmShrink .45s ease-in both}
+  @keyframes mmShrink{to{transform:translate(-28%,-120px) scale(.25);opacity:0}}
+  #netsEnd{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(5,10,20,.6);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #netsEnd.show{display:flex}
+  #netsEnd .card{width:min(320px,86vw);padding:18px;border-radius:20px;background:#0E1C38;border:3px solid #FFC93A;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+  #netsEnd .row{display:flex;gap:10px;width:100%}
+  #netsEnd button{flex:1;height:52px;border-radius:14px;border:3px solid #050A14;font:18px 'Lilita One','Arial Black',Arial;cursor:pointer}
+  `;
+  document.head.appendChild(css);
+  const el = document.createElement('div'); el.id = 'matchMoment'; el.setAttribute('aria-live', 'polite'); document.body.appendChild(el);
+  const ne = document.createElement('div'); ne.id = 'netsEnd'; ne.innerHTML = `<div class="card"><span style="font-size:13px;letter-spacing:.12em;color:#FFC93A">NETS · PRACTICE</span><span id="netsRuns" style="font-size:52px;line-height:1">0</span><span id="netsLine" style="font-size:14px;color:#B4C2DD"></span><span style="font-size:12px;color:#B4C2DD">No rewards in the nets — just practice.</span><div class="row"><button id="netsBack" style="background:#2457D6;color:#fff">BACK</button><button id="netsAgain" style="background:#FFC93A;color:#5a3300">AGAIN</button></div></div>`;
+  document.body.appendChild(ne);
+})();
+let _momentTimer = null;
+function hideMoment() { const el = document.getElementById('matchMoment'); if (el) { el.className = ''; el.style.display = ''; } clearTimeout(_momentTimer); }
+function showMoment(kind, d) {
+  const el = document.getElementById('matchMoment'); if (!el) return;
+  d = d || {};
+  const r = canvas.getBoundingClientRect(), sy = r.height / H;
+  const zoneTop = window._hudBottom ? window._hudBottom + 10 : (MATCH_HUD.scorebug.b + 0.012) * H, zoneBot = (PITCH_TOP() - 0.045 * H - 12);
+  el.style.top = (r.top + zoneTop * sy + 6) + 'px';
+  el.style.maxHeight = ((zoneBot - zoneTop) * sy) + 'px';
+  const lg = THEMED_LEAGUES[(window.chase && window.chase.leagueIdx) || 1] || {};
+  let html = '', ms = 1500;
+  if (kind === 'intro') {
+    const c = window.chase, L = curLook();
+    html = `<div class="mmCard gold"><span style="font-size:13px;letter-spacing:.12em;color:#FFC93A">${lg.name || ''}</span><span style="font-size:44px;line-height:1">NEED ${c.target}</span><span style="font-size:22px;line-height:1">OFF ${c.balls} BALLS</span><span class="mmDim">${c.wickets} WICKETS · ${L.flag} ${L.name}</span></div>`;
+    ms = 1900;
+  } else if (kind === 'wicket') {
+    html = d.nets ? '' : `<div class="mmCard" style="margin-top:20px"><span style="font-size:20px">${d.left} WICKET${d.left === 1 ? '' : 'S'} LEFT</span><span class="mmSub" style="font-size:15px">NEED ${d.need} OFF ${d.balls}</span></div>`;
+    ms = 1250;
+  } else if (kind === 'won') {
+    html = `<span class="mmBig" style="font-size:68px;color:#FFC93A">WON!</span><div class="mmCard"><span style="font-size:17px">${d.spare > 0 ? `WITH ${d.spare} BALL${d.spare === 1 ? '' : 'S'} TO SPARE` : 'OFF THE LAST BALL!'}</span></div>`;
+    ms = 2100;
+  } else if (kind === 'lastball') {
+    html = `<span class="mmBig" style="font-size:52px;color:#FFC93A">LAST BALL!</span><span style="font-size:24px;text-shadow:0 3px 0 #050A14">${d.need} TO WIN</span>`;
+    haptic([40, 30, 40]);
+  } else if (kind === 'matchpoint') {
+    html = `<span class="mmBig" style="font-size:46px;color:#FFC93A">${d.need} TO WIN!</span><span style="font-size:18px;text-shadow:0 3px 0 #050A14">${d.left} BALL${d.left === 1 ? '' : 'S'} LEFT</span>`;
+  }
+  if (!html) return;
+  el.innerHTML = html; el.className = ''; void el.offsetWidth; el.className = 'show';
+  clearTimeout(_momentTimer);
+  _momentTimer = setTimeout(() => { el.className = kind === 'intro' ? 'show shrink' : 'show out'; _momentTimer = setTimeout(hideMoment, 450); }, ms);
+}
+
+// ---------- Nets: unlimited balls, 1 wicket, no entry fee, no rewards ----------
+function playNets(idx) {
+  idx = (idx == null) ? selectedLeagueIdx() : idx;
+  if (idx > highestLeagueIdx()) idx = highestLeagueIdx();
+  window._activeLeagueIdx = idx; window._leagueTargetFloor = 0;    // league only picks the ground; netsEnd skips all rewards
+  setupChase('nets', idx);
+  window._netsLeague = idx;
+  closeAllScreens();
+  startGame();
+}
+function netsEnd() {
+  state = 'menu';
+  const c = window.chase || {};
+  track('match_end', { mode: 'nets', runs, ballsUsed: c.used || 0, wickets: c.wkLost || 0 });
+  window.chase = null; window._activeLeagueIdx = null;
+  document.getElementById('netsRuns').textContent = runs + ' RUNS';
+  document.getElementById('netsLine').textContent = `${c.used || 0} ball${c.used === 1 ? "" : "s"} · ${thisRunFours} four${thisRunFours === 1 ? "" : "s"} · ${thisRunSixes} six${thisRunSixes === 1 ? "" : "es"}`;
+  document.getElementById('netsEnd').classList.add('show');
+}
+document.addEventListener('click', e => {
+  if (e.target && e.target.id === 'netsAgain') { document.getElementById('netsEnd').classList.remove('show'); playNets(window._netsLeague); }
+  if (e.target && e.target.id === 'netsBack') {
+    document.getElementById('netsEnd').classList.remove('show');
+    closeAllScreens(); leagueScreen.classList.remove('hidden'); renderLeagueScreen(); showNav('league'); muteBtn.classList.remove('hidden');
+  }
+});
+
+// ---------- the corner scoreboard (MATCH_HUD), drawn in code until each theme's painted frame arrives ----------
+function _hudRR(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+function _hudStumps(x, y, w, h, alive, s) {
+  ctx.save(); ctx.globalAlpha = alive ? 1 : 0.3;
+  ctx.fillStyle = '#fff'; const sw = w * 0.17;
+  for (let j = 0; j < 3; j++) ctx.fillRect(x + j * (w - sw) / 2, y + 3 * s, sw, h - 3 * s);
+  ctx.fillStyle = '#FFC93A'; ctx.fillRect(x, y, w, 2.4 * s);
+  ctx.restore();
+}
+function drawMatchHud() {
+  window._sbDrawn = true;
+  const c = window.chase;
+  const inPlay = c && state !== 'menu';
+  if (!inPlay) return;                                   // nothing over the scene on menus
+  const wide = c.mode === 'league' && c.target >= 100;
+  const baseW = wide ? MATCH_HUD_SCALE.wideW : MATCH_HUD_SCALE.baseW;
+  const s = (W * MATCH_HUD_SCALE.widthOfW) / MATCH_HUD_SCALE.baseW;   // keeps its shape on every phone
+  const x0 = W * MATCH_HUD.scorebug.l, y0 = Math.max(SAFE_TOP + MATCH_HUD_SCALE.gapUnderSafeTop, H * MATCH_HUD.scorebug.t);
+  const bw = baseW * s, bh = 98 * s, now = performance.now();
+  const FONT = (px) => `${Math.round(px * s)}px 'Lilita One','Arial Black',Arial,sans-serif`;
+  const close = chaseClose();
+  ctx.save();
+  ctx.textBaseline = 'alphabetic';
+  // glow when the chase is close (code-drawn, works over any theme's frame)
+  if (close) {
+    const p = 0.5 + 0.5 * Math.sin(now / 180);
+    ctx.save(); ctx.shadowColor = 'rgba(255,90,90,' + (0.5 + 0.4 * p) + ')'; ctx.shadowBlur = (10 + 10 * p) * s;
+    ctx.strokeStyle = 'rgba(255,90,90,' + (0.55 + 0.35 * p) + ')'; ctx.lineWidth = 3 * s; _hudRR(x0 - 1.5 * s, y0 - 1.5 * s, bw + 3 * s, bh + 3 * s, 13 * s); ctx.stroke(); ctx.restore();
+  }
+  // frame
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; _hudRR(x0, y0 + 3 * s, bw, bh, 12 * s); ctx.fill();
+  ctx.fillStyle = '#0E1C38'; _hudRR(x0, y0, bw, bh, 12 * s); ctx.fill();
+  ctx.save(); _hudRR(x0, y0, bw, bh, 12 * s); ctx.clip();
+  // top band: badge + chase panel
+  const tbH = 46 * s;
+  const lg = THEMED_LEAGUES[c.leagueIdx] || {};
+  ctx.fillStyle = '#FFC93A'; ctx.fillRect(x0, y0, 30 * s, tbH);
+  ctx.fillStyle = lg.accentColor || '#2457D6'; ctx.beginPath(); ctx.arc(x0 + 15 * s, y0 + tbH / 2, 10 * s, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = FONT(11); ctx.textAlign = 'center'; ctx.fillText(((lg.name || 'N')[0] || 'N'), x0 + 15 * s, y0 + tbH / 2 + 4 * s);
+  const won = c.won;
+  ctx.fillStyle = won ? '#0d6e2e' : c.mode === 'nets' ? '#1e3a8a' : close ? '#c8222c' : '#7a1420';
+  ctx.fillRect(x0 + 30 * s, y0, bw - 30 * s, tbH);
+  ctx.textAlign = 'left';
+  const tx = x0 + 40 * s, mid = y0 + tbH / 2;
+  if (c.mode === 'nets') {
+    ctx.fillStyle = '#fff'; ctx.font = FONT(28); ctx.fillText(String(runs), tx, mid + 10 * s);
+    const nw = ctx.measureText(String(runs)).width;
+    ctx.font = FONT(12); ctx.fillStyle = '#c9d8ff'; ctx.fillText('RUNS', tx + nw + 6 * s, mid - 2 * s);
+    ctx.font = FONT(13); ctx.fillStyle = '#fff'; ctx.fillText('NETS · NO LIMIT', tx + nw + 6 * s, mid + 12 * s);
+  } else {
+    // ticking: the shown number counts down towards the real one
+    const need = chaseNeed();
+    if (window._hudNeedShown == null) window._hudNeedShown = need;
+    window._hudNeedShown += (need - window._hudNeedShown) * 0.18;
+    if (Math.abs(window._hudNeedShown - need) < 0.5) window._hudNeedShown = need;
+    const shown = won ? 'WON!' : String(Math.round(window._hudNeedShown));
+    ctx.fillStyle = '#fff'; ctx.font = FONT(won ? 22 : 28); ctx.fillText(shown, tx, mid + 10 * s);
+    const nw = ctx.measureText(shown).width;
+    const left = chaseBallsLeft();
+    ctx.font = FONT(12); ctx.fillStyle = '#ffd2d2'; ctx.fillText(won ? 'CHASED' : 'TO WIN', tx + nw + 6 * s, mid - 2 * s);
+    ctx.font = FONT(13); ctx.fillStyle = '#fff';
+    ctx.fillText(won ? `${left} SPARE` : left === 1 ? 'LAST BALL' : `OFF ${left} BALLS`, tx + nw + 6 * s, mid + 12 * s);
+  }
+  // wickets: stump sets on the right of the chase panel (lost ones greyed, lost from the left)
+  { const n = c.wickets, sc = n >= 3 ? 0.8 : 1, sw = 14 * s * sc, sh = 20 * s * sc, gap = 4 * s;
+    let sx = x0 + bw - 10 * s - n * sw - (n - 1) * gap;
+    for (let i = 0; i < n; i++) { _hudStumps(sx, mid - sh / 2, sw, sh, i >= c.wkLost, s); sx += sw + gap; } }
+  // row 2: score + target, this over
+  const r2 = y0 + tbH + 24 * s;
+  ctx.font = FONT(20); ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+  const sc = `${runs}-${c.wkLost}`; ctx.fillText(sc, x0 + 10 * s, r2);
+  const sw2 = ctx.measureText(sc).width;
+  ctx.font = FONT(13); ctx.fillStyle = '#B4C2DD';
+  ctx.fillText(c.mode === 'nets' ? `BEST ${best}` : `TGT ${c.target}`, x0 + 10 * s + sw2 + 6 * s, r2);
+  { const used = c.log.length, start = used === 0 ? 0 : Math.floor((used - 1) / 6) * 6, over = c.log.slice(start, start + 6);
+    const rr = 7 * s, gap = 3 * s; let bx = x0 + bw - 10 * s - 6 * 2 * rr - 5 * gap + rr; const by = r2 - 6 * s;
+    for (let i = 0; i < 6; i++) {
+      const v = over[i];
+      ctx.beginPath(); ctx.arc(bx, by, rr, 0, 7);
+      if (v === undefined) { ctx.strokeStyle = 'rgba(180,194,221,.7)'; ctx.lineWidth = 1.5 * s; ctx.stroke(); }
+      else {
+        const isW = v === 'W', bg = isW ? '#c8222c' : v === 6 ? '#ff8a1e' : v === 4 ? '#ffd23a' : '#fff6df';
+        ctx.fillStyle = bg; ctx.fill();
+        ctx.fillStyle = isW ? '#fff' : '#1e3a8a'; ctx.font = FONT(10); ctx.textAlign = 'center';
+        ctx.fillText(isW ? 'W' : v === 0 ? '•' : String(v), bx, by + 3.5 * s);
+      }
+      bx += 2 * rr + gap;
+    }
+  }
+  // row 3: energy icon + bar
+  { const ey = y0 + bh - 12 * s, ex = x0 + 22 * s, ew = bw - 32 * s, f = Math.max(0, Math.min(1, energy / MAX_ENERGY));
+    const col = f > 0.5 ? '#4fd46a' : f >= 0.25 ? '#ffd23a' : '#ff5a5a';
+    const low = f < 0.25, p = low ? 0.5 + 0.5 * Math.sin(now / 140) : 1;
+    ctx.fillStyle = low ? `rgba(255,90,90,${0.6 + 0.4 * p})` : '#FFC93A';
+    ctx.beginPath(); const bx = x0 + 10 * s, byy = ey - 6 * s;
+    ctx.moveTo(bx + 6 * s, byy); ctx.lineTo(bx, byy + 7.5 * s); ctx.lineTo(bx + 4 * s, byy + 7.5 * s); ctx.lineTo(bx + 3 * s, byy + 13 * s); ctx.lineTo(bx + 10 * s, byy + 5 * s); ctx.lineTo(bx + 6 * s, byy + 5 * s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#050A14'; _hudRR(ex, ey - 3 * s, ew, 6 * s, 3 * s); ctx.fill();
+    ctx.fillStyle = col; _hudRR(ex, ey - 3 * s, Math.max(6 * s, ew * f), 6 * s, 3 * s); ctx.fill(); }
+  ctx.restore();   // clip
+  ctx.strokeStyle = close ? '#ff5a5a' : '#050A14'; ctx.lineWidth = 2 * s; _hudRR(x0, y0, bw, bh, 12 * s); ctx.stroke();
+  window._hudBottom = y0 + bh;
+  // timing word, floats up beside the batter for 0.8 s
+  { const tw = window._timingWord, age = tw ? now - tw.at : 1e9;
+    if (age < 800) {
+      const k = age / 800, col = { PERFECT: '#FFC93A', GOOD: '#7CFF8A', EARLY: '#7fd0ff', LATE: '#ff9a7a' }[tw.text] || '#fff';
+      ctx.save(); ctx.globalAlpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
+      ctx.font = FONT(tw.text === 'PERFECT' ? 20 : 16); ctx.textAlign = 'center';
+      const ty = PITCH_BOTTOM() - 70 * s - k * 26 * s, tx2 = W / 2 + 62 * s;
+      ctx.lineWidth = 4 * s; ctx.strokeStyle = '#050A14'; ctx.strokeText(tw.text, tx2, ty); ctx.fillStyle = col; ctx.fillText(tw.text, tx2, ty);
+      ctx.restore();
+    } }
+  // pause button, top-right (tap target is the #pauseHit button placed by pausePlace)
+  { const pr = 22 * s, px = W * MATCH_HUD.pause_button.r - pr, py = y0 + pr + 2 * s;
+    ctx.fillStyle = 'rgba(14,28,56,.85)'; ctx.beginPath(); ctx.arc(px, py, pr, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#050A14'; ctx.lineWidth = 2.5 * s; ctx.stroke();
+    ctx.fillStyle = '#FFC93A'; ctx.fillRect(px - 6 * s, py - 7 * s, 4 * s, 14 * s); ctx.fillRect(px + 2 * s, py - 7 * s, 4 * s, 14 * s);
+    window._pauseSpot = { x: px, y: py, r: pr, t: now }; }
+  ctx.restore();
 }
 
 // ---------- ANALYTICS HOOKS (sprint 1) ----------

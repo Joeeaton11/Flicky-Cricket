@@ -342,3 +342,12 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
   - `GAME_CONFIG`: every number in the Build Blueprint (match bands, extra over, streaks, kit levels/costs/boosters, daily, shop/offers/gem packs/ads, season/pass). Energy constants and `RARITY_MAX_LEVEL` already read from it. `loadRemoteConfig(url)` merges a remote JSON over it (not called yet). `matchBand(leagueNo)`.
   - `track(name, data)`: logs `[track]` to the console and keeps the last 200 in `window._trackLog`. Fires: session_start, match_start, match_end, bag_open, kit_upgrade, daily_claim, purchase (placeholder). The rest (extra_over_*, offer_*, mission_done) are added by the sprints that build those features.
   - Tested: an existing player's save (coins, gems, kit levels, trophies, best) migrates with nothing lost and survives reloads.
+- Sprint 2 The new match built (Oct 29):
+  - `window.chase` (setupChase): league = balls + wickets by band (12/2, 18/2, 24/3) and a target from `GAME_CONFIG.match.targets`; Nets = unlimited balls, 1 wicket, no rewards. chaseBall / chaseAfterBall / chaseWicket / chaseNewBatter drive it from the existing animateHit, nextOrEnd, bowled and caughtOut. The chase stops on the winning ball (WON! moment), or when balls or wickets run out. A new batter walks in with full energy.
+  - Corner scoreboard `drawMatchHud()` replaces every ground's old board (drawSceneScoreboard; `window.OLD_HUD = true` brings the old boards back). Ticking TO WIN, last-over glow, wickets as stumps, this over, energy bar + bolt, pause top-right, wide version for 3-digit targets, Nets variant.
+  - Moments (`showMoment`): intro (NEED x OFF y, shrinks into the board), wicket card, WON!, LAST BALL!, match point. Big FOUR/SIX/OUT pop-ups now sit just under the scoreboard.
+  - Timing words PERFECT / GOOD / EARLY / LATE beside the batter; PERFECT adds 8% distance.
+  - Leagues screen: LEAGUE / NETS · FREE switch; cards show TARGET x OFF y · n WKTS; Nets end card (BACK / AGAIN).
+  - Trophy bonus now by balls to spare (3+ = +1, 6+ = +2). Result screen shows balls to spare, name and best.
+  - Targets from `tools/sim_chase.js` (calibrated so a player who belonged in a league under the old format wins 60% now). They're a starting point — playtest and tune in GAME_CONFIG.
+  - Haptics use navigator.vibrate (Android/web); iPhone needs the Capacitor Haptics plugin (sprint 7).
