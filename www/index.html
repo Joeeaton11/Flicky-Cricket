@@ -3619,9 +3619,12 @@ const GAME_CONFIG = {
     saver: { minStreak: 3, gems: 30, perDay: 1 },
   },
   kit: {
-    maxLevelNow: { common: 8, rare: 6, epic: 5, legendary: 4 },                                         // (live) until sprint 4
-    maxLevel: 10, startLevel: { common: 1, rare: 3, epic: 6, legendary: 8 },                           // sprint 4
-    upgrade: { cards: [0, 0, 2, 4, 10, 20, 50, 100, 200, 400, 800], coins: [0, 0, 10, 40, 100, 250, 600, 1500, 3000, 6000, 12000] },   // index = level reached
+    maxLevelNow: { common: 10, rare: 10, epic: 10, legendary: 10 },                                     // (live) every item reaches 10 (sprint 4)
+    oldMaxLevel: { common: 8, rare: 6, epic: 5, legendary: 4 },                                         // before sprint 4, for the one-time migration
+    maxLevel: 10, startLevel: { common: 1, rare: 3, epic: 6, legendary: 8 },                           // (live) rarer items start higher
+    // index = level reached. Coins are the blueprint's; cards are scaled to our bag drop rates (the blueprint's
+    // 2…800 card ladder is Clash Royale's and would take years with ~1 card per item per day). Tune with the economy sim.
+    upgrade: { cards: [0, 0, 2, 3, 4, 6, 8, 10, 14, 18, 24], coins: [0, 0, 10, 40, 100, 250, 600, 1500, 3000, 6000, 12000] },
     maxStatGain: 0.15,
     spareCardCoins: { common: 5, rare: 25, epic: 100, legendary: 500 },
     boosters: {
@@ -4484,7 +4487,7 @@ function hasExtraChestSlot() {
 function unlockPremiumItem(item) {
   if (gems < item.gemPrice) { showMessage('Not enough gems!', '#ff6b6b', 1500); return; }
   gems -= item.gemPrice;
-  itemLevels[item.id] = 1;
+  itemLevels[item.id] = kitStartLevel(item);
   itemCards[item.id] = 0;
   saveEquipmentState();
   showMessage(`💎 ${item.name} UNLOCKED!`, '#a855f7', 2500);
@@ -4838,12 +4841,9 @@ const RARITY_UNLOCK_SEASON = { common:1, rare:2, epic:4, legendary:7 };   // leg
 const RARITY_UNLOCK_LEAGUE = { common:0, rare:2, epic:4, legendary:8 };
 
 // Coin cost to upgrade per rarity, indexed by current level (0 = L1→L2)
-const UPGRADE_COIN_COST = {
-  common:    [50,  100,  200,  350,  500,  750, 1000],
-  rare:      [150, 350,  700, 1200, 2000],
-  epic:      [400, 900, 1800, 3500],
-  legendary: [1000,2500,5000],
-};
+// Coin cost to upgrade, indexed by current level (index 0 = L1→L2) — same ladder for every rarity (sprint 4)
+const _UPC = GAME_CONFIG.kit.upgrade.coins.slice(2);   // [to L2 … to L10]
+const UPGRADE_COIN_COST = { common: _UPC, rare: _UPC, epic: _UPC, legendary: _UPC };
 
 // Match entry fee and win prize by season
 const MATCH_ECONOMY = [
@@ -4930,11 +4930,38 @@ let itemCards = _equipState.itemCards;
 let itemLevels = _equipState.itemLevels;
 let gems = _equipState.gems;
 
+// ---------- SPRINT 4: every item levels to 10 (Oct 29) ----------
+// Levels are absolute 1–10; rarer items start higher (common 1, rare 3, epic 6, legendary 8). Each item keeps the
+// total stat gain it always had, spread from its start level to 10 with each level adding a little less than the last.
+function kitStartLevel(item) { return GAME_CONFIG.kit.startLevel[item.rarity] || 1; }
+function _kitTotalGain(item, stat) { return (item.gains || []).reduce((t, g) => t + (g[stat] || 0), 0); }
+EQUIP_SLOTS.forEach(slot => EQUIPMENT[slot].forEach(item => {
+  // cardsToLevel[L-1] = cards to go from L to L+1 (unused below the start level)
+  const C = GAME_CONFIG.kit.upgrade.cards;
+  item.cardsToLevel = Array.from({ length: 10 }, (_, i) => C[Math.min(10, i + 2)] || C[10]);
+}));
+// one-time migration: old levels (capped 8/6/5/4) → new levels that keep at least the same total stats
+(function migrateKitTo10() {
+  const ks = SAVE.section('kit');
+  if (ks.levels10) return;
+  const oldMax = GAME_CONFIG.kit.oldMaxLevel;
+  EQUIP_SLOTS.forEach(slot => EQUIPMENT[slot].forEach(item => {
+    const k = itemLevels[item.id] || 0; if (!k) return;
+    const stats = Object.keys(item.stats);
+    const oldSum = stats.reduce((t, st) => { let v = item.stats[st]; for (let i = 0; i < Math.min(k - 1, (oldMax[item.rarity] || 5) - 1, item.gains.length); i++) v += (item.gains[i][st] || 0); return t + v; }, 0);
+    let L = kitStartLevel(item);
+    while (L < 10 && stats.reduce((t, st) => t + statAtLevel(item, st, L), 0) < oldSum) L++;
+    itemLevels[item.id] = L;
+  }));
+  ks.levels10 = Date.now();
+  const b = SAVE.section('boosters'); b.power_bat = (b.power_bat || 0) + 1; b.fresh_legs = (b.fresh_legs || 0) + 1;   // a taste of boosters
+  SAVE.save(); saveEquipmentState();
+})();
+
 function statAtLevel(item, stat, lvl) {
   if (item.stats[stat] === undefined) return 0;
-  let val = item.stats[stat];
-  for (let i = 0; i < Math.min(lvl - 1, item.gains.length); i++) val += (item.gains[i][stat] || 0);
-  return val;
+  const start = kitStartLevel(item), x = Math.max(0, Math.min(1, ((lvl || start) - start) / Math.max(1, 10 - start)));
+  return item.stats[stat] + Math.round(_kitTotalGain(item, stat) * (1 - Math.pow(1 - x, 1.5)));   // each level adds a bit less
 }
 
 function getEquipStat(slot, stat) {
@@ -4982,7 +5009,7 @@ function openChestRewards(typeName) {
   const cfg = CHEST_TYPES[typeName];
   const numCards  = cfg.cards.min + Math.floor(Math.random() * (cfg.cards.max - cfg.cards.min + 1));
   const gemReward = cfg.gems.min  + Math.floor(Math.random() * (cfg.gems.max  - cfg.gems.min  + 1));
-  const coinReward = cfg.coins ? cfg.coins.min + Math.floor(Math.random() * (cfg.coins.max - cfg.coins.min + 1)) : 0;
+  let coinReward = cfg.coins ? cfg.coins.min + Math.floor(Math.random() * (cfg.coins.max - cfg.coins.min + 1)) : 0;
   const rewards = { cards: [], gems: gemReward, coins: coinReward };
   // only offer rarities the player has unlocked via season progression
   const allRarities = ['common','rare','epic','legendary'];
@@ -5008,13 +5035,26 @@ function openChestRewards(typeName) {
     });
     if (candidates.length === 0) continue;
     const picked = candidates[Math.floor(Math.random() * candidates.length)];
+    if ((itemLevels[picked.id] || 0) >= GAME_CONFIG.kit.maxLevel) {
+      // spare card past level 10 → coins, so no bag is ever wasted
+      const sc = GAME_CONFIG.kit.spareCardCoins[picked.rarity] || 5;
+      coinReward += sc; rewards.coins += sc;
+      rewards.cards.push({ id: picked.id, rarity: picked.rarity, spare: sc });
+      continue;
+    }
     itemCards[picked.id] = (itemCards[picked.id] || 0) + 1;
     rewards.cards.push({ id: picked.id, rarity: picked.rarity });
-    // unlock item immediately on first card received
-    if (itemLevels[picked.id] === 0) {
-      itemLevels[picked.id] = 1;
+    // unlock item immediately on first card received, at its rarity's start level
+    if (!itemLevels[picked.id]) {
+      itemLevels[picked.id] = kitStartLevel(picked);
     }
   }
+  // bags can hold a booster (silver and up more often); Golden Ball comes from the calendar, Pass and shop
+  { const ch = { wooden: 0, bronze: 0.15, silver: 0.35, gold: 0.6, platinum: 1 }[typeName] || 0;
+    rewards.boosters = [];
+    const n = typeName === 'platinum' ? 2 : (Math.random() < ch ? 1 : 0);
+    for (let i = 0; i < n; i++) { const id = ['power_bat', 'lucky_grip', 'fresh_legs'][Math.floor(Math.random() * 3)]; boosterAdd(id, 1); rewards.boosters.push(id); }
+    if (rewards.boosters.length) setTimeout(() => showMessage('+ ' + rewards.boosters.map(id => BOOSTER_INFO[id].short).join(' + '), '#7fd0ff', 2400), 900); }
   gems += gemReward;
   career.coins += coinReward;
   saveEquipmentState();
@@ -6267,8 +6307,8 @@ function _hasKitUpgradeAvailable() {
     const maxLvl = RARITY_MAX_LEVEL[item.rarity] || 5;
     const cards  = itemCards[item.id] || 0;
     const needed = lvl < maxLvl ? item.cardsToLevel[lvl - 1] : null;
-    const upgradeReady = needed && cards >= needed;
-    const isNew = lvl === 1 && cards <= item.cardsToLevel[0];
+    const upgradeReady = needed && cards >= needed && career.coins >= getUpgradeCoinCost(item, lvl);
+    const isNew = lvl === kitStartLevel(item) && cards <= item.cardsToLevel[lvl - 1];
     if ((upgradeReady || isNew) && !seen[item.id]) return true;
     return false;
   }));
@@ -6288,7 +6328,7 @@ function _markKitUpgradesSeen() {
     const maxLvl = RARITY_MAX_LEVEL[item.rarity] || 5;
     const cards  = itemCards[item.id] || 0;
     const needed = lvl < maxLvl ? item.cardsToLevel[lvl - 1] : null;
-    if ((needed && cards >= needed) || lvl === 1) seen[item.id] = true;
+    if ((needed && cards >= needed) || lvl === kitStartLevel(item)) seen[item.id] = true;
   }));
   SAVE.setItem('flickyKitUpgradeSeen', JSON.stringify(seen));
   updateKitUpgradeArrow();
@@ -28636,6 +28676,7 @@ function playLeague(idx) {
     target = leagueTarget(lg);
     window._leagueTargetFloor = target;
     setupChase('league', idx);
+    boostersConsume();
     leagueScreen.classList.add('hidden');
     startGame();
   };
@@ -28717,6 +28758,7 @@ function renderLeagueScreen() {
       </div>
       <div class="lgRow"><span><span>${nets ? 'NETS' : 'TARGET'}</span> ${nets ? 'NO LIMIT &middot; 1 WKT' : `${leagueTarget(lg)} OFF ${band.balls} &middot; ${band.wickets} WKTS`}</span>&nbsp;<span><span>DIFFICULTY</span><span class="lgBalls">${[1,2,3,4,5].map(n => `<i class="${n <= balls ? 'on' : ''}"></i>`).join('')}</span></span></div>
       ${notes.length ? `<div class="lgNote">${unlocked ? '' : 'UNLOCKS: '}${notes.join(' &middot; ')}</div>` : ''}
+      ${!nets && unlocked ? boosterChipsHtml() : ''}
       <button class="leaguePlayBtn ${btnClass}${nets && unlocked ? ' nets' : ''}" data-idx="${idx}" ${unlocked ? '' : 'disabled'}>${btnHtml}</button>`;
     card.appendChild(info);
 
@@ -30854,14 +30896,14 @@ function doFlick(swipe) {
   let drainFactor = 1;
   if (bigSwing) drainFactor *= (1 - cushion * 0.55);   // up to 55% less drain on big swings
   if (fatigued) drainFactor *= (1 - composure * 0.60); // up to 60% less drain when tired
-  const energyCost = Math.max(0, power - 0.5) * ENERGY_DRAIN_RATE * drainFactor;
+  const energyCost = Math.max(0, power - 0.5) * ENERGY_DRAIN_RATE * drainFactor * (boosterActive('fresh_legs') ? 1 + GAME_CONFIG.kit.boosters.fresh_legs.effect.energyDrain : 1);
   energy = Math.max(0, energy - energyCost);
 
   // ---- shot distance ----
   // bat power scales from 0.592 (stat 32) to 0.964 (stat 94); well-timed big
   // swing with mid-range bat reaches boundary, maxed legendary can clear the rope
   const batPower = 0.40 + (getEquipStat('bat','power') / 100) * 0.60;
-  const distance = effectivePower * batPower * timingQuality * (_perfect ? 1 + GAME_CONFIG.match.perfectTimingDistance : 1);
+  const distance = effectivePower * batPower * timingQuality * (_perfect ? 1 + GAME_CONFIG.match.perfectTimingDistance : 1) * (boosterActive('power_bat') ? 1 + GAME_CONFIG.kit.boosters.power_bat.effect.distance : 1);
 
   resolveShot(distance, shotAngle, timingQuality, power, fatigued, mismatched);
 }
@@ -30944,6 +30986,10 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
     }
   }
 
+  // Lucky Grip booster: the first edge that would be caught goes down instead
+  if (outType === 'caught' && boosterActive('lucky_grip') && !window.chase.luckyUsed) {
+    window.chase.luckyUsed = true; outType = null; runsScored = 1; outcome = 'DROPPED! LUCKY GRIP';
+  }
   // ---- energy regen ----
   // agility already used above; gentle shots restore more energy naturally
   let regen = ENERGY_PASSIVE_REGEN;
@@ -31564,6 +31610,7 @@ function endGame() {
       const refundPct = Math.min(0.5, runs / (target * 1.2));
       coinsEarned = Math.round(activeLg.entry * refundPct) + activeLg.lossCoins;
     }
+    if (window.chase && window.chase.boosters && window.chase.boosters.includes('golden_ball')) coinsEarned *= GAME_CONFIG.kit.boosters.golden_ball.effect.coinMult;
     trophyState.count = Math.max(0, trophyState.count + trophyDelta);
     trophyState.best = Math.max(trophyState.best || 0, trophyState.count);
     saveTrophies();
@@ -59392,7 +59439,7 @@ function _showChestSummary() {
     const ref = EQUIP_SLOTS.map(s2 => EQUIPMENT[s2].find(x => x.id === c.id)).find(Boolean);
     const lvl = itemLevels[c.id] || 0, maxLvl = RARITY_MAX_LEVEL[c.rarity] || 5, have = itemCards[c.id] || 0;
     const needed = (ref && lvl > 0 && lvl < maxLvl) ? ref.cardsToLevel[lvl - 1] : null;
-    const isNew = lvl === 1 && (have - count) <= 0 && (!needed || have < needed);
+    const isNew = ref && lvl === kitStartLevel(ref) && (have - count) <= 0 && (!needed || have < needed);
     const ready = needed && have >= needed, maxed = lvl >= maxLvl;
     const pct = maxed ? 100 : needed ? Math.min(1, have / needed) * 100 : 0;
     const status = maxed ? '<em class="mx">MAX LEVEL</em>' : ready ? '<em class="up">▲ UPGRADE READY!</em>'
@@ -59651,7 +59698,7 @@ function fcShowItem(c, count) {
   const needed = (ref && lvl > 0 && lvl < maxLvl) ? ref.cardsToLevel[lvl - 1] : null;
   const ready = needed && have >= needed, maxed = lvl >= maxLvl;
   const pct = maxed ? 100 : needed ? Math.min(1, have / needed) * 100 : 100;
-  const status = lvl === 0 || (lvl === 1 && have - count <= 0 && !ready) ? '<div class="fcStatus">NEW ITEM UNLOCKED!</div>'
+  const status = lvl === 0 || (ref && lvl === kitStartLevel(ref) && have - count <= 0 && !ready) ? '<div class="fcStatus">NEW ITEM UNLOCKED!</div>'
     : maxed ? '<div class="fcStatus max">MAX LEVEL</div>' : ready ? '<div class="fcStatus">▲ UPGRADE READY!</div>'
     : needed ? `<div class="fcStatus" style="color:#B4C2DD">${needed - have} MORE TO LV ${lvl + 1}</div>` : '<div class="fcStatus"></div>';
   const stars = [1, 2, 3, 4].map(k => `<i class="${k <= (FC_STARS[rar] || 1) ? '' : 'off'}"></i>`).join('');
@@ -60069,7 +60116,7 @@ function showMoment(kind, d) {
   let html = '', ms = 1500;
   if (kind === 'intro') {
     const c = window.chase, L = curLook();
-    html = `<div class="mmCard gold"><span style="font-size:13px;letter-spacing:.12em;color:#FFC93A">${lg.name || ''}</span><span style="font-size:44px;line-height:1">NEED ${c.target}</span><span style="font-size:22px;line-height:1">OFF ${c.balls} BALLS</span><span class="mmDim">${c.wickets} WICKETS · ${L.flag} ${L.name}</span>${(() => { const n = streakState().current, nx = streakTier(n + 1); return n >= 2 ? `<span class="mmSub" style="font-size:14px">${FLAME_SVG} WIN STREAK ${n}${nx.coinMult > 1 ? ` · WIN FOR ×${nx.coinMult} COINS` : ''}</span>` : ''; })()}</div>`;
+    html = `<div class="mmCard gold"><span style="font-size:13px;letter-spacing:.12em;color:#FFC93A">${lg.name || ''}</span><span style="font-size:44px;line-height:1">NEED ${c.target}</span><span style="font-size:22px;line-height:1">OFF ${c.balls} BALLS</span><span class="mmDim">${c.wickets} WICKETS · ${L.flag} ${L.name}</span>${c.boosters && c.boosters.length ? `<span style="font-size:13px;color:#7fd0ff">${c.boosters.map(id => BOOSTER_INFO[id].short).join(' + ')}</span>` : ''}${(() => { const n = streakState().current, nx = streakTier(n + 1); return n >= 2 ? `<span class="mmSub" style="font-size:14px">${FLAME_SVG} WIN STREAK ${n}${nx.coinMult > 1 ? ` · WIN FOR ×${nx.coinMult} COINS` : ''}</span>` : ''; })()}</div>`;
     ms = 1900;
   } else if (kind === 'wicket') {
     html = d.nets ? '' : `<div class="mmCard" style="margin-top:20px"><span style="font-size:20px">${d.left} WICKET${d.left === 1 ? '' : 'S'} LEFT</span><span class="mmSub" style="font-size:15px">NEED ${d.need} OFF ${d.balls}</span></div>`;
@@ -60368,6 +60415,58 @@ function updateHomeStreak() {
   el.innerHTML = `${FLAME_SVG}<b>${n}</b>`;
   el.title = `Win streak ${n}`;
 }
+
+// ===================================================================================================
+// SPRINT 4: BOOSTERS (Oct 29) — one match each, chosen on the league card before you play, used up
+// ===================================================================================================
+const BOOSTER_IDS = ['power_bat', 'lucky_grip', 'golden_ball', 'fresh_legs'];
+const BOOSTER_INFO = {
+  power_bat:   { short: 'POWER BAT',   desc: '+10% distance',          col: '#ff8a1e' },
+  lucky_grip:  { short: 'LUCKY GRIP',  desc: 'First edge is dropped',  col: '#4fd46a' },
+  golden_ball: { short: 'GOLDEN BALL', desc: 'Coins ×2 this match',    col: '#FFC93A' },
+  fresh_legs:  { short: 'FRESH LEGS',  desc: 'Energy drains 30% slower', col: '#7fd0ff' },
+};
+window._pickedBoosters = window._pickedBoosters || [];
+function boosterCount(id) { return SAVE.section('boosters')[id] || 0; }
+function boosterAdd(id, n) { const b = SAVE.section('boosters'); b[id] = (b[id] || 0) + (n || 1); SAVE.save(); }
+function boosterActive(id) { const c = window.chase; return !!(c && c.boosters && c.boosters.includes(id)); }
+// take the picked boosters out of stock as the match starts
+function boostersConsume() {
+  const c = window.chase; if (!c || c.mode !== 'league') { window._pickedBoosters = []; return; }
+  const b = SAVE.section('boosters');
+  c.boosters = window._pickedBoosters.filter(id => (b[id] || 0) > 0).slice(0, GAME_CONFIG.kit.boostersPerMatch);
+  c.boosters.forEach(id => { b[id]--; track('booster_used', { booster: id, league: c.leagueIdx }); });
+  window._pickedBoosters = []; SAVE.save();
+}
+// booster chips on the league card
+function boosterChipsHtml() {
+  const owned = BOOSTER_IDS.filter(id => boosterCount(id) > 0);
+  if (!owned.length) return `<div class="lgBoost none">BOOSTERS: win them from bags</div>`;
+  return `<div class="lgBoost">${owned.map(id => { const on = window._pickedBoosters.includes(id), i = BOOSTER_INFO[id];
+    return `<button class="lgBst${on ? ' on' : ''}" data-b="${id}" aria-pressed="${on}" title="${i.desc}" style="--bc:${i.col}"><b>${i.short}</b><small>${on ? 'ON · ' : ''}×${boosterCount(id)}</small></button>`; }).join('')}</div>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target && e.target.closest && e.target.closest('.lgBst'); if (!b) return;
+  e.stopPropagation();
+  const id = b.dataset.b, P = window._pickedBoosters, i = P.indexOf(id);
+  if (i >= 0) P.splice(i, 1);
+  else { if (P.length >= GAME_CONFIG.kit.boostersPerMatch) { showMessage(`Up to ${GAME_CONFIG.kit.boostersPerMatch} boosters a match`, '#ff6b6b', 1400); return; } P.push(id); }
+  try { playUiTap(); } catch (err) {}
+  document.querySelectorAll('.lgBoost').forEach(el => { el.outerHTML = boosterChipsHtml(); });
+}, true);
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `
+  .lgBoost{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:2px 0 6px}
+  .lgBoost.none{font-size:11px;color:#8ea0c4;letter-spacing:.06em}
+  .lgBst{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:72px;height:40px;padding:0 8px;border-radius:12px;border:2px solid #050A14;background:#14203a;color:#cfe0ff;font-family:'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;line-height:1.05}
+  .lgBst b{font-size:12px;font-weight:400}
+  .lgBst small{font-size:10px;color:#8ea0c4}
+  .lgBst.on{background:var(--bc);color:#1a1000;box-shadow:0 0 0 2px #fff inset}
+  .lgBst.on small{color:#1a1000}
+  `;
+  document.head.appendChild(css);
+})();
 
 // ---------- ANALYTICS HOOKS (sprint 1) ----------
 // Wrap the existing functions so each key moment calls track() without touching their insides.
