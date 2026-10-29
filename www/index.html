@@ -3917,12 +3917,12 @@ let career = loadCareerStats();
 // tracks consecutive days played. On each page load, compare today's date to
 // the last play date: consecutive day -> streak+1 (with a coin bonus),
 // same day -> no change, gap -> streak resets to 1.
-const STREAK_BONUS_PER_DAY = 5;  // coins per streak day
+const STREAK_BONUS_PER_DAY = 0;  // replaced by the login calendar (sprint 5)
 const STREAK_BONUS_CAP = 50;     // max bonus from streak in one day
 let streakBonusAwarded = 0; // bonus coins awarded this load, shown on menu
 
 function todayKey() {
-  const d = new Date();
+  const d = _nowDate();
   return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
 }
 function daysBetween(a, b) {
@@ -28748,7 +28748,8 @@ function renderLeagueScreen() {
     const base = THEMED_LEAGUES[cur].unlock;
     if (fill && txt) {
       fill.style.width = nx ? (Math.max(0, Math.min(1, (trophyState.count - base) / Math.max(1, nx.unlock - base))) * 100) + '%' : '100%';
-      txt.innerHTML = nx ? `${trophyState.count} / ${nx.unlock} <i class="hIco hi-trophy"></i> TO UNLOCK ${nx.name}` : 'TOP LEAGUE REACHED';
+      txt.innerHTML = (nx ? `${trophyState.count} / ${nx.unlock} <i class="hIco hi-trophy"></i> TO UNLOCK ${nx.name}` : 'TOP LEAGUE REACHED')
+        + (trophyRoadPending().length ? `<button id="roadClaim">CLAIM ${trophyRoadPending().length}</button>` : '');
     } }
   const fmtCoins = v => v >= 1000 ? (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + 'K' : v.toLocaleString();
   const rarityAt = {}; Object.keys(RARITY_UNLOCK_LEAGUE).forEach(r => { if (RARITY_UNLOCK_LEAGUE[r] > 0) rarityAt[RARITY_UNLOCK_LEAGUE[r]] = r.toUpperCase(); });
@@ -28787,7 +28788,7 @@ function renderLeagueScreen() {
     const tr = (lg.winTrophy || 1) + 1;
     info.innerHTML = `
       <div><div class="leagueCardName" style="color:${lg.textColor || '#fff'}">${lg.name}</div></div>
-      <div class="leagueCardSubtitle">${lg.subtitle}</div>
+      <div class="leagueCardSubtitle">${lg.subtitle}${unlocked && !nets ? ` &middot; <span class="lgStars">★ ${leagueStars(idx).have}/${leagueStars(idx).max}</span>` : ''}</div>
       ${nets ? `<div class="lgRew"><div style="grid-column:1/-1"><b style="color:#7fd0ff">PRACTICE ONLY</b><small>NO ENTRY FEE · NO COINS, TROPHIES OR BAGS</small></div></div><div class="lgRew" style="display:none">` : '<div class="lgRew">'}
         <div><i class="hIco hi-coin"></i><b style="color:#FFE27A">+${fmtCoins(lg.winCoins)}</b><small>WIN COINS</small></div>
         <div><i class="hIco hi-trophy" style="${older ? 'filter:grayscale(1);opacity:.5' : ''}"></i><b>${older ? '&mdash;' : `+${tr}&ndash;${tr + 2}`}</b><small>${older ? 'NO TROPHIES' : `TROPHIES &middot; &minus;${trophyLossFor(idx)} IF LOST`}</small></div>
@@ -29432,6 +29433,7 @@ function updateEquipTopBar() {
 
 function updateMenuHUD() {
   try { updateHomeStreak(); } catch (e) {}
+  try { updateTodayBadge(); } catch (e) {}
   try { updateStatsNavBadge(); } catch (e) {}
   try { updatePlayerNavBadge(); } catch (e) {}
   const gc = document.getElementById('menuGemCount');
@@ -30880,6 +30882,7 @@ function doFlick(swipe) {
   const _tWord = z < zc - timingWindow ? 'EARLY' : Math.abs(_tdz) <= 0.04 ? 'PERFECT' : (_tdz < 0 ? (_tdz > -0.12 ? 'GOOD' : 'EARLY') : (_tdz < 0.07 ? 'GOOD' : 'LATE'));
   window._timingWord = { text: _tWord, at: performance.now() };
   const _perfect = _tWord === 'PERFECT';
+  if (_perfect && window.chase && window.chase.mode === 'league') trackMission('perfect');
 
   const shotAngle = Math.atan2(swipe.dx, -swipe.dy) * 180/Math.PI;
 
@@ -31724,8 +31727,18 @@ function endGame() {
   showInterstitialIfDue();
 
   const _chaseDone = window.chase; window.chase = null;
+  let _stars = null;
+  if (_chaseDone && _chaseDone.mode === 'league') {
+    const spare = Math.max(0, _chaseDone.balls - _chaseDone.used);
+    trackMission('play'); trackMission('runs', runs);
+    if (runs >= 30) trackMission('runs30'); if (runs >= 50) trackMission('runs50');
+    if (beatTarget) { trackMission('win'); if (_chaseDone.wkLost === 0) trackMission('win_clean'); if (spare >= 3) trackMission('win_spare');
+      if (streakState().current >= 3) trackMission('streak3');
+      const n = starsFor(spare, _chaseDone.balls - (_chaseDone.extras || 0) * GAME_CONFIG.match.extraOver.balls);
+      _stars = Object.assign({ n }, awardStars(currentTimeOfDay && currentTimeOfDay.key, n, _chaseDone.leagueIdx)); }
+  }
   showResultScreen({
-    streak: (typeof _streak !== 'undefined') ? _streak : null,
+    streak: (typeof _streak !== 'undefined') ? _streak : null, stars: _stars,
     chase: _chaseDone, ballsSpare: _chaseDone ? Math.max(0, _chaseDone.balls - _chaseDone.used) : 0,
     runs, target: effectiveTarget, beatTarget, nearMiss, isNewBest,
     fours: thisRunFours, sixes: thisRunSixes, balls: _chaseDone ? _chaseDone.used : ballsBowled,
@@ -31736,6 +31749,7 @@ function endGame() {
     entryPaid: activeLg ? activeLg.entry : 0, activeLgIdx: activeLgIdx,
     firstWinGems,
   });
+  if (window._missionToast && window._missionToast.length) { const t = window._missionToast; window._missionToast = []; setTimeout(() => showMessage('MISSION DONE: ' + t.join(' · '), '#4fd46a', 2600), 2600); }
 }
 
 // ──────────────────────────────────────────────
@@ -31947,6 +31961,8 @@ function showResultScreen(d) {
   const ex = [];
   if (d.isNewBest && d.runs > 0) ex.push(`<span class="r2Badge gold"><i class="hIco hi-trophy"></i>NEW BEST ${d.runs}</span>`);
   if (d.firstWinGems) ex.push(`<span class="r2Badge gem"><i class="hIco hi-gem"></i>+${d.firstWinGems} FIRST WIN</span>`);
+  if (d.stars) ex.unshift(`<span class="r2Badge gold">${'★'.repeat(d.stars.n)}<span style="opacity:.3">${'★'.repeat(3 - d.stars.n)}</span>${d.stars.gained ? ` · +${d.stars.gained} STAR${d.stars.gained === 1 ? '' : 'S'}` : ''}</span>`);
+  if (d.stars && d.stars.extras && d.stars.extras.length) ex.push(`<span class="r2Badge gold">STAR REWARD · ${d.stars.extras.join(' · ')}</span>`);
   if (d.streak && d.streak.won && d.streak.current >= 2) ex.unshift(`<span class="r2Badge gold">${FLAME_SVG} STREAK ${d.streak.current}${d.streak.mult > 1 ? ` · ×${d.streak.mult}` : ''}${d.streak.bagUp ? ' · BAG UP' : ''}</span>`);
   if (d.streak && !d.streak.won && d.streak.canSave) ex.unshift(`<button id="r2StreakSave" style="flex:1 0 100%;height:46px;border-radius:14px;border:3px solid #050A14;background:linear-gradient(#c58bff,#8a3df0);color:#fff;font:16px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 0 #4a1a8a">${FLAME_SVG} KEEP YOUR STREAK OF ${d.streak.before} · ${GAME_CONFIG.streak.saver.gems} GEMS</button>`);
   else if (d.streak && !d.streak.won && d.streak.before >= 2) ex.push(`<span class="r2Badge">STREAK OF ${d.streak.before} ENDED</span>`);
@@ -60071,6 +60087,9 @@ function chaseBuzz() { if (chaseClose() && chaseBallsLeft() <= 6) haptic(20); }
 function chaseBall(runsScored) {
   const c = window.chase; if (!c) return;
   c.used++; c.log.push(runsScored);
+  if (c.mode === 'nets') trackMission('nets_ball');
+  else if (runsScored === 6) { trackMission('six'); trackMission('boundary'); }
+  else if (runsScored === 4) { trackMission('four'); trackMission('boundary'); }
   chaseBuzz();
 }
 // after the scoring ball has played out: won, out of balls, a pressure moment, or the next ball
@@ -60472,7 +60491,7 @@ function boostersConsume() {
   const c = window.chase; if (!c || c.mode !== 'league') { window._pickedBoosters = []; return; }
   const b = SAVE.section('boosters');
   c.boosters = window._pickedBoosters.filter(id => (b[id] || 0) > 0).slice(0, GAME_CONFIG.kit.boostersPerMatch);
-  c.boosters.forEach(id => { b[id]--; track('booster_used', { booster: id, league: c.leagueIdx }); });
+  c.boosters.forEach(id => { b[id]--; track('booster_used', { booster: id, league: c.leagueIdx }); trackMission('booster'); });
   window._pickedBoosters = []; SAVE.save();
 }
 // booster chips on the league card
@@ -60505,11 +60524,247 @@ document.addEventListener('click', e => {
   document.head.appendChild(css);
 })();
 
+// ===================================================================================================
+// SPRINT 5: DAILY RETURN (Oct 29) — TODAY panel (calendar, gift, missions), ground stars, trophy road
+// ===================================================================================================
+function _nowDate() { return new Date(Date.now() + (window._dayOffset || 0) * 864e5); }   // _dayOffset: testing only
+function weekKey() { const d = _nowDate(); const m = new Date(d); m.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return `${m.getFullYear()}-${m.getMonth() + 1}-${m.getDate()}`; }
+function _seeded(str) { let h = 2166136261; for (const ch of str) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return () => ((h = Math.imul(h ^ (h >>> 15), 2246822507) ^ Math.imul(h ^ (h >>> 13), 3266489909)) >>> 0) / 4294967296; }
+const BAG_COIN_VALUE = { wooden: 60, bronze: 100, silver: 250, gold: 600, platinum: 1500 };
+// give a reward: { coins, gems, bag, booster } → returns a short label
+function grantReward(r) {
+  const out = [];
+  if (r.coins) { career.coins += r.coins; out.push(`${r.coins.toLocaleString()} COINS`); }
+  if (r.gems) { gems += r.gems; out.push(`${r.gems} GEMS`); }
+  if (r.booster) { const id = r.booster === 'random' ? ['power_bat', 'lucky_grip', 'fresh_legs', 'golden_ball'][Math.floor(Math.random() * 4)] : r.booster; boosterAdd(id, r.boosterCount || 1); out.push(BOOSTER_INFO[id].short); }
+  if (r.bag) { const i = chestSlots.indexOf(null);
+    if (i >= 0) { chestSlots[i] = { type: r.bag, openingStarted: null }; saveChestSlots(); out.push(`${r.bag.toUpperCase()} BAG`); }
+    else { const v = BAG_COIN_VALUE[r.bag] || 100; career.coins += v; out.push(`${v} COINS (BAG SLOTS FULL)`); } }
+  saveCareerStats(); saveEquipmentState();
+  try { updateMenuHUD(); } catch (e) {}
+  return out.join(' + ');
+}
+function rewardLabel(r) {
+  if (r.bag && r.gems) return `${r.bag.toUpperCase()} BAG + ${r.gems} GEMS`;
+  if (r.bag) return `${r.bag.toUpperCase()} BAG`;
+  if (r.booster) return r.booster === 'random' ? 'BOOSTER' : BOOSTER_INFO[r.booster].short;
+  if (r.gems) return `${r.gems} GEMS`;
+  return `${(r.coins || 0).toLocaleString()} COINS`;
+}
+
+// ---------- login calendar (7 days; missing a day pauses it, never resets) + daily gift ----------
+function dailyState() { const d = SAVE.section('daily'); if (d.calDay == null) { d.calDay = 0; d.calClaimedOn = null; d.giftClaimedOn = null; } return d; }
+function calendarReady() { return dailyState().calClaimedOn !== todayKey(); }
+function claimCalendar() {
+  const d = dailyState(); if (!calendarReady()) return null;
+  const cal = GAME_CONFIG.daily.calendar, idx = d.calDay % cal.length;
+  const label = grantReward(cal[idx]);
+  d.calDay++; d.calClaimedOn = todayKey(); SAVE.save();
+  track('daily_claim', { kind: 'calendar', day: idx + 1, reward: label });
+  return label;
+}
+function giftIndex(offset) { const rot = GAME_CONFIG.daily.giftRotation; const day = Math.floor((_nowDate() - new Date(2026, 0, 1)) / 864e5) + (offset || 0); return ((day % rot.length) + rot.length) % rot.length; }
+function giftReady() { return dailyState().giftClaimedOn !== todayKey(); }
+function claimGift() {
+  const d = dailyState(); if (!giftReady()) return null;
+  const label = grantReward(GAME_CONFIG.daily.giftRotation[giftIndex(0)]);
+  d.giftClaimedOn = todayKey(); SAVE.save();
+  track('daily_claim', { kind: 'gift', reward: label });
+  return label;
+}
+
+// ---------- missions: 3 daily from a pool, 5 weekly ----------
+const MISSION_POOL_DAILY = [
+  { id: 'six2', text: 'Hit 2 sixes', ev: 'six', goal: 2, coins: 60 },
+  { id: 'four5', text: 'Hit 5 fours', ev: 'four', goal: 5, coins: 60 },
+  { id: 'win1', text: 'Win a match', ev: 'win', goal: 1, coins: 80 },
+  { id: 'win2', text: 'Win 2 matches', ev: 'win', goal: 2, coins: 120 },
+  { id: 'r30', text: 'Score 30+ in a match', ev: 'runs30', goal: 1, coins: 80 },
+  { id: 'clean', text: 'Win without losing a wicket', ev: 'win_clean', goal: 1, coins: 120 },
+  { id: 'play3', text: 'Play 3 matches', ev: 'play', goal: 3, coins: 50 },
+  { id: 'perf3', text: 'Hit 3 PERFECT shots', ev: 'perfect', goal: 3, coins: 60 },
+  { id: 'runs60', text: 'Score 60 runs in total', ev: 'runs', goal: 60, coins: 70 },
+  { id: 'spare', text: 'Win with 3+ balls to spare', ev: 'win_spare', goal: 1, coins: 100 },
+  { id: 'nets20', text: 'Face 20 balls in the Nets', ev: 'nets_ball', goal: 20, coins: 50 },
+  { id: 'bnd10', text: 'Hit 10 fours or sixes', ev: 'boundary', goal: 10, coins: 100 },
+  { id: 'boost', text: 'Use a booster', ev: 'booster', goal: 1, coins: 60 },
+  { id: 'bag1', text: 'Open a bag', ev: 'bag', goal: 1, coins: 50 },
+  { id: 'upg1', text: 'Upgrade a kit item', ev: 'upgrade', goal: 1, coins: 80 },
+  { id: 'six4', text: 'Hit 4 sixes', ev: 'six', goal: 4, coins: 120 },
+  { id: 'r50', text: 'Score 50+ in a match', ev: 'runs50', goal: 1, coins: 150 },
+  { id: 'play5', text: 'Play 5 matches', ev: 'play', goal: 5, coins: 80 },
+  { id: 'bnd15', text: 'Hit 15 fours or sixes', ev: 'boundary', goal: 15, coins: 150 },
+  { id: 'str3', text: 'Get a 3-win streak', ev: 'streak3', goal: 1, coins: 150 },
+];
+const MISSION_POOL_WEEKLY = [
+  { id: 'w_win10', text: 'Win 10 matches', ev: 'win', goal: 10, coins: 400 },
+  { id: 'w_six25', text: 'Hit 25 sixes', ev: 'six', goal: 25, coins: 500 },
+  { id: 'w_upg2', text: 'Upgrade 2 kit items', ev: 'upgrade', goal: 2, coins: 300 },
+  { id: 'w_play25', text: 'Play 25 matches', ev: 'play', goal: 25, coins: 400 },
+  { id: 'w_runs300', text: 'Score 300 runs', ev: 'runs', goal: 300, coins: 500 },
+  { id: 'w_clean3', text: 'Win 3 without losing a wicket', ev: 'win_clean', goal: 3, coins: 600 },
+  { id: 'w_bag10', text: 'Open 10 bags', ev: 'bag', goal: 10, coins: 300 },
+  { id: 'w_star15', text: 'Earn 15 ground stars', ev: 'star', goal: 15, coins: 800 },
+];
+function _pick(pool, n, key) { const r = _seeded(key), a = pool.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a.slice(0, n); }
+function missionsState() {
+  const m = SAVE.section('missions'), dk = todayKey(), wk = weekKey();
+  if (m.dayKey !== dk) { m.dayKey = dk; m.daily = _pick(MISSION_POOL_DAILY, GAME_CONFIG.daily.missions.dailyCount, 'd' + dk).map(x => ({ id: x.id, p: 0, claimed: false })); m.dailyBag = false; }
+  if (m.weekKey !== wk) { m.weekKey = wk; m.weekly = _pick(MISSION_POOL_WEEKLY, GAME_CONFIG.daily.missions.weeklyCount, 'w' + wk).map(x => ({ id: x.id, p: 0, claimed: false })); m.weeklyBag = false; }
+  return m;
+}
+const _mDef = id => MISSION_POOL_DAILY.find(x => x.id === id) || MISSION_POOL_WEEKLY.find(x => x.id === id);
+function trackMission(ev, n) {
+  const m = missionsState(); let done = [];
+  [...m.daily, ...m.weekly].forEach(x => { const d = _mDef(x.id); if (d.ev !== ev || x.p >= d.goal) return; x.p = Math.min(d.goal, x.p + (n == null ? 1 : n)); if (x.p >= d.goal) done.push(d); });
+  SAVE.save();
+  done.forEach(d => { track('mission_done', { mission: d.id }); });
+  if (done.length) { window._missionToast = (window._missionToast || []).concat(done.map(d => d.text)); try { updateTodayBadge(); } catch (e) {} }
+}
+function claimMission(id) {
+  const m = missionsState(), x = [...m.daily, ...m.weekly].find(y => y.id === id), d = _mDef(id);
+  if (!x || x.claimed || x.p < d.goal) return null;
+  x.claimed = true; SAVE.save();
+  return grantReward({ coins: d.coins });
+}
+function claimAllBag(kind) {
+  const m = missionsState(), list = kind === 'daily' ? m.daily : m.weekly, flag = kind === 'daily' ? 'dailyBag' : 'weeklyBag';
+  if (m[flag] || !list.every(x => x.claimed)) return null;
+  m[flag] = true; SAVE.save();
+  return grantReward({ bag: kind === 'daily' ? GAME_CONFIG.daily.missions.dailyAllBag : GAME_CONFIG.daily.missions.weeklyAllBag });
+}
+
+// ---------- ground stars: 1 = win, 2 = win with 3+ balls spare, 3 = with 6+ spare (12-ball chases; scaled for longer) ----------
+function starsFor(spare, balls) { const sc = (balls || 12) / 12, st = GAME_CONFIG.daily.stars; return spare >= Math.round(st.ballsSpareFor3 * sc) ? 3 : spare >= Math.round(st.ballsSpareFor2 * sc) ? 2 : 1; }
+function starsState() { return SAVE.section('stars'); }
+function totalStars() { return Object.values(starsState()).filter(v => typeof v === 'number').reduce((a, b) => a + b, 0); }
+function leagueStars(idx) { const lg = THEMED_LEAGUES[idx]; const sc = (lg && (lg.scenes || [lg.sceneKey])) || []; return { have: sc.reduce((t, k) => t + (starsState()[k] || 0), 0), max: sc.length * 3 }; }
+function awardStars(groundKey, n, leagueIdx) {
+  const S = starsState(), before = S[groundKey] || 0;
+  if (n <= before) return { gained: 0, best: before };
+  const totBefore = totalStars();
+  S[groundKey] = n; SAVE.save();
+  const gained = n - before, totAfter = totalStars(), extras = [];
+  trackMission('star', gained);
+  // every 10 stars = 100 coins
+  const tens = Math.floor(totAfter / 10) - Math.floor(totBefore / 10);
+  if (tens > 0) extras.push(grantReward({ coins: tens * GAME_CONFIG.daily.stars.coinsPer10Stars }));
+  // a full league of stars = that league's bag + a profile badge
+  const ls = leagueStars(leagueIdx);
+  if (ls.max && ls.have >= ls.max) { S.badges = S.badges || {}; if (!S.badges[leagueIdx]) { S.badges[leagueIdx] = Date.now(); SAVE.save(); extras.push(grantReward({ bag: THEMED_LEAGUES[leagueIdx].winChest }) + ' · LEAGUE BADGE'); } }
+  return { gained, best: n, extras };
+}
+
+// ---------- trophy road: a reward every 2 trophies ----------
+function trophyRoadReward(t) {   // reward at trophy count t (t is even)
+  const k = t / GAME_CONFIG.daily.trophyRoadEvery, lg = Math.max(1, leagueIdxForTrophies(t));
+  const coins = Math.round((50 + lg * 25) / 10) * 10;
+  return k % 10 === 0 ? { bag: lg >= 19 ? 'gold' : lg >= 9 ? 'silver' : 'bronze' } : k % 5 === 0 ? { gems: 10 } : k % 3 === 0 ? { booster: 'random' } : { coins };
+}
+function trophyRoadPending() {
+  const tr = SAVE.section('trophyRoad'), step = GAME_CONFIG.daily.trophyRoadEvery, best = Math.max(trophyState.best || 0, trophyState.count);
+  const from = (tr.claimedTo || 0) + step, list = [];
+  for (let t = from; t <= best; t += step) list.push(t);
+  return list;
+}
+function claimTrophyRoad() {
+  const list = trophyRoadPending(); if (!list.length) return null;
+  const tr = SAVE.section('trophyRoad'); const labels = [];
+  list.slice(0, 50).forEach(t => labels.push(grantReward(trophyRoadReward(t))));
+  tr.claimedTo = list[Math.min(49, list.length - 1)]; SAVE.save();
+  track('trophy_road_claim', { to: tr.claimedTo, count: labels.length });
+  return labels;
+}
+
+// ---------- the TODAY panel ----------
+function todayCount() {
+  const m = missionsState();
+  let n = (calendarReady() ? 1 : 0) + (giftReady() ? 1 : 0);
+  n += [...m.daily, ...m.weekly].filter(x => !x.claimed && x.p >= _mDef(x.id).goal).length;
+  if (!m.dailyBag && m.daily.every(x => x.claimed)) n++;
+  if (!m.weeklyBag && m.weekly.every(x => x.claimed)) n++;
+  return n;
+}
+function updateTodayBadge() { const b = document.getElementById('todayBadge'); if (!b) return; const n = todayCount(); b.textContent = n; b.hidden = !n; }
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `
+  #todayBtn{position:absolute;right:12px;top:calc(44% - 40px);z-index:3;width:72px;height:80px;border-radius:18px;border:3px solid #050A14;background:linear-gradient(#2a5fd6,#163a8a);color:#fff;font:15px 'Lilita One','Arial Black',Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 5px 0 #0b1f4f;cursor:pointer}
+  #todayBtn svg{width:34px;height:34px}
+  #todayBadge{position:absolute;top:-10px;right:-10px;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:#e8283c;border:2px solid #050A14;font-size:14px;display:flex;align-items:center;justify-content:center}
+  #todayBadge[hidden]{display:none}
+  #todayPanel{position:fixed;inset:0;z-index:300;display:none;background:rgba(5,10,20,.7);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #todayPanel.show{display:flex;align-items:flex-end;justify-content:center}
+  #todayPanel .sheet{width:min(440px,100%);max-height:92%;overflow:auto;background:#0E1C38;border:3px solid #050A14;border-bottom:none;border-radius:22px 22px 0 0;padding:14px 14px calc(18px + env(safe-area-inset-bottom,0px));box-sizing:border-box;display:flex;flex-direction:column;gap:12px;animation:mmIn .3s ease-out both}
+  #todayPanel h2{margin:0;font-size:24px;font-weight:400;display:flex;align-items:center;justify-content:space-between}
+  #todayPanel h3{margin:0 0 6px;font-size:14px;font-weight:400;letter-spacing:.1em;color:#FFC93A}
+  #todayPanel .x{width:40px;height:40px;border-radius:50%;border:2px solid #050A14;background:#14203a;color:#fff;font-size:18px;cursor:pointer}
+  .tdCal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+  .tdDay{border-radius:10px;background:#14203a;border:2px solid #050A14;padding:6px 2px;text-align:center;font-size:10px;line-height:1.15;min-height:58px;display:flex;flex-direction:column;justify-content:space-between}
+  .tdDay b{font-size:11px;font-weight:400;color:#B4C2DD}
+  .tdDay.done{opacity:.45}
+  .tdDay.today{border-color:#FFC93A;background:#26386a}
+  .tdBtn{height:44px;border-radius:12px;border:3px solid #050A14;background:#FFC93A;color:#5a3300;font:16px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;padding:0 14px}
+  .tdBtn[disabled]{background:#14203a;color:#7f8fb0;cursor:default}
+  .tdRow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:#14203a}
+  .tdRow .t{flex:1;min-width:0;font-size:14px}
+  .tdRow .bar{height:6px;border-radius:3px;background:#050A14;margin-top:5px;overflow:hidden}
+  .tdRow .bar i{display:block;height:100%;background:#4fd46a}
+  .tdRow small{color:#B4C2DD;font-size:11px}
+  .tdGift{display:flex;gap:8px}
+  .tdGift > div{flex:1;border-radius:12px;background:#14203a;padding:10px;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center}
+  .tdGift .tmr{opacity:.45}
+  #roadClaim{margin-left:8px;height:26px;padding:0 10px;border-radius:9px;border:2px solid #050A14;background:#FFC93A;color:#5a3300;font:13px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
+  .lgStars{font-size:12px;color:#FFC93A;letter-spacing:.04em}
+  `;
+  document.head.appendChild(css);
+  const home = document.getElementById('overlay');
+  if (home) { const b = document.createElement('button'); b.id = 'todayBtn'; b.setAttribute('aria-label', 'Today: calendar, gift and missions');
+    b.innerHTML = `<svg viewBox="0 0 34 34" aria-hidden="true"><rect x="3" y="6" width="28" height="25" rx="5" fill="#fff" stroke="#050A14" stroke-width="2"/><rect x="3" y="6" width="28" height="8" rx="4" fill="#e8283c" stroke="#050A14" stroke-width="2"/><rect x="9" y="2" width="3.5" height="8" rx="1.5" fill="#050A14"/><rect x="21.5" y="2" width="3.5" height="8" rx="1.5" fill="#050A14"/><path d="M11 22l4 4 8-9" fill="none" stroke="#2a8a3a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>TODAY<span id="todayBadge" hidden>0</span>`;
+    home.appendChild(b); }
+  const p = document.createElement('div'); p.id = 'todayPanel'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Today'); p.innerHTML = '<div class="sheet"></div>';
+  document.body.appendChild(p);
+})();
+function renderToday() {
+  const sh = document.querySelector('#todayPanel .sheet'), d = dailyState(), cal = GAME_CONFIG.daily.calendar, m = missionsState();
+  const cur = d.calDay % cal.length, weekStart = d.calDay - cur, ready = calendarReady();
+  const days = cal.map((r, i) => { const n = weekStart + i, done = n < d.calDay, today = ready && n === d.calDay;
+    return `<div class="tdDay${done ? ' done' : ''}${today ? ' today' : ''}"><b>DAY ${i + 1}</b><span>${rewardLabel(r)}</span>${done ? '<span style="color:#4fd46a">✓</span>' : '<span>&nbsp;</span>'}</div>`; }).join('');
+  const rot = GAME_CONFIG.daily.giftRotation, g0 = rot[giftIndex(0)], g1 = rot[giftIndex(1)];
+  const mrow = (x, weekly) => { const df = _mDef(x.id), pct = Math.min(1, x.p / df.goal) * 100, done = x.p >= df.goal;
+    return `<div class="tdRow"><div class="t">${df.text}<div class="bar"><i style="width:${pct}%"></i></div><small>${Math.min(x.p, df.goal)} / ${df.goal} · ${df.coins} COINS</small></div>${x.claimed ? '<span style="color:#4fd46a;font-size:13px">CLAIMED</span>' : `<button class="tdBtn" data-mission="${x.id}" ${done ? '' : 'disabled'}>${done ? 'CLAIM' : 'GO'}</button>`}</div>`; };
+  const allBtn = (kind, bag, got, all) => `<div class="tdRow"><div class="t">All ${kind === 'daily' ? 'three' : 'five'} done<br><small>${bag.toUpperCase()} BAG</small></div>${got ? '<span style="color:#4fd46a;font-size:13px">CLAIMED</span>' : `<button class="tdBtn" data-allbag="${kind}" ${all ? '' : 'disabled'}>CLAIM</button>`}</div>`;
+  sh.innerHTML = `
+    <h2>TODAY <button class="x" id="todayClose" aria-label="Close">✕</button></h2>
+    <div><h3>LOGIN CALENDAR · DAY ${cur + 1} OF 7</h3><div class="tdCal">${days}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><small style="color:#B4C2DD;font-size:11px">Miss a day and it waits for you — it never resets.</small><button class="tdBtn" id="tdCalClaim" ${ready ? '' : 'disabled'}>${ready ? 'CLAIM DAY ' + (cur + 1) : 'BACK TOMORROW'}</button></div></div>
+    <div><h3>DAILY GIFT</h3><div class="tdGift"><div><span style="font-size:13px;color:#B4C2DD">TODAY</span><b style="font-weight:400;font-size:17px">${rewardLabel(g0)}</b><button class="tdBtn" id="tdGiftClaim" ${giftReady() ? '' : 'disabled'}>${giftReady() ? 'FREE · CLAIM' : 'CLAIMED'}</button></div><div class="tmr"><span style="font-size:13px;color:#B4C2DD">TOMORROW</span><b style="font-weight:400;font-size:17px">${rewardLabel(g1)}</b></div></div></div>
+    <div><h3>DAILY MISSIONS</h3><div style="display:flex;flex-direction:column;gap:6px">${m.daily.map(x => mrow(x)).join('')}${allBtn('daily', GAME_CONFIG.daily.missions.dailyAllBag, m.dailyBag, m.daily.every(x => x.claimed))}</div></div>
+    <div><h3>WEEKLY MISSIONS · RESET MONDAY</h3><div style="display:flex;flex-direction:column;gap:6px">${m.weekly.map(x => mrow(x, true)).join('')}${allBtn('weekly', GAME_CONFIG.daily.missions.weeklyAllBag, m.weeklyBag, m.weekly.every(x => x.claimed))}</div></div>`;
+  updateTodayBadge();
+}
+function openToday() { renderToday(); document.getElementById('todayPanel').classList.add('show'); try { playUiTap(); } catch (e) {} }
+document.addEventListener('click', e => {
+  const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+  if (t.closest('#todayBtn')) { openToday(); return; }
+  if (t.closest('#todayClose') || t.id === 'todayPanel') { document.getElementById('todayPanel').classList.remove('show'); updateTodayBadge(); return; }
+  let label = null;
+  if (t.closest('#tdCalClaim')) label = claimCalendar();
+  else if (t.closest('#tdGiftClaim')) label = claimGift();
+  else if (t.closest('[data-mission]')) label = claimMission(t.closest('[data-mission]').dataset.mission);
+  else if (t.closest('[data-allbag]')) label = claimAllBag(t.closest('[data-allbag]').dataset.allbag);
+  else if (t.closest('#roadClaim')) { const l = claimTrophyRoad(); if (l) { showMessage('TROPHY ROAD: ' + (l.length > 3 ? l.length + ' REWARDS' : l.join(' · ')), '#FFC93A', 2600); try { renderLeagueScreen(); } catch (err) {} } return; }
+  else return;
+  if (label) { showMessage('+ ' + label, '#FFC93A', 2200); try { hapticBig(); playAchievementChime(); } catch (err) {} renderToday(); }
+});
+
 // ---------- ANALYTICS HOOKS (sprint 1) ----------
 // Wrap the existing functions so each key moment calls track() without touching their insides.
 (function () {
   const wrap = (name, after) => { const f = window[name]; if (typeof f !== 'function') return; window[name] = function () { const r = f.apply(this, arguments); try { after(r, arguments); } catch (e) {} return r; }; };
+  wrap('openChestRewards', (r, a) => r && trackMission('bag'));
   wrap('openChestRewards', (r, a) => r && track('bag_open', { type: a[0], cards: (r.cards || []).length, coins: r.coins || 0, gems: r.gems || 0 }));
+  wrap('upgradeItem', (ok, a) => ok && trackMission('upgrade'));
   wrap('upgradeItem', (ok, a) => ok && track('kit_upgrade', { item: a[0], newLevel: itemLevels[a[0]], coinsSpent: null }));
   wrap('claimDailyChest', (ok) => ok && track('daily_claim', { reward: 'bronze bag' }));
   wrap('purchaseGemPack', (r, a) => track('purchase', { product: 'gems_' + (a[0] && a[0].gems), price: a[0] && a[0].price, currency: 'GBP', placeholder: true }));
