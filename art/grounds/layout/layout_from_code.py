@@ -72,7 +72,7 @@ pt, pb = p_top, p_bot
 L['zones'] = {
   'safe_top':      dict(left=0, top=0, right=1, bottom=59/844, note='status bar / Dynamic Island: no UI, simple art'),
   'home_bar':      dict(left=0, top=1-34/844, right=1, bottom=1, note='iPhone home indicator'),
-  'popup_words':   dict(left=0.08, top=HUD['scorebug']['bottom']+0.01, right=0.92, bottom=pt-0.02, note='FOUR!/SIX!/OUT! pop-ups (brief, over the field)'),
+  'popup_words':   dict(left=0.08, top=HUD['scorebug']['bottom']+0.01, right=0.92, bottom=L['umpire']['y']-70/844, note='FOUR!/SIX!/OUT! pop-ups (brief, over the field)'),
   'bowler_runup':  dict(left=0.5, top=pt-62/844-0.03, right=0.58, bottom=pt+0.01, note='bowler run-up (drawGullyBowler)'),
   'batter':        dict(left=0.44, top=pb-0.065, right=0.56, bottom=pb, note='batter (drawBatsman)'),
   'keeper':        dict(left=0.45, top=pb+12/844-0.02, right=0.55, bottom=pb+50/844, note='keeper up/back range (drawWicketKeeper)'),
