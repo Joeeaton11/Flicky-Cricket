@@ -27,12 +27,12 @@ Keep the top quarter of the picture calm (sky, skyline, roofs; no faces or key p
 ```
 
 ## 2. HUD layer: corner scorebug + pause (layout locked Oct 29, option 11)
-Ball-limited chase (12 balls, 2 wickets). One compact scorebug top-left (x 12–242 of 390, top 62), pause top-right, nothing else above the rope.
+Ball-limited chase (12 balls, 2 wickets). One compact scorebug top-left (x 12–242 of 390, top 62; 230 px wide), pause top-right, nothing else above the rope.
 ```
 On the flat key background, each piece separate, nothing touching. All blank: no text or numbers.
 - SCOREBUG, 690x252 px, three stacked bands in one themed frame:
-  · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line ("14 TO WIN · OFF 9 BALLS").
-  · middle band (about 35%): blank area for score + target on the left, then 6 empty round sockets in a row (this over), then TWO small empty wicket slots on the right (the game draws stumps, greyed when lost).
+  · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line ("14 TO WIN · OFF 9 BALLS"), with TWO empty wicket slots at its right end (the game draws stumps, greyed when lost).
+  · middle band (about 35%): blank area for score + target on the left, then 6 empty round sockets in a row (this over) on the right.
   · bottom band (about 10%): an empty thin energy track across the full width, with a small icon slot at its left end for a themed energy symbol.
 - PAUSE BUTTON, 132 px round: themed badge with a pause symbol.
 ```
