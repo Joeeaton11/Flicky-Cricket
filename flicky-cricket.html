@@ -3677,7 +3677,8 @@ const GAME_CONFIG = {
     tournament: { bands: [[1, 8], [9, 18], [19, 28]], rewards: { top1: { bag: 'gold', gems: 200 }, top10: { bag: 'gold' }, top50: { bag: 'silver' }, all: { bag: 'bronze' } } },
     endless: { wickets: 1, ticketGems: 20, secondLifeGems: 30, milestones: [50, 100, 200] },
     ranked: { resetFraction: 0.5 },
-    pass: { tiers: 30, xpPerTier: 100, xp: { match: 10, win: 20, dailyMission: 50, weeklyMission: 200, dailyChallenge: 30 }, premium: 4.99, plus: 9.99 },
+    pass: { tiers: 30, xpPerTier: 400,   // 400 (not the blueprint's 100): ~10 matches a day + missions ≈ 420 XP/day, so tier 30 lands around day 28
+            xp: { match: 10, win: 20, dailyMission: 50, weeklyMission: 200, dailyChallenge: 30 }, premium: 4.99, plus: 9.99 },
     eventDays: [7, 14],
   },
 };
@@ -5126,7 +5127,7 @@ function openChest(slotIdx) {
     return { rewards };
   } else {
     if (cfg.openTime > 0 && bagUnlockingIdx() !== -1) return { error: 'busy' };
-    chestSlots[slotIdx] = Object.assign({}, chest, { openingStarted: Date.now() });
+    chestSlots[slotIdx] = Object.assign({}, chest, { openingStarted: Date.now() - (passPremiumActive() ? cfg.openTime * 100 : 0) });   // Pass: 10% faster
     saveChestSlots();
     scheduleBagReadyNotice(slotIdx);
     return { started: true };
@@ -28725,6 +28726,9 @@ function playLeague(idx) {
     leagueScreen.classList.add('hidden');
     startGame();
   };
+  // first hour: the first 3 Gully Cup matches are free to enter
+  { const ms = SAVE.section('match'); if (idx === 1 && (ms.freeEntries || 0) < 3 && (career.matchesPlayed || 0) < 3) { ms.freeEntries = (ms.freeEntries || 0) + 1; SAVE.save(); window._freeEntry = true; go(); return; } }
+  window._freeEntry = false;
   if (career.coins >= lg.entry) { career.coins -= lg.entry; saveCareerStats(); go(); return; }
   if (gems >= GEM_ENTRY_COST) {
     bagConfirm(GEM_ENTRY_COST, 'Not enough coins.<br>Play with gems?', () => { gems -= GEM_ENTRY_COST; saveEquipmentState(); go(); });
@@ -28785,7 +28789,8 @@ function renderLeagueScreen() {
     const canAfford = career.coins >= lg.entry;
     const btnClass = !unlocked ? 'locked' : canAfford ? 'active' : 'active costly';
     const nets = window._leagueMode === 'nets';
-    const btnHtml = !unlocked ? `UNLOCKS AT ${lg.unlock} <i class="hIco hi-trophy"></i>` : nets ? 'PRACTISE &middot; FREE' : `PLAY &middot; <i class="hIco hi-coin"></i>${lg.entry.toLocaleString()}`;
+    const freeLeft = idx === 1 && (career.matchesPlayed || 0) < 3 ? 3 - (SAVE.section('match').freeEntries || 0) : 0;
+    const btnHtml = !unlocked ? `UNLOCKS AT ${lg.unlock} <i class="hIco hi-trophy"></i>` : nets ? 'PRACTISE &middot; FREE' : freeLeft > 0 ? `PLAY &middot; FREE (${freeLeft} LEFT)` : `PLAY &middot; <i class="hIco hi-coin"></i>${lg.entry.toLocaleString()}`;
     const band = matchBand(Math.max(1, idx));
     const balls = idx < 4 ? 2 : idx < 8 ? 3 : idx < 14 ? 4 : 5;
     const prev = THEMED_LEAGUES[idx - 1];
@@ -29120,7 +29125,7 @@ function plRenderTry() {
   document.getElementById('playerScreen').classList.toggle('trying', !!plPreview);
   if (!plPreview) { el.classList.add('hidden'); return; }
   const it = plListFor(plPreview.kind).find(x => x.id === plPreview.id);
-  const btn = it.unlock.gems ? `<button id="plTryBuy" class="gem">UNLOCK <i class="hIco hi-gem"></i>${it.unlock.gems}</button>`
+  const btn = it.unlock.pass ? `<button id="plTryBuy" class="lg" disabled>FLICKY PASS</button>` : it.unlock.gems ? `<button id="plTryBuy" class="gem">UNLOCK <i class="hIco hi-gem"></i>${it.unlock.gems}</button>`
     : `<button id="plTryBuy" class="lg" disabled>REACH ${THEMED_LEAGUES[it.unlock.league].name}</button>`;
   el.innerHTML = `<button id="plTryX" aria-label="Stop trying on">✕</button><div><small>TRYING ON</small><b>${it.name} ${PL_KIND_NAME[plPreview.kind]}</b></div>${btn}`;
   el.classList.remove('hidden'); el.onclick = e => e.stopPropagation();
@@ -29442,6 +29447,7 @@ function updateEquipTopBar() {
 function updateMenuHUD() {
   try { updateHomeStreak(); } catch (e) {}
   try { checkFeatureUnlocks(); } catch (e) {}
+  try { updatePassBtn(); } catch (e) {}
   try { updateTodayBadge(); } catch (e) {}
   setTimeout(() => { try { maybeOfferPopup(); } catch (e) {} }, 600);
   try { updateStatsNavBadge(); } catch (e) {}
@@ -31660,6 +31666,9 @@ function endGame() {
     } else {
       const refundPct = Math.min(0.5, runs / (target * 1.2));
       coinsEarned = Math.round(activeLg.entry * refundPct) + activeLg.lossCoins;
+      // first hour: your first league loss gives the whole entry back
+      { const ms = SAVE.section('match'); if (!ms.firstLossRefunded && !window._freeEntry) { ms.firstLossRefunded = Date.now(); SAVE.save(); coinsEarned = Math.max(coinsEarned, activeLg.entry); window._firstLossRefund = true; } }
+      if (window._freeEntry) coinsEarned = 0;   // a free entry has nothing to refund
     }
     if (window.chase && window.chase.boosters && window.chase.boosters.includes('golden_ball')) coinsEarned *= GAME_CONFIG.kit.boosters.golden_ball.effect.coinMult;
     trophyState.count = Math.max(0, trophyState.count + trophyDelta);
@@ -31743,6 +31752,7 @@ function endGame() {
   if (_chaseDone && _chaseDone.mode === 'league') {
     const spare = Math.max(0, _chaseDone.balls - _chaseDone.used);
     trackMission('play'); trackMission('runs', runs);
+    addPassXP(GAME_CONFIG.season.pass.xp.match + (beatTarget ? GAME_CONFIG.season.pass.xp.win : 0), 'match');
     if (runs >= 30) trackMission('runs30'); if (runs >= 50) trackMission('runs50');
     if (beatTarget) { trackMission('win'); if (_chaseDone.wkLost === 0) trackMission('win_clean'); if (spare >= 3) trackMission('win_spare');
       if (streakState().current >= 3) trackMission('streak3');
@@ -31758,7 +31768,7 @@ function endGame() {
     earnedChestType, activeLg, newlyUnlocked,
     seasonSummary, seasonBonus,
     matchInSeason: 0, seasonLength: SEASON_LENGTH,
-    entryPaid: activeLg ? activeLg.entry : 0, activeLgIdx: activeLgIdx,
+    entryPaid: activeLg && !window._freeEntry ? activeLg.entry : 0, activeLgIdx: activeLgIdx,
     firstWinGems,
   });
   if (window._missionToast && window._missionToast.length) { const t = window._missionToast; window._missionToast = []; setTimeout(() => showMessage('MISSION DONE: ' + t.join(' · '), '#4fd46a', 2600), 2600); }
@@ -60389,12 +60399,13 @@ function extraOverOffer() {
   if (!c || c.mode !== 'league') return false;
   const need = chaseNeed(), bought = c.extras || 0;
   if (need <= 0 || need > cfg.needWithin || bought >= cfg.prices.length) return false;
-  const price = cfg.prices[bought];
+  let price = cfg.prices[bought];
+  const ms0 = SAVE.section('match'); if (!ms0.freeExtraUsed && bought === 0) price = { gems: 0, adAllowed: false, free: true };   // first one is on us, to teach it
   state = 'extraover';
   hideMoment();
   document.getElementById('xoNeed').textContent = `NEED ${need}`;
   document.getElementById('xoSub').textContent = `${cfg.balls} more balls · ${c.wickets - c.wkLost} wicket${c.wickets - c.wkLost === 1 ? '' : 's'} left · energy as it is`;
-  document.getElementById('xoGemsTxt').textContent = gems >= price.gems ? `${price.gems} GEMS` : `${price.gems} GEMS · YOU HAVE ${gems}`;
+  document.getElementById('xoGemsTxt').textContent = price.free ? 'FREE · FIRST ONE ON US' : gems >= price.gems ? `${price.gems} GEMS` : `${price.gems} GEMS · YOU HAVE ${gems}`;
   document.getElementById('xoGems').disabled = gems < price.gems;
   document.getElementById('xoAd').style.display = price.adAllowed ? '' : 'none';
   document.getElementById('xoOverlay').classList.add('show');
@@ -60439,7 +60450,8 @@ document.addEventListener('click', e => {
   if (t.id === 'xoGems') {
     if (gems < _xo.price.gems) return;
     gems -= _xo.price.gems; saveEquipmentState(); try { updateMenuHUD(); } catch (err) {}
-    extraOverGrant('gems'); return;
+    if (_xo.price.free) { SAVE.section('match').freeExtraUsed = Date.now(); SAVE.save(); }
+    extraOverGrant(_xo.price.free ? 'free' : 'gems'); return;
   }
   if (t.id === 'xoAd') {
     _xo.adOpen = true;
@@ -60637,6 +60649,7 @@ function claimMission(id) {
   const m = missionsState(), x = [...m.daily, ...m.weekly].find(y => y.id === id), d = _mDef(id);
   if (!x || x.claimed || x.p < d.goal) return null;
   x.claimed = true; SAVE.save();
+  addPassXP(MISSION_POOL_WEEKLY.includes(d) ? GAME_CONFIG.season.pass.xp.weeklyMission : GAME_CONFIG.season.pass.xp.dailyMission, 'mission');
   return grantReward({ coins: d.coins });
 }
 function claimAllBag(kind) {
@@ -60894,6 +60907,7 @@ function renderShopV2(container) {
   const rot = GAME_CONFIG.daily.giftRotation, gift = rot[giftIndex(0)];
   const nextDeal = (dealWindow() + 1) * O.kitDealsRefreshHours * 3600e3 - (Date.now() + (window._dayOffset || 0) * 864e5);
   container.innerHTML = `<div class="sh2">
+    ${featureOn('pass') ? `<h4>FLICKY PASS · ${passDaysLeft()} DAYS LEFT</h4><div class="card" style="background:linear-gradient(135deg,#5a3a0a,#0E1C38);border-color:#e08a12"><div class="t"><b style="font-weight:400;font-size:19px">TIER ${passTier()} / 30</b><small>${passPremiumActive() ? 'Premium active' : "This month's kit, 600 gems, gold bags, faster bags"}</small></div><button class="btn" data-act="pass">${passPremiumActive() ? 'VIEW' : '£' + GAME_CONFIG.season.pass.premium.toFixed(2)}</button></div>` : ''}
     ${off ? `<h4>TODAY'S OFFER · ENDS IN ${fmtLeft(off.until - Date.now())}</h4><div class="card offer"><div class="t"><b style="font-weight:400;font-size:19px">${off.title}</b><small style="color:#e4d8ff">${off.label}</small></div><button class="btn buy" data-act="offer">£${off.price.toFixed(2)}</button></div>` : ''}
     <h4>DAILY GIFT</h4><div class="card"><div class="t"><b style="font-weight:400;font-size:17px">${rewardLabel(gift)}</b><small>Free every day · tomorrow: ${rewardLabel(rot[giftIndex(1)])}</small></div><button class="btn" data-act="gift" ${giftReady() ? '' : 'disabled'}>${giftReady() ? 'FREE' : 'CLAIMED'}</button></div>
     ${featureOn('deals') ? `<h4>KIT DEALS · NEW IN ${fmtLeft(nextDeal)}</h4><div class="grid3">${deals.map((d, i) => { const got = s.deals[d.key];
@@ -60935,6 +60949,7 @@ document.addEventListener('click', e => {
   else if (act === 'ad') { watchAdForGems(); setTimeout(refresh, 300); }
   else if (act === 'slot') { buyExtraChestSlot(); refresh(); }
   else if (act === 'odds') showBagOdds();
+  else if (act === 'pass') { renderPass(); document.getElementById('passPanel').classList.add('show'); }
 });
 
 // ---------- FEATURE UNLOCKS (Oct 29): new players meet one system at a time, each as a small "new!" moment ----------
@@ -60955,6 +60970,122 @@ function checkFeatureUnlocks() {
 (function () { const u = SAVE.section('unlocks'); if (u._init) return; u._init = 1;
   if ((career.matchesPlayed || 0) >= 10) for (const id in FEATURE_UNLOCKS) u[id] = u[id] || Date.now();
   SAVE.save(); })();
+
+// ===================================================================================================
+// FLICKY PASS (Oct 29): a month-long track of 30 tiers. Free track for everyone; Premium (£4.99) adds the month's
+// kit, 600 gems, gold bags and 10% faster bags; Pass+ (£9.99) also jumps 10 tiers and adds a second kit piece.
+// ===================================================================================================
+const PASS_MONTH_KITS = ['#E8562A', '#2BB3A0', '#C93A8C', '#3A6FE8', '#E0B020', '#7A3AE8', '#1FA05A', '#E83A3A', '#20A0E0', '#B0662A', '#5A6A7A', '#D0D0D0'];
+const PASS_MONTH_NAMES = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+function passSeasonKey() { const d = _nowDate(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
+function passDaysLeft() { const d = _nowDate(), end = new Date(d.getFullYear(), d.getMonth() + 1, 1); return Math.max(0, Math.ceil((end - d) / 864e5)); }
+// this month's pass kit: a shirt (Premium) and a trim (Pass+), added to the player's wardrobe lists
+(function () {
+  const m = _nowDate().getMonth(), c = PASS_MONTH_KITS[m], n = PASS_MONTH_NAMES[m], key = passSeasonKey().replace('-', '');
+  PLAYER_SHIRTS.push({ id: 'pass' + key, name: n + ' PASS', c, unlock: { pass: true } });
+  PLAYER_TRIMS.push({ id: 'passtrim' + key, name: n + ' PASS+', c: '#FFD34D', unlock: { pass: true } });
+})();
+function passState() {
+  const p = SAVE.section('season'), k = passSeasonKey();
+  if (p.passSeason !== k) { p.passSeason = k; p.xp = 0; p.premium = false; p.plus = false; p.claimedFree = []; p.claimedPrem = []; }
+  return p;
+}
+function passTier() { const P = GAME_CONFIG.season.pass; return Math.min(P.tiers, Math.floor(passState().xp / P.xpPerTier)); }
+function addPassXP(n, why) {
+  const p = passState(), before = passTier(); p.xp += n; SAVE.save();
+  const after = passTier(); if (after > before) { window._passToast = `PASS TIER ${after}!`; try { updateTodayBadge(); } catch (e) {} }
+}
+function passPremiumActive() { return !!passState().premium; }
+function passReward(tier, premium) {
+  const key = passSeasonKey().replace('-', '');
+  if (!premium) {
+    if (tier % 3 === 0) return { bag: tier >= 27 ? 'gold' : tier >= 15 ? 'silver' : 'bronze' };
+    if (tier % 5 === 1) return { booster: 'random' };
+    return { coins: 100 + tier * 20 };
+  }
+  if (tier === 1) return { cos: 'pass' + key, kind: 'shirt', label: 'MONTH KIT SHIRT' };
+  if (tier === 15 || tier === 30) return tier === 30 ? { bag: 'platinum' } : { cos: 'passtrim' + key, kind: 'trim', label: 'PASS+ TRIM', plus: true };
+  if (tier % 5 === 0) return { bag: 'gold' };
+  return { gems: 26 };
+}
+function passRewardLabel(r) { return r.cos ? r.label : rewardLabel(r); }
+function claimPassTier(tier, premium) {
+  const p = passState(); if (tier > passTier()) return null;
+  const list = premium ? p.claimedPrem : p.claimedFree; if (list.includes(tier)) return null;
+  if (premium && !p.premium) return null;
+  const r = passReward(tier, premium);
+  if (r.plus && !p.plus) return null;
+  list.push(tier); SAVE.save();
+  if (r.cos) { if (!ownedCos.includes(r.cos + ':' + r.kind)) { ownedCos.push(r.cos + ':' + r.kind); SAVE.setItem('flickyCosmetics', JSON.stringify(ownedCos)); } return r.label; }
+  return grantReward(r);
+}
+function buyPass(plus) {
+  const P = GAME_CONFIG.season.pass, price = plus ? P.plus : P.premium;
+  buyRealMoney(plus ? 'pass_plus' : 'pass_premium', price, () => {
+    const p = passState(); p.premium = true; if (plus) { p.plus = true; p.xp += 10 * P.xpPerTier; } SAVE.save();
+    track('offer_bought', { offer: plus ? 'pass_plus' : 'pass', price });
+    return plus ? 'PASS+ ACTIVE · +10 TIERS' : 'FLICKY PASS ACTIVE';
+  });
+  renderPass();
+}
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `
+  #passBtn{position:absolute;right:12px;top:calc(44% + 52px);z-index:3;width:72px;height:72px;border-radius:18px;border:3px solid #050A14;background:linear-gradient(#ffcf4a,#e08a12);color:#3a2300;font:14px 'Lilita One','Arial Black',Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 5px 0 #8a5600;cursor:pointer}
+  #passBtn small{font-size:10px}
+  #passPanel{position:fixed;inset:0;z-index:300;display:none;background:rgba(5,10,20,.7);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #passPanel.show{display:flex;align-items:flex-end;justify-content:center}
+  #passPanel .sheet{width:min(440px,100%);max-height:94%;overflow:auto;background:#0E1C38;border:3px solid #050A14;border-bottom:none;border-radius:22px 22px 0 0;padding:14px 12px calc(18px + env(safe-area-inset-bottom,0px));box-sizing:border-box;display:flex;flex-direction:column;gap:10px}
+  #passPanel h2{margin:0;font-size:24px;font-weight:400;display:flex;align-items:center;justify-content:space-between}
+  #passPanel .x{width:40px;height:40px;border-radius:50%;border:2px solid #050A14;background:#14203a;color:#fff;font-size:18px;cursor:pointer}
+  .psXP{height:12px;border-radius:6px;background:#050A14;overflow:hidden}.psXP i{display:block;height:100%;background:linear-gradient(90deg,#ffcf4a,#e08a12)}
+  .psBuy{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .psBuy button{height:56px;border-radius:14px;border:3px solid #050A14;font:16px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;line-height:1.1}
+  .psRow{display:grid;grid-template-columns:44px 1fr 1fr;gap:6px;align-items:stretch}
+  .psRow .n{display:flex;align-items:center;justify-content:center;border-radius:10px;background:#14203a;font-size:16px}
+  .psRow.reached .n{background:#e08a12;color:#3a2300}
+  .psCell{border-radius:10px;background:#14203a;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;font-size:12px;min-height:54px}
+  .psCell.prem{background:#2a1a4a}
+  .psCell button{height:28px;padding:0 10px;border-radius:8px;border:2px solid #050A14;background:#FFC93A;color:#5a3300;font:13px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
+  .psCell .ok{color:#4fd46a}.psCell .lock{color:#8e7fb8;font-size:11px}
+  `;
+  document.head.appendChild(css);
+  const home = document.getElementById('overlay');
+  if (home) { const b = document.createElement('button'); b.id = 'passBtn'; b.setAttribute('aria-label', 'Flicky Pass'); b.innerHTML = `PASS<small id="passBtnTier">TIER 0</small>`; home.appendChild(b); }
+  const p = document.createElement('div'); p.id = 'passPanel'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Flicky Pass'); p.innerHTML = '<div class="sheet"></div>'; document.body.appendChild(p);
+})();
+function passClaimable() { const p = passState(), t = passTier(); let n = 0; for (let i = 1; i <= t; i++) { if (!p.claimedFree.includes(i)) n++; if (p.premium && !p.claimedPrem.includes(i) && !(passReward(i, true).plus && !p.plus)) n++; } return n; }
+function updatePassBtn() { const b = document.getElementById('passBtn'); if (!b) return; b.style.display = featureOn('pass') ? '' : 'none'; const t = document.getElementById('passBtnTier'); if (t) { const c = passClaimable(); t.textContent = c ? `${c} TO CLAIM` : `TIER ${passTier()}`; } }
+function renderPass() {
+  const sh = document.querySelector('#passPanel .sheet'); if (!sh) return;
+  const P = GAME_CONFIG.season.pass, p = passState(), t = passTier(), into = p.xp - t * P.xpPerTier, m = _nowDate().getMonth();
+  const rows = [];
+  for (let i = 1; i <= P.tiers; i++) {
+    const fr = passReward(i, false), pr = passReward(i, true), reached = i <= t;
+    const fDone = p.claimedFree.includes(i), pDone = p.claimedPrem.includes(i), pLocked = !p.premium || (pr.plus && !p.plus);
+    rows.push(`<div class="psRow${reached ? ' reached' : ''}"><div class="n">${i}</div>
+      <div class="psCell">${passRewardLabel(fr)}${fDone ? '<span class="ok">✓</span>' : reached ? `<button data-pass="${i}:0">CLAIM</button>` : ''}</div>
+      <div class="psCell prem">${pr.cos ? `<span style="display:inline-block;width:18px;height:18px;border-radius:5px;background:${pr.kind === 'trim' ? '#FFD34D' : PASS_MONTH_KITS[m]};border:2px solid #050A14"></span>` : ''}${passRewardLabel(pr)}${pDone ? '<span class="ok">✓</span>' : pLocked ? `<span class="lock">${pr.plus ? 'PASS+' : 'PREMIUM'}</span>` : reached ? `<button data-pass="${i}:1">CLAIM</button>` : ''}</div></div>`);
+  }
+  sh.innerHTML = `<h2>FLICKY PASS · ${PASS_MONTH_NAMES[m]} <button class="x" id="passClose" aria-label="Close">✕</button></h2>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#B4C2DD"><span>TIER ${t} / ${P.tiers}</span><span>${passDaysLeft()} DAYS LEFT</span></div>
+    <div class="psXP"><i style="width:${t >= P.tiers ? 100 : into / P.xpPerTier * 100}%"></i></div>
+    <span style="font-size:11px;color:#B4C2DD">XP: ${P.xp.match} a match · ${P.xp.win} a win · ${P.xp.dailyMission} a daily mission · ${P.xp.weeklyMission} a weekly mission</span>
+    ${p.premium ? `<div style="text-align:center;color:#FFC93A">${p.plus ? 'PASS+' : 'PREMIUM'} ACTIVE · BAGS OPEN 10% FASTER</div>${p.plus ? '' : `<div class="psBuy" style="grid-template-columns:1fr"><button data-buypass="plus" style="background:linear-gradient(#c58bff,#8a3df0);color:#fff">UPGRADE TO PASS+ · +10 TIERS</button></div>`}`
+      : `<div class="psBuy"><button data-buypass="prem" style="background:linear-gradient(#ffcf4a,#e08a12);color:#3a2300">PREMIUM<br>£${P.premium.toFixed(2)}</button><button data-buypass="plus" style="background:linear-gradient(#c58bff,#8a3df0);color:#fff">PASS+ · +10 TIERS<br>£${P.plus.toFixed(2)}</button></div>
+      <span style="font-size:11px;color:#B4C2DD;text-align:center">Premium: this month's kit, 600 gems, gold bags, a platinum bag at tier 30 and 10% faster bags. Pass+ also jumps 10 tiers and adds a gold trim.</span>`}
+    <div class="psRow" style="font-size:11px;color:#B4C2DD"><span></span><span style="text-align:center">FREE</span><span style="text-align:center;color:#c9b8ff">PREMIUM</span></div>
+    ${rows.join('')}`;
+  updatePassBtn();
+}
+document.addEventListener('click', e => {
+  const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+  if (t.closest('#passBtn')) { renderPass(); document.getElementById('passPanel').classList.add('show'); try { playUiTap(); } catch (err) {} return; }
+  if (t.closest('#passClose') || t.id === 'passPanel') { document.getElementById('passPanel').classList.remove('show'); updatePassBtn(); return; }
+  const c = t.closest('[data-pass]'); if (c) { const [tier, prem] = c.dataset.pass.split(':').map(Number); const l = claimPassTier(tier, !!prem); if (l) { showMessage('+ ' + l, '#FFC93A', 2000); try { hapticBig(); } catch (err) {} } renderPass(); return; }
+  const b = t.closest('[data-buypass]'); if (b) { buyPass(b.dataset.buypass === 'plus'); return; }
+});
+FEATURE_UNLOCKS.pass = { when: () => (career.matchesPlayed || 0) >= 5, msg: 'NEW! FLICKY PASS' };
 
 // ---------- ANALYTICS HOOKS (sprint 1) ----------
 // Wrap the existing functions so each key moment calls track() without touching their insides.
