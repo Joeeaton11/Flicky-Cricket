@@ -352,3 +352,7 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
   - Targets from `tools/sim_chase.js` (calibrated so a player who belonged in a league under the old format wins 60% now). They're a starting point — playtest and tune in GAME_CONFIG.
   - Haptics use navigator.vibrate (Android/web); iPhone needs the Capacitor Haptics plugin (sprint 7).
 - Oct 29 change (Joe): 2 wickets in every league (19–27 now 24 balls, 2 wickets; targets 92–102 re-simulated) and NO wide scoreboard — one 230-wide size everywhere. With two stump slots, 3-digit chases (102 TO WIN · OFF 24 BALLS, 98-1 TGT 102) fit the normal board. MATCH_HUD_WIDE and the stretch note in the art prompt are gone.
+- Sprint 3 built (Oct 29):
+  - Extra over = a real 6-ball over (Joe). Offered when the balls (not wickets) run out and you need 25 or fewer: full-screen card NEED x · EXTRA OVER? with 8 s ring timer; 1st = 25 gems or a rewarded ad, 2nd = 50 gems, no 3rd; timing out = no. Wickets and energy carry on. `extraOverOffer / extraOverGrant / extraOverDecline`; tracks extra_over_shown / extra_over_bought.
+  - Win streaks in `SAVE.data.streak` (current, best, saverUsedOn): ×1.2 coins at 3, ×1.5 at 5 (+1 bag tier), ×2 at 10 (+2 tiers); loss resets; Nets never counts. Streak saver after losing a 3+ streak: KEEP YOUR STREAK · 30 GEMS on the result screen, once a day.
+  - Shown on: the intro card (WIN STREAK n · WIN FOR ×1.5 COINS), the result badges, and a flame pill on the Home league card (2+).

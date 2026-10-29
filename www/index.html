@@ -2101,6 +2101,8 @@
     border:none; cursor:pointer; transition:transform 80ms, box-shadow 80ms;
   }
   .leaguePlayBtn:active { transform:scale(0.96); }
+  .lcStreak { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:10px; background:rgba(5,10,20,.55); color:#FFC93A; }
+  .lcStreak[hidden] { display:none; }
   #leagueModeTabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; padding:4px; margin:8px 16px 0; border-radius:16px; background:#050A14; align-self:stretch; width:auto; max-width:420px; box-sizing:border-box; }
   #leagueModeTabs button { height:40px; min-width:0; padding:0 6px; white-space:nowrap; border-radius:12px; border:none; background:transparent; color:#B4C2DD; font:16px 'Lilita One','Arial Black',Arial,sans-serif; cursor:pointer; }
   #leagueModeTabs button[aria-selected="true"] { background:#FFC93A; color:#5a3300; }
@@ -3314,7 +3316,7 @@
         <span class="lcTag" id="homeLeagueTag">STREET CRICKET</span>
         <span class="lcBody">
           <span class="lcName" id="homeLeagueName">GULLY CUP</span>
-          <span class="lcMeta"><span><small>BEST</small> <b id="menuBestVal">0</b></span><span class="lcEntry"><i class="hIco hi-coin"></i><b id="homeLeagueEntry">75</b></span></span>
+          <span class="lcMeta"><span><small>BEST</small> <b id="menuBestVal">0</b></span><span id="homeStreak" class="lcStreak" hidden></span><span class="lcEntry"><i class="hIco hi-coin"></i><b id="homeLeagueEntry">75</b></span></span>
           <span class="lcRoad"><i class="hIco hi-trophy"></i><span class="lcTrack"><span class="lcFill" id="homeRoadFill"></span><span id="homeRoadTxt">0 / 8</span></span></span>
         </span>
       </button>
@@ -3609,7 +3611,7 @@ const GAME_CONFIG = {
     targets: [34, 34, 34, 35, 36, 38, 39, 40, 42, 64, 65, 66, 67, 67, 68, 69, 69, 70, 71, 92, 94, 96, 97, 98, 99, 100, 101, 102],
     perfectTimingDistance: 0.08,          // PERFECT adds 8% distance
     nets: { balls: Infinity, wickets: 1 },
-    extraOver: { needWithin: 15, balls: 3, prices: [{ gems: 25, adAllowed: true }, { gems: 50, adAllowed: false }], timerSec: 8 },   // sprint 3
+    extraOver: { needWithin: 25, balls: 6, prices: [{ gems: 25, adAllowed: true }, { gems: 50, adAllowed: false }], timerSec: 8 },   // sprint 3: a real 6-ball over (Joe, Oct 29)
   },
   streak: {                                                                                            // sprint 3
     tiers: [ { from: 1, coinMult: 1, bagTierUp: 0 }, { from: 3, coinMult: 1.2, bagTierUp: 1 },
@@ -29350,6 +29352,7 @@ function updateEquipTopBar() {
 }
 
 function updateMenuHUD() {
+  try { updateHomeStreak(); } catch (e) {}
   try { updateStatsNavBadge(); } catch (e) {}
   try { updatePlayerNavBadge(); } catch (e) {}
   const gc = document.getElementById('menuGemCount');
@@ -31551,11 +31554,12 @@ function endGame() {
   if (activeLgIdx !== undefined && activeLgIdx !== null) {
     activeLg = THEMED_LEAGUES[activeLgIdx];
     trophyDelta = trophyChangeFor(activeLgIdx, beatTarget, beatBy);
+    var _streak = streakOnResult(beatTarget);
     const _lgBefore = highestLeagueIdx();
     const lgCoins = beatTarget ? activeLg.winCoins : activeLg.lossCoins;
     // use the actual league entry fee for loss refund calculation
     if (beatTarget) {
-      coinsEarned = lgCoins;
+      coinsEarned = Math.round(lgCoins * _streak.mult);       // win streak: ×1.2 at 3, ×1.5 at 5, ×2 at 10
     } else {
       const refundPct = Math.min(0.5, runs / (target * 1.2));
       coinsEarned = Math.round(activeLg.entry * refundPct) + activeLg.lossCoins;
@@ -31568,9 +31572,10 @@ function endGame() {
     if (beatTarget && activeLg.winChest) {
       const ci = chestSlots.indexOf(null);
       if (ci !== -1) {
-        chestSlots[ci] = { type: activeLg.winChest, openingStarted: null };
+        const _bag = bagTierUp(activeLg.winChest, _streak.bagUp);
+        chestSlots[ci] = { type: _bag, openingStarted: null };
         saveChestSlots();
-        earnedChestType = activeLg.winChest;
+        earnedChestType = _bag;
         window._pendingBagFly = earnedChestType;
       }
     }
@@ -31636,6 +31641,7 @@ function endGame() {
 
   const _chaseDone = window.chase; window.chase = null;
   showResultScreen({
+    streak: (typeof _streak !== 'undefined') ? _streak : null,
     chase: _chaseDone, ballsSpare: _chaseDone ? Math.max(0, _chaseDone.balls - _chaseDone.used) : 0,
     runs, target: effectiveTarget, beatTarget, nearMiss, isNewBest,
     fours: thisRunFours, sixes: thisRunSixes, balls: _chaseDone ? _chaseDone.used : ballsBowled,
@@ -31857,9 +31863,12 @@ function showResultScreen(d) {
   const ex = [];
   if (d.isNewBest && d.runs > 0) ex.push(`<span class="r2Badge gold"><i class="hIco hi-trophy"></i>NEW BEST ${d.runs}</span>`);
   if (d.firstWinGems) ex.push(`<span class="r2Badge gem"><i class="hIco hi-gem"></i>+${d.firstWinGems} FIRST WIN</span>`);
+  if (d.streak && d.streak.won && d.streak.current >= 2) ex.unshift(`<span class="r2Badge gold">${FLAME_SVG} STREAK ${d.streak.current}${d.streak.mult > 1 ? ` · ×${d.streak.mult}` : ''}${d.streak.bagUp ? ' · BAG UP' : ''}</span>`);
+  if (d.streak && !d.streak.won && d.streak.canSave) ex.unshift(`<button id="r2StreakSave" style="flex:1 0 100%;height:46px;border-radius:14px;border:3px solid #050A14;background:linear-gradient(#c58bff,#8a3df0);color:#fff;font:16px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 0 #4a1a8a">${FLAME_SVG} KEEP YOUR STREAK OF ${d.streak.before} · ${GAME_CONFIG.streak.saver.gems} GEMS</button>`);
+  else if (d.streak && !d.streak.won && d.streak.before >= 2) ex.push(`<span class="r2Badge">STREAK OF ${d.streak.before} ENDED</span>`);
   const nAch = (d.newlyUnlocked || []).length;
   if (nAch) ex.push(`<span class="r2Badge gem"><i class="hIco hi-gem"></i>${nAch === 1 ? d.newlyUnlocked[0].name : nAch + ' AWARDS'}</span>`);
-  $('r2Extras').className = 'r2-step badges';
+  $('r2Extras').className = ex.some(x => x.includes('r2StreakSave')) ? 'r2-step' : 'r2-step badges';
   $('r2Extras').innerHTML = ex.join('');
   $('r2Extras').style.display = ex.length ? '' : 'none';
   const nextLg = THEMED_LEAGUES[selectedLeagueIdx()];
@@ -59985,7 +59994,7 @@ function chaseAfterBall() {
   const c = window.chase;
   if (!c || c.mode === 'nets') return false;
   if (runs >= c.target) { chaseWon(); return true; }
-  if (c.used >= c.balls) { state = 'result'; setTimeout(() => endGame(), 900); return true; }
+  if (c.used >= c.balls) { state = 'result'; setTimeout(() => { if (!extraOverOffer()) endGame(); }, 700); return true; }
   const left = chaseBallsLeft(), need = chaseNeed();
   if (left === 1) showMoment('lastball', { need });
   else if (need <= 6 && !c.mp) { c.mp = true; showMoment('matchpoint', { need, left }); }
@@ -60004,8 +60013,8 @@ function chaseWicket(kind) {
   if (!c) { setTimeout(() => endGame(), 2000); return; }
   c.used++; c.wkLost++; c.log.push('W');
   haptic([80, 30, 80]);
-  const over = c.wkLost >= c.wickets || c.used >= c.balls;
-  if (over) { setTimeout(() => endGame(), 2000); return; }
+  if (c.wkLost >= c.wickets) { setTimeout(() => endGame(), 2000); return; }
+  if (c.used >= c.balls) { setTimeout(() => { if (!extraOverOffer()) endGame(); }, 2000); return; }
   const left = c.wickets - c.wkLost;
   setTimeout(() => showMoment('wicket', { left, need: chaseNeed(), balls: chaseBallsLeft(), nets: c.mode === 'nets' }), 1250);   // after the OUT word
   setTimeout(chaseNewBatter, 2900);
@@ -60060,7 +60069,7 @@ function showMoment(kind, d) {
   let html = '', ms = 1500;
   if (kind === 'intro') {
     const c = window.chase, L = curLook();
-    html = `<div class="mmCard gold"><span style="font-size:13px;letter-spacing:.12em;color:#FFC93A">${lg.name || ''}</span><span style="font-size:44px;line-height:1">NEED ${c.target}</span><span style="font-size:22px;line-height:1">OFF ${c.balls} BALLS</span><span class="mmDim">${c.wickets} WICKETS · ${L.flag} ${L.name}</span></div>`;
+    html = `<div class="mmCard gold"><span style="font-size:13px;letter-spacing:.12em;color:#FFC93A">${lg.name || ''}</span><span style="font-size:44px;line-height:1">NEED ${c.target}</span><span style="font-size:22px;line-height:1">OFF ${c.balls} BALLS</span><span class="mmDim">${c.wickets} WICKETS · ${L.flag} ${L.name}</span>${(() => { const n = streakState().current, nx = streakTier(n + 1); return n >= 2 ? `<span class="mmSub" style="font-size:14px">${FLAME_SVG} WIN STREAK ${n}${nx.coinMult > 1 ? ` · WIN FOR ×${nx.coinMult} COINS` : ''}</span>` : ''; })()}</div>`;
     ms = 1900;
   } else if (kind === 'wicket') {
     html = d.nets ? '' : `<div class="mmCard" style="margin-top:20px"><span style="font-size:20px">${d.left} WICKET${d.left === 1 ? '' : 'S'} LEFT</span><span class="mmSub" style="font-size:15px">NEED ${d.need} OFF ${d.balls}</span></div>`;
@@ -60224,6 +60233,140 @@ function drawMatchHud() {
     ctx.fillStyle = '#FFC93A'; ctx.fillRect(px - 6 * s, py - 7 * s, 4 * s, 14 * s); ctx.fillRect(px + 2 * s, py - 7 * s, 4 * s, 14 * s);
     window._pauseSpot = { x: px, y: py, r: pr, t: now }; }
   ctx.restore();
+}
+
+// ===================================================================================================
+// SPRINT 3: EXTRA OVER + WIN STREAKS (Oct 29)
+// ===================================================================================================
+const FLAME_SVG = '<svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true" style="vertical-align:-2px"><path d="M7 0C8 4 12 5 12 10A5 5 0 0 1 2 10C2 7 4 6 4 3C5 5 6 5 7 0Z" fill="#ff8a1e" stroke="#050A14" stroke-width="1"/><path d="M7 7C8 9 9.5 9.5 9.5 11.5A2.5 2.5 0 0 1 4.5 11.5C4.5 10 6 9.5 7 7Z" fill="#FFC93A"/></svg>';
+
+// ---------- extra over: offered when the balls (not the wickets) run out and the target is still in reach ----------
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `
+  #xoOverlay{position:fixed;inset:0;z-index:72;display:none;align-items:center;justify-content:center;background:rgba(5,10,20,.62);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #xoOverlay.show{display:flex}
+  #xoOverlay .card{width:min(330px,88vw);padding:18px 16px 16px;border-radius:22px;background:#0E1C38;border:3px solid #FFC93A;box-shadow:0 8px 0 rgba(0,0,0,.35);display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;animation:mmIn .35s cubic-bezier(.2,1.6,.4,1) both}
+  #xoOverlay .ring{position:relative;width:64px;height:64px}
+  #xoOverlay .ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+  #xoOverlay .ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px}
+  #xoOverlay button{width:100%;height:54px;border-radius:14px;border:3px solid #050A14;font:19px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+  #xoOverlay button[disabled]{opacity:.45;cursor:default}
+  #xoOverlay .no{height:40px;background:transparent;border:none;color:#B4C2DD;font-size:15px}
+  `;
+  document.head.appendChild(css);
+  const el = document.createElement('div'); el.id = 'xoOverlay'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Extra over');
+  el.innerHTML = `<div class="card">
+    <span style="font-size:13px;letter-spacing:.14em;color:#FFC93A">SO CLOSE!</span>
+    <span id="xoNeed" style="font-size:40px;line-height:1">NEED 7</span>
+    <span style="font-size:20px">EXTRA OVER?</span>
+    <span id="xoSub" style="font-size:13px;color:#B4C2DD">6 more balls · wickets and energy as they are</span>
+    <div class="ring"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="#050A14" stroke-width="6"/><circle id="xoRing" cx="32" cy="32" r="28" fill="none" stroke="#FFC93A" stroke-width="6" stroke-linecap="round" stroke-dasharray="176" stroke-dashoffset="0"/></svg><b id="xoSecs">8</b></div>
+    <button id="xoGems" style="background:linear-gradient(#c58bff,#8a3df0);color:#fff"><i class="hIco hi-gem"></i><span id="xoGemsTxt">25</span></button>
+    <button id="xoAd" style="background:#FFC93A;color:#5a3300"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="#5a3300"/></svg>WATCH AD</button>
+    <button id="xoNo" class="no">NO THANKS</button>
+  </div>`;
+  document.body.appendChild(el);
+})();
+let _xo = null;
+function extraOverOffer() {
+  const c = window.chase, cfg = GAME_CONFIG.match.extraOver;
+  if (!c || c.mode !== 'league') return false;
+  const need = chaseNeed(), bought = c.extras || 0;
+  if (need <= 0 || need > cfg.needWithin || bought >= cfg.prices.length) return false;
+  const price = cfg.prices[bought];
+  state = 'extraover';
+  hideMoment();
+  document.getElementById('xoNeed').textContent = `NEED ${need}`;
+  document.getElementById('xoSub').textContent = `${cfg.balls} more balls · ${c.wickets - c.wkLost} wicket${c.wickets - c.wkLost === 1 ? '' : 's'} left · energy as it is`;
+  document.getElementById('xoGemsTxt').textContent = gems >= price.gems ? `${price.gems} GEMS` : `${price.gems} GEMS · YOU HAVE ${gems}`;
+  document.getElementById('xoGems').disabled = gems < price.gems;
+  document.getElementById('xoAd').style.display = price.adAllowed ? '' : 'none';
+  document.getElementById('xoOverlay').classList.add('show');
+  track('extra_over_shown', { runsNeeded: need, price: price.gems, ad: !!price.adAllowed, which: bought + 1 });
+  haptic([30, 30, 30]);
+  const t0 = performance.now(), ring = document.getElementById('xoRing'), secs = document.getElementById('xoSecs'), dur = cfg.timerSec * 1000;
+  _xo = { price, t0, raf: 0, done: false, adOpen: false };
+  const tick = () => {
+    if (!_xo || _xo.done) return;
+    if (_xo.adOpen) { _xo.t0 += 16; _xo.raf = requestAnimationFrame(tick); return; }   // the timer waits while an ad plays
+    const left = Math.max(0, dur - (performance.now() - _xo.t0));
+    ring.setAttribute('stroke-dashoffset', String(176 * (1 - left / dur)));
+    secs.textContent = Math.ceil(left / 1000);
+    if (left <= 0) { extraOverDecline(); return; }
+    _xo.raf = requestAnimationFrame(tick);
+  };
+  tick();
+  return true;
+}
+function _xoClose() { if (_xo) { _xo.done = true; cancelAnimationFrame(_xo.raf); } document.getElementById('xoOverlay').classList.remove('show'); }
+function extraOverGrant(how) {
+  const c = window.chase; if (!c || !_xo || _xo.done) return;
+  const price = _xo.price;
+  _xoClose();
+  c.extras = (c.extras || 0) + 1;
+  c.balls += GAME_CONFIG.match.extraOver.balls;
+  window._hudNeedShown = null;
+  track('extra_over_bought', { runsNeeded: chaseNeed(), price: how === 'gems' ? price.gems : 0, paidWith: how, which: c.extras });
+  showMoment('matchpoint', { need: chaseNeed(), left: chaseBallsLeft() });
+  hapticBig();
+  setTimeout(() => { if (window.chase) startBallSequence(); }, 900);
+}
+function extraOverDecline() {
+  if (!_xo || _xo.done) return;
+  _xoClose();
+  state = 'result';
+  setTimeout(() => endGame(), 300);
+}
+document.addEventListener('click', e => {
+  const t = e.target && e.target.closest && e.target.closest('#xoGems,#xoAd,#xoNo'); if (!t || !_xo || _xo.done) return;
+  if (t.id === 'xoNo') { extraOverDecline(); return; }
+  if (t.id === 'xoGems') {
+    if (gems < _xo.price.gems) return;
+    gems -= _xo.price.gems; saveEquipmentState(); try { updateMenuHUD(); } catch (err) {}
+    extraOverGrant('gems'); return;
+  }
+  if (t.id === 'xoAd') {
+    _xo.adOpen = true;
+    showRewardedVideo(() => { if (_xo) _xo.adOpen = false; extraOverGrant('ad'); }, () => { if (_xo) _xo.adOpen = false; });
+  }
+});
+
+// ---------- win streaks ----------
+function streakState() { const s = SAVE.section('streak'); if (s.current == null) { s.current = 0; s.best = 0; s.saverUsedOn = null; } return s; }
+function streakTier(n) { let t = GAME_CONFIG.streak.tiers[0]; for (const x of GAME_CONFIG.streak.tiers) if (n >= x.from) t = x; return t; }
+const BAG_ORDER = ['wooden', 'bronze', 'silver', 'gold', 'platinum'];
+function bagTierUp(type, steps) { const i = BAG_ORDER.indexOf(type); return i < 0 || !steps ? type : BAG_ORDER[Math.min(BAG_ORDER.length - 1, i + steps)]; }
+// called once per league result from endGame; returns the multiplier and bag steps for a win
+function streakOnResult(won) {
+  const s = streakState(), before = s.current;
+  if (won) { s.current += 1; s.best = Math.max(s.best || 0, s.current); s.lost = 0; }
+  else { s.lost = before; s.current = 0; }
+  SAVE.save();
+  const tier = won ? streakTier(s.current) : { coinMult: 1, bagTierUp: 0 };
+  return { won, current: s.current, before, mult: tier.coinMult, bagUp: tier.bagTierUp,
+           canSave: !won && before >= GAME_CONFIG.streak.saver.minStreak && s.saverUsedOn !== todayKey() };
+}
+function streakSave() {
+  const s = streakState(), cost = GAME_CONFIG.streak.saver.gems;
+  if (!s.lost || s.saverUsedOn === todayKey()) return false;
+  if (gems < cost) { showMessage('Not enough gems!', '#ff6b6b', 1500); return false; }
+  gems -= cost; saveEquipmentState();
+  s.current = s.lost; s.lost = 0; s.saverUsedOn = todayKey(); SAVE.save();
+  track('streak_saved', { streak: s.current, gems: cost });
+  try { updateMenuHUD(); updateHomeStreak(); } catch (e) {}
+  return true;
+}
+document.addEventListener('click', e => {
+  const b = e.target && e.target.closest && e.target.closest('#r2StreakSave'); if (!b) return;
+  if (streakSave()) { b.outerHTML = `<span class="r2Badge gold">${FLAME_SVG} STREAK OF ${streakState().current} KEPT</span>`; try { hapticBig(); playAchievementChime(); } catch (err) {} }
+});
+function updateHomeStreak() {
+  const el = document.getElementById('homeStreak'); if (!el) return;
+  const n = streakState().current;
+  el.hidden = n < 2;
+  el.innerHTML = `${FLAME_SVG}<b>${n}</b>`;
+  el.title = `Win streak ${n}`;
 }
 
 // ---------- ANALYTICS HOOKS (sprint 1) ----------
