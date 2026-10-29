@@ -41,7 +41,7 @@ m = re.search(r'const MATCH_HUD\s*=\s*\{(.*?)\n\};', src, re.S)
 if not m: sys.exit('LAYOUT NOT FOUND in code: MATCH_HUD')
 HUD = {k: dict(left=float(l), top=float(t), right=float(r), bottom=float(b_)) for k, l, t, r, b_ in
        re.findall(r'(\w+):\s*\{\s*l:([0-9.]+),\s*t:([0-9.]+),\s*r:([0-9.]+),\s*b:([0-9.]+)', m.group(1))}
-for k in ('scorebug', 'pause_button', 'name_plate'):
+for k in ('scorebug', 'pause_button'):
     if k not in HUD: sys.exit(f'MATCH_HUD missing {k}')
 def inside(A, B): return A['left'] >= B['left'] and A['right'] <= B['right'] and A['top'] >= B['top'] and A['bottom'] <= B['bottom']
 for k in HUD:
@@ -56,6 +56,18 @@ for grp in ([k for k in HUD if not k.startswith('sb_')], [k for k in HUD if k.st
 if not inside(HUD['sb_wickets'], HUD['sb_chase_line']) and HUD['sb_wickets']['left'] < HUD['sb_chase_line']['right']:
     pass
 if HUD['scorebug']['bottom'] >= cy - ry: sys.exit('HUD covers the field: scorebug reaches the rope')
+
+# text spec + scaling rule (MATCH_HUD_TEXT / MATCH_HUD_SCALE in the code), evaluated with node
+import subprocess
+def js_const(name):
+    m = re.search(r'const ' + name + r'\s*=\s*(\{[^\n]*\});', src) or re.search(r'const ' + name + r'\s*=\s*(\{.*?\n\});', src, re.S)
+    if not m: sys.exit(f'LAYOUT NOT FOUND in code: {name}')
+    return json.loads(subprocess.run(['node', '-e', 'console.log(JSON.stringify(' + m.group(1) + '))'], capture_output=True, text=True, check=True).stdout)
+HUD_TEXT, HUD_SCALE = js_const('MATCH_HUD_TEXT'), js_const('MATCH_HUD_SCALE')
+for k in HUD_TEXT:
+    if k not in HUD: sys.exit(f'MATCH_HUD_TEXT has {k} but MATCH_HUD has no box for it')
+for k in HUD:
+    if k != 'scorebug' and k not in HUD_TEXT: sys.exit(f'MATCH_HUD_TEXT missing {k}')
 
 L = {
   'size': [W, H],
@@ -161,6 +173,32 @@ def write_svg(path):
             x0, y0, x1, y1 = px(r['left'],'x'), px(r['top'],'y'), px(r['right'],'x'), px(r['bottom'],'y')
             dash = ' stroke-dasharray="18 18"' if k in DASHED else ''
             o.append(f'<rect id="{NAMES[k] or k}" x="{x0}" y="{y0}" width="{x1-x0}" height="{y1-y0}" fill="none" stroke="{hx(COL[k])}" stroke-width="4"{dash}/>')
+            t = HUD_TEXT.get(k)
+            if t:
+                f3 = SCALE * (390 * HUD_SCALE['widthOfW']) / HUD_SCALE['baseW']   # px at 1170 wide
+                cx = x0 + 10
+                if k == 'sb_chase_line':
+                    big, l1, l2 = t['parts']; fb, f1, f2 = big['px']*f3, l1['px']*f3, l2['px']*f3; mid = (y0+y1)/2
+                    o.append(f'<text id="{k} · {big["text"]} · {big["px"]}px" x="{cx:.0f}" y="{mid + fb*0.35:.0f}" font-family="Lilita One, Arial" font-size="{fb:.0f}" fill="#fff">{big["text"]}</text>')
+                    lx = cx + fb*0.62*len(big['text']) + 12
+                    o.append(f'<text id="{k} · {l1["text"]} · {l1["px"]}px" x="{lx:.0f}" y="{mid - 4:.0f}" font-family="Lilita One, Arial" font-size="{f1:.0f}" fill="#ffd2d2">{l1["text"]}</text>')
+                    o.append(f'<text id="{k} · {l2["text"]} · {l2["px"]}px" x="{lx:.0f}" y="{mid + f2 + 2:.0f}" font-family="Lilita One, Arial" font-size="{f2:.0f}" fill="#fff">{l2["text"]}</text>')
+                    continue
+                if k == 'sb_this_over':
+                    rr = t['parts'][0]['px']*f3/2; n = 6; gap = ((x1-x0) - n*2*rr)/(n-1)
+                    for i in range(n): o.append(f'<circle id="ball {i+1}" cx="{x0+rr+i*(2*rr+gap):.0f}" cy="{(y0+y1)/2:.0f}" r="{rr:.0f}" fill="none" stroke="#b4c2dd" stroke-width="3"/>')
+                    continue
+                if k == 'sb_wickets':
+                    hh = t['parts'][0]['px']*f3; ww = hh*0.7
+                    for i in range(2):
+                        sx = x1 - (2-i)*(ww+10)
+                        o.append(f'<g id="stump set {i+1}" opacity="{0.3 if i == 0 else 1}">' + ''.join(f'<rect x="{sx + j*ww*0.38:.0f}" y="{(y0+y1)/2-hh/2+6:.0f}" width="{ww*0.18:.0f}" height="{hh-6:.0f}" fill="#fff"/>' for j in range(3)) + f'<rect x="{sx:.0f}" y="{(y0+y1)/2-hh/2:.0f}" width="{ww:.0f}" height="5" fill="#ffc93a"/></g>')
+                    continue
+                for part in t['parts']:
+                    if part['text'] in ('2 stumps', '6 sockets', 'fill', 'bolt icon', 'league crest image', 'pause icon'): continue
+                    fs_ = part['px'] * f3
+                    o.append(f'<text id="{k} · {part["text"]} · {part["px"]}px" x="{cx:.0f}" y="{(y0+y1)/2 + fs_*0.35:.0f}" font-family="Lilita One, Arial" font-size="{fs_:.0f}" fill="#fff">{part["text"]}</text>')
+                    cx += fs_ * 0.6 * len(part['text']) + 14
         o.append('</g>')
     o.append('</svg>')
     open(path, 'w').write('\n'.join(o))
@@ -177,13 +215,25 @@ write_svg(os.path.join(HERE, 'layout_1170x2532.svg'))
 
 # ---------- prompts ----------
 fo, ir, pi, sb, u = L['field_oval'], L['inner_ring'], L['pitch'], L['scorebug'], L['umpire']
-ps, nm = L['pause_button'], L['name_plate']
+ps = L['pause_button']
 def frac(v):
     for n, w in ((0.5,'half'),(0.6,'three fifths'),(0.62,'just over three fifths'),(0.66,'two thirds')):
         if abs(v-n) < 0.015: return w
     return f'{round(v*100)} percent'
 def area(r): return f"{pct(r['left'])}–{pct(r['right'])} W, {pct(r['top'])}–{pct(r['bottom'])} H"
 pitch_h = px(pi['bottom'],'y') - px(pi['top'],'y')
+def text_spec():
+    sc = HUD_SCALE
+    out = ['### Scoreboard text spec (MATCH_HUD_TEXT in the code; sizes at the 230 px-wide scoreboard, scale with its width)',
+           f"Scaling: the scoreboard keeps its shape on every phone — width {round(sc['widthOfW']*100)}% of the screen, height from the {sc['baseW']}:{round(sc['baseW']/sc['aspect'])} shape, top-left, {sc['gapUnderSafeTop']} px under the safe area. Digits are fixed-width so ticking numbers don't jiggle.",
+           '', '| Slot | Content (size) | Alignment | Longest / states |', '|---|---|---|---|']
+    for k, t in HUD_TEXT.items():
+        parts = ' + '.join(f"{p_['text']} ({p_['px']}px)" for p_ in t['parts'])
+        extra = ' · '.join(x for x in (t.get('longest',''), t.get('states','')) if x)
+        nm_ = {'sb_chase_line':'Chase line','sb_wickets':'Wickets','sb_score_target':'Score + target','sb_this_over':'This over','sb_energy_icon':'Energy icon','sb_energy_track':'Energy bar','sb_badge':'Badge','pause_button':'Pause'}.get(k, k)
+        out.append(f"| {nm_} | {parts} | {t['align']} | {extra} |")
+    return '\n'.join(out)
+TEXT_SPEC = text_spec()
 P = f"""# Ground prompts — generated from the game code
 Do not edit by hand. Re-run `python3 art/grounds/layout/layout_from_code.py` after any layout change.
 Replace [THEME] and the [e.g. …] parts per ground. Every result is checked with `--check` and aligned to the template before use.
@@ -213,7 +263,6 @@ SCREEN ZONES (the game's interface sits on top of these; paint scenery there, ju
 - TOP-LEFT BLOCK: from the left edge to {frac(sb['right'])} of the way across, and from the top down to about {round(sb['bottom']*100)} percent of the height: a scoreboard covers it. Simple background only here (sky, roofs, plain stand tops); no faces, landmarks or key props.
 - TOP-RIGHT CORNER: a small round button sits in the very top-right corner. Keep that small spot plain.
 - THE REST OF THE TOP (right of the scoreboard and below it, down to the stands): this stays on show the whole match. Put the ground's showpiece here: its landmark, skyline highlight or most fun detail [e.g. a lighthouse, a ship's mast, a giant tree with kids in it].
-- BOTTOM-LEFT CORNER: a small name tag sits there. Keep it simple.
 - Nothing is ever drawn on the field, so the field stays fully visible.
 This is a background only: never paint any game interface, buttons, icons, panels or scoreboards.
 ```
@@ -223,7 +272,7 @@ Ball-limited chase (12 balls, 2 wickets). One compact scoreboard top-left, pause
 ```
 On the flat key background, each piece separate, nothing touching. All blank: no text or numbers.
 - SCOREBOARD, {px(sb['right']-sb['left'],'x')}x{px(sb['bottom']-sb['top'],'y')} px, three stacked bands in one themed frame:
-  · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line, with TWO empty wicket slots at its right end.
+  · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line, with an empty wicket slot at its right end wide enough for THREE small stump sets (the game shows 2 or 3).
   · middle band (about 35%): a blank area on the left for score and target, then 6 empty round sockets in a row on the right (this over).
   · bottom band (about 10%): a thin empty energy track across the full width, with a small icon slot at its left end for a themed energy symbol.
 - PAUSE BUTTON, {px(ps['right']-ps['left'],'x')} px round: themed badge with a pause symbol.
@@ -231,6 +280,8 @@ On the flat key background, each piece separate, nothing touching. All blank: no
 A themed display font is chosen per ground; the game draws the chase line ("14 TO WIN · OFF 9 BALLS"), score, target, ball results, stumps (greyed when lost) and energy fill in it.
 Last over / close finish is done by code, not art: a pulsing glow round the scoreboard and the chase panel tinted to an alert colour. Paint the frame so a glow round its outline reads well.
 BEST score is not on the match screen; it shows on the result screen.
+
+{TEXT_SPEC}
 
 ## 3. Props sheet: pitch, stump, bail, ball (one generation)
 ```
@@ -288,7 +339,7 @@ SIX! the biggest and boldest. Each word on one line, letters fully visible, noth
 Ground 1 · HUD 1 · props 1 · fielder 4 · bowler 1 · keeper + umpire 1 · words 1 = **10**. A second ground in the same theme: **1** (just the background).
 
 ## Where things stand in the game (for checking)
-- HUD (MATCH_HUD in the code): scoreboard {area(sb)}; pause {area(ps)}; name plate {area(nm)}.
+- HUD (MATCH_HUD in the code): scoreboard {area(sb)}; pause {area(ps)}.
 - Far stumps {pct(pi['top'])} H, batter's stumps {pct(pi['bottom'])} H, umpire {pct(u['y'])} H, all at 50% W.
 """
 open(os.path.join(HERE, 'PROMPTS.md'), 'w').write(P)
