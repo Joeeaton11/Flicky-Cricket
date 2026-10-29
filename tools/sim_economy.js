@@ -25,10 +25,13 @@ let seed = 1; const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff
 const ri = (a, b) => a + Math.floor(rnd() * (b - a + 1));
 const stat = (r, L) => BAND[r][0] + (BAND[r][1] - BAND[r][0]) * (1 - Math.pow(1 - (L - 1) / 9, 1.5));
 const need = lg => 28 + lg * 2.2;
+let LOSS = { base: 1, perLeague: 0.12, max: 3 };
+const trophyLoss = li => Math.min(LOSS.max, Math.round(LOSS.base + li * LOSS.perLeague));
 const lgFor = tr => { let i = 1; for (let k = 1; k < LG.length; k++) if (tr >= LG[k].unlock) i = k; return i; };
 
 function run(P, M, days = 90) {
   if (M.unlock) UNLOCK = Object.assign({ common: 0 }, M.unlock);
+  if (M.loss) LOSS = M.loss;
   // M = { cards: {common: x, ...}, coins: {common: y, ...} }
   seed = P.seed || 7;
   const S = { tr: 0, best: 0, coins: 500, gems: 300, streak: 0, slots: [null, null, null, null], opening: null, items: {}, log: [] };
@@ -99,7 +102,7 @@ function run(P, M, days = 90) {
           const i = S.slots.indexOf(null); if (i >= 0) S.slots[i] = BAGS[Math.min(4, BAGS.indexOf(LG[li].chest) + t[2])];
         } else {
           S.streak = 0; S.coins += Math.round(LG[li].entry * 0.35);
-          if (li >= lgFor(S.tr)) S.tr = Math.max(LG[lgFor(S.best)].unlock, S.tr - 1);
+          if (li >= lgFor(S.tr)) S.tr = Math.max(LG[lgFor(S.best)].unlock, S.tr - trophyLoss(li));
         }
         S.best = Math.max(S.best, S.tr);
       }
@@ -143,7 +146,7 @@ if (process.argv[2] === '--search') {
 }
 if (require.main === module && process.argv[2] !== '--search') {
   // default = the numbers in GAME_CONFIG.kit.tierCost / tierUnlockLeague (Oct 29)
-  const M = JSON.parse(process.argv[2] || 'null') || { cards: { common: .15, rare: .25, epic: .4, legendary: .6 }, coins: { common: .12, rare: .5, epic: 1.6, legendary: 5 }, unlock: { rare: 9, epic: 16, legendary: 21 } };
+  const M = JSON.parse(process.argv[2] || 'null') || { cards: { common: .15, rare: .25, epic: .4, legendary: .6 }, coins: { common: .12, rare: .5, epic: 1.6, legendary: 5 }, unlock: { rare: 9, epic: 16, legendary: 21 }, loss: { base: 1, perLeague: 0.12, max: 3 } };
   console.log(JSON.stringify(M));
   for (const [k, P] of Object.entries(PLAYERS)) console.log(summary(k, avg(P, M)));
 }

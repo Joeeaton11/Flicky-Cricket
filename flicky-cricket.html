@@ -3611,6 +3611,9 @@ const GAME_CONFIG = {
     targets: [34, 34, 34, 35, 36, 38, 39, 40, 42, 64, 65, 66, 67, 67, 68, 69, 69, 70, 71, 92, 94, 96, 97, 98, 99, 100, 101, 102],
     perfectTimingDistance: 0.08,          // PERFECT adds 8% distance
     nets: { balls: Infinity, wickets: 1 },
+    // trophies lost on a loss grow with the league (1 in leagues 1–4, 2 in 5–12, 3 from 13), so climbing stalls
+    // near a 50% win rate instead of drifting up while losing (tools/sim_economy.js). Never below your best league's floor.
+    trophyLoss: { base: 1, perLeague: 0.12, max: 3 },
     extraOver: { needWithin: 25, balls: 6, prices: [{ gems: 25, adAllowed: true }, { gems: 50, adAllowed: false }], timerSec: 8 },   // sprint 3: a real 6-ball over (Joe, Oct 29)
   },
   streak: {                                                                                            // sprint 3
@@ -28690,6 +28693,7 @@ target = leagueTarget(THEMED_LEAGUES[Math.min(THEMED_LEAGUES.length - 1, leagueI
 function setSelectedLeague(i) { try { SAVE.setItem('flickySelectedLeague', String(i)); } catch (e) {} }
 // trophies for a result: win +winTrophy+1 (+1 more at 20+ margin, +2 at 40+); loss −1, never below your highest league's floor;
 // older leagues (below the one your trophies put you in) give coins and bags but no trophies either way
+function trophyLossFor(lgIdx) { const t = GAME_CONFIG.match.trophyLoss; return Math.min(t.max, Math.round(t.base + lgIdx * t.perLeague)); }
 function trophyChangeFor(lgIdx, beatTarget, beatBy) {
   if (lgIdx < currentLeagueIdx()) return 0;
   const lg = THEMED_LEAGUES[lgIdx];
@@ -28697,7 +28701,7 @@ function trophyChangeFor(lgIdx, beatTarget, beatBy) {
   const spare = window.chase ? Math.max(0, window.chase.balls - window.chase.used) : 0, st = GAME_CONFIG.daily.stars;
   if (beatTarget) return (lg.winTrophy || 1) + 1 + (spare >= st.ballsSpareFor3 ? 2 : spare >= st.ballsSpareFor2 ? 1 : 0);
   const floor = THEMED_LEAGUES[highestLeagueIdx()].unlock;
-  return -Math.min(1, Math.max(0, trophyState.count - floor));
+  return -Math.min(trophyLossFor(lgIdx), Math.max(0, trophyState.count - floor));
 }
 // start a match in a league (Home PLAY, Leagues PLAY, Play Again); handles entry fee / gem fallback
 function playLeague(idx) {
@@ -28786,7 +28790,7 @@ function renderLeagueScreen() {
       <div class="leagueCardSubtitle">${lg.subtitle}</div>
       ${nets ? `<div class="lgRew"><div style="grid-column:1/-1"><b style="color:#7fd0ff">PRACTICE ONLY</b><small>NO ENTRY FEE · NO COINS, TROPHIES OR BAGS</small></div></div><div class="lgRew" style="display:none">` : '<div class="lgRew">'}
         <div><i class="hIco hi-coin"></i><b style="color:#FFE27A">+${fmtCoins(lg.winCoins)}</b><small>WIN COINS</small></div>
-        <div><i class="hIco hi-trophy" style="${older ? 'filter:grayscale(1);opacity:.5' : ''}"></i><b>${older ? '&mdash;' : `+${tr}&ndash;${tr + 2}`}</b><small>${older ? 'NO TROPHIES' : 'TROPHIES'}</small></div>
+        <div><i class="hIco hi-trophy" style="${older ? 'filter:grayscale(1);opacity:.5' : ''}"></i><b>${older ? '&mdash;' : `+${tr}&ndash;${tr + 2}`}</b><small>${older ? 'NO TROPHIES' : `TROPHIES &middot; &minus;${trophyLossFor(idx)} IF LOST`}</small></div>
         <div>${bagSrc ? `<img src="${bagSrc}" alt="">` : ''}<b>${lg.winChest.toUpperCase()}</b><small>BAG</small></div>
       </div>
       <div class="lgRow"><span><span>${nets ? 'NETS' : 'TARGET'}</span> ${nets ? 'NO LIMIT &middot; 1 WKT' : `${leagueTarget(lg)} OFF ${band.balls} &middot; ${band.wickets} WKTS`}</span>&nbsp;<span><span>DIFFICULTY</span><span class="lgBalls">${[1,2,3,4,5].map(n => `<i class="${n <= balls ? 'on' : ''}"></i>`).join('')}</span></span></div>
