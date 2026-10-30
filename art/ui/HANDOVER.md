@@ -439,3 +439,9 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - The value is honest (`offerWorthGems`): gems + coins at the coin-pack rate + the instant-open cost of the bag + booster packs, priced at the cheapest gem pack. The sticker only shows at ×2 or more.
 - League pack now adds gems (`leagueUnlock.gems: [275, 450]`), so every league pack is ×2–2.5 value (it was ×1.3–1.5).
 - For the UI sweep: the gem tile art is a treasure chest and could be mistaken for a bag. Replace it with a plain gem pile (Joe).
+
+## Kit screen v3 (Oct 30, Joe went with it after scoring the original, first pass and new pass)
+- `renderKitBag`: slot tabs run across the top. The equipped card is a compact strip: art, name + LV, three stat chips (POW/TIM/CON…, gains show when ready), a "CARDS n/n" bar and an UPGRADE button (green + coin cost + pulse when ready, muted when not). The full stat bars stay on the showroom (tap the item).
+- "KIT 34 [grade] BEST KIT" sits on the ALL BATS line (the rating row is gone).
+- Kit list is 3 across in the same card style as the bag summary: art top, name, foot bar (LV · n/n, green "UPGRADE!" when ready, or 🔒 LEAGUE n / IN BAGS / n GEMS). Rarity frame plus a C/R/E/L letter chip for colour-blind players. Locked kit is shown in shadow at about 60% brightness with a rarity glow.
+- `window.KB_STYLE = 'v2'` brings back the first pass (full-height equipped card with stat bars).
