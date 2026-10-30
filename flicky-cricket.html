@@ -792,6 +792,7 @@
   .kbItemTxt b.long { font-size:10px; letter-spacing:-0.01em; }
   .kbItemTxt small { font-size:9px; letter-spacing:0.1em; }
   .kbItemTxt span { font-family:Arial,sans-serif; font-weight:700; font-size:10px; color:#FFE27A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .kbItemTxt span.lkT { letter-spacing:0 !important; font-size:10px !important; overflow:visible !important; text-overflow:clip !important; white-space:nowrap; }
   .kbItem.lk .kbItemTxt span { color:#9FB0CF; }
   .kbItem .kbUp { right:-6px; top:-6px; }
 
@@ -29692,7 +29693,7 @@ function kbState(slot, item) {
   const lockLg = RARITY_UNLOCK_LEAGUE[item.rarity] || 0;
   const lockText = item.gemOnly ? item.gemPrice + ' GEMS' : lockLg > highestLeagueIdx() ? THEMED_LEAGUES[lockLg].name : 'IN BAGS';
   return { level, owned, cards, maxLvl, isMax, needed, ready, cost, canAfford: career.coins >= cost,
-    equipped: equippedItems[slot] === item.id, lockText, showLevel: owned ? level : 1 };
+    equipped: equippedItems[slot] === item.id, lockText, lockShort: !item.gemOnly && lockLg > highestLeagueIdx() ? 'LEAGUE ' + (lockLg + 1) : lockText, showLevel: owned ? level : 1 };
 }
 function kbEquippedItem(slot) { return EQUIPMENT[slot].find(i => i.id === equippedItems[slot]) || EQUIPMENT[slot][0]; }
 function kbPips(val, gain, cols) {
@@ -29853,12 +29854,12 @@ function renderKitBag(container) {
   const ownedCount = items.filter(i => (itemLevels[i.id] || 0) >= 1).length;
   const grid = items.map((it, idx) => {
     const st = kbState(slot, it);
-    const foot = st.owned ? (st.isMax ? 'LV ' + st.level + ' · MAX' : `LV ${st.level} · ${st.cards}/${st.needed}`) : (st.cards > 0 ? `${st.cards}/${st.needed} · ${st.lockText}` : st.lockText);
+    const foot = st.owned ? (st.isMax ? 'LV ' + st.level + ' · MAX' : `LV ${st.level} · ${st.cards}/${st.needed}`) : (st.cards > 0 ? `${st.cards}/${st.needed} · ${st.lockShort}` : st.lockShort);
     const isNew = kbIsNew(it);
     return `<button class="kbItem${st.equipped ? ' eq' : ''}${st.owned ? '' : ' lk'}${isNew ? ' isNew' : ''}" data-idx="${idx}" style="--rc:${rarityColor(it.rarity)};position:relative">` +
       (isNew ? '<span class="kbNew">NEW</span>' : '') +
       kbTile(slot, it, 0, st) + kbCrest(it, !st.owned) +
-      `<span class="kbItemTxt"><b${it.name.split(' ').some(w => w.length > 7) ? ' class="long"' : ''}>${kbBreak(it.name)}</b><small style="color:${rarityColor(it.rarity)}">${it.rarity.toUpperCase()}</small><span>${foot}</span></span>` +
+      `<span class="kbItemTxt"><b${it.name.split(' ').some(w => w.length > 7) ? ' class="long"' : ''}>${kbBreak(it.name)}</b><small style="color:${rarityColor(it.rarity)}">${it.rarity.toUpperCase()}</small><span${st.owned ? '' : ' class="lkT"'}>${foot}</span></span>` +
       (st.ready ? `<span class="kbUp">${KB_SVG.chev}</span>` : '') + '</button>';
   }).join('');
   container.innerHTML = `<div class="kb">${kbRating()}${kbSetsStrip()}<div class="kbBody"><div class="kbRail">${tabs}</div><div>
@@ -32092,7 +32093,7 @@ function showResultScreen(d) {
   $('r2Extras').style.display = ex.length ? '' : 'none';
   const nextLg = THEMED_LEAGUES[selectedLeagueIdx()];
   document.querySelector('#rs-playAgainBtn .rs-playLabel').textContent = unlockIdx != null ? 'PLAY NEXT' : 'PLAY AGAIN';
-  $('rs-playCost').innerHTML = `${nextLg.name} &middot; <i class="hIco hi-coin"></i>${nextLg.entry.toLocaleString()}`;
+  $('rs-playCost').innerHTML = (nextLg !== d.activeLg ? `${nextLg.name} &middot; ` : '') + `<i class="hIco hi-coin"></i>${nextLg.entry.toLocaleString()}`;
   [['r2Ribbon', .15], ['r2ScoreTop', .3], ['r2Badge', .45], ['r2Line', .55], ['r2Score', .6], ['r2Coins', .8], ['r2Trophy', 1.0], ['r2Bag', 1.2], ['r2Double', 1.35], ['r2Road', 1.5], ['r2Extras', 1.8]]
     .forEach(([id, t]) => $(id).style.setProperty('--d', t + 's'));
   void rs.offsetWidth;
@@ -60995,9 +60996,9 @@ function showDailyPop(force) {
 }
 function maybeDailyPop() {
   if (window._dailyPopShown || !featureOn('today') || !calendarReady()) return;
-  const home = document.getElementById('overlay'); if (!home || home.classList.contains('hidden') || getComputedStyle(home).display === 'none') return;
+  if (!onHomeOnly()) return;
   if (document.querySelector('#offerPop.show, #todayPanel.show, #competePanel.show, #passPanel.show')) return;
-  setTimeout(() => { if (!window._dailyPopShown) showDailyPop(); }, 700);
+  setTimeout(() => { if (!window._dailyPopShown && onHomeOnly() && !document.querySelector('#offerPop.show')) showDailyPop(); }, 700);
 }
 document.addEventListener('click', e => {
   const t = e.target && e.target.closest ? e.target : null; if (!t) return;
@@ -61097,8 +61098,13 @@ function offerTriggers(d) {   // called from endGame
   SAVE.save();
 }
 // at most one pop-up offer a session, only on Home, never during a match
+function onHomeOnly() {   // true only when Home itself is on screen (not the result screen or another menu over it)
+  const ov = document.getElementById('overlay'); if (!ov || ov.classList.contains('hidden') || getComputedStyle(ov).display === 'none') return false;
+  const rs = document.getElementById('resultScreen'); if (rs && rs.classList.contains('rs-visible')) return false;   // slides in with .rs-visible
+  return !document.querySelector('#leagueScreen:not(.hidden), #customiseScreen:not(.hidden), #statsScreen:not(.hidden), #playerScreen:not(.hidden)');
+}
 function maybeOfferPopup() {
-  if (window._offerShownThisSession || state !== 'menu') return;
+  if (window._offerShownThisSession || state !== 'menu' || !onHomeOnly()) return;
   const ov = document.getElementById('overlay'); if (!ov || ov.classList.contains('hidden')) return;
   const o = activeOffer(); if (!o) return;
   window._offerShownThisSession = true;
