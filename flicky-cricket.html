@@ -61334,7 +61334,7 @@ function renderDealStreak() {
   p.className = 'so-' + V;
   const INK = ['#1d3a9a', '#c0262e', '#1d3a9a', '#2a8a3a', '#c0262e', '#1d3a9a'];
   const cells = D.steps.map((x, i) => { const done = i < st.step, cur = i === st.step;
-    return `<div class="sbBall${done ? ' done' : ''}${cur ? ' cur' : ''}"${cur ? ` data-ds="${i}" role="button"` : ''}>
+    return `<div class="sbBall${done ? ' done' : ''}${cur ? ' cur' : ''}${done && window._dsFresh === i ? ' fresh' : ''}"${cur ? ` data-ds="${i}" role="button"` : ''}>
       <span class="no">${i + 1}</span><div class="it n${Object.keys(x.r).filter(k => k !== 'boosterCount').length}">${dsItems(x.r)}</div>
       <span class="pr${x.free ? '' : ' paid'}">${x.free ? 'FREE' : '£' + x.price.toFixed(2)}</span>
       ${done ? `<b class="ink" style="color:${INK[i]}">${x.free ? '4' : '6'}</b>` : ''}${cur && x.free ? '<span class="fhw">FREE HIT!</span>' : ''}</div>`; }).join('');
@@ -61348,10 +61348,18 @@ function renderDealStreak() {
     <div class="sbFoot"><span class="lab">NOTES &amp; GENERAL REMARKS</span><span class="hw note">${st.step >= n ? 'Over complete — well bowled!' : st.step === n - 1 ? 'Last ball: the gold bag!' : 'Play every ball for the gold bag on ball 6.'}</span></div>
     ${st.step < n ? `<button class="gcBuy sbGo${nx.free ? '' : ' paid'}" data-ds="${st.step}">BALL ${st.step + 1} · ${nx.free ? 'FREE' : '£' + nx.price.toFixed(2)}</button>` : ''}${testBuyOn() ? '<small class="sbTest">TEST MODE · purchases are free on this device</small>' : ''}</div>`;
   p.classList.add('show');
+  if (window._dsFresh != null) { const f = window._dsFresh; window._dsFresh = null; setTimeout(() => { try { soPenSound(); } catch (e) {} }, 120);
+    const c = p.querySelector('.sbBall.fresh'); if (c) setTimeout(() => c.classList.remove('fresh'), 1600); }
+}
+// pen-on-paper scratch for the hand-written run: a few short filtered noise strokes
+function soPenSound() {
+  if (typeof audioMuted !== 'undefined' && audioMuted) return;
+  [0, 0.11, 0.2, 0.33].forEach((t, k) => setTimeout(() => { try { playNoiseBurst({ duration: 0.07 + k * 0.01, volume: 0.22, filterFreq: 3800 + k * 500, filterQ: 2.5, filterType: 'bandpass', decay: 0.06 }); } catch (e) {} }, t * 1000));
+  setTimeout(() => { try { playTone({ freq: 880, duration: 0.09, volume: 0.08, type: 'triangle' }); } catch (e) {} }, 470);
 }
 function dsClaim(i) {
   const D = GAME_CONFIG.shop.dealStreak, st = dsState(), x = D.steps[i]; if (!x || i !== st.step || !dsActive()) return;
-  const done = () => { st.step = i + 1; SAVE.save(); track('offer_bought', { offer: 'deal_streak', step: i + 1, price: x.free ? 0 : x.price }); return grantReward(x.r); };
+  const done = () => { st.step = i + 1; window._dsFresh = i; SAVE.save(); track('offer_bought', { offer: 'deal_streak', step: i + 1, price: x.free ? 0 : x.price }); return grantReward(x.r); };
   if (x.free) { const l = done(); showMessage('+ ' + l, '#FFC93A', 2200); try { hapticBig(); playAchievementChime(); } catch (e) {} }
   else buyRealMoney('deal_streak_' + (i + 1), x.price, done);
   setTimeout(() => { if (document.getElementById('dsPop').classList.contains('show')) renderDealStreak(); }, 60);
@@ -61436,6 +61444,14 @@ document.addEventListener('click', e => {
   .sbBall.done .it,.sbBall.done .pr{opacity:.28;filter:grayscale(1)}
   .sbBall .fhw{position:absolute;right:6px;top:3px;font-family:'FlickyHand',cursive;font-weight:700;font-size:15px;color:#2a8a3a;transform:rotate(6deg)}
   .sbBall .ink{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%) rotate(-8deg);font-family:'FlickyHand',cursive;font-weight:700;font-size:64px;line-height:1;opacity:.9}
+  /* claim animation: the run is written in with a pen stroke, the deal fades under it */
+  .sbBall.fresh .ink{animation:soWrite .55s cubic-bezier(.4,0,.2,1) .1s both}
+  .sbBall.fresh .it,.sbBall.fresh .pr{animation:soFade .5s ease .05s both}
+  .sbBall.fresh::after{content:'';position:absolute;left:50%;top:46%;width:46px;height:46px;transform:translate(-50%,-50%);border-radius:50%;
+    background:radial-gradient(circle,rgba(255,236,60,.7),rgba(255,236,60,0) 70%);animation:soBurst .7s ease-out .55s both;pointer-events:none}
+  @keyframes soWrite{0%{clip-path:inset(0 100% 0 0);transform:translate(-50%,-50%) rotate(-8deg) scale(1.35)}70%{clip-path:inset(0 0 0 0);transform:translate(-50%,-50%) rotate(-8deg) scale(1.08)}100%{clip-path:inset(0 0 0 0);transform:translate(-50%,-50%) rotate(-8deg) scale(1)}}
+  @keyframes soFade{from{opacity:1;filter:none}to{opacity:.28;filter:grayscale(1)}}
+  @keyframes soBurst{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}40%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(2.6)}}
   .sbFig{display:flex;align-items:baseline;justify-content:flex-end;gap:6px;padding:3px 8px}
   .sbFig .hw{font-size:22px}
   .sbFoot{display:flex;flex-direction:column;gap:2px;border:1.5px solid #5a6a6a;padding:4px 8px 6px;background:#eef1ec}
