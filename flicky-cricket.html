@@ -2367,6 +2367,17 @@
   .r2Rew.off { background:#14203a; }
   .r2Rew.off b, .r2Rew.off small { color:#7C8BA8; }
   #r2Road { padding:10px 12px 12px; }
+  #r2Prog { padding:8px 10px 10px; }
+  .r2PgHd { font-size:12px; letter-spacing:.1em; color:#B4C2DD; margin-bottom:6px; }
+  .r2PgRow { display:grid; grid-template-columns:repeat(auto-fit,minmax(0,1fr)); gap:6px; }
+  .r2Pg { display:flex; flex-direction:column; gap:3px; min-width:0; padding:6px 7px; border-radius:12px; background:rgba(5,10,20,.55); border:2px solid #050A14; }
+  .r2Pg .k { font-size:10px; letter-spacing:.08em; color:#8ea0c4; }
+  .r2Pg b { font-weight:400; font-size:18px; line-height:1; }
+  .r2Pg .bar { height:8px; border-radius:4px; background:#050A14; overflow:hidden; }
+  .r2Pg .bar i { display:block; height:100%; background:linear-gradient(90deg,#7CF29A,#2a9a3e); }
+  .r2Pg small { font-size:9.5px; color:#B4C2DD; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .r2Pg.hot { border-color:#4fd46a; box-shadow:0 0 10px rgba(79,212,106,.45); }
+  #r2Double.keep { background:linear-gradient(#c58bff,#8a3df0) !important; }
   #r2RoadHead { display:flex; justify-content:space-between; align-items:center; font-size:14px; letter-spacing:.08em; margin-bottom:7px; }
   #r2RoadTxt { font-size:12px; color:#B4C2DD; letter-spacing:.04em; }
   #r2RoadBar { height:18px; border-radius:9px; border:3px solid #050A14; background:#050C1A; overflow:hidden; }
@@ -32091,7 +32102,7 @@ function showResultScreen(d) {
   const margin = d.runs - d.target;
   $('r2Badge').className = d.beatTarget ? 'win' : 'lose';
   const _sp = d.ballsSpare || 0, _wl = d.chase ? d.chase.wickets - d.chase.wkLost : 0, _L = curLook();
-  $('r2Badge').textContent = d.beatTarget ? `TARGET ${d.target} ✔ · ${_sp > 0 ? `${_sp} BALL${_sp === 1 ? '' : 'S'} SPARE` : 'LAST BALL'}` : `TARGET ${d.target} · ${-margin} SHORT`;
+  $('r2Badge').textContent = d.beatTarget ? `TARGET ${d.target} ✔ · ${_sp > 0 ? `${_sp} BALL${_sp === 1 ? '' : 'S'} SPARE` : 'LAST BALL'}` : (d.nearMiss ? `SO CLOSE · JUST ${-margin} SHORT` : `TARGET ${d.target} · ${-margin} SHORT`);
   rs.classList.toggle('won', !!d.beatTarget);
   $('r2Line').textContent = (d.beatTarget
     ? (_sp >= 6 ? `Chased with ${_sp} balls to spare — a thrashing!` : _sp >= 3 ? `Chased with ${_sp} balls to spare.` : _sp > 0 ? `Got there with ${_sp} ball${_sp === 1 ? '' : 's'} left.` : `Won off the last ball!`)
@@ -32126,7 +32137,25 @@ function showResultScreen(d) {
   // watch an ad to double the coins (wins only)
   const dbl = $('r2Double');
   const canDouble = d.beatTarget && d.coinsEarned > 0 && r2DoubleLeft() > 0;
-  dbl.classList.toggle('hidden', !canDouble); dbl.disabled = false;
+  const canKeep = !d.beatTarget && lg && d.trophyDelta < 0 && r2DoubleLeft() > 0;   // UX pass (Oct 30): losses are when players care most
+  dbl.classList.toggle('hidden', !canDouble && !canKeep); dbl.disabled = false;
+  dbl.classList.toggle('keep', !!canKeep);
+  if (canKeep) {
+    dbl.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="#fff" stroke="#050A14" stroke-width="2" stroke-linejoin="round"/></svg>WATCH AD &middot; KEEP YOUR ${-d.trophyDelta === 1 ? 'TROPHY' : -d.trophyDelta + ' TROPHIES'}`;
+    dbl.onclick = () => {
+      if (dbl.disabled) return; dbl.disabled = true; playUiTap();
+      showRewardedVideo(() => {
+        r2DoubleUse();
+        trophyState.count += -d.trophyDelta; saveTrophies(); track('ad_keep_trophy', { trophies: -d.trophyDelta });
+        $('r2TrophyVal').textContent = '0'; $('r2TrophySub').textContent = 'KEPT!'; $('r2Trophy').classList.add('up');
+        dbl.innerHTML = 'TROPHY KEPT!';
+        const ci = currentLeagueIdx(), cur = THEMED_LEAGUES[ci], nx = THEMED_LEAGUES[ci + 1];
+        if (nx) { $('r2RoadFill').style.width = Math.max(0, Math.min(1, (trophyState.count - cur.unlock) / Math.max(1, nx.unlock - cur.unlock))) * 100 + '%'; $('r2RoadTxt').textContent = `${trophyState.count} / ${nx.unlock} → ${nx.name}`; }
+        try { updateMenuHUD(); } catch (e) {}
+      }, () => { dbl.disabled = false; });
+    };
+  } else {
+  dbl.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="#fff" stroke="#050A14" stroke-width="2" stroke-linejoin="round"/></svg>WATCH AD &middot; 2&times; COINS <span id="r2DoubleAmt"></span>`;
   $('r2DoubleAmt').textContent = canDouble ? '+' + d.coinsEarned.toLocaleString() : '';
   dbl.onclick = () => {
     if (dbl.disabled) return; dbl.disabled = true; playUiTap();
@@ -32139,6 +32168,7 @@ function showResultScreen(d) {
       r2Fly('r2Coins', 'r2CoinPill', 'r2CoinVal', 'hi-coin', from, career.coins);
     }, () => { dbl.disabled = false; });
   };
+  }
   const tr = $('r2Trophy'), tv = $('r2TrophyVal'), ts = $('r2TrophySub');
   tr.className = 'r2Rew r2-step';
   if (!lg) { tv.textContent = '—'; ts.textContent = 'TROPHIES'; tr.classList.add('off'); }
@@ -32177,6 +32207,16 @@ function showResultScreen(d) {
       setTimeout(() => { try { playAchievementChime(); } catch (e) {} }, 2000);
     } else un.classList.add('hidden');
   }
+  { let pg = $('r2Prog'); if (!pg) { pg = document.createElement('div'); pg.id = 'r2Prog'; pg.className = 'r2Card r2-step'; road.insertAdjacentElement('afterend', pg); }
+    const items = [];
+    try { if (featureOn('today')) { const m = missionsState(), done = m.daily.filter(x => x.p >= _mDef(x.id).goal).length, n = m.daily.length;
+      const near = m.daily.filter(x => x.p < _mDef(x.id).goal).map(x => ({ x, df: _mDef(x.id) })).sort((a, b) => (b.x.p / b.df.goal) - (a.x.p / a.df.goal))[0];
+      items.push({ k: 'MISSIONS', v: `${done}/${n}`, pct: done / n * 100, sub: done >= n ? (m.dailyBag ? 'all done today' : 'bronze bag ready!') : near ? `${near.df.text} · ${Math.min(near.x.p, near.df.goal)}/${near.df.goal}` : '', hot: done >= n && !m.dailyBag }); } } catch (e) {}
+    try { if (featureOn('pass')) { const P = GAME_CONFIG.season.pass, t = passTier(), into = passState().xp - t * P.xpPerTier, gain = P.xp.match + (d.beatTarget ? P.xp.win : 0);
+      items.push({ k: 'PASS', v: `+${gain} XP`, pct: t >= P.tiers ? 100 : into / P.xpPerTier * 100, sub: t >= P.tiers ? 'max tier' : `tier ${t + 1} in ${P.xpPerTier - into} XP`, hot: passClaimable() > 0 }); } } catch (e) {}
+    try { if (featureOn('today')) { const w = weekBagState(); items.push({ k: 'WEEKLY BAG', v: `${Math.min(w.wDays.length, T3_WEEK_DAYS)}/${T3_WEEK_DAYS}`, pct: Math.min(1, w.wDays.length / T3_WEEK_DAYS) * 100, sub: 'days with a daily bag' }); } } catch (e) {}
+    pg.innerHTML = items.length ? `<div class="r2PgHd">PROGRESS</div><div class="r2PgRow">${items.map(it => `<div class="r2Pg${it.hot ? ' hot' : ''}"><span class="k">${it.k}</span><b>${it.v}</b><div class="bar"><i style="width:${Math.max(4, it.pct)}%"></i></div><small>${it.sub}</small></div>`).join('')}</div>` : '';
+    pg.style.display = items.length ? '' : 'none'; pg.style.setProperty('--d', '1.65s'); }
   const ex = [];
   if (d.isNewBest && d.runs > 0) ex.push(`<span class="r2Badge gold"><i class="hIco hi-trophy"></i>NEW BEST ${d.runs}</span>`);
   if (d.firstWinGems) ex.push(`<span class="r2Badge gem"><i class="hIco hi-gem"></i>+${d.firstWinGems} FIRST WIN</span>`);
@@ -61778,7 +61818,7 @@ function passDaysLeft() { const d = _nowDate(), end = new Date(d.getFullYear(), 
 })();
 function passState() {
   const p = SAVE.section('season'), k = passSeasonKey();
-  if (p.passSeason !== k) { p.passSeason = k; p.xp = 0; p.premium = false; p.plus = false; p.claimedFree = []; p.claimedPrem = []; }
+  if (p.passSeason !== k) { p.passSeason = k; p.xp = 0; p.premium = false; p.plus = false; p.claimedFree = []; p.claimedPrem = []; p.gift1 = false; }
   return p;
 }
 function passTier() { const P = GAME_CONFIG.season.pass; return Math.min(P.tiers, Math.floor(passState().xp / P.xpPerTier)); }
@@ -61928,6 +61968,8 @@ function renderPass() {
   // tap a glowing reward to claim it. One big ACTIVATE button (Pass+ as the smaller second option).
   const sh = document.querySelector('#passPanel .sheet'); if (!sh) return;
   document.getElementById('passPanel').classList.add('fs');
+  { const P0 = GAME_CONFIG.season.pass, p0 = passState();   // UX pass (Oct 30): the bar starts already moving — Tier 1 free on the first look each season
+    if (!p0.gift1) { p0.gift1 = true; if (p0.xp < P0.xpPerTier) { p0.xp = P0.xpPerTier; setTimeout(() => showMessage('TIER 1 ON US · WELCOME TO THE PASS', '#FFC93A', 2600), 400); } SAVE.save(); } }
   const P = GAME_CONFIG.season.pass, p = passState(), t = passTier(), into = p.xp - t * P.xpPerTier, m = _nowDate().getMonth();
   const art = r => r.cos ? `<span class="psKit" style="--k:${r.kind === 'trim' ? '#FFD34D' : PASS_MONTH_KITS[m]}"><svg viewBox="0 0 40 36"><path d="M13 2l-11 7 4 9 5-3v19h18V15l5 3 4-9-11-7c-1 3-4 5-7 5s-6-2-7-5z" fill="var(--k)" stroke="#050A14" stroke-width="2.4" stroke-linejoin="round"/>${r.kind === 'trim' ? '' : '<path d="M14 2c1 3 3 5 6 5s5-2 6-5" fill="none" stroke="#FFD34D" stroke-width="2.4"/>'}</svg></span>`
     : r.booster === 'random' ? '<i class="bIco ki-gloves"></i>' : t3RewardArt(r);
