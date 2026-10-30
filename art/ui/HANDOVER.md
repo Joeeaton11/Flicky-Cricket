@@ -424,3 +424,12 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Dynamic Island check (Oct 30): result screen compacts by usable height (`body.rsTight` when innerHeight − SAFE_TOP < 800, a copy of the 760px rules) and has scroll room under the fixed buttons, so the new PROGRESS card never hides behind them; Pass tiles/connectors shrink by var(--hdrTop) so the track fits under the island. Checked Pass, Super Over, bag pop-up, Settings, result with a simulated 59px island.
 - UX pass batch 3 live (Oct 30): no red screen flash when out (Joe) — bowled and caught; a brand-new player goes straight into their first match with a random look (`flickyCreateLater`), and "NOW MAKE THEM YOURS" (create-player screen) opens the first time they're back on Home (`maybeCreatePlayer` at the top of updateMenuHUD); the first-ever league match bowls only stock/slow balls, a bit slower and straighter (beginner's luck); the Starter Pack timer starts after the first LOSS or from session 2 (`session_start`), never straight after the first win.
 - Welcome bag (Oct 30, Joe picked a): no longer takes a locker — it opens straight away (normal bag-opening animation) the first time a new player is back on Home, after "make them yours" (`maybeWelcomeBag`, `flickyWelcomeOpen`). New players now start with 2 of 4 lockers used, so their first two wins both earn a bag.
+
+## Bag summary ("YOU RECEIVED") v2 — Oct 30
+- `_showChestSummary()`: bag sits at the bottom with a beam of light; rewards rise out of it. The summary bag starts where the tap-to-open bag was, then settles into place.
+- Coin and gem hero tiles count up; booster chips (`.csBst2`) appear only when the bag gives boosters.
+- Kit cards: three across, full size, rarity-coloured frames, sorted best first. Rare and above land first with a spotlight; legendary gets a gold screen flash (`#csLegFlash`). Green ▲ badge when ready; the bar says UPGRADE! / NEW! / have/need; all cards are the same height.
+- Heading reads "n ITEMS · n CARDS" when copies differ.
+- UPGRADE NOW (yellow) appears beside COLLECT when any card is ready: it collects, then opens the kit tab (`track('bag_upgrade_now')`).
+- Big bags: the grid shrinks slightly (zoom down to 0.86), then the list scrolls with a fade at the bottom (`.csScroll`).
+- Background: the changing room under a dark overlay (Joe picked this look over the lighter room).
