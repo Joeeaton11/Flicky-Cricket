@@ -29600,6 +29600,7 @@ function updateEquipTopBar() {
 function updateMenuHUD() {
   try { updateHomeStreak(); } catch (e) {}
   try { if (maybeCreatePlayer()) return; } catch (e) {}
+  try { if (maybeWelcomeBag()) { window._offerShownThisSession = true; window._dailyPopShown = true; } } catch (e) {}
   try { checkFeatureUnlocks(); } catch (e) {}
   try { rankedRollover(); payWeeklyBoards(); } catch (e) {}
   try { updatePassBtn(); } catch (e) {}
@@ -59481,14 +59482,18 @@ try { updateStreakDisplay(); } catch(e) {}
 (function grantWelcomeChest() {
   if (SAVE.getItem('flickyWelcomeChest')) return;
   SAVE.setItem('flickyWelcomeChest', '1');
-  const emptySlot = chestSlots.findIndex(s => s === null);
-  if (emptySlot !== -1) {
-    // openingStarted set so timer is already "done" (openTime is 0)
-    chestSlots[emptySlot] = { type: 'wooden', earnedAt: Date.now(), openingStarted: Date.now(), daily: false };
-    saveChestSlots();
-    setTimeout(() => showMessage('WELCOME BAG — TAP TO OPEN!', '#f4d03f', 2500), 800);
-  }
+  // Oct 30 (Joe picked a): the welcome bag no longer takes a locker — it opens straight away the first time the
+  // new player is on Home (after their first match and "make them yours"), so their first wins always have room.
+  SAVE.setItem('flickyWelcomeOpen', '1');
 })();
+function maybeWelcomeBag() {
+  if (SAVE.getItem('flickyWelcomeOpen') !== '1' || !onHomeOnly()) return false;
+  SAVE.removeItem('flickyWelcomeOpen');
+  setTimeout(() => { try { const rewards = openChestRewards('wooden'); saveEquipmentState(); saveCareerStats();
+    showChestOpenAnimation('wooden', rewards, () => { try { updateMenuHUD(); } catch (e) {} }); } catch (e) {} }, 500);
+  return true;
+}
+// existing players with an unopened welcome bag still in a locker keep it as is
 
 // grant free daily chests on load (up to 2 per day)
 (function grantDailyChests() {
