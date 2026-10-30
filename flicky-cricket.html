@@ -2508,6 +2508,23 @@
   .lgBalls { display:inline-flex; gap:3px; vertical-align:middle; margin-left:4px; }
   .lgBalls i { width:11px; height:11px; border-radius:6px; border:2px solid #050A14; background:#2a3a5a; }
   .lgBalls i.on { background:radial-gradient(circle at 35% 30%,#FF8A7A,#D12E2E 60%); }
+  .lgStarChip { position:absolute; left:8px; bottom:10px; font-size:13px; padding:3px 9px; border-radius:9px; border:2px solid #050A14; background:rgba(1,22,44,.85); color:#FFE27A; }
+  .lgInfo { position:absolute; right:8px; bottom:8px; width:34px; height:34px; border-radius:50%; border:3px solid #050A14; background:#0a2240; color:#fff; font:400 19px 'Lilita One','Arial Black',Arial,sans-serif; cursor:pointer; box-shadow:0 3px 0 #050A14; padding:0; }
+  .lgNeed { justify-content:center !important; align-items:baseline !important; gap:6px; font-size:17px !important; padding:6px 10px !important;
+    background:linear-gradient(#123064,#0a1d40) !important; border:2px solid rgba(255,201,58,.65); }
+  .lgNeed em { font-style:normal; font-size:30px; line-height:1; color:#FFC93A; text-shadow:0 2px 0 #050A14; }
+  .lgNeed .wk { color:#B4C2DD !important; font-size:14px; }
+  /* booster icons, shared by the Leagues chips and the shop */
+  .bIco { display:inline-block; width:26px; height:26px; flex:none; background-position:center; background-size:contain; background-repeat:no-repeat; }
+  .bIco.gball { border-radius:50%; width:20px; height:20px; margin:3px; background:radial-gradient(circle at 35% 30%,#fff6c0,#FFC93A 35%,#c47a00 80%); border:2px solid #050A14; box-sizing:border-box; }
+  #lgInfoPop { position:fixed; inset:0; z-index:320; display:none; align-items:center; justify-content:center; background:rgba(5,10,20,.66); font-family:'Lilita One','Arial Black',Arial,sans-serif; color:#fff; }
+  #lgInfoPop.show { display:flex; }
+  #lgInfoPop .c { width:min(320px,86vw); padding:18px; border-radius:20px; background:#0E1C38; border:3px solid #050A14; display:flex; flex-direction:column; gap:8px; }
+  #lgInfoPop h3 { margin:0; font-weight:400; font-size:22px; }
+  #lgInfoPop .r { display:flex; justify-content:space-between; gap:10px; font-size:15px; border-top:1px solid #26386a; padding-top:7px; }
+  #lgInfoPop .r span:first-child { color:#B4C2DD; }
+  #lgInfoPop .lgBalls i { width:11px; height:11px; }
+  #lgInfoPop small { color:#7f8fb0; font-size:12px; text-align:center; }
   .lgNote { font-size:12px; letter-spacing:.06em; text-align:center; padding:5px 8px; border-radius:10px; border:2px dashed rgba(192,132,252,.6); color:#E3CCFF; }
   .leaguePlayBtn { height:54px !important; border-radius:16px !important; border:3px solid #050A14 !important; font-family:inherit !important; font-weight:400 !important;
     font-size:22px !important; letter-spacing:.06em !important; display:flex !important; align-items:center; justify-content:center; gap:6px; padding:0 !important; width:100%; margin:0 !important; }
@@ -3483,7 +3500,7 @@
   <div id="leagueHeader">
     <button id="leagueBackBtn" aria-label="Back to home"><svg width="16" height="16" viewBox="0 0 20 20" aria-hidden="true"><path d="M13 3 L6 10 L13 17" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div id="leagueTitleBlock"><h1>LEAGUES</h1></div>
-    <div id="leaguePills"><span class="lgPill"><i class="hIco hi-trophy"></i><span id="leagueTrophyCount">0</span></span><span class="lgPill"><i class="hIco hi-coin"></i><span id="leagueHeaderCoinVal">0</span></span></div>
+    <div id="leaguePills"><span class="lgPill" style="display:none"><i class="hIco hi-trophy"></i><span id="leagueTrophyCount">0</span></span><span class="lgPill"><i class="hIco hi-coin"></i><span id="leagueHeaderCoinVal">0</span></span></div>
   </div>
   <div id="leagueRoad"><i id="leagueRoadFill"></i><span id="leagueRoadTxt"></span></div>
   <div id="leagueModeTabs" role="tablist" aria-label="Mode"><button role="tab" data-mode="league" aria-selected="true">LEAGUE</button><button role="tab" data-mode="nets" aria-selected="false">NETS · FREE</button></div>
@@ -28798,6 +28815,19 @@ function playLeague(idx) {
   closeAllScreens(); leagueScreen.classList.remove('hidden'); renderLeagueScreen(); showNav('league');
 }
 
+function showLeagueInfo(idx) {
+  const lg = THEMED_LEAGUES[idx], card = document.querySelector(`.leagueCard[data-idx="${idx}"]`), d = (card && card._lgInfo) || {};
+  let p = document.getElementById('lgInfoPop');
+  if (!p) { p = document.createElement('div'); p.id = 'lgInfoPop'; p.addEventListener('click', () => p.classList.remove('show')); document.body.appendChild(p); }
+  const rows = [['GROUNDS', (lg.subtitle || '').split('\u00b7').slice(1).join('·').trim() || '—'],
+    ['DIFFICULTY', `<span class="lgBalls">${[1,2,3,4,5].map(n => `<i class="${n <= (d.balls || 1) ? 'on' : ''}"></i>`).join('')}</span>`],
+    ['IF YOU LOSE', d.loss ? `−${d.loss} ${d.loss === 1 ? 'TROPHY' : 'TROPHIES'}` : 'NO TROPHIES LOST'],
+    ['ENTRY', `${lg.entry.toLocaleString()} COINS`]];
+  if (d.notes && d.notes.length) rows.push([d.unlocked ? 'NEW HERE' : 'UNLOCKS', d.notes.join(' · ')]);
+  p.innerHTML = `<div class="c"><h3 style="color:${lg.textColor || '#fff'}">${lg.name}</h3><small style="text-align:left;color:#B4C2DD">${(lg.subtitle || '').split('\u00b7')[0].trim()}</small>${rows.map(r => `<div class="r"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('')}<small>Tap anywhere to close</small></div>`;
+  p.classList.add('show');
+}
+document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('.lgInfo'); if (!b) return; e.stopPropagation(); try { playUiTap(); } catch (err) {} showLeagueInfo(+b.dataset.lginfo); }, true);
 function renderLeagueScreen() {
   // Update header
   const trophyEl = document.getElementById('leagueTrophyCount');
@@ -28822,7 +28852,7 @@ function renderLeagueScreen() {
       fill.style.width = nx ? (Math.max(0, Math.min(1, (trophyState.count - base) / Math.max(1, nx.unlock - base))) * 100) + '%' : '100%';
       txt.innerHTML = (nx ? `${trophyState.count} / ${nx.unlock} <i class="hIco hi-trophy"></i> TO UNLOCK ${nx.name}` : 'TOP LEAGUE REACHED')
         + (trophyRoadPending().length ? `<button id="roadClaim">CLAIM ${trophyRoadPending().length}</button>` : '')
-        + `<small style="margin-left:6px;color:#B4C2DD;font-size:11px">S${seasonNumber()} · ${passDaysLeft()}D</small>`;
+        ;
     } }
   const fmtCoins = v => v >= 1000 ? (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + 'K' : v.toLocaleString();
   const rarityAt = {}; Object.keys(RARITY_UNLOCK_LEAGUE).forEach(r => { if (RARITY_UNLOCK_LEAGUE[r] > 0) rarityAt[RARITY_UNLOCK_LEAGUE[r]] = r.toUpperCase(); });
@@ -28841,8 +28871,9 @@ function renderLeagueScreen() {
     cvs.width = 620; cvs.height = liveArt ? 355 : 360;
     cvs.style.cssText = 'width:100%;display:block;';
     art.appendChild(cvs);
-    art.insertAdjacentHTML('beforeend', `<span class="lgChip no">LEAGUE ${idx + 1} / ${THEMED_LEAGUES.length}</span>` +
-      (idx === sel ? '<span class="lgChip you">YOUR LEAGUE</span>' : older ? '<span class="lgChip old">COINS ONLY</span>' : ''));
+    art.insertAdjacentHTML('beforeend', (idx === sel ? '<span class="lgChip you">YOUR LEAGUE</span>' : older ? '<span class="lgChip old">COINS ONLY</span>' : '') +
+      (unlocked && window._leagueMode !== 'nets' ? `<span class="lgStarChip">★ ${leagueStars(idx).have}/${leagueStars(idx).max}</span>` : '') +
+      `<button class="lgInfo" data-lginfo="${idx}" aria-label="League details">i</button>`);
     card.appendChild(art);
 
     const info = document.createElement('div');
@@ -28862,17 +28893,17 @@ function renderLeagueScreen() {
     const tr = (lg.winTrophy || 1) + 1;
     info.innerHTML = `
       <div><div class="leagueCardName" style="color:${lg.textColor || '#fff'}">${lg.name}</div></div>
-      <div class="leagueCardSubtitle">${lg.subtitle}${unlocked && !nets ? ` &middot; <span class="lgStars">★ ${leagueStars(idx).have}/${leagueStars(idx).max}</span>` : ''}</div>
+
       ${nets ? `<div class="lgRew"><div style="grid-column:1/-1"><b style="color:#7fd0ff">PRACTICE ONLY</b><small>NO ENTRY FEE · NO COINS, TROPHIES OR BAGS</small></div></div><div class="lgRew" style="display:none">` : '<div class="lgRew">'}
         <div><i class="hIco hi-coin"></i><b style="color:#FFE27A">+${fmtCoins(lg.winCoins)}</b><small>WIN COINS</small></div>
-        <div><i class="hIco hi-trophy" style="${older ? 'filter:grayscale(1);opacity:.5' : ''}"></i><b>${older ? '&mdash;' : `+${tr}&ndash;${tr + 2}`}</b><small>${older ? 'NO TROPHIES' : `TROPHIES &middot; &minus;${trophyLossFor(idx)} IF LOST`}</small></div>
+        <div><i class="hIco hi-trophy" style="${older ? 'filter:grayscale(1);opacity:.5' : ''}"></i><b>${older ? '&mdash;' : `+${tr}&ndash;${tr + 2}`}</b><small>${older ? 'NO TROPHIES' : 'TROPHIES'}</small></div>
         <div>${bagSrc ? `<img src="${bagSrc}" alt="">` : ''}<b>${lg.winChest.toUpperCase()}</b><small>BAG</small></div>
       </div>
-      <div class="lgRow"><span><span>${nets ? 'NETS' : 'TARGET'}</span> ${nets ? 'NO LIMIT &middot; 1 WKT' : `${leagueTarget(lg)} OFF ${band.balls} &middot; ${band.wickets} WKTS`}</span>&nbsp;<span><span>DIFFICULTY</span><span class="lgBalls">${[1,2,3,4,5].map(n => `<i class="${n <= balls ? 'on' : ''}"></i>`).join('')}</span></span></div>
-      ${notes.length ? `<div class="lgNote">${unlocked ? '' : 'UNLOCKS: '}${notes.join(' &middot; ')}</div>` : ''}
+      <div class="lgRow lgNeed">${nets ? 'NETS &middot; NO LIMIT &middot; 1 WKT' : `NEED <em>${leagueTarget(lg)}</em> OFF <em>${band.balls}</em> BALLS <span class="wk">&middot; ${band.wickets} WKTS</span>`}</div>
       ${!nets && unlocked && featureOn('boosters') ? boosterChipsHtml() : ''}
       <button class="leaguePlayBtn ${btnClass}${nets && unlocked ? ' nets' : ''}" data-idx="${idx}" ${unlocked ? '' : 'disabled'}>${btnHtml}</button>`;
     card.appendChild(info);
+    card._lgInfo = { subtitle: lg.subtitle, balls, loss: older ? 0 : trophyLossFor(idx), notes, unlocked };
 
     if (!unlocked) {
       const lockDiv = document.createElement('div');
@@ -60590,11 +60621,12 @@ function boostersConsume() {
   window._pickedBoosters = []; SAVE.save();
 }
 // booster chips on the league card
+function boosterIconHtml(id) { return id === 'golden_ball' ? '<i class="bIco gball"></i>' : `<i class="bIco ${{ power_bat: 'ki-bat', lucky_grip: 'ki-gloves', fresh_legs: 'ki-shoes' }[id] || 'ki-bat'}"></i>`; }
 function boosterChipsHtml() {
   const owned = BOOSTER_IDS.filter(id => boosterCount(id) > 0);
   if (!owned.length) return `<div class="lgBoost none">BOOSTERS: win them from bags</div>`;
   return `<div class="lgBoost">${owned.map(id => { const on = window._pickedBoosters.includes(id), i = BOOSTER_INFO[id];
-    return `<button class="lgBst${on ? ' on' : ''}" data-b="${id}" aria-pressed="${on}" title="${i.desc}" style="--bc:${i.col}"><b>${i.short}</b><small>${on ? 'ON · ' : ''}×${boosterCount(id)}</small></button>`; }).join('')}</div>`;
+    return `<button class="lgBst${on ? ' on' : ''}" data-b="${id}" aria-pressed="${on}" title="${i.desc}" style="--bc:${i.col}">${boosterIconHtml(id)}<span class="bx"><b>${i.short}</b><small>${on ? 'ON · ' : ''}×${boosterCount(id)}</small></span></button>`; }).join('')}</div>`;
 }
 document.addEventListener('click', e => {
   const b = e.target && e.target.closest && e.target.closest('.lgBst'); if (!b) return;
@@ -60612,6 +60644,8 @@ document.addEventListener('click', e => {
   .lgBoost.none{font-size:11px;color:#8ea0c4;letter-spacing:.06em}
   .lgBst{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:72px;height:40px;padding:0 8px;border-radius:12px;border:2px solid #050A14;background:#14203a;color:#cfe0ff;font-family:'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;line-height:1.05}
   .lgBst b{font-size:12px;font-weight:400}
+  .lgBst{flex-direction:row !important;gap:5px !important;padding:0 10px 0 6px !important}
+  .lgBst .bx{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1}
   .lgBst small{font-size:10px;color:#8ea0c4}
   .lgBst.on{background:var(--bc);color:#1a1000;box-shadow:0 0 0 2px #fff inset}
   .lgBst.on small{color:#1a1000}
