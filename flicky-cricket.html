@@ -3813,6 +3813,7 @@ function track(name, data) {
   const s = SAVE.section('match');
   if (!s.installedAt) s.installedAt = Date.now();
   s.sessions = (s.sessions || 0) + 1; SAVE.save();
+  try { const sh = SAVE.section('shop'); if (!sh.starterUntil && s.sessions >= 2 && (career.matchesPlayed || 0) >= 1) { sh.starterUntil = Date.now() + GAME_CONFIG.shop.offers.starter.hours * 3600e3; SAVE.save(); } } catch (e) {}   // or from session 2
   track('session_start', { daysSinceInstall: Math.floor((Date.now() - s.installedAt) / 864e5), payer: (SAVE.data.purchases || []).length > 0, session: s.sessions, migratedKeys: SAVE.data.migratedKeys || 0 });
 })();
 
@@ -29164,7 +29165,7 @@ function openPlayerScreen(mode) {
   closeAllScreens();
   const scr = document.getElementById('playerScreen');
   scr.classList.remove('hidden'); scr.classList.toggle('create', plMode === 'create');
-  document.getElementById('plTitle').textContent = plMode === 'create' ? 'CREATE YOUR PLAYER' : 'PLAYER';
+  document.getElementById('plTitle').textContent = plMode === 'create' ? (window._createAfterMatch ? 'NOW MAKE THEM YOURS' : 'CREATE YOUR PLAYER') : 'PLAYER';
   document.getElementById('plStart').classList.toggle('hidden', plMode !== 'create');
   if (plMode === 'create') { hideNav(); plTab = 'body'; } else showNav('player');
   plShownNew = []; plPreview = null; plSetMini(false); window._plLastTab = null;
@@ -29307,7 +29308,18 @@ document.getElementById('plStart').addEventListener('click', () => {
 document.getElementById('playerNavBtn').addEventListener('click', () => { playUiTap(); hapticTap(); openPlayerScreen('edit'); });
 document.getElementById('homePlayer').addEventListener('click', () => { playUiTap(); hapticTap(); openPlayerScreen('edit'); });
 refreshPlayerArt();
-if (!playerLook) setTimeout(() => openPlayerScreen('create'), 60);
+// UX pass (Oct 30): a brand-new player goes straight into their first match with a random look;
+// "create your player" opens the first time they're back on Home (people value what they've invested in once they've won).
+if (!playerLook) {
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  playerLook = Object.assign({}, curLook(), { g: Math.random() < .5 ? 'm' : 'f', face: Math.floor(Math.random() * PLAYER_FACES), name: 'PLAYER' });
+  savePlayerLook(); refreshPlayerArt(); SAVE.setItem('flickyCreateLater', '1');
+  setTimeout(() => { try { if ((career.matchesPlayed || 0) === 0) playLeague(selectedLeagueIdx()); } catch (e) {} }, 1900);
+}
+function maybeCreatePlayer() {
+  if (SAVE.getItem('flickyCreateLater') !== '1' || (career.matchesPlayed || 0) < 1 || !onHomeOnly()) return false;
+  SAVE.removeItem('flickyCreateLater'); window._createAfterMatch = true; openPlayerScreen('create'); return true;
+}
 
 let statsTab = 'career';
 const ST_ICON = {
@@ -29587,6 +29599,7 @@ function updateEquipTopBar() {
 
 function updateMenuHUD() {
   try { updateHomeStreak(); } catch (e) {}
+  try { if (maybeCreatePlayer()) return; } catch (e) {}
   try { checkFeatureUnlocks(); } catch (e) {}
   try { rankedRollover(); payWeeklyBoards(); } catch (e) {}
   try { updatePassBtn(); } catch (e) {}
@@ -31046,7 +31059,10 @@ function startBallSequence() {
   // Each entry: [weight, speedMult, swingMult, zoneBias, label]
   // speedMult: multiplier on base pace  swingMult: line width scale
   // zoneBias: shift zoneCenter (-ve = shorter/back-of-a-length, +ve = fuller)
-  const DELIVERIES = [
+  const firstMatch = (career.matchesPlayed || 0) === 0 && window.chase && window.chase.mode === 'league';   // UX pass (Oct 30): beginner's luck
+  const DELIVERIES = firstMatch ? [
+    { w: 0.6, spd:0.85, swg:0.6, zb: 0.00 }, { w: 0.4, spd:0.55, swg:0.5, zb:+0.04 },
+  ] : [
     // type          weight(easy→hard)    spd    swing  zone
     { w: lerp(0.28, 0.08, d), spd:1.00, swg:0.9,  zb: 0.00 }, // stock ball
     { w: lerp(0.28, 0.12, d), spd:0.55, swg:0.7,  zb:+0.04 }, // slow ball (fuller)
@@ -31691,7 +31707,7 @@ function bowled() {
   completeTutorialIfActive();
   hapticWicket();
   spawnFlyingStumps();
-  flash = 0.85; flashColor = '220,30,30';
+  // no red flash when out (Joe, Oct 30)
   triggerShake(28, 28);
   spawnParticles(W/2, PITCH_BOTTOM(), 'rgba(255,80,30,ALPHA)', 20, 0.9);
   spawnParticles(W/2, PITCH_BOTTOM(), 'rgba(255,220,60,ALPHA)', 12, 0.7);
@@ -31723,7 +31739,7 @@ function caughtOut() {
   try { let best = null, bd = 1e9; fielders.forEach(f => { if (f.name === 'keeper') return; const d = Math.hypot(f.x - (ball.screenX || 0), f.y - (ball.screenY || 0)); if (d < bd) { bd = d; best = f; } });
     window._gCatch = best ? { name: best.name, at: performance.now() } : null; } catch (e) {}
   hapticWicket();
-  flash = 0.7; flashColor = '220,30,30';
+  // no red flash when out (Joe, Oct 30)
   triggerShake(22, 22);
   spawnParticles(W/2, H*0.45, 'rgba(255,80,30,ALPHA)', 16, 0.8);
   state = 'result';
@@ -61262,7 +61278,8 @@ function buyOffer() {
 }
 function offerTriggers(d) {   // called from endGame
   const s = shopState();
-  if (d.won && !s.starterUntil && (career.matchesWon || 0) >= 1) { s.starterUntil = Date.now() + GAME_CONFIG.shop.offers.starter.hours * 3600e3; }
+  // UX pass (Oct 30): the first loss is the moment it helps — not straight after the first win
+  if (!d.won && !s.starterUntil && (career.matchesPlayed || 0) >= 1) { s.starterUntil = Date.now() + GAME_CONFIG.shop.offers.starter.hours * 3600e3; }
   if (d.newLeague != null && d.newLeague >= 2) { s.leagueUntil = Date.now() + GAME_CONFIG.shop.offers.leagueUnlock.hours * 3600e3; s.leagueIdx = d.newLeague; s.leagueBought = 0; }
   SAVE.save();
 }
