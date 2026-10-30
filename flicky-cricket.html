@@ -61005,7 +61005,7 @@ document.addEventListener('click', e => {
   if (t.closest('#dpClaim')) { const l = claimCalendar(); document.getElementById('dailyPop').classList.remove('show'); if (l) { showMessage('+ ' + l, '#FFC93A', 2200); try { hapticBig(); playAchievementChime(); } catch (err) {} }
     try { updateTodayBadge(); updateMenuHUD(); } catch (err) {} if (document.getElementById('todayPanel').classList.contains('show')) renderToday(); return; }
   if (t.id === 'dailyPop') { t.classList.remove('show'); return; }
-  if (t.closest('[data-weekbag]')) { const w = weekBagState(); if (w.wDays.length >= T3_WEEK_DAYS && !w.wClaimed) { w.wClaimed = true; SAVE.save(); const l = grantReward({ bag: GAME_CONFIG.daily.missions.weeklyAllBag, coins: GAME_CONFIG.daily.missions.weekBagCoins }); showMessage('+ ' + l, '#FFC93A', 2200); try { hapticBig(); } catch (err) {} } renderToday(); return; }
+  if (t.closest('[data-weekbag]')) { const w = weekBagState(); if (w.wDays.length >= T3_WEEK_DAYS && !w.wClaimed) { w.wClaimed = true; SAVE.save(); try { addPassXP(GAME_CONFIG.season.pass.xp.weeklyMission, 'weekbag'); } catch (err) {} const l = grantReward({ bag: GAME_CONFIG.daily.missions.weeklyAllBag, coins: GAME_CONFIG.daily.missions.weekBagCoins }); showMessage('+ ' + l, '#FFC93A', 2200); try { hapticBig(); } catch (err) {} } renderToday(); return; }
 }, true);
 function goMission(ev) {
   document.getElementById('todayPanel').classList.remove('show');
@@ -61461,7 +61461,7 @@ function passReward(tier, premium) {
   if (tier === 1) return { cos: 'pass' + key, kind: 'shirt', label: 'MONTH KIT SHIRT' };
   if (tier === 15 || tier === 30) return tier === 30 ? { bag: 'platinum' } : { cos: 'passtrim' + key, kind: 'trim', label: 'PASS+ TRIM', plus: true };
   if (tier % 5 === 0) return { bag: 'gold' };
-  return { gems: 26 };
+  return { gems: tier === 29 ? 28 : 26 };   // 23 gem tiers = 600 gems exactly (Oct 30)
 }
 function passRewardLabel(r) { return r.cos ? r.label : rewardLabel(r); }
 function claimPassTier(tier, premium) {
@@ -61491,6 +61491,77 @@ function buyPass(plus) {
   #passPanel{position:fixed;inset:0;z-index:300;display:none;background:rgba(5,10,20,.7);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
   #passPanel.show{display:flex;align-items:flex-end;justify-content:center}
   #passPanel .sheet{width:min(440px,100%);max-height:94%;overflow:auto;background:#0E1C38;border:3px solid #050A14;border-bottom:none;border-radius:22px 22px 0 0;padding:14px 12px calc(18px + env(safe-area-inset-bottom,0px));box-sizing:border-box;display:flex;flex-direction:column;gap:10px}
+  /* PASS v2: Golf Pass style track (Oct 30) */
+  #passPanel.fs{background:#01162C}
+  #passPanel.fs .sheet{width:min(440px,100%);height:100%;max-height:none;border:0;border-radius:0;overflow:hidden;background:radial-gradient(ellipse 120% 50% at 50% 0%,#3a2a6a,#14204a 55%,#01162C);
+    padding:calc(var(--hdrTop,8px) + 2px) 0 calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px}
+  #passPanel.fs .evTop{padding:0 12px}
+  .psHero{position:relative;margin:0 12px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:18px;border:3px solid #050A14;background:linear-gradient(135deg,#6a4a0a,#2a1a04);box-shadow:0 0 0 2px #f5a800 inset}
+  .psHero .t{display:flex;flex-direction:column;flex:none}.psHero .t b{font-weight:400;font-size:20px;text-shadow:0 2px 0 #050A14}.psHero .t span{font-size:12px;color:#f3e2b8}.psHero em{font-style:normal;color:#FFC93A}
+  .psXP2{flex:1;display:flex;align-items:center;min-width:0}
+  .psXP2 .bar{position:relative;flex:1;height:22px;border-radius:11px;background:#050A14;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .psXP2 .bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#FFE27A,#F4A30A);border-radius:11px}
+  .psXP2 .bar span{position:relative;font-size:12px;text-shadow:0 1px 0 #000}
+  .psXP2 .hex{width:40px;height:44px;margin-left:-6px;flex:none;display:flex;align-items:center;justify-content:center;font-size:20px;background:#050A14;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);color:#fff}
+  .psHow{width:28px;height:28px;flex:none;border-radius:50%;border:2px solid #050A14;background:#1d3a66;color:#fff;font:14px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;padding:0}
+  .psHowBox{display:none;margin:0 12px;padding:8px 12px;border-radius:12px;background:#0a1630;font-size:12px;color:#B4C2DD}.psHowBox.open{display:block}.psHowBox b{font-weight:400;color:#FFC93A}
+  .psTrackWrap{position:relative;flex:1;min-height:0;display:flex}
+  .psLabels{position:absolute;z-index:3;left:0;top:0;bottom:0;width:0;pointer-events:none}
+  .psLabels span{position:absolute;left:8px;top:6px;padding:4px 12px;border-radius:10px;border:2px solid #050A14;background:#24488a;font-size:15px;letter-spacing:.06em;color:#fff;text-shadow:0 1px 0 #050A14;box-shadow:0 2px 0 #050A14}
+  .psLabels span.pr{top:auto;bottom:6px;color:#fff;background:#5d27bd}
+  .psTrack{flex:1;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+    background:linear-gradient(transparent calc(50% + 26px),#f0b020 calc(50% + 26px)),repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 10px,transparent 10px 20px)}
+  .psTrack::-webkit-scrollbar{display:none}
+  .psCols{--cw:clamp(112px, 31vw, 128px);position:relative;display:flex;height:100%;padding:0 30px 0 60px;width:max-content}
+  .psCols::before{content:'';position:absolute;left:0;right:0;top:50%;height:18px;transform:translateY(-50%);background:#050A14;border-top:3px solid #1a2a4a;border-bottom:3px solid #1a2a4a}
+  .psCols::after{content:'';position:absolute;left:0;top:50%;height:12px;width:calc(var(--fill) + 60px);transform:translateY(-50%);background:linear-gradient(#FFE27A,#F4A30A);border-radius:0 6px 6px 0}
+  .psCol{position:relative;z-index:1;width:var(--cw,112px);flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+  .psCol::before,.psCol::after{content:'';width:3px;flex:none;height:clamp(12px, 3vh, 30px);background:#050A14;opacity:.5}
+  .psCol::before{order:2}.psCol::after{order:4}
+  .psCol > .psTile:first-child{order:1}.psNode{order:3}.psCol > .psTile.prem{order:5}
+  .psNode{width:46px;height:52px;display:flex;align-items:center;justify-content:center;background:#050A14;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);font-size:22px;color:#fff}
+  .psNode span{display:flex;align-items:center;justify-content:center;width:40px;height:46px;background:#1a2440;clip-path:inherit}
+  .psCol.on .psNode span{background:linear-gradient(#FFE27A,#F4A30A);color:#3a2300}
+  .psCol.cur .psNode span{background:#26386a;box-shadow:inset 0 0 0 3px #FFC93A}
+  .psTile{position:relative;width:calc(var(--cw,112px) - 14px);height:clamp(104px, 17vh, 150px);border-radius:14px;border:3px solid #050A14;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    background:radial-gradient(ellipse 70% 55% at 50% 0%,rgba(255,255,255,.35),rgba(255,255,255,0) 70%),linear-gradient(#24488a,#13284f);box-shadow:0 4px 0 rgba(0,0,0,.45)}
+  .psTile.prem{background:radial-gradient(ellipse 70% 55% at 50% 0%,rgba(255,255,255,.4),rgba(255,255,255,0) 70%),linear-gradient(#3a2a6a,#1d1240);box-shadow:0 4px 0 rgba(120,70,0,.6)}
+  .psTile .pa{height:62%;display:flex;align-items:center;justify-content:center}
+  .psTile .pa img{max-width:86%;max-height:100%;object-fit:contain;filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
+  .psTile .pa .bIco{width:44px;height:44px}
+  .psTile b{font-weight:400;font-size:14px;text-shadow:0 2px 0 #050A14}
+  .psKit svg{width:52px;height:48px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.4))}
+  .psTile.got{filter:saturate(.4) brightness(.8)}
+  .psTile .col{position:absolute;top:-18px;font-size:10px;letter-spacing:.06em;color:#cfe0ff;white-space:nowrap}
+  .psTile.prem .col{top:auto;bottom:-16px;color:#3a2300}
+  .psTile .tick{position:absolute;right:-8px;top:-8px;width:26px;height:26px;border-radius:50%;background:#4fd46a;border:2px solid #050A14;color:#04310f;font-style:normal;font-size:14px;display:flex;align-items:center;justify-content:center}
+  .psTile .pad{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);width:28px;height:30px;font-style:normal;font-size:12px;color:#3a2300;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;box-sizing:border-box;
+    background:radial-gradient(circle at 50% 70%,#3a2300 0 3px,transparent 4px),linear-gradient(#ffe27a,#d8930a) bottom/100% 62% no-repeat;border-radius:5px}
+  .psTile .pad::before{content:'';position:absolute;left:6px;right:6px;top:0;height:16px;border:4px solid #c88a10;border-bottom:0;border-radius:10px 10px 0 0}
+  .psTile.can{cursor:pointer;border-color:#FFC93A;box-shadow:0 0 0 3px rgba(255,201,58,.4),0 0 18px rgba(255,201,58,.6),0 4px 0 rgba(0,0,0,.45);animation:evPulse 1.4s ease-in-out infinite}
+  .psTile .tap{position:absolute;bottom:-11px;padding:1px 9px;border-radius:9px;background:linear-gradient(#9cf26a,#3dbb2c);border:2px solid #050A14;font-size:11px;text-shadow:0 1px 0 #1a6a10}
+  .psShow{position:relative;margin:0 12px;display:flex;align-items:stretch;gap:8px;min-height:0;flex:none}
+  .psShow .who{position:relative;width:34%;flex:none;display:flex;align-items:flex-end;justify-content:center;border-radius:16px;overflow:hidden;border:3px solid #050A14;
+    background:radial-gradient(ellipse 70% 60% at 50% 0%,rgba(255,255,255,.55),rgba(255,255,255,0) 70%),linear-gradient(color-mix(in srgb,var(--pk,#5d27bd) 60%,#2a1060),#14204a)}
+  .psShow .who canvas{height:clamp(96px, 17vh, 170px);width:auto;display:block;margin-bottom:-4px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5))}
+  .psShow .who .tag{position:absolute;left:6px;top:6px;padding:2px 7px;border-radius:8px;background:#FFC93A;color:#3a2300;font-size:11px;border:2px solid #050A14}
+  .psShow .list{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:8px 10px;border-radius:16px;border:3px solid #050A14;background:linear-gradient(135deg,#3a2a6a,#1d1240)}
+  .psShow .list b{font-weight:400;font-size:15px;color:#FFC93A;letter-spacing:.04em}
+  .psShow .list span{display:flex;align-items:center;gap:7px;font-size:12px;line-height:1.15}
+  .psShow .list img{width:30px;height:22px;object-fit:contain;flex:none}
+  .psShow .list .k{width:24px;height:20px;margin:0 3px;border-radius:5px;border:2px solid #050A14;flex:none}
+  .psShow.own .list{background:linear-gradient(135deg,#2a5a1a,#1d1240)}
+  .gcBuy.psAct{position:relative}
+  .gcBuy.psAct .val{position:absolute;right:-6px;top:-14px;padding:2px 8px;border-radius:9px;background:#e8283c;border:2px solid #050A14;font-size:11px;letter-spacing:0;text-shadow:0 1px 0 #6a0a12;transform:rotate(3deg);white-space:nowrap}
+  @media (max-height:720px){ .psShow .list span:nth-child(4),.psShow .list span:nth-child(5){display:none} .psShow .list{gap:4px;padding:6px 8px} .psShow .list span{font-size:11px}
+    .psShow .who canvas{height:84px} .psTile{height:96px !important} .psCol::before,.psCol::after{height:8px !important} .psLabels span{font-size:12px;padding:2px 8px} }
+  .psCta{display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 16px}
+  .gcBuy.psAct{width:min(320px,100%);height:64px;margin:0;font-size:22px;flex-direction:column;gap:0;line-height:1}
+  .gcBuy.psAct small{font-size:13px;letter-spacing:.1em;color:#eaffd8}
+  .psPlusLink{background:none;border:0;color:#3a2300;font:13px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;padding:4px;text-decoration:underline}
+  .psOn{text-align:center;font-size:18px;color:#3a2300;display:flex;flex-direction:column}.psOn small{font-size:12px;color:#5a3a00}
+  .gcBuy.psPlus{height:48px;margin:0;padding:0 16px;font-size:16px;background:linear-gradient(#c58bff,#8a3df0);text-shadow:0 2px 0 #3a1080;box-shadow:0 4px 0 #3a1080}
+  #passPanel.fs .psCta{background:#f0b020;margin-top:-8px;padding-top:6px}
   #passPanel h2{margin:0;font-size:24px;font-weight:400;display:flex;align-items:center;justify-content:space-between}
   #passPanel .x{width:40px;height:40px;border-radius:50%;border:2px solid #050A14;background:#14203a;color:#fff;font-size:18px;cursor:pointer}
   .psXP{height:12px;border-radius:6px;background:#050A14;overflow:hidden}.psXP i{display:block;height:100%;background:linear-gradient(90deg,#ffcf4a,#e08a12)}
@@ -61516,32 +61587,55 @@ function updateEventsBadge() { const b = document.getElementById('evBadge'); if 
   b.textContent = n; b.classList.toggle('show', n > 0); }
 function updatePassBtn() { try { updateEventsBadge(); } catch (e) {} const b = document.getElementById('passBtn'); if (!b) return; b.style.display = featureOn('pass') ? '' : 'none'; const t = document.getElementById('passBtnTier'); if (t) { const c = passClaimable(); t.textContent = c ? `${c} TO CLAIM` : `TIER ${passTier()}`; } }
 function renderPass() {
+  // PASS v2 (Oct 30, Joe's Golf Pass reference): full screen; one horizontal track you swipe along — free rewards
+  // above the line, premium below on gold with padlocks, numbered tier nodes on the line that fill as you earn XP,
+  // tap a glowing reward to claim it. One big ACTIVATE button (Pass+ as the smaller second option).
   const sh = document.querySelector('#passPanel .sheet'); if (!sh) return;
+  document.getElementById('passPanel').classList.add('fs');
   const P = GAME_CONFIG.season.pass, p = passState(), t = passTier(), into = p.xp - t * P.xpPerTier, m = _nowDate().getMonth();
-  const rows = [];
-  for (let i = 1; i <= P.tiers; i++) {
-    const fr = passReward(i, false), pr = passReward(i, true), reached = i <= t;
-    const fDone = p.claimedFree.includes(i), pDone = p.claimedPrem.includes(i), pLocked = !p.premium || (pr.plus && !p.plus);
-    rows.push(`<div class="psRow${reached ? ' reached' : ''}"><div class="n">${i}</div>
-      <div class="psCell">${passRewardLabel(fr)}${fDone ? '<span class="ok">✓</span>' : reached ? `<button data-pass="${i}:0">CLAIM</button>` : ''}</div>
-      <div class="psCell prem">${pr.cos ? `<span style="display:inline-block;width:18px;height:18px;border-radius:5px;background:${pr.kind === 'trim' ? '#FFD34D' : PASS_MONTH_KITS[m]};border:2px solid #050A14"></span>` : ''}${passRewardLabel(pr)}${pDone ? '<span class="ok">✓</span>' : pLocked ? `<span class="lock">${pr.plus ? 'PASS+' : 'PREMIUM'}</span>` : reached ? `<button data-pass="${i}:1">CLAIM</button>` : ''}</div></div>`);
-  }
-  sh.innerHTML = `<h2>FLICKY PASS · ${PASS_MONTH_NAMES[m]} <button class="x" id="passClose" aria-label="Close">✕</button></h2>
-    <div style="display:flex;justify-content:space-between;font-size:13px;color:#B4C2DD"><span>TIER ${t} / ${P.tiers}</span><span>${passDaysLeft()} DAYS LEFT</span></div>
-    <div class="psXP"><i style="width:${t >= P.tiers ? 100 : into / P.xpPerTier * 100}%"></i></div>
-    <span style="font-size:11px;color:#B4C2DD">XP: ${P.xp.match} a match · ${P.xp.win} a win · ${P.xp.dailyMission} a daily mission · ${P.xp.weeklyMission} a weekly mission</span>
-    ${p.premium ? `<div style="text-align:center;color:#FFC93A">${p.plus ? 'PASS+' : 'PREMIUM'} ACTIVE · +1 BAG SLOT · BAGS OPEN 10% FASTER</div>${p.plus ? '' : `<div class="psBuy" style="grid-template-columns:1fr"><button data-buypass="plus" style="background:linear-gradient(#c58bff,#8a3df0);color:#fff">UPGRADE TO PASS+ · +10 TIERS</button></div>`}`
-      : `<div class="psBuy"><button data-buypass="prem" style="background:linear-gradient(#ffcf4a,#e08a12);color:#3a2300">PREMIUM<br>£${P.premium.toFixed(2)}</button><button data-buypass="plus" style="background:linear-gradient(#c58bff,#8a3df0);color:#fff">PASS+ · +10 TIERS<br>£${P.plus.toFixed(2)}</button></div>
-      <span style="font-size:11px;color:#B4C2DD;text-align:center">Premium: this month's kit, 600 gems, gold bags, a platinum bag at tier 30, an extra bag slot and 10% faster bags. Pass+ also jumps 10 tiers and adds a gold trim.</span>`}
-    <div class="psRow" style="font-size:11px;color:#B4C2DD"><span></span><span style="text-align:center">FREE</span><span style="text-align:center;color:#c9b8ff">PREMIUM</span></div>
-    ${rows.join('')}`;
+  const art = r => r.cos ? `<span class="psKit" style="--k:${r.kind === 'trim' ? '#FFD34D' : PASS_MONTH_KITS[m]}"><svg viewBox="0 0 40 36"><path d="M13 2l-11 7 4 9 5-3v19h18V15l5 3 4-9-11-7c-1 3-4 5-7 5s-6-2-7-5z" fill="var(--k)" stroke="#050A14" stroke-width="2.4" stroke-linejoin="round"/>${r.kind === 'trim' ? '' : '<path d="M14 2c1 3 3 5 6 5s5-2 6-5" fill="none" stroke="#FFD34D" stroke-width="2.4"/>'}</svg></span>`
+    : r.booster === 'random' ? '<i class="bIco ki-gloves"></i>' : t3RewardArt(r);
+  const txt = r => r.cos ? (r.kind === 'trim' ? 'GOLD TRIM' : 'MONTH KIT') : r.bag ? `${r.bag.toUpperCase()} BAG` : r.gems ? `×${r.gems}` : r.coins ? r.coins.toLocaleString() : r.booster ? 'BOOSTER' : '';
+  const cell = (i, prem) => { const r = passReward(i, prem), list = prem ? p.claimedPrem : p.claimedFree, got = list.includes(i), reached = i <= t;
+    const locked = prem && (!p.premium || (r.plus && !p.plus)), can = reached && !got && !locked;
+    return `<div class="psTile${prem ? ' prem' : ''}${got ? ' got' : ''}${can ? ' can' : ''}${locked ? ' lock' : ''}${r.bag ? ' big' : ''}"${can ? ` data-pass="${i}:${prem ? 1 : 0}" role="button"` : ''}>
+      ${got ? '<span class="col">COLLECTED</span>' : ''}<div class="pa">${art(r)}</div><b>${txt(r)}</b>${got ? '<i class="tick">✓</i>' : locked ? `<i class="pad">${r.plus ? '+' : ''}</i>` : ''}${can ? '<span class="tap">TAP</span>' : ''}</div>`; };
+  const cols = [];
+  for (let i = 1; i <= P.tiers; i++) { const reached = i <= t, cur = i === t + 1;
+    cols.push(`<div class="psCol${reached ? ' on' : ''}${cur ? ' cur' : ''}" data-tier="${i}">${cell(i, false)}<div class="psNode"><span>${i}</span></div>${cell(i, true)}</div>`); }
+  const cw = Math.max(112, Math.min(128, Math.round(window.innerWidth * .31))), fillPx = t >= P.tiers ? 1e4 : (t - 0.5 + into / P.xpPerTier) * cw + cw;
+  const claimN = passClaimable();
+  sh.innerHTML = `<div class="evTop"><button class="evBack" id="passClose" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b>FLICKY PASS</b>
+      <span class="lgPill"><i class="hIco hi-coin"></i><span>${career.coins.toLocaleString()}</span></span><span class="lgPill"><i class="hIco hi-gem"></i><span>${gems.toLocaleString()}</span></span></div>
+    <div class="psHero"><div class="t"><b>${PASS_MONTH_NAMES[m]} SEASON</b><span>ENDS IN <em>${passDaysLeft()} DAYS</em></span></div>
+      <div class="psXP2"><div class="bar"><i style="width:${t >= P.tiers ? 100 : into / P.xpPerTier * 100}%"></i><span>${t >= P.tiers ? 'MAX' : into + ' / ' + P.xpPerTier + ' XP'}</span></div><span class="hex">${t}</span></div>
+      <button class="psHow" data-pshow>i</button></div>
+    ${window.PASS_SHOW !== false ? (() => { let g = 0, bags = 0; for (let i = 1; i <= P.tiers; i++) { const r = passReward(i, true); if (r.plus) continue; if (r.gems) g += r.gems; if (r.bag) bags++; }
+      window._psValue = { g, bags };
+      return `<div class="psShow${p.premium ? ' own' : ''}"><div class="who"><canvas id="psPlayer" width="10" height="10"></canvas><span class="tag">${PASS_MONTH_NAMES[m]} KIT</span></div>
+        <div class="list"><b>${p.premium ? 'YOUR PREMIUM REWARDS' : 'PREMIUM UNLOCKS'}</b>
+          <span><i class="k" style="background:${PASS_MONTH_KITS[m]}"></i>This month's kit, yours to keep</span>
+          <span><img alt="" src="${REWARD_HEAP_ART.gems_m}">${g} gems across the season</span>
+          <span><img alt="" src="${CHEST_IMG_SRC.platinum}">${bags} premium bags · platinum at tier ${P.tiers}</span>
+          <span><img alt="" src="${CHEST_IMG_SRC.bronze}">+1 bag slot · bags open 10% faster</span></div></div>`; })() : ''}
+    <div class="psHowBox">XP: ${P.xp.match} a match · +${P.xp.win} a win · ${P.xp.dailyMission} a daily mission · ${P.xp.weeklyMission} the weekly bag. ${claimN ? `<b>${claimN} reward${claimN > 1 ? 's' : ''} ready to collect.</b>` : ''}</div>
+    <div class="psTrackWrap"><div class="psLabels"><span>FREE</span><span class="pr">PREMIUM</span></div>
+      <div class="psTrack"><div class="psCols" style="--cw:${cw}px;--fill:${Math.min(fillPx, P.tiers * cw)}px">${cols.join('')}</div></div></div>
+    <div class="psCta">${p.premium ? `<div class="psOn">${p.plus ? 'PASS+' : 'PREMIUM'} ACTIVE<small>+1 bag slot · bags open 10% faster${p.plus ? '' : ' · gold trim at tier 15 with Pass+'}</small></div>
+        ${p.plus ? '' : `<button class="gcBuy psPlus" data-buypass="plus">PASS+ · +10 TIERS · £${P.plus.toFixed(2)}</button>`}`
+      : `<button class="gcBuy psAct" data-buypass="prem"><small>ACTIVATE</small>FLICKY PASS · £${P.premium.toFixed(2)}${window._psValue && window.PASS_SHOW !== false ? `<span class="val">${window._psValue.g} GEMS + KIT + ${window._psValue.bags} BAGS</span>` : ''}</button>
+        <button class="psPlusLink" data-buypass="plus">or PASS+ · jump 10 tiers + gold trim · £${P.plus.toFixed(2)}</button>`}</div>`;
+  const tr = sh.querySelector('.psTrack');
+  { const pc = sh.querySelector('#psPlayer'); if (pc) { const L = Object.assign({}, curLook(), { shirt: 'pass' + passSeasonKey().replace('-', '') }); paintPlayerTo(pc, L); } }
+  requestAnimationFrame(() => { const can = sh.querySelector('.psTile.can'), c = (can && can.closest('.psCol')) || sh.querySelector('.psCol.cur') || sh.querySelector(`.psCol[data-tier="${P.tiers}"]`); if (c) tr.scrollLeft = Math.max(0, c.offsetLeft - 70); });
   updatePassBtn();
 }
 document.addEventListener('click', e => {
   const t = e.target && e.target.closest ? e.target : null; if (!t) return;
   if (t.closest('#passBtn')) { renderPass(); document.getElementById('passPanel').classList.add('show'); try { playUiTap(); } catch (err) {} return; }
   if (t.closest('#passClose') || t.id === 'passPanel') { document.getElementById('passPanel').classList.remove('show'); updatePassBtn(); return; }
-  const c = t.closest('[data-pass]'); if (c) { const [tier, prem] = c.dataset.pass.split(':').map(Number); const l = claimPassTier(tier, !!prem); if (l) { showMessage('+ ' + l, '#FFC93A', 2000); try { hapticBig(); } catch (err) {} } renderPass(); return; }
+  if (t.closest('[data-pshow]')) { const b = document.querySelector('#passPanel .psHowBox'); if (b) b.classList.toggle('open'); return; }
+  const c = t.closest('[data-pass]'); if (c) { const [tier, prem] = c.dataset.pass.split(':').map(Number); const tr = document.querySelector('#passPanel .psTrack'), x = tr ? tr.scrollLeft : 0; const l = claimPassTier(tier, !!prem); if (l) { showMessage('+ ' + l, '#FFC93A', 2000); try { hapticBig(); } catch (err) {} } renderPass(); requestAnimationFrame(() => { const t2 = document.querySelector('#passPanel .psTrack'); if (t2) t2.scrollLeft = x; }); return; }
   const b = t.closest('[data-buypass]'); if (b) { buyPass(b.dataset.buypass === 'plus'); return; }
 });
 FEATURE_UNLOCKS.pass = { when: () => (career.matchesPlayed || 0) >= 5, msg: 'NEW! FLICKY PASS · TAP EVENTS' };
