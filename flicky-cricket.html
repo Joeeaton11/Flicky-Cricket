@@ -29182,7 +29182,8 @@ function renderPlayerScreen() {
   } else if (plTab === 'kit') {
     const sw = (list, kind) => list.map(it => {
       const un = cosUnlocked(it, kind), on = (kind === 'pants' ? plPantsOf(L) : L[kind]) === it.id;
-      const chip = un ? '' : it.unlock.gems ? `<small class="gem">${it.unlock.gems} GEMS</small>` : `<small>${THEMED_LEAGUES[it.unlock.league].name}</small>`;
+      const u = it.unlock || {};   // pass / event kits have no league (fixed Oct 30: this crashed the KIT COLOURS tab)
+      const chip = un ? '' : u.gems ? `<small class="gem">${u.gems} GEMS</small>` : u.pass ? '<small>PASS</small>' : u.event ? '<small>EVENT</small>' : (THEMED_LEAGUES[u.league] ? `<small>${THEMED_LEAGUES[u.league].name}</small>` : '<small>LOCKED</small>');
       const nw = plShownNew.includes(it.id + ':' + kind) ? '<i class="plNew">NEW</i>' : '';
       const tr = plPreview && plPreview.kind === kind && plPreview.id === it.id;
       return `<button data-k="${kind}" data-id="${it.id}" aria-label="${it.name}" class="${on ? 'on' : ''} ${un ? '' : 'lk'} ${tr ? 'try' : ''}" style="background:${it.c}">${chip}${nw}</button>`;
@@ -29230,7 +29231,7 @@ function plRenderTry() {
   if (!plPreview) { el.classList.add('hidden'); return; }
   const it = plListFor(plPreview.kind).find(x => x.id === plPreview.id);
   const btn = it.unlock.pass ? `<button id="plTryBuy" class="lg" disabled>FLICKY PASS</button>` : it.unlock.gems ? `<button id="plTryBuy" class="gem">UNLOCK <i class="hIco hi-gem"></i>${it.unlock.gems}</button>`
-    : `<button id="plTryBuy" class="lg" disabled>REACH ${THEMED_LEAGUES[it.unlock.league].name}</button>`;
+    : `<button id="plTryBuy" class="lg" disabled>${it.unlock && it.unlock.pass ? 'FROM THE FLICKY PASS' : it.unlock && it.unlock.event ? 'FROM THE EVENT' : THEMED_LEAGUES[(it.unlock || {}).league] ? 'REACH ' + THEMED_LEAGUES[it.unlock.league].name : 'LOCKED'}</button>`;
   el.innerHTML = `<button id="plTryX" aria-label="Stop trying on">✕</button><div><small>TRYING ON</small><b>${it.name} ${PL_KIND_NAME[plPreview.kind]}</b></div>${btn}`;
   el.classList.remove('hidden'); el.onclick = e => e.stopPropagation();
   document.getElementById('plTryX').onclick = e => { e.stopPropagation(); playUiTap(); plPreview = null; renderPlayerScreen(); };
