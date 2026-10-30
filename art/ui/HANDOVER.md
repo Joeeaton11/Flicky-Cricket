@@ -468,3 +468,10 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Cards give a small squash bounce as they land (`#fcWrap.land`).
 - The items-left badge by the bag is 10% bigger. Joe turned down combining coins and gems on one card and a "n LEFT" pill (both reverted).
 - To do once Figma is back: redesign the card back (the FLICKY / cricket ball card shown before each flip). Joe wants a new design.
+
+## Match intro: big-number slam (Oct 30, Joe picked C after comparing the old card, a TV band and the slam)
+- `showMoment('intro')`, `window.INTRO_STYLE` = 'slam' (default) | 'v2' (TV band, kept) | anything else (the old card).
+- Slam: league name in a small dark pill, then NEED (gold, 54), the target (200, thick outline, slight tilt, slams in with a thud and a buzz), OFF n BALLS (40), and a "WIN 🪙n · BAG" chip (league matches only). It can sit over the top half of the field (it's brief).
+- The score bar is hidden during the intro and fades in as the intro flies into it (`window._hudFadeAt`, `_hudRect`, `_hudA`). The first ball comes at 1.75 s (it was 2.2 s). Tap anywhere (not on buttons) to skip.
+- Tournaments and endless use the old card (they have no target).
+- Fixed: feature-unlock toasts ("NEW IN EVENTS…") now only show on Home and wait if you're in a match; any toast is cleared at match start.
