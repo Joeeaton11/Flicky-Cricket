@@ -2874,6 +2874,7 @@
   #chestRevealChestArea .bagFx .sbSpot { display:none; }
   #chestRevealChestCanvas { position:relative; z-index:1; width:280px !important; height:241px !important; }
   #chestRemainingBadge { z-index:2; bottom:170px !important; right:calc(50% - 150px) !important; }
+  #chestRemainingBadge { min-width:44px !important; height:48px !important; font-size:24px !important; border-radius:9px 9px 22px 22px !important; }
   /* bag name: plain gold lettering (Joe preferred it to a ribbon) */
   #chestOpenTitle { position:relative; z-index:1; margin-bottom:6px; }
 
@@ -2884,6 +2885,10 @@
   #fcWrap.deal { animation:fcDeal 0.5s cubic-bezier(.2,.9,.3,1) forwards; }
   #fcWrap.deal.lift { animation:fcDealDone 0s forwards, fcLift 0.7s cubic-bezier(.4,0,.3,1) forwards; }
   #fcWrap.out { animation:fcOut 0.22s ease-in forwards; }
+  #fcWrap.quick.deal { animation-duration:.24s; } #fcWrap.quick.deal.lift { animation:fcDealDone 0s forwards, fcLift .32s cubic-bezier(.4,0,.3,1) forwards; }
+  #fcWrap.quick #fcCard.turn { transition-duration:.3s; }
+  #fcWrap.deal.lift.land { animation:fcDealDone 0s forwards, fcLand .34s cubic-bezier(.3,1.6,.5,1) forwards; }
+  @keyframes fcLand { 0% { opacity:1; transform:scale(1.05,.95); } 55% { opacity:1; transform:scale(.97,1.03); } 100% { opacity:1; transform:none; } }
   #fcCard { position:relative; width:100%; height:100%; transform-style:preserve-3d; -webkit-transform-style:preserve-3d;
     transform:rotateY(180deg); will-change:transform; }
   #fcCard.turn { transform:rotateY(0deg); transition:transform 0.7s cubic-bezier(.45,0,.2,1); }
@@ -2938,6 +2943,15 @@
     box-shadow:inset 0 0 0 2px rgba(255,255,255,0.35), inset 0 -40px 40px rgba(0,0,0,0.35); overflow:visible; }
   .fcWin::before { content:''; position:absolute; inset:0; border-radius:9px; overflow:hidden;
     background:repeating-conic-gradient(from 0deg at 50% 60%, rgba(255,255,255,0.16) 0 8deg, transparent 8deg 22deg); animation:sbSpin 18s linear infinite; opacity:0.6; }
+  .fcWin.fcCur { display:flex; align-items:stretch; height:auto; flex:1; }
+  .fcWin.fcCur > div { justify-content:center !important; gap:6px; }
+  .fcWin.fcCur .fcArt { height:120px !important; }
+  .fcWin.fcCur b { font-size:52px !important; }
+  .fcWin.fcCur > div { position:relative; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom:8px; }
+  .fcWin.fcCur > div + div { border-left:2px solid rgba(5,10,20,.35); }
+  .fcWin.fcCur .fcArt { position:relative !important; left:auto !important; bottom:auto !important; width:90% !important; height:58% !important; transform:none !important; }
+  .fcWin.fcCur b { font-weight:400; font-size:40px; line-height:1; color:#fff; text-shadow:0 3px 0 #050A14; }
+  .fcWin.fcCur small { font-size:13px; letter-spacing:.14em; color:#fff; text-shadow:0 2px 0 #050A14; }
   .fcWin.sun { background:radial-gradient(circle at 50% 58%, color-mix(in srgb, var(--fa) 90%, #fff), var(--fb) 45%, var(--fc)); }
   .fcArt { position:absolute; left:50%; bottom:6px; width:92%; height:118%; transform:translateX(-50%); background-size:contain; background-repeat:no-repeat;
     background-position:center bottom; filter:drop-shadow(0 8px 0 rgba(0,0,0,0.35)) drop-shadow(0 0 18px var(--glow)); z-index:2; }
@@ -59890,7 +59904,7 @@ function _chestAnimLoop() {
 
   if (_chestOpenPhase === 'shake') {
     _chestShakeT += 0.032;
-    chestOpenTitle.style.opacity = Math.min(1, _chestShakeT).toString();
+    chestOpenTitle.style.opacity = Math.min(1, _chestShakeT * 4).toString();
     const k = Math.min(1, _chestShakeT / 1.6), amp = 1 + k * k * 9;
     const shakeX   = Math.sin(_chestShakeT * 34) * amp;
     const shakeY   = -Math.abs(Math.sin(_chestShakeT * 5.2)) * 14 * k;            // little hops that get bigger
@@ -60054,7 +60068,7 @@ function _onRevealTap() {
   if (_revealBusy) return;
   if (_revealIndex >= _revealItems.length) return;
 
-  const item = _revealItems[_revealIndex];
+  let item = _revealItems[_revealIndex];
   _revealIndex++;
   _updateRemainingBadge();
 
@@ -60068,7 +60082,9 @@ function _onRevealTap() {
   _afterRevealTap();
 }
 function _showRevealItem(item) {
-  if (item.type === 'coins' || item.type === 'gems') {
+  if (item.type === 'cur') {
+    fcShowCur(item);
+  } else if (item.type === 'coins' || item.type === 'gems') {
     fcShowCoins(item);
   } else if (item.card.rarity === 'epic' || item.card.rarity === 'legendary') {
     _revealBusy = true;
@@ -60381,14 +60397,16 @@ function _fcDeal(html, rarity, after) {
   wrap.className = 'on deal';
   try { playTone({ freq:300, duration:0.06, volume:0.1, type:'triangle' }); } catch (e) {}
   if (_fcTimer) clearTimeout(_fcTimer);
+  const quick = rarity === 'common' || rarity === 'coins' || rarity === 'gems';   // Oct 30: commons flip fast, so a slow flip means something good
+  wrap.classList.toggle('quick', quick);
   _fcTimer = setTimeout(() => {
     requestAnimationFrame(() => { card.classList.add('turn'); wrap.classList.add('lift'); });
     try { playTone({ freq:760, duration:0.09, volume:0.12, type:'sine' }); haptic(15); } catch (e) {}
-    _fcTimer = setTimeout(() => { front.classList.add('shown'); _fcLanded(rarity, after); }, 680);
-  }, 520);
+    _fcTimer = setTimeout(() => { front.classList.add('shown'); _fcLanded(rarity, after); }, quick ? 300 : 680);
+  }, quick ? 200 : 520);
 }
 function _fcLanded(rarity, after) {
-  {
+  { const wr = document.getElementById('fcWrap'); if (wr) wr.classList.add('land');
     if (rarity === 'legendary' || rarity === 'epic') {
       const n = rarity === 'legendary' ? 8 : 4, f = document.getElementById('fcFront');
       for (let i = 0; i < n; i++) { const sp = document.createElement('i'); sp.className = 'fcSpark';
@@ -60406,6 +60424,14 @@ function fcShowCoins(item) {
   _setCardRays(gems ? '#a855f7' : '#f4d03f');
   document.getElementById('chestGlowBeam').style.setProperty('--beam-col', (gems ? '#a855f7' : '#f4d03f') + '44');
   _fcDeal(html, gems ? 'gems' : 'coins', () => _countUp(document.getElementById('fcAmt'), 0, amt, 900));
+}
+function fcShowCur(item) {
+  const cs = item.coins >= 800 ? 'l' : item.coins >= 250 ? 'm' : 's', gs = item.gems >= 30 ? 'l' : item.gems >= 10 ? 'm' : 's';
+  const html = `<div class="fcInner"><div class="fcTop"><span class="fcSlot" style="background:#c98a0c">COINS &amp; GEMS</span><span></span></div>
+    <div class="fcWin sun fcCur"><div><i class="fcArt rh-coins_${cs}"></i><b id="fcAmtC">0</b><small>COINS</small></div><div><i class="fcArt rh-gems_${gs}"></i><b id="fcAmtG">0</b><small>GEMS</small></div></div></div><i class="fcFoil"></i>`;
+  _setCardRays('#f4d03f');
+  document.getElementById('chestGlowBeam').style.setProperty('--beam-col', '#f4d03f44');
+  _fcDeal(html, 'coins', () => { _countUp(document.getElementById('fcAmtC'), 0, item.coins, 900); _countUp(document.getElementById('fcAmtG'), 0, item.gems, 900); });
 }
 function fcShowItem(c, count) {
   count = count || 1;

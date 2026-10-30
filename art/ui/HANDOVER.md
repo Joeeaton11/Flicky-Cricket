@@ -461,3 +461,10 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - `bagConfirm(cost, q, onYes, opts)` is now navy and, with `opts.bag`, shows the bag art, "n LEFT" and a purple "OPEN NOW 💎n" button. Other callers keep the plain look in navy.
 - All four lockers empty → "WIN MATCHES TO EARN BAGS" card with PLAY (`.bagsEmpty`).
 - A bag queue was built and then removed at Joe's request. The helpers (`bagQueue`, `bagQueuedIdx`, `bagFixQueue`, and the `cs-queued` display branch) are still in the code but nothing calls `bagQueue`, so they do nothing. Delete them if they're not wanted.
+
+## Bag opening pass (Oct 30)
+- The "GOLD BAG" title reaches full opacity almost straight away (it used to fade in over the whole shake).
+- Common cards, coins and gems flip about twice as fast (`#fcWrap.quick`); rare and above keep the slow flip, so a slow flip hints at something good.
+- Cards give a small squash bounce as they land (`#fcWrap.land`).
+- The items-left badge by the bag is 10% bigger. Joe turned down combining coins and gems on one card and a "n LEFT" pill (both reverted).
+- To do once Figma is back: redesign the card back (the FLICKY / cricket ball card shown before each flip). Joe wants a new design.
