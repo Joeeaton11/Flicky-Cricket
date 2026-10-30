@@ -445,3 +445,11 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - "KIT 34 [grade] BEST KIT" sits on the ALL BATS line (the rating row is gone).
 - Kit list is 3 across in the same card style as the bag summary: art top, name, foot bar (LV · n/n, green "UPGRADE!" when ready, or 🔒 LEAGUE n / IN BAGS / n GEMS). Rarity frame plus a C/R/E/L letter chip for colour-blind players. Locked kit is shown in shadow at about 60% brightness with a rarity glow.
 - `window.KB_STYLE = 'v2'` brings back the first pass (full-height equipped card with stat bars).
+
+## Level-up celebration (Oct 30)
+- `kbLevelUp(el, slot, item, from, to, scoreBefore, scoreAfter)`: the upgrade pop-up turns into the reward. Rays in the rarity colour, the item pops in, an LV n badge stamps on, then each stat bar fills and counts up one by one with a rising tick and a +n. "KIT RATING a → b", then CONTINUE.
+- UPGRADE AGAIN (green, with coin cost) replaces CONTINUE when the item can level up again; it upgrades straight away (`track('upgrade_again')`).
+- When the kit grade letter changes, a "NEW GRADE" letter stamps in with a sound and a stronger vibration.
+- Kit rating is now level-aware (`kitScore()`, stats at each equipped item's current level). Before, it only counted base stats and never moved with upgrades. Numbers read a bit lower at level 1 (34 → 31 on the test save).
+- Fixed (live): confirming a kit upgrade also started a match. The Missions GO handler caught any `[data-go]`; it is now scoped to `#todayPanel`.
+- Later: say what each stat gain does in a match (needs the batting maths numbers).

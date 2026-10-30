@@ -775,6 +775,31 @@
   .kbStage.fresh .kbTile { animation:kbPop 520ms cubic-bezier(.2,1.6,.4,1) both, kbFloat 3.2s ease-in-out 520ms infinite; }
   @keyframes kbPop { from { transform:rotate(-4deg) scale(0.4); opacity:0; } to { transform:rotate(-4deg) scale(1); opacity:1; } }
   /* sparkle burst on equip / upgrade */
+  .luCard { display:flex; flex-direction:column; align-items:center; gap:8px; overflow:visible; }
+  .luStage { position:relative; width:200px; height:150px; display:flex; align-items:center; justify-content:center; }
+  .luRays { position:absolute; inset:-30px -40px; border-radius:50%; background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--rc) 45%,rgba(255,240,190,.5)) 0 10deg,transparent 10deg 20deg);
+    -webkit-mask:radial-gradient(circle,#000 25%,transparent 68%); mask:radial-gradient(circle,#000 25%,transparent 68%); animation:luSpin 9s linear infinite, luFade .5s ease-out both; }
+  @keyframes luSpin { to { transform:rotate(360deg); } } @keyframes luFade { from { opacity:0; transform:scale(.4); } }
+  .luCard .luStage .kbTile { width:124px; height:124px; border-color:var(--rc); animation:luPop .6s cubic-bezier(.2,1.7,.4,1) both; box-shadow:0 6px 0 rgba(0,0,0,.5),0 0 30px color-mix(in srgb,var(--rc) 70%,#fff); }
+  @keyframes luPop { 0% { transform:scale(.3) rotate(-12deg); filter:brightness(2.5); } 60% { transform:scale(1.15) rotate(3deg); filter:brightness(1.4); } 100% { transform:none; filter:none; } }
+  .luLv { position:absolute; right:14px; bottom:4px; padding:3px 12px; border-radius:12px; border:3px solid #050A14; background:linear-gradient(#9cf26a,#2a9a1e); font-size:22px; text-shadow:0 2px 0 #1a6a10; transform:rotate(-8deg); animation:luStamp .45s cubic-bezier(.3,1.8,.5,1) .35s both; }
+  @keyframes luStamp { from { transform:rotate(-8deg) scale(2.6); opacity:0; } to { transform:rotate(-8deg); opacity:1; } }
+  .luName { font-size:26px; text-shadow:0 2px 0 #000; }
+  .luStats { align-self:stretch; display:flex; flex-direction:column; gap:7px; padding:10px; border-radius:14px; background:#0a1630; border:2px solid #050A14; }
+  .luRow { display:flex; align-items:center; gap:7px; font-size:13px; letter-spacing:.04em; text-transform:uppercase; }
+  .luRow > span:first-child { width:84px; }
+  .luBar { position:relative; flex:1; height:12px; border-radius:6px; background:#050A14; overflow:hidden; }
+  .luBar i { position:absolute; left:0; top:0; bottom:0; width:var(--a); background:var(--c); animation:luFill .38s ease-out var(--d) forwards; }
+  @keyframes luFill { to { width:var(--b); } }
+  .luRow b { font-weight:400; min-width:24px; text-align:right; font-size:16px; }
+  .luRow em { font-style:normal; color:#6EE787; font-size:14px; opacity:0; animation:luIn .3s ease-out var(--d) forwards; }
+  @keyframes luIn { from { opacity:0; transform:translateY(6px) scale(.6); } to { opacity:1; transform:none; } }
+  .luKit { font-size:15px; letter-spacing:.06em; color:#B4C2DD; opacity:0; animation:luIn .35s ease-out var(--d) forwards; }
+  .luGrade { position:absolute; right:-12px; top:70px; width:74px; height:74px; border-radius:18px; border:3px solid #050A14; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:40px; line-height:.9; text-shadow:0 3px 0 rgba(0,0,0,.45); box-shadow:0 5px 0 rgba(0,0,0,.5),0 0 24px rgba(255,255,255,.4); opacity:0; animation:luGradeIn .5s cubic-bezier(.3,1.8,.5,1) var(--d) forwards; z-index:3; }
+  .luGrade small { font-size:9px; letter-spacing:.08em; text-shadow:none; margin-bottom:2px; }
+  @keyframes luGradeIn { from { opacity:0; transform:scale(3) rotate(-30deg); } to { opacity:1; transform:rotate(8deg); } }
+  .luSkip { background:none; border:0; color:#B4C2DD; font:15px 'Lilita One','Arial Black',Arial,sans-serif; height:30px; cursor:pointer; }
+  .luKit b { font-weight:400; color:#fff; font-size:20px; } .luKit b.up { color:#6EE787; } .luKit span { color:#6EE787; }
   .kbBurst { position:fixed; left:50%; top:42%; width:0; height:0; z-index:400; pointer-events:none; }
   .kbBurst i { position:absolute; left:-8px; top:-8px; width:16px; height:16px; border:2px solid #050A14; box-sizing:border-box;
     clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);
@@ -30085,10 +30110,15 @@ function kbProgress(st, withBtn) {
   return `<div class="kbProg"><span class="kbBar"><i class="${st.ready ? 'ready' : ''}" style="width:${pct}%"></i><span>${lbl}</span></span>` +
     (withBtn && st.owned ? `<button class="kbUpBtn${st.ready ? ' ready' : ''}" data-act="up" aria-label="${st.ready ? 'Upgrade' : 'Upgrade: needs more cards'}">${KB_SVG.up}</button>` : '') + '</div>';
 }
+function kitScore() {   // Oct 30: counts each equipped item's stats at its current level, so upgrades move the rating
+  let tot = 0, max = 0;
+  KB_SLOTS.forEach(s => { const it = kbEquippedItem(s), lv = Math.max(1, itemLevels[it.id] || 1); Object.keys(it.stats).forEach(k => { tot += Math.min(100, statAtLevel(it, k, lv)); max += 100; }); });
+  return Math.round(tot / max * 100);
+}
 function kbRating() {
   let tot = 0, max = 0;
   KB_SLOTS.forEach(s => { Object.values(kbEquippedItem(s).stats).forEach(v => { tot += v; max += 100; }); });
-  const score = Math.round(tot / max * 100), g = kitRatingGrade(score);
+  const score = kitScore(), g = kitRatingGrade(score);
   return `<div class="kbRating"><span>KIT RATING<b>${score}</b>/ 100</span><button class="kbBest" data-best aria-label="Equip your best kit">BEST KIT</button><span class="kbGrade" style="background:${g.color}"><small>GRADE</small>${g.letter}</span></div>`;
 }
 
@@ -30118,9 +30148,9 @@ function renderKitBag(container) {
   if ((window.KB_STYLE || 'v3') === 'v3') {   // Kit v3 (Oct 30): compact equipped strip so three rows of kit show without scrolling
     const bonus = kitSetBonus(eqItem.id), lv = est.level || 1;
     const stats = Object.keys(eqItem.stats).map((k, i) => { const v = Math.min(100, statAtLevel(eqItem, k, lv) + bonus), g = est.owned && !est.isMax ? Math.min(100, statAtLevel(eqItem, k, lv + 1) + bonus) - v : 0;
-      return `<span class="k3S" style="--sc:${KB_COLS[i % 3]}"><small>${kbEsc((STAT_INFO[k] || {}).short || k.slice(0, 3).toUpperCase())}</small>${v}${est.ready && g > 0 ? `<em>+${g}</em>` : ''}</span>`; }).join('');
+      return `<span class="k3S" style="--sc:${KB_COLS[i % 3][1]}"><small>${kbEsc((STAT_INFO[k] || {}).short || k.slice(0, 3).toUpperCase())}</small>${v}${est.ready && g > 0 ? `<em>+${g}</em>` : ''}</span>`; }).join('');
     const pct = est.isMax ? 100 : Math.min(100, est.needed ? est.cards / est.needed * 100 : 0);
-    let tot = 0, mx = 0; KB_SLOTS.forEach(s2 => { Object.values(kbEquippedItem(s2).stats).forEach(v => { tot += v; mx += 100; }); }); const score = Math.round(tot / mx * 100), gr = kitRatingGrade(score);
+    let tot = 0, mx = 0; KB_SLOTS.forEach(s2 => { Object.values(kbEquippedItem(s2).stats).forEach(v => { tot += v; mx += 100; }); }); const score = kitScore(), gr = kitRatingGrade(score);
     container.innerHTML = `<div class="kb v2 v3"><div class="kbBody"><div class="kbRail">${tabs}</div><div>
       <div class="kbCard k3" data-idx="${items.indexOf(eqItem)}" role="button" tabindex="0" aria-label="${kbEsc(eqItem.name)}, open" style="--rc:${rarityColor(eqItem.rarity)}">
         <div class="k3Top">${kbTile(slot, eqItem, 0, est)}<div class="k3Info"><span class="kbEq">EQUIPPED · LV ${est.level}</span><span class="kbName">${kbEsc(eqItem.name)}</span><span class="k3Stats">${stats}</span></div></div>
@@ -30254,16 +30284,45 @@ function kbUpgrade(slot, item, onDone) {
   kbBindStats(el);
   const go = el.querySelector('[data-go]');
   if (go && st.canAfford) go.addEventListener('click', () => {
+    const before = kitScore();
     if (upgradeItem(item.id)) {
-      hapticBig(); kbBurst('#6EE787');
-      showMessage(`${item.name} · LEVEL ${st.level + 1}!`, '#6EE787', 1800);
-      el.classList.add('hidden');
+      hapticBig();
+      kbLevelUp(el, slot, item, st.level, st.level + 1, before, kitScore());
       kbRefresh();
       onDone && onDone();
     }
   });
 }
 
+// Level-up celebration (Oct 30): the upgrade pop-up turns into the reward moment — rays, the item pops, LV stamp, stats count up one by one
+function kbLevelUp(el, slot, item, from, to, scoreBefore, scoreAfter) {
+  const st = kbState(slot, item), bonus = kitSetBonus(item.id), again = st.ready && st.canAfford;
+  const gOld = kitRatingGrade(scoreBefore), gNew = kitRatingGrade(scoreAfter);
+  const rows = Object.keys(item.stats).map((k, i) => { const a = Math.min(100, statAtLevel(item, k, from) + bonus), b = Math.min(100, statAtLevel(item, k, to) + bonus);
+    return `<div class="luRow" style="--c:linear-gradient(${KB_COLS[i % 3][0]},${KB_COLS[i % 3][1]});--a:${a}%;--b:${b}%;--d:${700 + i * 380}ms"><span>${kbEsc((STAT_INFO[k] || {}).label || k)}</span><span class="luBar"><i></i></span><b data-a="${a}" data-b="${b}">${a}</b><em>+${b - a}</em></div>`; }).join('');
+  el.innerHTML = `<div class="kbModalCard luCard" role="dialog" aria-label="${kbEsc(item.name)} level ${to}" style="--rc:${rarityColor(item.rarity)}">
+    <div class="kbModalTitle">LEVEL UP!</div>
+    <div class="luStage"><span class="luRays"></span>${kbTile(slot, item, 0, st)}<span class="luLv">LV ${to}</span></div>
+    <div class="luName">${kbEsc(item.name)}</div>
+    <div class="luStats">${rows}</div>
+    ${scoreAfter > scoreBefore ? `<div class="luKit" style="--d:${700 + Object.keys(item.stats).length * 380 + 150}ms">KIT RATING <b>${scoreBefore}</b> <span>→</span> <b class="up">${scoreAfter}</b></div>` : ''}
+    ${gNew.letter !== gOld.letter ? `<div class="luGrade" style="--d:${700 + Object.keys(item.stats).length * 380 + 550}ms;background:${gNew.color}"><small>NEW GRADE</small>${gNew.letter}</div>` : ''}
+    ${again ? `<button class="kbBtn green luGo" data-again style="align-self:stretch;flex:none"><span class="row">UPGRADE AGAIN <i class="hIco hi-coin"></i>${st.cost.toLocaleString()}</span></button><button class="luSkip" data-lu>CONTINUE</button>`
+      : `<button class="kbBtn green luGo" data-lu style="align-self:stretch;flex:none">CONTINUE</button>`}</div>`;
+  el.classList.remove('hidden');
+  kbBurst(rarityColor(item.rarity));
+  if (gNew.letter !== gOld.letter) setTimeout(() => { try { hapticBig(); playTone({ freq: 392, duration: .18, volume: .16, type: 'triangle' }); setTimeout(() => playTone({ freq: 784, duration: .3, volume: .16, type: 'triangle' }), 160); } catch (e) {} }, 700 + Object.keys(item.stats).length * 380 + 550);
+  try { playTone({ freq: 523, duration: .12, volume: .14, type: 'triangle' }); setTimeout(() => playTone({ freq: 784, duration: .2, volume: .14, type: 'triangle' }), 140); } catch (e) {}
+  el.querySelectorAll('.luRow b').forEach((n, i) => { const a = +n.dataset.a, b = +n.dataset.b, d = 700 + i * 380;
+    setTimeout(() => { try { playTone({ freq: 660 + i * 110, duration: .07, volume: .1, type: 'sine' }); } catch (e) {} const t0 = performance.now();
+      const f = now => { const t = Math.min(1, (now - t0) / 380); n.textContent = Math.round(a + (b - a) * t); if (t < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); }, d); });
+  const close = () => { el.classList.add('hidden'); };
+  el.querySelector('[data-lu]').addEventListener('click', () => { hapticTap(); close(); });
+  const ag = el.querySelector('[data-again]');
+  if (ag) ag.addEventListener('click', () => { const b = kitScore(), lv = kbState(slot, item).level;
+    if (upgradeItem(item.id)) { hapticBig(); try { track('upgrade_again', { item: item.id }); } catch (e) {} kbLevelUp(el, slot, item, lv, lv + 1, b, kitScore()); kbRefresh(); } });
+  el.addEventListener('click', e => { if (e.target === el) close(); }, { once: true });
+}
 
 const STAT_INFO = {
   power:      { short:'PWR',  label:'Power',      icon:'💥', desc:'How hard you hit the ball. High power sends the ball further for sixes and boundaries.' },
