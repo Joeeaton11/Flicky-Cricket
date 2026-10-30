@@ -30496,41 +30496,80 @@ function renderFreeBar(el) {
   el.innerHTML = '<i class="bIcon hi-chest" aria-hidden="true"></i><span>' + txt + '</span>';
 }
 
-function showBagInfo(type) {
+function showBagInfo(type, slotIdx) {
+  // BAG INFO v2 (Oct 30, after Joe's Golf Clash reference — in our style): big bag on a spotlight plinth with rays in
+  // the tier colour, unlock time, "GUARANTEED AT LEAST" rows (coins, gems, kit cards — each "i" opens its detail),
+  // "+ CHANCE OF" rows (boosters, lucky next-tier card), and the locker's own action as one big button.
   if (type === 'elite' || type === 'legendary') type = 'platinum';
-  const cfg = CHEST_TYPES[type];
-  if (!cfg) return;
+  const cfg = CHEST_TYPES[type]; if (!cfg) return;
   let ov = document.getElementById('bagInfoOv');
   if (!ov) {
     ov = document.createElement('div'); ov.id = 'bagInfoOv';
-    ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('.bagInfoClose')) ov.classList.remove('show'); });
+    ov.addEventListener('click', e => {
+      if (e.target === ov || e.target.closest('.bagInfoClose')) { ov.classList.remove('show'); return; }
+      const i = e.target.closest('[data-bi]'); if (i) { const d = ov.querySelector('.bi2More[data-for="' + i.dataset.bi + '"]'); if (d) d.classList.toggle('open'); try { playUiTap(); } catch (err) {} return; }
+      const go = e.target.closest('[data-bigo]'); if (go) { ov.classList.remove('show'); const sb = document.querySelectorAll('#chestSlotsGrid .chestSlot')[+go.dataset.bigo]; const btn = sb && sb.querySelector('.chestSlotBtn'); if (btn) btn.click(); }
+    });
     document.body.appendChild(ov);
   }
   const R = ['common', 'rare', 'epic', 'legendary'];
   const odds = R.map((r, i) => ({ r, p: cfg.rarity[i] })).filter(o => o.p > 0);
-  const range = (o) => o.min === o.max ? o.min.toLocaleString() : o.min.toLocaleString() + '–' + o.max.toLocaleString();
-  const best = odds[odds.length - 1];
-  ov.innerHTML =
-    '<div class="bagInfoCard" role="dialog" aria-label="' + cfg.name + ' bag contents">' +
-      '<button class="bagInfoClose" aria-label="Close">✕</button>' +
-      '<div class="bagInfoTitle">' + cfg.name + ' BAG</div>' +
-      '<canvas class="bagInfoArt" width="280" height="200"></canvas>' +
-      '<div class="bagInfoTime">' + (cfg.openTime > 0 ? 'Unlocks in ' + formatTimer(cfg.openTime) : 'Opens instantly') + '</div>' +
-      '<div class="bagInfoRows">' +
-        '<div class="bagInfoRow"><i class="hIco hi-coin"></i><span>Coins</span><b>' + range(cfg.coins) + '</b></div>' +
-        '<div class="bagInfoRow"><i class="hIco hi-gem"></i><span>Gems</span><b>' + range(cfg.gems) + '</b></div>' +
-        '<div class="bagInfoRow"><i class="hIco hi-chest"></i><span>Kit cards</span><b>' + range(cfg.cards) + '</b></div>' +
-      '</div>' +
-      '<div class="bagInfoSub">EACH CARD COULD BE</div>' +
-      '<div class="bagInfoOdds">' + odds.map(o =>
-        '<div class="bagOdd" style="--rc:' + rarityColor(o.r) + '"><span>' + o.r.toUpperCase() + '</span>' +
-        '<div class="bagOddBar"><i style="width:' + Math.max(3, o.p * 100) + '%"></i></div><b>' + (o.p * 100 < 1 ? '<1' : Math.round(o.p * 100)) + '%</b></div>').join('') +
-      '</div>' +
-      (best && (best.r === 'epic' || best.r === 'legendary') ? '<div class="bagInfoTip">Best chance of ' + best.r + ' kit</div>' : '') +
-    '</div>';
+  const range = o => o.min === o.max ? o.min.toLocaleString() : o.min.toLocaleString() + '–' + o.max.toLocaleString();
+  const boostCh = { wooden: 0, bronze: 0.15, silver: 0.35, gold: 0.6, platinum: 1 }[type] || 0;
+  const lucky = GAME_CONFIG.kit.luckyNextTier || 0;
+  const heap = k => `<img alt="" src="${REWARD_HEAP_ART[k + '_m']}">`;
+  const tc = cfg.color;
+  let cta = '';
+  if (slotIdx != null) { const sb = document.querySelectorAll('#chestSlotsGrid .chestSlot')[slotIdx], btn = sb && sb.querySelector('.chestSlotBtn');
+    if (btn) { const lbl = btn.textContent.trim(), busy = btn.classList.contains('waiting');
+      cta = `<button class="gcBuy bi2Go${busy ? ' goal' : ''}" data-bigo="${slotIdx}">${lbl === 'START' ? `START UNLOCK · ${cfg.openTime > 0 ? formatTimer(cfg.openTime) : 'NOW'}` : busy ? 'ANOTHER BAG IS UNLOCKING' : lbl}</button>`; } }
+  const row = (k, ico, big, sub, more) => `<div class="bi2Row">${ico}<div class="t"><b>${big}</b>${sub ? `<small>${sub}</small>` : ''}</div>${more ? `<button class="bi2I" data-bi="${k}">i</button>` : ''}</div>${more ? `<div class="bi2More" data-for="${k}">${more}</div>` : ''}`;
+  const oddsHtml = odds.map(o => `<div class="bagOdd" style="--rc:${rarityColor(o.r)}"><span>${o.r.toUpperCase()}</span><div class="bagOddBar"><i style="width:${Math.max(3, o.p * 100)}%"></i></div><b>${o.p * 100 < 1 ? '<1' : Math.round(o.p * 100)}%</b></div>`).join('');
+  ov.innerHTML = `<div class="bi2" role="dialog" aria-label="${cfg.name} bag contents" style="--tc:${tc}">
+      <button class="bagInfoClose" aria-label="Close">✕</button>
+      <div class="bi2Top"><b>${cfg.name} BAG</b></div>
+      <div class="bi2Stage"><canvas class="bagInfoArt" width="280" height="200"></canvas><span class="bi2Time">${cfg.openTime > 0 ? '⏱ UNLOCKS IN ' + formatTimer(cfg.openTime) : 'OPENS INSTANTLY'}</span></div>
+      <div class="bi2Body"><span class="bi2Sub">GUARANTEED AT LEAST</span>
+        ${row('cards', '<span class="bi2Cards"><i></i><i></i><i></i></span>', `×${cfg.cards.min} KIT CARDS`, `up to ${cfg.cards.max} · ${odds[odds.length - 1].r} chance ${Math.round(odds[odds.length - 1].p * 100) || '<1'}%`, `<span class="bi2Lbl">EACH CARD COULD BE</span>${oddsHtml}`)}
+        ${row('coins', heap('coins'), `${cfg.coins.min.toLocaleString()} COINS`, `up to ${cfg.coins.max.toLocaleString()}`)}
+        ${cfg.gems.max > 0 ? row('gems', heap('gems'), cfg.gems.min > 0 ? `${cfg.gems.min} GEM${cfg.gems.min === 1 ? '' : 'S'}` : 'GEMS', `${range(cfg.gems)} gems`) : ''}
+        ${boostCh || lucky ? '<span class="bi2Sub">+ CHANCE OF</span>' : ''}
+        ${boostCh ? row('boost', '<i class="bIco ki-bat"></i>', boostCh >= 1 ? '2 BOOSTERS' : 'A BOOSTER', `${boostCh >= 1 ? 'every bag' : Math.round(boostCh * 100) + '% of bags'}`) : ''}
+        ${lucky ? row('lucky', '<span class="bi2Star">★</span>', 'A LUCKY CARD', `${Math.round(lucky * 100)}% chance of a card from the next locked tier`) : ''}
+      </div>
+      ${cta}</div>`;
   drawChestArt(ov.querySelector('.bagInfoArt'), type, 0);
   requestAnimationFrame(() => ov.classList.add('show'));
 }
+(function () { const css = document.createElement('style'); css.textContent = `
+  #bagInfoOv .bi2{position:relative;width:min(340px,90vw);max-height:92vh;overflow:auto;display:flex;flex-direction:column;border-radius:22px;border:3px solid #050A14;background:#0E1C38;box-shadow:0 0 0 3px var(--tc),0 14px 40px rgba(0,0,0,.6);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff;scrollbar-width:none}
+  #bagInfoOv .bi2 .bagInfoClose{position:absolute;right:8px;top:8px;z-index:3}
+  .bi2Top{padding:12px 50px 8px;text-align:center;background:linear-gradient(color-mix(in srgb,var(--tc) 70%,#fff),color-mix(in srgb,var(--tc) 55%,#000));border-bottom:3px solid #050A14}
+  .bi2Top b{font-weight:400;font-size:28px;text-shadow:0 3px 0 #050A14;letter-spacing:.03em}
+  .bi2Stage{position:relative;height:clamp(140px, 22vh, 190px);display:flex;align-items:center;justify-content:center;overflow:hidden;
+    background:radial-gradient(ellipse 55% 70% at 50% 45%,color-mix(in srgb,var(--tc) 60%,#fff),transparent 70%),repeating-conic-gradient(from 0deg at 50% 45%,rgba(255,255,255,.12) 0 8deg,transparent 8deg 16deg),linear-gradient(#24488a,#0E1C38)}
+  .bi2Stage::before{content:'';position:absolute;left:50%;bottom:30px;width:200px;height:34px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse at 50% 30%,rgba(255,255,255,.9),rgba(255,255,255,.3) 45%,transparent 72%);box-shadow:0 8px 10px -3px rgba(0,0,0,.5)}
+  .bi2Stage canvas{position:relative;width:250px;height:auto;margin-top:-16px;filter:drop-shadow(0 8px 6px rgba(0,0,0,.45));animation:bi2Bob 2.6s ease-in-out infinite}
+  @keyframes bi2Bob{50%{transform:translateY(-6px)}}
+  .bi2Time{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);padding:4px 14px;border-radius:14px;background:rgba(5,10,20,.88);border:2px solid rgba(255,201,58,.5);font-size:14px;white-space:nowrap}
+  .bi2Body{display:flex;flex-direction:column;gap:6px;padding:10px 12px 12px}
+  .bi2Sub{font-size:13px;letter-spacing:.1em;color:#FFC93A;margin-top:2px}
+  .bi2Row{display:flex;align-items:center;gap:10px;padding:7px 8px 7px 6px;border-radius:14px;background:#14203a;border:2px solid #050A14}
+  .bi2Row > img{width:46px;height:36px;object-fit:contain;flex:none}
+  .bi2Row > .bIco{width:40px;height:40px;margin:0 3px}
+  .bi2Row .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}.bi2Row b{font-weight:400;font-size:19px;line-height:1.05}.bi2Row small{font-size:11px;color:#B4C2DD}
+  .bi2I{width:30px;height:30px;flex:none;border-radius:50%;border:2px solid #050A14;background:#2a62d6;color:#fff;font:15px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;padding:0;box-shadow:0 2px 0 #050A14}
+  .bi2More{display:none;flex-direction:column;gap:4px;padding:6px 10px 8px;margin-top:-4px;border-radius:0 0 12px 12px;background:#0a1630}.bi2More.open{display:flex}
+  .bi2Lbl{font-size:11px;letter-spacing:.08em;color:#8ea0c4}
+  .bi2Cards{position:relative;width:46px;height:40px;flex:none}
+  .bi2Cards i{position:absolute;left:12px;top:4px;width:22px;height:30px;border-radius:4px;border:2px solid #050A14;background:linear-gradient(#ffe27a,#d8930a)}
+  .bi2Cards i:nth-child(1){transform:rotate(-18deg) translateX(-8px);background:linear-gradient(#9fc4ff,#3b82f6)}
+  .bi2Cards i:nth-child(2){transform:rotate(0deg);background:linear-gradient(#e2c4ff,#a855f7)}
+  .bi2Cards i:nth-child(3){transform:rotate(18deg) translateX(8px)}
+  .bi2Star{width:46px;text-align:center;font-size:32px;color:#FFC93A;text-shadow:0 2px 0 #050A14;flex:none}
+  .gcBuy.bi2Go{margin:0 12px 12px;height:54px;font-size:20px}
+  .gcBuy.bi2Go.goal{font-size:15px}
+`; document.head.appendChild(css); })();
 
 function renderChestTab(container) {
   const slotsDiv = document.createElement('div');
@@ -30675,7 +30714,7 @@ function renderChestTab(container) {
           bayEl.setAttribute('aria-label', 'What is inside this bag');
           const info = document.createElement('span'); info.className = 'bagInfoDot'; info.textContent = 'i';
           bayEl.appendChild(info);
-          bayEl.addEventListener('click', () => { playUiTap(); showBagInfo(chest.type); });
+          bayEl.addEventListener('click', () => { playUiTap(); showBagInfo(chest.type, idx); });
         }
       }
       slot.appendChild(top);
