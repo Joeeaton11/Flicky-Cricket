@@ -3721,6 +3721,16 @@ const GAME_CONFIG = {
       outOfCoins:   { gems: 30, coins: 500 },
       noAds:        { price: 2.99, gems: 100, triggerAfterAdsToday: 3 },
     },
+    // DEAL STREAK (Oct 30, Joe's Golf Clash reference): 6 offers in a chain, free and paid mixed; claim each to unlock
+    // the next. Runs 48 h, starts after 10 matches, then rests 5 days. Free steps total ~15 gems + 300 coins + 2 boosters
+    // + a silver bag + a gold bag at the end — the gold bag only after both paid steps.
+    dealStreak: { minMatches: 10, hours: 48, restDays: 5, steps: [
+      { free: true, r: { gems: 15 } },
+      { free: true, r: { coins: 300, booster: 'power_bat' } },
+      { price: 1.99, r: { gems: 125, bag: 'silver', booster: 'power_bat', boosterCount: 3 } },
+      { free: true, r: { bag: 'silver' } },
+      { price: 2.99, r: { gems: 250, bag: 'gold', booster: 'golden_ball', boosterCount: 2 } },
+      { free: true, r: { bag: 'gold', coins: 600 } } ] },
     gemPacks: [ { price: 0.99, gems: 80 }, { price: 4.99, gems: 450 }, { price: 9.99, gems: 1000, tag: 'MOST POPULAR' }, { price: 19.99, gems: 2200 }, { price: 49.99, gems: 6000 } ],
     firstBuyDoubled: true, maxPopupOffersPerSession: 1,
     ads: { interstitialEvery: 3, noInterstitialFirstMatches: 3, rewardedGemsPerDay: 3, rewardedGems: 5 },
@@ -61003,9 +61013,9 @@ function maybeDailyPop() {
 document.addEventListener('click', e => {
   const t = e.target && e.target.closest ? e.target : null; if (!t) return;
   if (t.closest('[data-dailypop]')) { showDailyPop(true); return; }
-  if (t.closest('#dpClaim')) { const l = claimCalendar(); document.getElementById('dailyPop').classList.remove('show'); if (l) { showMessage('+ ' + l, '#FFC93A', 2200); try { hapticBig(); playAchievementChime(); } catch (err) {} }
+  if (t.closest('#dpClaim')) { const l = claimCalendar(); document.getElementById('dailyPop').classList.remove('show'); setTimeout(() => { try { maybeOfferPopup(); } catch (err) {} }, 900); if (l) { showMessage('+ ' + l, '#FFC93A', 2200); try { hapticBig(); playAchievementChime(); } catch (err) {} }
     try { updateTodayBadge(); updateMenuHUD(); } catch (err) {} if (document.getElementById('todayPanel').classList.contains('show')) renderToday(); return; }
-  if (t.id === 'dailyPop') { t.classList.remove('show'); return; }
+  if (t.id === 'dailyPop') { t.classList.remove('show'); window._dailyPopSkipped = true; setTimeout(() => { try { maybeOfferPopup(); } catch (err) {} }, 900); return; }
   if (t.closest('[data-weekbag]')) { const w = weekBagState(); if (w.wDays.length >= T3_WEEK_DAYS && !w.wClaimed) { w.wClaimed = true; SAVE.save(); try { addPassXP(GAME_CONFIG.season.pass.xp.weeklyMission, 'weekbag'); } catch (err) {} const l = grantReward({ bag: GAME_CONFIG.daily.missions.weeklyAllBag, coins: GAME_CONFIG.daily.missions.weekBagCoins }); showMessage('+ ' + l, '#FFC93A', 2200); try { hapticBig(); } catch (err) {} } renderToday(); return; }
 }, true);
 function goMission(ev) {
@@ -61105,6 +61115,8 @@ function onHomeOnly() {   // true only when Home itself is on screen (not the re
 }
 function maybeOfferPopup() {
   if (window._offerShownThisSession || state !== 'menu' || !onHomeOnly()) return;
+  if (document.querySelector('#dailyPop.show, #dsPop.show') || (calendarReady() && featureOn('today') && !window._dailyPopSkipped)) return;   // daily reward first
+  { const ds = dsActive(); if (ds && !window._dsShownThisSession) { window._dsShownThisSession = true; window._offerShownThisSession = true; setTimeout(() => { if (onHomeOnly()) renderDealStreak(); }, 600); return; } }
   const ov = document.getElementById('overlay'); if (!ov || ov.classList.contains('hidden')) return;
   const o = activeOffer(); if (!o) return;
   window._offerShownThisSession = true;
@@ -61260,6 +61272,7 @@ function fmtLeft(ms) { const h = Math.max(0, Math.floor(ms / 3600e3)), m = Math.
   .gcNoAd{position:relative;width:52px;height:40px;border-radius:9px;border:3px solid #050A14;background:#fff;color:#1a6a10;font-size:20px;display:flex;align-items:center;justify-content:center}
   .gcNoAd::after{content:'';position:absolute;left:-8px;right:-8px;top:50%;height:5px;background:#e8283c;border:2px solid #050A14;transform:rotate(-28deg)}
   .gcPlay{position:absolute;right:16px;bottom:14px;width:26px;height:26px;border-radius:50%;background:#e8283c;border:2px solid #050A14;font-size:12px;display:flex;align-items:center;justify-content:center}
+  .dsMini{display:grid;grid-template-columns:repeat(2,18px);gap:6px}.dsMini i{width:18px;height:18px;border-radius:5px;background:rgba(5,10,20,.55);border:2px solid #050A14}.dsMini i.on{background:#4fd46a}.dsMini i.cur{background:#FFC93A;box-shadow:0 0 8px #FFC93A}
   .gcOdds{margin:2px auto 0;background:none;border:0;color:#9fb3d8;font:13px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;padding:8px}
   .sh2 .passBan{background:linear-gradient(135deg,#5a3f08,#1d1404);border-color:#f5a800;cursor:pointer;padding:10px 12px}
   .sh2 .passBan b{font-weight:400;font-size:17px}
@@ -61285,6 +61298,86 @@ function showBagOdds() {
     <span style="font-size:12px;color:#B4C2DD">Bags can also hold a booster: bronze 15%, silver 35%, gold 60%, platinum 2 every time.</span><button id="oddsClose" style="background:#FFC93A;color:#5a3300">OK</button>`;
   document.getElementById('oddsPop').classList.add('show');
 }
+// ---------- DEAL STREAK ----------
+function dsState() { const s = shopState(); s.ds = s.ds || { start: 0, step: 0 }; return s.ds; }
+function dsActive() {   // starts a new streak when due; returns the live state or null
+  const D = GAME_CONFIG.shop.dealStreak, st = dsState(), now = Date.now() + (window._dayOffset || 0) * 864e5;
+  if ((career.matchesPlayed || 0) < D.minMatches) return null;
+  const end = st.start + D.hours * 3600e3;
+  if (st.start && now < end) return st.step < D.steps.length ? st : null;
+  if (!st.start || now >= end + D.restDays * 864e5) { st.start = now; st.step = 0; SAVE.save(); track('offer_shown', { offer: 'deal_streak' }); return st; }
+  return null;
+}
+function dsLeft() { const D = GAME_CONFIG.shop.dealStreak, st = dsState(); return st.start + D.hours * 3600e3 - (Date.now() + (window._dayOffset || 0) * 864e5); }
+function dsItems(r) {
+  const heap = (k, n) => `<img alt="" src="${REWARD_HEAP_ART[k + '_' + (k === 'coins' ? (n < 250 ? 's' : n < 800 ? 'm' : 'l') : (n < 30 ? 's' : n < 150 ? 'm' : 'l'))]}">`;
+  const out = [];
+  if (r.gems) out.push(`<span>${heap('gems', r.gems)}<b>×${r.gems}</b></span>`);
+  if (r.coins) out.push(`<span>${heap('coins', r.coins)}<b>${r.coins.toLocaleString()}</b></span>`);
+  if (r.bag) out.push(`<span><img alt="" src="${CHEST_IMG_SRC[r.bag]}"><b>×1</b></span>`);
+  if (r.booster) out.push(`<span>${boosterIconHtml(r.booster)}<b>×${r.boosterCount || 1}</b></span>`);
+  return out.join('');
+}
+function renderDealStreak() {
+  const D = GAME_CONFIG.shop.dealStreak, st = dsState();
+  let p = document.getElementById('dsPop'); if (!p) { p = document.createElement('div'); p.id = 'dsPop'; document.body.appendChild(p); }
+  const cards = D.steps.map((x, i) => { const done = i < st.step, cur = i === st.step;
+    return `<div class="dsCard${done ? ' done' : ''}${cur ? ' cur' : ''}" style="grid-area:c${i}"><div class="it n${Object.keys(x.r).filter(k => k !== 'boosterCount').length}">${dsItems(x.r)}</div>
+      <button class="dsBtn${cur ? (x.free ? ' free' : ' buy') : ''}"${cur ? ` data-ds="${i}"` : ' disabled'}>${done ? '✓' : x.free ? 'FREE' : '£' + x.price.toFixed(2)}</button>${done ? '<i class="tick">✓</i>' : ''}</div>`; }).join('');
+  const arrows = ['a0', 'a1', 'a2', 'a3', 'a4'].map((a, i) => `<i class="dsArr ${a}${i < st.step ? ' on' : ''}"></i>`).join('');
+  p.innerHTML = `<div class="c"><button class="x" id="dsClose" aria-label="Close">✕</button>
+    <div class="ttl"><b>DEAL</b><b class="big">STREAK</b></div>
+    <span class="tmr">ENDS IN <b>${fmtLeft(dsLeft())}</b></span><small class="sub">Claim each offer to unlock the next!</small>
+    <div class="grid">${cards}${arrows}</div></div>`;
+  p.classList.add('show');
+}
+function dsClaim(i) {
+  const D = GAME_CONFIG.shop.dealStreak, st = dsState(), x = D.steps[i]; if (!x || i !== st.step || !dsActive()) return;
+  const done = () => { st.step = i + 1; SAVE.save(); track('offer_bought', { offer: 'deal_streak', step: i + 1, price: x.free ? 0 : x.price }); return grantReward(x.r); };
+  if (x.free) { const l = done(); showMessage('+ ' + l, '#FFC93A', 2200); try { hapticBig(); playAchievementChime(); } catch (e) {} }
+  else buyRealMoney('deal_streak_' + (i + 1), x.price, done);
+  setTimeout(() => { if (document.getElementById('dsPop').classList.contains('show')) renderDealStreak(); }, 60);
+}
+document.addEventListener('click', e => {
+  const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+  if (t.closest('#dsClose') || t.id === 'dsPop') { document.getElementById('dsPop').classList.remove('show'); try { if (document.querySelector('.sh3')) openEquipTab('shop'); } catch (err) {} return; }
+  const b = t.closest('[data-ds]'); if (b) { try { playUiTap(); } catch (err) {} dsClaim(+b.dataset.ds); return; }
+  if (t.closest('[data-act="dstreak"]')) { if (dsActive()) renderDealStreak(); return; }
+}, true);
+(function () { const css = document.createElement('style'); css.textContent = `
+  #dsPop{position:fixed;inset:0;z-index:320;display:none;align-items:center;justify-content:center;background:rgba(5,10,20,.75);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff;padding:calc(var(--hdrTop,8px) + 6px) 12px calc(12px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
+  #dsPop.show{display:flex}
+  #dsPop .c{position:relative;width:min(380px,100%);max-height:100%;display:flex;flex-direction:column;align-items:center;gap:4px;animation:dpIn .35s cubic-bezier(.3,1.4,.5,1)}
+  #dsPop .x{position:absolute;right:-2px;top:-2px;z-index:2;width:42px;height:42px;border-radius:12px;border:3px solid #050A14;background:linear-gradient(#ff6a6a,#c8222c);color:#fff;font-size:20px;cursor:pointer;box-shadow:0 3px 0 #6a0a12}
+  #dsPop .ttl{display:flex;flex-direction:column;align-items:center;line-height:.9;transform:rotate(-3deg);margin-top:6px}
+  #dsPop .ttl b{font-weight:400;font-size:40px;color:#eaf2ff;text-shadow:0 3px 0 #1a3a8a,0 0 14px rgba(90,160,255,.9),3px 3px 0 #050A14}
+  #dsPop .ttl b.big{font-size:60px;background:linear-gradient(#fff6a0,#ffc21a 45%,#ff6a00);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(3px 4px 0 #050A14) drop-shadow(0 0 12px rgba(255,140,0,.7));text-shadow:none}
+  #dsPop .tmr{margin-top:4px;padding:4px 12px;border-radius:12px;background:#050A14;border:2px solid rgba(255,201,58,.6);font-size:14px}#dsPop .tmr b{font-weight:400;color:#FFC93A}
+  #dsPop .sub{font-size:14px;color:#eaf2ff}
+  #dsPop .grid{position:relative;display:grid;width:100%;gap:22px 30px;margin-top:6px;grid-template-columns:1fr 1fr;grid-template-areas:"c0 c1" "c3 c2" "c4 c5"}
+  .dsCard{position:relative;display:flex;flex-direction:column;border-radius:16px;border:3px solid #050A14;overflow:hidden;
+    background:radial-gradient(ellipse 70% 60% at 50% 0%,rgba(255,255,255,.55),rgba(255,255,255,0) 70%),linear-gradient(#5fa6ff,#2a62d6);box-shadow:0 5px 0 rgba(0,0,0,.45)}
+  .dsCard .it{flex:1;min-height:92px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px 4px;padding:8px 4px 4px}
+  .dsCard .it span{position:relative;display:flex;align-items:center;justify-content:center;width:46%}
+  .dsCard .it.n1 span{width:80%}
+  .dsCard .it img{max-width:100%;height:46px;object-fit:contain;filter:drop-shadow(0 3px 2px rgba(0,0,0,.35))}
+  .dsCard .it.n1 img{height:70px}
+  .dsCard .it .bIco{width:40px;height:40px}
+  .dsCard .it b{position:absolute;right:-2px;bottom:-2px;font-weight:400;font-size:16px;text-shadow:0 2px 0 #050A14,0 0 4px #050A14}
+  .dsBtn{height:46px;border:0;border-top:3px solid #050A14;background:linear-gradient(#e8eef8,#a8b4c8);color:#fff;font:22px 'Lilita One','Arial Black',Arial,sans-serif;text-shadow:0 2px 0 #4a5a78;cursor:default}
+  .dsBtn.free,.dsBtn.buy{cursor:pointer;background:linear-gradient(#9cf26a,#3dbb2c 60%,#2a9a1e);text-shadow:0 2px 0 #1a6a10;box-shadow:inset 0 2px 0 rgba(255,255,255,.6)}
+  .dsCard.cur{border-color:#FFC93A;box-shadow:0 0 0 3px rgba(255,201,58,.45),0 0 20px rgba(255,201,58,.6),0 5px 0 rgba(0,0,0,.45);animation:evPulse 1.5s ease-in-out infinite}
+  .dsCard.done{filter:saturate(.35) brightness(.75)}
+  .dsCard .tick{position:absolute;right:6px;top:6px;width:28px;height:28px;border-radius:50%;background:#4fd46a;border:2px solid #050A14;color:#04310f;font-style:normal;font-size:16px;display:flex;align-items:center;justify-content:center}
+  .dsArr{position:absolute;width:26px;height:26px;background:#FFC93A;border:0;filter:drop-shadow(0 2px 0 #050A14);clip-path:polygon(0 30%,55% 30%,55% 0,100% 50%,55% 100%,55% 70%,0 70%);opacity:.55}
+  .dsArr.on{opacity:1}
+  .dsArr.a0{left:50%;top:16.6%;transform:translate(-50%,-50%)}
+  .dsArr.a1{right:25%;top:33.3%;transform:translate(50%,-50%) rotate(90deg)}
+  .dsArr.a2{left:50%;top:50%;transform:translate(-50%,-50%) rotate(180deg)}
+  .dsArr.a3{left:25%;top:66.6%;transform:translate(-50%,-50%) rotate(90deg)}
+  .dsArr.a4{left:50%;top:83.3%;transform:translate(-50%,-50%)}
+  @media (max-height:720px){ #dsPop .ttl b{font-size:30px} #dsPop .ttl b.big{font-size:44px} .dsCard .it{min-height:70px} .dsCard .it.n1 img{height:52px} .dsCard .it img{height:36px} #dsPop .grid{gap:16px 26px} .dsBtn{height:40px;font-size:19px} }
+`; document.head.appendChild(css); })();
 function renderShopV2(container) {
   // Shop v4 (Oct 30, Joe's Golf Clash reference): ONE scrolling shop; the tab bar pins to the top and its highlight
   // slides across as each section reaches it (tap a tab to jump). Big tiles: name on top, art on a sunburst, flag,
@@ -61309,8 +61402,12 @@ function renderShopV2(container) {
       <button class="gcBuy${o.btnCls ? ' ' + o.btnCls : ''}"${o.btnAttr || ''}>${o.btn}</button></div></div>`;
   // ---------- DEALS ----------
   let deal = '';
-  if (off || featureOn('pass')) {
+  const ds = dsActive();
+  if (off || featureOn('pass') || ds) {
     deal += hd('FEATURED');
+    if (ds) { const D = GAME_CONFIG.shop.dealStreak, x = D.steps[ds.step];
+      deal += wide({ tint: '#2a62d6', art: `<div class="dsMini">${D.steps.map((_, i) => `<i class="${i < ds.step ? 'on' : i === ds.step ? 'cur' : ''}"></i>`).join('')}</div>`, timer: `ENDS IN <b>${fmtLeft(dsLeft())}</b>`, name: 'DEAL STREAK',
+        sub: `Offer ${ds.step + 1} of ${D.steps.length} · ${x.free ? 'next one is FREE!' : 'unlock the next free offers'}`, btn: x.free ? 'CLAIM FREE' : 'OPEN', btnAttr: ' data-act="dstreak"' }); }
     if (off) deal += wide({ tint: '#8a3df0', art: img(REWARD_HEAP_ART.gems_l), timer: `OFFER ENDS IN <b>${fmtLeft(off.until - Date.now())}</b>`, name: off.title, sub: off.label, btn: `£${off.price.toFixed(2)}`, btnAttr: ' data-act="offer"' });
     if (featureOn('pass')) { const P = GAME_CONFIG.season.pass, t = passTier(), into = passState().xp - t * P.xpPerTier;
       deal += wide({ tint: '#e8a21a', art: img(CHEST_IMG_SRC.gold), timer: `ENDS IN <b>${passDaysLeft()} DAYS</b>`, name: `FLICKY PASS · ${PASS_MONTH_NAMES[_nowDate().getMonth()]}`,
