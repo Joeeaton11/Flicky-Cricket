@@ -453,3 +453,11 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Kit rating is now level-aware (`kitScore()`, stats at each equipped item's current level). Before, it only counted base stats and never moved with upgrades. Numbers read a bit lower at level 1 (34 → 31 on the test save).
 - Fixed (live): confirming a kit upgrade also started a match. The Missions GO handler caught any `[data-go]`; it is now scoped to `#todayPanel`.
 - Later: say what each stat gain does in a match (needs the batting maths numbers).
+
+## Bags screen pass (Oct 30)
+- The "i" odds button is now a round "i" next to the free-bags timer, so the lockers move up and the 5th (locked) locker shows its padlock.
+- Button colours follow the rule: OPEN! is green (get), START is blue. The gem button just shows "💎n" (no "SKIP").
+- One bag opens at a time (kept on purpose: gem skips, return visits and the sim depend on it). Other bags still show START; tapping it says "One bag opens at a time" and the opening bag shakes (`.bagNudge`). No NEXT/WAITING label.
+- `bagConfirm(cost, q, onYes, opts)` is now navy and, with `opts.bag`, shows the bag art, "n LEFT" and a purple "OPEN NOW 💎n" button. Other callers keep the plain look in navy.
+- All four lockers empty → "WIN MATCHES TO EARN BAGS" card with PLAY (`.bagsEmpty`).
+- A bag queue was built and then removed at Joe's request. The helpers (`bagQueue`, `bagQueuedIdx`, `bagFixQueue`, and the `cs-queued` display branch) are still in the code but nothing calls `bagQueue`, so they do nothing. Delete them if they're not wanted.

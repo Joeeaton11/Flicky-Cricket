@@ -3317,6 +3317,31 @@
     background:linear-gradient(180deg,#a76d35,#6b4119); border:4px solid #2a1606; transform:scale(0.85); transition:transform 0.22s cubic-bezier(0.34,1.5,0.64,1);
     box-shadow:0 8px 0 #2a1606, 0 20px 50px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,220,170,0.45); }
   #bagConfirmOv.show .bagConfirmCard { transform:scale(1); }
+  /* Oct 30: navy style to match the other pop-ups; the bag art and time left show what the gems buy */
+  #bagConfirmOv { background:rgba(3,7,16,.78); }
+  .bagConfirmCard.bc2 { width:min(320px,100%); padding:0 14px 14px; overflow:hidden; color:#fff; background:#0E1C38; border:3px solid #050A14; box-shadow:0 0 0 3px var(--tc),0 14px 40px rgba(0,0,0,.6); }
+  .bc2 .bc2Stage { position:relative; margin:0 -14px 10px; height:150px; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse 55% 70% at 50% 45%,color-mix(in srgb,var(--tc) 55%,#fff),transparent 70%),repeating-conic-gradient(from 0deg at 50% 45%,rgba(255,255,255,.1) 0 8deg,transparent 8deg 16deg),linear-gradient(#24488a,#0E1C38); border-bottom:3px solid #050A14; }
+  .bc2 .bc2Stage canvas { width:200px; height:auto; filter:drop-shadow(0 8px 6px rgba(0,0,0,.45)); animation:bi2Bob 2.6s ease-in-out infinite; }
+  .bc2 .bc2Left { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); padding:3px 12px; border-radius:14px; background:rgba(5,10,20,.88); border:2px solid rgba(255,201,58,.5); font-size:14px; white-space:nowrap; }
+  .bc2 .bagConfirmQ { font-size:22px; text-shadow:0 2px 0 #050A14; margin:14px 0 14px; }
+  .bc2 .bagConfirmBtns button { border-color:#050A14; }
+  .bc2 .bcNo { background:#1d3566 !important; color:#B4C2DD !important; box-shadow:0 4px 0 #050A14 !important; flex:.8 !important; }
+  .bc2 .bcYes { display:flex; align-items:center; justify-content:center; gap:4px; background:linear-gradient(#d98fff,#a748f0 55%,#7e23d6) !important; box-shadow:0 4px 0 #4a1590 !important; flex:1.4 !important; }
+  .bc2 .bcYes .hIco { width:24px; height:24px; } .bc2 .bcYes span { margin-right:4px; }
+  /* colour rule: green = get (OPEN!), blue = neutral action (START / QUEUE) */
+  .cs-chests .chestSlotBtn.open { background:linear-gradient(#9cf26a,#3dbb2c 60%,#2a9a1e) !important; color:#fff !important; text-shadow:0 2px 0 #1a6a10 !important; }
+  .cs-chests .chestSlotBtn.start { background:linear-gradient(#6aa8ff,#2f6fe0 55%,#1d4fb0) !important; }
+  .cs-chests .chestSlotBtn.queued { background:linear-gradient(#2a4a86,#1d3566) !important; color:#9fd0ff !important; }
+  .cs-chests .cs-queued .chestBay { filter:saturate(.8); }
+  .cs-chests .chestSlot.bagNudge { animation:bagNudge .5s ease-in-out; } @keyframes bagNudge { 20%,60% { transform:translateX(-5px) rotate(-1deg); } 40%,80% { transform:translateX(5px) rotate(1deg); } }
+  .cs-chests .oddsBtn { position:absolute; right:14px; top:6px; z-index:3; width:34px; height:34px; padding:0; margin:0; border-radius:50%; font-size:0; border:2.5px solid #2a1606; background:linear-gradient(#fdf4dc,#e8d09b); box-shadow:0 3px 0 #2a1606; }
+  .cs-chests .oddsBtn::before { content:'i'; font:18px 'Lilita One','Arial Black',Arial,sans-serif; color:#4a2a0c; }
+  .cs-chests #equipContent { position:relative; }
+  .bagsEmpty { position:absolute; z-index:4; left:14px; right:14px; top:44%; transform:translateY(-50%); padding:16px; border-radius:18px; text-align:center; color:#fff; font-family:'Lilita One','Arial Black',Arial,sans-serif;
+    background:rgba(14,28,56,.94); border:3px solid #050A14; box-shadow:0 0 0 3px #FFC93A,0 10px 30px rgba(0,0,0,.5); display:flex; flex-direction:column; gap:10px; align-items:center; }
+  .bagsEmpty b { font-weight:400; font-size:22px; line-height:1.1; } .bagsEmpty small { font-size:14px; color:#B4C2DD; }
+  .bagsEmpty button { width:100%; height:54px; border-radius:16px; border:3px solid #050A14; font:24px 'Lilita One','Arial Black',Arial,sans-serif; color:#5a3300; background:linear-gradient(#fff27f,#ffc61a 55%,#f0a000); box-shadow:0 5px 0 #8a5a00; cursor:pointer; }
   .bagConfirmQ { font-size:21px; line-height:1.15; text-shadow:0 2px 0 #2a1606; }
   .bagConfirmCost { display:inline-flex; align-items:center; gap:6px; margin:12px 0 16px; padding:4px 16px 2px 8px; border-radius:14px;
     background:rgba(42,22,6,0.5); box-shadow:inset 0 0 0 2px rgba(201,150,58,0.6); font-size:30px; color:#fff; text-shadow:0 2px 0 #2a1606; }
@@ -5465,10 +5490,25 @@ function openChest(slotIdx) {
   }
 }
 
-// index of the bag whose timer is still running, or -1
+// Bag queue (Oct 30): one bag can be lined up to start the moment the running one finishes.
+// A queued bag simply has openingStarted in the future (= the running bag's finish time), so every timer, badge and notification just works.
+function bagQueuedIdx() { const now = Date.now(); return chestSlots.findIndex(c => c && c.openingStarted && c.openingStarted > now); }
+function bagRunningIdx() { const now = Date.now(); return chestSlots.findIndex(c => c && c.openingStarted && c.openingStarted <= now && (now - c.openingStarted) / 1000 < (CHEST_TYPES[c.type] || {}).openTime); }
+function bagFixQueue() {   // if the running bag was opened early (gems), the queued one starts now instead of waiting
+  const q = bagQueuedIdx(); if (q === -1 || bagRunningIdx() !== -1) return;
+  const now = Date.now(), fin = Math.max(0, ...chestSlots.filter(c => c && c.openingStarted && c.openingStarted <= now).map(c => c.openingStarted + (CHEST_TYPES[c.type] || {}).openTime * 1000).filter(t => t <= now));
+  chestSlots[q].openingStarted = (fin > 0 && now - fin < 5000 ? fin : now) - (passPremiumActive() ? (CHEST_TYPES[chestSlots[q].type] || {}).openTime * 100 : 0); saveChestSlots(); try { planNotifications(true); } catch (e) {}
+}
+function bagQueue(idx) {
+  const r = bagRunningIdx(), c = chestSlots[idx]; if (r === -1 || !c) return;
+  const cr = chestSlots[r], ct = CHEST_TYPES[c.type] || {};
+  c.openingStarted = cr.openingStarted + (CHEST_TYPES[cr.type] || {}).openTime * 1000 - (passPremiumActive() ? ct.openTime * 100 : 0); c.queued = 1; saveChestSlots();   // Pass: 10% faster, same as START
+  try { planNotifications(true); track('bag_queued', { type: c.type }); } catch (e) {}
+}
+function bagUnqueue(idx) { const c = chestSlots[idx]; if (!c) return; c.openingStarted = null; delete c.queued; saveChestSlots(); try { cancelBagReadyNotice(idx); planNotifications(true); } catch (e) {} }
+// index of the bag whose timer is still running (or queued), or -1
 function bagUnlockingIdx() {
-  return chestSlots.findIndex(c => c && c.openingStarted &&
-    (Date.now() - c.openingStarted) / 1000 < (CHEST_TYPES[c.type] || {}).openTime);
+  const r = bagRunningIdx(); return r !== -1 ? r : bagQueuedIdx();
 }
 
 // ── ready notification (app build with @capacitor/local-notifications; no-op in the browser) ──
@@ -30715,13 +30755,16 @@ function drawChestArt(canvas, type, pct, open) {
 
 // ── Kit bag helpers (Oct 24) ──
 const GEM_CONFIRM_OVER = 20;
-function bagConfirm(cost, question, onYes) {
+function bagConfirm(cost, question, onYes, opts) {
+  opts = opts || {};
   let ov = document.getElementById('bagConfirmOv');
   if (!ov) { ov = document.createElement('div'); ov.id = 'bagConfirmOv'; document.body.appendChild(ov); }
-  ov.innerHTML = '<div class="bagConfirmCard" role="dialog" aria-label="Confirm gem spend">' +
+  const tc = opts.bag && CHEST_TYPES[opts.bag] ? CHEST_TYPES[opts.bag].color : '#a748f0';
+  ov.innerHTML = '<div class="bagConfirmCard bc2" role="dialog" aria-label="Confirm gem spend" style="--tc:' + tc + '">' +
+    (opts.bag ? '<div class="bc2Stage"><canvas width="240" height="180"></canvas>' + (opts.left ? '<span class="bc2Left">' + opts.left + ' LEFT</span>' : '') + '</div>' : '') +
     '<div class="bagConfirmQ">' + question + '</div>' +
-    '<div class="bagConfirmCost"><i class="hIco hi-gem"></i>' + cost + '</div>' +
-    '<div class="bagConfirmBtns"><button class="bcNo">CANCEL</button><button class="bcYes">SPEND</button></div></div>';
+    '<div class="bagConfirmBtns"><button class="bcNo">CANCEL</button><button class="bcYes"><span>' + (opts.yes || 'SPEND') + '</span><i class="hIco hi-gem"></i>' + cost + '</button></div></div>';
+  if (opts.bag) drawChestArt(ov.querySelector('canvas'), opts.bag, 1, false);
   const close = () => ov.classList.remove('show');
   ov.onclick = e => { if (e.target === ov) close(); };
   ov.querySelector('.bcNo').onclick = () => { playUiTap(); close(); };
@@ -30950,6 +30993,7 @@ function renderChestTab(container) {
       if (got) { showMessage(got === 2 ? '2 FREE DAILY BAGS ADDED!' : 'FREE DAILY BAG ADDED!', '#22c55e', 1800); updateMenuHUD(); }
     }
     renderFreeBar(freeBar);
+    bagFixQueue();
     slotsDiv.innerHTML = '';
     syncBagSlots();
     chestSlots.forEach((chest, idx) => {
@@ -30999,7 +31043,13 @@ function renderChestTab(container) {
         nameEl.textContent = cfg.name;
         top.appendChild(nameEl);
 
-        if (chest.openingStarted) {
+        if (chest.openingStarted && chest.openingStarted > Date.now()) {
+          slot.className = 'chestSlot cs-queued';
+          drawChestArt(artCanvas, chest.type, 0);
+          const lt = document.createElement('div'); lt.className = 'chestSlotTimer csLocked'; lt.textContent = 'STARTS IN ' + formatTimer((chest.openingStarted - Date.now()) / 1000); mid.appendChild(lt);
+          btn.className = 'chestSlotBtn queued'; btn.innerHTML = '✓ UP NEXT';
+          btn.addEventListener('click', () => { playUiTap(); bagUnqueue(idx); showMessage('Taken out of the queue', '#FFE27A', 1400); renderSlots(); });
+        } else if (chest.openingStarted) {
           const elapsed   = (Date.now() - chest.openingStarted) / 1000;
           const remaining = Math.max(0, cfg.openTime - elapsed);
           const pct = cfg.openTime > 0 ? Math.min(1, 1 - remaining / cfg.openTime) : 1;
@@ -31035,7 +31085,7 @@ function renderChestTab(container) {
 
             const gemCost = Math.ceil(remaining / 600);
             btn.className = 'chestSlotBtn gems';
-            btn.innerHTML = '<i class="hIco hi-gem csGem"></i>' + gemCost + ' SKIP';
+            btn.innerHTML = '<i class="hIco hi-gem csGem"></i>' + gemCost;
             btn.addEventListener('click', () => {
               const chestType = chest.type;
               const go = () => {
@@ -31047,7 +31097,7 @@ function renderChestTab(container) {
                   showChestOpenAnimation(chestType, result.rewards, () => { updateEquipTopBar(); renderSlots(); });
                 }
               };
-              if (gemCost > GEM_CONFIRM_OVER && gems >= gemCost) bagConfirm(gemCost, 'Open the ' + cfg.name.toLowerCase() + ' bag now?', go);
+              if (gemCost > GEM_CONFIRM_OVER && gems >= gemCost) bagConfirm(gemCost, 'Open the ' + cfg.name + ' BAG now?', go, { bag: chestType, left: formatTimer(remaining), yes: 'OPEN NOW' });
               else go();
             });
           }
@@ -31060,8 +31110,8 @@ function renderChestTab(container) {
             lt.textContent = formatTimer(cfg.openTime); mid.appendChild(lt); }
           const busyIdx = cfg.openTime > 0 ? bagUnlockingIdx() : -1;
           if (busyIdx !== -1) {
-            btn.className = 'chestSlotBtn waiting'; btn.innerHTML = BAG_BTN_ICON.watch + 'WAITING';
-            btn.addEventListener('click', () => { playUiTap(); showMessage('One bag unlocks at a time', '#FFE27A', 1600); });
+            btn.className = 'chestSlotBtn start'; btn.innerHTML = BAG_BTN_ICON.watch + 'START';
+            btn.addEventListener('click', () => { playUiTap(); showMessage('One bag opens at a time', '#FFE27A', 1600); const bz = slotsDiv.children[busyIdx]; if (bz) { bz.classList.remove('bagNudge'); void bz.offsetWidth; bz.classList.add('bagNudge'); } });
           } else {
             btn.addEventListener('click', () => { playUiTap(); openChest(idx); renderSlots(); });
           }
@@ -31085,6 +31135,12 @@ function renderChestTab(container) {
       slot.appendChild(btn);
       slotsDiv.appendChild(slot);
     });
+    // all lockers empty: point the way to more bags
+    { const old = container.querySelector('.bagsEmpty'); if (old) old.remove();
+      if (chestSlots.slice(0, 4).every(c => !c)) { const em = document.createElement('div'); em.className = 'bagsEmpty';
+        em.innerHTML = '<b>WIN MATCHES TO EARN BAGS</b><small>Every win puts a bag in a locker</small><button>PLAY</button>';
+        em.querySelector('button').addEventListener('click', () => { playUiTap(); try { document.getElementById('homeLeagueCard').click(); } catch (e) {} });
+        container.appendChild(em); } }
     // locked 5th cabinet until it is bought
     if (!hasExtraChestSlot()) {
       const lk = document.createElement('div');
