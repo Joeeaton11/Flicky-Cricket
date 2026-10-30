@@ -3701,9 +3701,10 @@ const GAME_CONFIG = {
     boostersPerMatch: 2, boosterPack: { count: 3, gems: 60 },
   },
   daily: {                                                                                             // sprint 5
-    calendar: [ { coins: 100 }, { booster: 'power_bat' }, { coins: 200 }, { gems: 20 }, { bag: 'silver' }, { coins: 400 }, { bag: 'gold', gems: 50 } ],
+    // Oct 30: the separate daily gift and the weekly mission list were folded in here and into the weekly bag (sim re-run)
+    calendar: [ { coins: 150 }, { booster: 'power_bat' }, { coins: 300 }, { gems: 25 }, { bag: 'silver' }, { coins: 600 }, { bag: 'gold', gems: 50 } ],
     giftRotation: [ { coins: 150 }, { booster: 'random' }, { gems: 5 }, { bag: 'wooden' } ],
-    missions: { dailyCount: 3, weeklyCount: 5, dailyCoins: [50, 150], dailyAllBag: 'bronze', weeklyCoins: [300, 800], weeklyAllBag: 'gold' },
+    missions: { dailyCount: 3, weeklyCount: 5, dailyCoins: [50, 150], dailyAllBag: 'bronze', weeklyCoins: [300, 800], weeklyAllBag: 'gold', weekBagDays: 4, weekBagCoins: 1500 },
     stars: { ballsSpareFor2: 3, ballsSpareFor3: 6, coinsPer10Stars: 100 },
     trophyRoadEvery: 2,
   },
@@ -60760,7 +60761,9 @@ function claimMission(id) {
 function claimAllBag(kind) {
   const m = missionsState(), list = kind === 'daily' ? m.daily : m.weekly, flag = kind === 'daily' ? 'dailyBag' : 'weeklyBag';
   if (m[flag] || !list.every(x => x.claimed)) return null;
-  m[flag] = true; SAVE.save();
+  m[flag] = true;
+  if (kind === 'daily') { const w = weekBagState(); if (!w.wDays.includes(todayKey())) w.wDays.push(todayKey()); }
+  SAVE.save();
   return grantReward({ bag: kind === 'daily' ? GAME_CONFIG.daily.missions.dailyAllBag : GAME_CONFIG.daily.missions.weeklyAllBag });
 }
 
@@ -60809,8 +60812,9 @@ function claimTrophyRoad() {
 // ---------- the TODAY panel ----------
 function todayCount() {
   const m = missionsState();
-  let n = (calendarReady() ? 1 : 0) + (giftReady() ? 1 : 0);
-  n += [...m.daily, ...m.weekly].filter(x => !x.claimed && x.p >= _mDef(x.id).goal).length;
+  let n = calendarReady() ? 1 : 0;
+  n += m.daily.filter(x => !x.claimed && x.p >= _mDef(x.id).goal).length;
+  { const w = weekBagState(); if (w.wDays.length >= T3_WEEK_DAYS && !w.wClaimed) n++; }
   if (!m.dailyBag && m.daily.every(x => x.claimed)) n++;
   if (!m.weeklyBag && m.weekly.every(x => x.claimed)) n++;
   return n;
@@ -60826,6 +60830,71 @@ function updateTodayBadge() { const b = document.getElementById('todayBadge'); i
   #todayPanel{position:fixed;inset:0;z-index:300;display:none;background:rgba(5,10,20,.7);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
   #todayPanel.show{display:flex;align-items:flex-end;justify-content:center}
   #todayPanel .sheet{width:min(440px,100%);max-height:92%;overflow:auto;background:#0E1C38;border:3px solid #050A14;border-bottom:none;border-radius:22px 22px 0 0;padding:14px 14px calc(18px + env(safe-area-inset-bottom,0px));box-sizing:border-box;display:flex;flex-direction:column;gap:12px;animation:mmIn .3s ease-out both}
+  /* full-screen MISSIONS panel (Oct 30) */
+  #todayPanel.fs{background:#01162C}
+  #todayPanel.fs .sheet{width:min(440px,100%);height:100%;max-height:none;border:0;border-radius:0;overflow:auto;background:radial-gradient(ellipse 120% 60% at 50% 0%,#14306a,#0a1b3c 55%,#01162C);
+    padding:calc(var(--hdrTop,8px) + 2px) 12px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px}
+  /* TODAY v3 / MISSIONS + daily pop-up (Oct 30) */
+  .t3{display:flex;flex-direction:column;gap:10px;padding-top:6px}
+  .t3Cal{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border-radius:14px;border:2px solid #FFC93A;background:linear-gradient(90deg,#4a3606,#14203a);color:#fff;font:14px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;animation:evPulse 1.6s ease-in-out infinite}
+  .t3Cal img{width:40px;height:30px;object-fit:contain}.t3Cal .bIco{width:30px;height:30px}.t3Cal span{flex:1;text-align:left}.t3Cal b{font-weight:400;color:#FFC93A}
+  .t3Bag{display:flex;align-items:stretch;border-radius:18px;border:3px solid #050A14;overflow:hidden;background:#0E1C38;box-shadow:0 4px 0 rgba(0,0,0,.45);--tc:#b0662a}
+  .t3Bag .gcArt{width:120px;height:auto;flex:none;border-right:3px solid #050A14}
+  .t3Bag .gcPic{width:100px;height:84px}
+  .t3Bag .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;padding:10px 10px}
+  .t3Bag .t > b{font-weight:400;font-size:20px;line-height:1;white-space:nowrap}
+  .t3Bag .gcTimer{white-space:nowrap}
+  .t3Bag.ready .gcArt{width:92px}.t3Bag.ready .gcPic{width:80px}
+  .t3Bag.ready .t > b{font-size:16px}.t3Bag.ready .gcTimer{font-size:10px}
+  .t3Bag .t{overflow:hidden}
+  .t3Tmr{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:16px;border:2px dashed rgba(255,255,255,.18);background:rgba(10,22,48,.6)}
+  .t3Tmr .art{width:52px;height:40px;display:flex;align-items:center;justify-content:center;flex:none;filter:saturate(.8)}.t3Tmr .art img{max-width:50px;max-height:38px;object-fit:contain}.t3Tmr .art .bIco{width:34px;height:34px}
+  .t3Tmr .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.t3Tmr small{font-size:11px;letter-spacing:.06em;color:#8ea0c4}.t3Tmr b{font-weight:400;font-size:16px}
+  .t3Tmr .when{font-size:13px;color:#FFC93A;padding:4px 10px;border-radius:12px;background:#050A14}
+  .t3Bag small{font-size:12px;color:#B4C2DD}
+  .t3Bag .segs{display:flex;gap:5px;margin-top:4px}.t3Bag .segs i{flex:1;height:12px;border-radius:6px;background:#050A14;border:2px solid #2a3a5a}.t3Bag .segs i.on{background:linear-gradient(#7CF29A,#2a9a3e);border-color:#050A14}
+  .t3Bag .gcBuy{align-self:center;margin:0 10px 0 0;height:46px;padding:0 14px;font-size:18px}
+  .t3Bag.ready{border-color:#FFC93A;box-shadow:0 0 18px rgba(255,201,58,.5)}.t3Bag.got{opacity:.65}
+  .t3Bag .ok,.t3Week .ok,.t3M .ok{align-self:center;width:44px;text-align:center;color:#4fd46a;font-size:24px}
+  .t3List{display:flex;flex-direction:column;gap:8px}
+  .t3M{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:16px;background:#14203a;border:2px solid #050A14}
+  .t3M .ic{width:48px;height:48px;flex:none;border-radius:14px;background:#0a1630;border:2px solid #050A14;display:flex;align-items:center;justify-content:center}
+  .t3M .ic svg{width:32px;height:32px}.t3M .ic .bIco{width:34px;height:34px}.t3M .ic img{width:38px;height:28px;object-fit:contain}
+  .t3M .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+  .t3M .t b{font-weight:400;font-size:16px;line-height:1.1}
+  .t3M .bar{position:relative;height:18px;border-radius:9px;background:#050A14;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .t3M .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:9px;background:linear-gradient(#7CF29A,#2a9a3e)}
+  .t3M .bar span{position:relative;font-size:12px;text-shadow:0 1px 0 #000}
+  .t3M .rw{display:flex;flex-direction:column;align-items:center;flex:none;width:42px}.t3M .rw img{width:32px;height:24px;object-fit:contain}.t3M .rw b{font-weight:400;font-size:13px;color:#FFE27A}
+  .t3M .gcBuy{margin:0;height:44px;min-width:70px;padding:0 12px;font-size:18px;flex:none}
+  .t3M.got{opacity:.5}.t3M.ready{border-color:#e8283c}
+  .t3Week{display:flex;align-items:center;gap:10px;padding:8px 10px 8px 8px;border-radius:16px;border:2px solid #050A14;background:linear-gradient(135deg,#3a2a08,#14203a 60%)}
+  .t3Week img{width:56px;height:42px;object-fit:contain;flex:none}
+  .t3Week .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.t3Week b{font-weight:400;font-size:15px}.t3Week small{font-size:11px;color:#B4C2DD}
+  .t3Week .pips{display:flex;gap:4px;margin-top:3px}.t3Week .pips i{font-style:normal;width:22px;height:22px;border-radius:50%;background:#050A14;border:2px solid #2a3a5a;font-size:10px;color:#7f8fb0;display:flex;align-items:center;justify-content:center}
+  .t3Week .pips i.on{background:#4fd46a;border-color:#050A14;color:#04310f}.t3Week .pips i.now{border-color:#FFC93A}
+  .t3Week .cnt{font-size:14px;color:#B4C2DD;width:44px;text-align:center}.t3Week .cnt b{font-size:22px;color:#FFC93A}
+  .t3Week .gcBuy{margin:0;height:42px;padding:0 12px;font-size:16px}.t3Week.ready{border-color:#FFC93A}
+  #dailyPop{position:fixed;inset:0;z-index:330;display:none;align-items:center;justify-content:center;background:rgba(5,10,20,.72);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #dailyPop.show{display:flex}
+  #dailyPop .c{width:min(330px,88vw);display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 16px 14px;border-radius:24px;border:3px solid #050A14;
+    background:radial-gradient(ellipse 70% 45% at 50% 30%,rgba(255,255,255,.35),rgba(255,255,255,0) 70%),linear-gradient(#2f5fb0,#13306a);box-shadow:0 0 0 3px #FFC93A,0 12px 40px rgba(0,0,0,.6);animation:dpIn .35s cubic-bezier(.3,1.4,.5,1)}
+  @keyframes dpIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+  #dailyPop .dk{font-size:14px;letter-spacing:.12em;color:#FFE27A}
+  #dailyPop .dn{font-weight:400;font-size:34px;line-height:1;text-shadow:0 3px 0 #050A14}
+  #dailyPop .art{position:relative;height:130px;display:flex;align-items:center;justify-content:center}
+  #dailyPop .art::before{content:'';position:absolute;left:50%;bottom:4px;width:150px;height:26px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse at 50% 30%,rgba(255,255,255,.9),rgba(255,255,255,.3) 45%,rgba(0,0,0,0) 72%);box-shadow:0 6px 8px -2px rgba(0,0,0,.5)}
+  #dailyPop .art img{position:relative;max-width:170px;max-height:120px;object-fit:contain;filter:drop-shadow(0 6px 4px rgba(0,0,0,.45))}
+  #dailyPop .art .bIco{position:relative;width:96px;height:96px}
+  #dailyPop .rn{font-weight:400;font-size:22px;text-shadow:0 2px 0 #050A14}
+  #dailyPop .gcBuy{width:100%;height:56px;margin:6px 0 4px;font-size:26px}
+  #dailyPop .strip{display:flex;gap:4px;width:100%}
+  #dailyPop .strip span{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px}
+  #dailyPop .strip em{font-style:normal;width:100%;aspect-ratio:1;border-radius:10px;background:#0a1630;border:2px solid #050A14;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #dailyPop .strip em img{max-width:80%;max-height:70%;object-fit:contain}#dailyPop .strip em .bIco{width:70%;height:70%}
+  #dailyPop .strip .done em{opacity:.4}#dailyPop .strip .now em{border-color:#FFC93A;box-shadow:0 0 8px rgba(255,201,58,.7)}#dailyPop .strip .big em{background:linear-gradient(#f5b62a,#b4700a)}
+  #dailyPop .strip small{font-size:9px;color:#cfe0ff}#dailyPop .strip .done small{color:#4fd46a}
+  #dailyPop .nx{font-size:11px;color:#B4C2DD;text-align:center;margin-top:4px}
   #todayPanel h2{margin:0;font-size:24px;font-weight:400;display:flex;align-items:center;justify-content:space-between}
   #todayPanel h3{margin:0 0 6px;font-size:14px;font-weight:400;letter-spacing:.1em;color:#FFC93A}
   #todayPanel .x{width:40px;height:40px;border-radius:50%;border:2px solid #050A14;background:#14203a;color:#fff;font-size:18px;cursor:pointer}
@@ -60850,29 +60919,108 @@ function updateTodayBadge() { const b = document.getElementById('todayBadge'); i
   document.head.appendChild(css);
   const home = document.getElementById('overlay');
   if (home) { const b = document.createElement('button'); b.id = 'todayBtn'; b.setAttribute('aria-label', 'Today: calendar, gift and missions');
-    b.innerHTML = `<svg viewBox="0 0 34 34" aria-hidden="true"><rect x="3" y="6" width="28" height="25" rx="5" fill="#fff" stroke="#050A14" stroke-width="2"/><rect x="3" y="6" width="28" height="8" rx="4" fill="#e8283c" stroke="#050A14" stroke-width="2"/><rect x="9" y="2" width="3.5" height="8" rx="1.5" fill="#050A14"/><rect x="21.5" y="2" width="3.5" height="8" rx="1.5" fill="#050A14"/><path d="M11 22l4 4 8-9" fill="none" stroke="#2a8a3a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>TODAY<span id="todayBadge" hidden>0</span>`;
+    b.innerHTML = `<svg viewBox="0 0 34 34" aria-hidden="true"><rect x="3" y="6" width="28" height="25" rx="5" fill="#fff" stroke="#050A14" stroke-width="2"/><rect x="3" y="6" width="28" height="8" rx="4" fill="#e8283c" stroke="#050A14" stroke-width="2"/><rect x="9" y="2" width="3.5" height="8" rx="1.5" fill="#050A14"/><rect x="21.5" y="2" width="3.5" height="8" rx="1.5" fill="#050A14"/><path d="M11 22l4 4 8-9" fill="none" stroke="#2a8a3a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>MISSIONS<span id="todayBadge" hidden>0</span>`;
     home.appendChild(b); }
   const p = document.createElement('div'); p.id = 'todayPanel'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Today'); p.innerHTML = '<div class="sheet"></div>';
   document.body.appendChild(p);
 })();
+// ---------- TODAY v3 (Oct 30, after research) ----------
+// Clash Royale model: 3 daily missions + a daily bag for finishing all three; the WEEKLY reward is simply "collect your
+// daily bag on 5 days this week" (no second mission list). The login calendar is a one-tap pop-up the first time you
+// open the game each day (Royal Match / Golf Clash), and the separate daily gift is gone — one free reward a day.
+const T3_WEEK_DAYS = GAME_CONFIG.daily.missions.weekBagDays || 4;
+function weekBagState() { const m = missionsState(); if (m.wbKey !== weekKey()) { m.wbKey = weekKey(); m.wDays = []; m.wClaimed = false; } m.wDays = m.wDays || []; return m; }
+function t3RewardArt(r) {
+  const heap = (k, n) => `<img alt="" src="${REWARD_HEAP_ART[k + '_' + (k === 'coins' ? (n < 250 ? 's' : n < 800 ? 'm' : 'l') : (n < 10 ? 's' : n < 30 ? 'm' : 'l'))]}">`;
+  return r.bag ? `<img alt="" src="${CHEST_IMG_SRC[r.bag]}">` : r.gems ? heap('gems', r.gems) : r.coins ? heap('coins', r.coins)
+    : r.booster ? (r.booster === 'random' ? '<i class="bIco ki-gloves"></i>' : boosterIconHtml(r.booster)) : '';
+}
+function t3RewardText(r) { return r.bag ? `${r.bag.toUpperCase()} BAG${r.gems ? ` + ${r.gems} GEMS` : ''}` : r.gems ? `${r.gems} GEMS` : r.coins ? `${r.coins.toLocaleString()} COINS` : r.booster ? (r.booster === 'random' ? 'A BOOSTER' : BOOSTER_INFO[r.booster].short) : rewardLabel(r); }
 function renderToday() {
-  const sh = document.querySelector('#todayPanel .sheet'), d = dailyState(), cal = GAME_CONFIG.daily.calendar, m = missionsState();
-  const cur = d.calDay % cal.length, weekStart = d.calDay - cur, ready = calendarReady();
-  const days = cal.map((r, i) => { const n = weekStart + i, done = n < d.calDay, today = ready && n === d.calDay;
-    return `<div class="tdDay${done ? ' done' : ''}${today ? ' today' : ''}"><b>DAY ${i + 1}</b><span>${rewardLabel(r)}</span>${done ? '<span style="color:#4fd46a">✓</span>' : '<span>&nbsp;</span>'}</div>`; }).join('');
-  const rot = GAME_CONFIG.daily.giftRotation, g0 = rot[giftIndex(0)], g1 = rot[giftIndex(1)];
-  const mrow = (x, weekly) => { const df = _mDef(x.id), pct = Math.min(1, x.p / df.goal) * 100, done = x.p >= df.goal;
-    return `<div class="tdRow"><div class="t">${df.text}<div class="bar"><i style="width:${pct}%"></i></div><small>${Math.min(x.p, df.goal)} / ${df.goal} · ${df.coins} COINS</small></div>${x.claimed ? '<span style="color:#4fd46a;font-size:13px">CLAIMED</span>' : `<button class="tdBtn" data-mission="${x.id}" ${done ? '' : 'disabled'}>${done ? 'CLAIM' : 'GO'}</button>`}</div>`; };
-  const allBtn = (kind, bag, got, all) => `<div class="tdRow"><div class="t">All ${kind === 'daily' ? 'three' : 'five'} done<br><small>${bag.toUpperCase()} BAG</small></div>${got ? '<span style="color:#4fd46a;font-size:13px">CLAIMED</span>' : `<button class="tdBtn" data-allbag="${kind}" ${all ? '' : 'disabled'}>CLAIM</button>`}</div>`;
-  sh.innerHTML = `
-    <h2>TODAY <button class="x" id="todayClose" aria-label="Close">✕</button></h2>
-    <div><h3>LOGIN CALENDAR · DAY ${cur + 1} OF 7</h3><div class="tdCal">${days}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><small style="color:#B4C2DD;font-size:11px">Miss a day and it waits for you — it never resets.</small><button class="tdBtn" id="tdCalClaim" ${ready ? '' : 'disabled'}>${ready ? 'CLAIM DAY ' + (cur + 1) : 'BACK TOMORROW'}</button></div></div>
-    <div><h3>DAILY GIFT</h3><div class="tdGift"><div><span style="font-size:13px;color:#B4C2DD">TODAY</span><b style="font-weight:400;font-size:17px">${rewardLabel(g0)}</b><button class="tdBtn" id="tdGiftClaim" ${giftReady() ? '' : 'disabled'}>${giftReady() ? 'FREE · CLAIM' : 'CLAIMED'}</button></div><div class="tmr"><span style="font-size:13px;color:#B4C2DD">TOMORROW</span><b style="font-weight:400;font-size:17px">${rewardLabel(g1)}</b></div></div></div>
-    <div><h3>DAILY MISSIONS</h3><div style="display:flex;flex-direction:column;gap:6px">${m.daily.map(x => mrow(x)).join('')}${allBtn('daily', GAME_CONFIG.daily.missions.dailyAllBag, m.dailyBag, m.daily.every(x => x.claimed))}</div></div>
-    <div><h3>WEEKLY MISSIONS · RESET MONDAY</h3><div style="display:flex;flex-direction:column;gap:6px">${m.weekly.map(x => mrow(x, true)).join('')}${allBtn('weekly', GAME_CONFIG.daily.missions.weeklyAllBag, m.weeklyBag, m.weekly.every(x => x.claimed))}</div></div>`;
+  const sh = document.querySelector('#todayPanel .sheet'), m = missionsState(), w = weekBagState();
+  document.getElementById('todayPanel').classList.add('fs');
+  const now = _nowDate(), toMid = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now;
+  const toMon = new Date(now.getFullYear(), now.getMonth(), now.getDate() + passDaysLeftWeek()) - now;
+  const heapC = n => `<img alt="" src="${REWARD_HEAP_ART['coins_' + (n < 250 ? 's' : n < 800 ? 'm' : 'l')]}">`;
+  const ICO = { six: 'ball', four: 'ball', boundary: 'ball', win: 'cup', win_clean: 'cup', win_spare: 'cup', streak3: 'flame', play: 'bat', runs: 'runs', runs30: 'runs', runs50: 'runs',
+    perfect: 'target', nets_ball: 'nets', booster: 'boost', bag: 'bag', upgrade: 'up', star: 'star' };
+  const SV = {
+    ball: '<svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="11" fill="#d8262e" stroke="#050A14" stroke-width="2"/><path d="M8 6c4 5 4 11 0 16M20 6c-4 5-4 11 0 16" fill="none" stroke="#fff" stroke-width="1.6" stroke-dasharray="2 2"/></svg>',
+    cup: '<svg viewBox="0 0 28 28"><path d="M7 3h14v6a7 7 0 0 1-14 0z" fill="#FFC93A" stroke="#050A14" stroke-width="2"/><path d="M7 5H3v3a4 4 0 0 0 4 4M21 5h4v3a4 4 0 0 1-4 4" fill="none" stroke="#050A14" stroke-width="2"/><rect x="11" y="16" width="6" height="5" fill="#FFC93A" stroke="#050A14" stroke-width="2"/><rect x="8" y="21" width="12" height="4" rx="1" fill="#FFC93A" stroke="#050A14" stroke-width="2"/></svg>',
+    flame: '<svg viewBox="0 0 14 16"><path d="M7 0C8 4 12 5 12 10A5 5 0 0 1 2 10C2 7 4 6 4 3C5 5 6 5 7 0Z" fill="#ff8a1e" stroke="#050A14" stroke-width="1"/><path d="M7 7C8 9 9.5 9.5 9.5 11.5A2.5 2.5 0 0 1 4.5 11.5C4.5 10 6 9.5 7 7Z" fill="#FFC93A"/></svg>',
+    runs: '<svg viewBox="0 0 28 28"><rect x="3" y="6" width="22" height="16" rx="3" fill="#123064" stroke="#050A14" stroke-width="2"/><text x="14" y="19" text-anchor="middle" font-family="Lilita One,Arial Black" font-size="11" fill="#FFC93A">50</text></svg>',
+    target: '<svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="11" fill="#fff" stroke="#050A14" stroke-width="2"/><circle cx="14" cy="14" r="7" fill="#e8283c" stroke="#050A14" stroke-width="1.5"/><circle cx="14" cy="14" r="3" fill="#fff"/></svg>',
+    nets: '<svg viewBox="0 0 28 28"><path d="M4 24V8l10-5 10 5v16" fill="none" stroke="#050A14" stroke-width="2.5"/><path d="M4 12h20M4 16h20M4 20h20M9 6v18M14 4v20M19 6v18" stroke="#7fd0ff" stroke-width="1.4"/></svg>',
+    up: '<svg viewBox="0 0 28 28"><circle cx="14" cy="14" r="11" fill="#4fd46a" stroke="#050A14" stroke-width="2"/><path d="M14 7l6 7h-4v6h-4v-6H8z" fill="#fff" stroke="#050A14" stroke-width="1.4"/></svg>',
+    star: '<svg viewBox="0 0 28 28"><path d="M14 3l3.3 6.8 7.5 1-5.4 5.2 1.3 7.4L14 19.9l-6.7 3.5 1.3-7.4L3.2 10.8l7.5-1z" fill="#FFC93A" stroke="#050A14" stroke-width="2"/></svg>' };
+  const mIco = ev => { const k = ICO[ev] || 'ball'; return k === 'bat' ? '<i class="bIco ki-bat"></i>' : k === 'boost' ? '<i class="bIco ki-gloves"></i>' : k === 'bag' ? `<img alt="" src="${CHEST_IMG_SRC.bronze}">` : SV[k]; };
+  const list = m.daily, nDone = list.filter(x => x.claimed).length, all = nDone === list.length, bagT = GAME_CONFIG.daily.missions.dailyAllBag;
+  const mrow = x => { const df = _mDef(x.id), pct = Math.min(1, x.p / df.goal) * 100, done = x.p >= df.goal;
+    return `<div class="t3M${x.claimed ? ' got' : done ? ' ready' : ''}"><span class="ic">${mIco(df.ev)}</span><div class="t"><b>${df.text}</b><div class="bar"><i style="width:${pct}%"></i><span>${Math.min(x.p, df.goal)} / ${df.goal}</span></div></div>
+      <span class="rw">${heapC(df.coins)}<b>${df.coins}</b></span>
+      ${x.claimed ? '<span class="ok">✓</span>' : done ? `<button class="gcBuy claim" data-mission="${x.id}">CLAIM</button>` : `<button class="gcBuy blue" data-go="${df.ev}">GO</button>`}</div>`; };
+  const wn = w.wDays.length, wReady = wn >= T3_WEEK_DAYS && !w.wClaimed;
+  const dow = (now.getDay() + 6) % 7, wkStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow);
+  const pips = 'MTWTFSS'.split('').map((L, i) => { const dd = new Date(wkStart.getFullYear(), wkStart.getMonth(), wkStart.getDate() + i), k = `${dd.getFullYear()}-${dd.getMonth() + 1}-${dd.getDate()}`;
+    return `<i class="${w.wDays.includes(k) ? 'on' : ''}${i === dow ? ' now' : ''}">${w.wDays.includes(k) ? '✓' : L}</i>`; }).join('');
+  const calReady = calendarReady(), d = dailyState(), cal = GAME_CONFIG.daily.calendar;
+  sh.innerHTML = `<div class="evTop"><button class="evBack" id="todayClose" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b>MISSIONS</b>
+      <span class="lgPill"><i class="hIco hi-coin"></i><span>${career.coins.toLocaleString()}</span></span><span class="lgPill"><i class="hIco hi-gem"></i><span>${gems.toLocaleString()}</span></span></div>
+    <div class="sh2 sh3 bgA t3">
+      ${calReady ? `<button class="t3Cal" data-dailypop>${t3RewardArt(cal[d.calDay % cal.length])}<span>DAY ${d.calDay % cal.length + 1} REWARD WAITING</span><b>CLAIM ›</b></button>` : ''}
+      <div class="t3Bag${all && !m.dailyBag ? ' ready' : ''}${m.dailyBag ? ' got' : ''}"><div class="gcArt"><img class="gcPic" alt="" src="${CHEST_IMG_SRC[bagT]}"></div>
+        <div class="t"><span class="gcTimer">NEW MISSIONS IN <b>${fmtLeft(toMid)}</b></span><b>DAILY ${bagT.toUpperCase()} BAG</b><small>Finish all 3 missions</small>
+          <div class="segs">${list.map(x => `<i class="${x.claimed ? 'on' : ''}"></i>`).join('')}</div></div>
+        ${m.dailyBag ? '<span class="ok">✓</span>' : all ? '<button class="gcBuy claim" data-allbag="daily">OPEN</button>' : ''}</div>
+      <div class="t3List">${list.map(mrow).join('')}</div>
+      <div class="t3Week${wReady ? ' ready' : ''}"><img alt="" src="${CHEST_IMG_SRC[GAME_CONFIG.daily.missions.weeklyAllBag]}"><div class="t"><b>WEEKLY GOLD BAG + ${GAME_CONFIG.daily.missions.weekBagCoins.toLocaleString()}</b><small>Open your daily bag on ${T3_WEEK_DAYS} days · resets in ${fmtLeft(toMon)}</small><div class="pips">${pips}</div></div>
+        ${w.wClaimed ? '<span class="ok">✓</span>' : wReady ? '<button class="gcBuy claim" data-weekbag>OPEN</button>' : `<span class="cnt"><b>${Math.min(wn, T3_WEEK_DAYS)}</b>/${T3_WEEK_DAYS}</span>`}</div>
+      ${(() => { const nd = (d.calDay + (calReady ? 1 : 0)) % cal.length, r = cal[nd];
+        return `<div class="t3Tmr"><span class="art">${t3RewardArt(r)}</span><div class="t"><small>TOMORROW · DAY ${nd + 1} REWARD</small><b>${t3RewardText(r)}</b></div><span class="when">${fmtLeft(toMid)}</span></div>`; })()}
+    </div>`;
   updateTodayBadge();
 }
+// the once-a-day login reward pop-up
+function showDailyPop(force) {
+  if (!calendarReady()) return false;
+  const d = dailyState(), cal = GAME_CONFIG.daily.calendar, cur = d.calDay % cal.length, weekStart = d.calDay - cur, r = cal[cur];
+  let p = document.getElementById('dailyPop');
+  if (!p) { p = document.createElement('div'); p.id = 'dailyPop'; document.body.appendChild(p); }
+  const strip = cal.map((x, i) => `<span class="${i < cur ? 'done' : i === cur ? 'now' : ''}${i === cal.length - 1 ? ' big' : ''}"><em>${t3RewardArt(x)}</em><small>${i < cur ? '✓' : 'DAY ' + (i + 1)}</small></span>`).join('');
+  p.innerHTML = `<div class="c"><span class="dk">DAILY REWARD</span><b class="dn">DAY ${cur + 1}</b>
+    <div class="art">${t3RewardArt(r)}</div><b class="rn">${t3RewardText(r)}</b>
+    <button class="gcBuy" id="dpClaim">CLAIM</button><div class="strip">${strip}</div>
+    <small class="nx">${cur < cal.length - 1 ? `Tomorrow: ${t3RewardText(cal[cur + 1])}` : 'Day 7! A new week starts tomorrow.'} · missed days wait for you</small></div>`;
+  p.classList.add('show'); window._dailyPopShown = true; return true;
+}
+function maybeDailyPop() {
+  if (window._dailyPopShown || !featureOn('today') || !calendarReady()) return;
+  const home = document.getElementById('overlay'); if (!home || home.classList.contains('hidden') || getComputedStyle(home).display === 'none') return;
+  if (document.querySelector('#offerPop.show, #todayPanel.show, #competePanel.show, #passPanel.show')) return;
+  setTimeout(() => { if (!window._dailyPopShown) showDailyPop(); }, 700);
+}
+document.addEventListener('click', e => {
+  const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+  if (t.closest('[data-dailypop]')) { showDailyPop(true); return; }
+  if (t.closest('#dpClaim')) { const l = claimCalendar(); document.getElementById('dailyPop').classList.remove('show'); if (l) { showMessage('+ ' + l, '#FFC93A', 2200); try { hapticBig(); playAchievementChime(); } catch (err) {} }
+    try { updateTodayBadge(); updateMenuHUD(); } catch (err) {} if (document.getElementById('todayPanel').classList.contains('show')) renderToday(); return; }
+  if (t.id === 'dailyPop') { t.classList.remove('show'); return; }
+  if (t.closest('[data-weekbag]')) { const w = weekBagState(); if (w.wDays.length >= T3_WEEK_DAYS && !w.wClaimed) { w.wClaimed = true; SAVE.save(); const l = grantReward({ bag: GAME_CONFIG.daily.missions.weeklyAllBag, coins: GAME_CONFIG.daily.missions.weekBagCoins }); showMessage('+ ' + l, '#FFC93A', 2200); try { hapticBig(); } catch (err) {} } renderToday(); return; }
+}, true);
+function goMission(ev) {
+  document.getElementById('todayPanel').classList.remove('show');
+  try { playUiTap(); } catch (e) {}
+  if (ev === 'bag') { const b = document.querySelector('[data-tab=chests]'); if (b) b.click(); return; }
+  if (ev === 'upgrade') { const b = document.querySelector('#bottomNav [data-tab=kit]'); if (b) b.click(); return; }
+  if (ev === 'nets_ball') { window._leagueMode = 'nets'; document.getElementById('homeLeagueCard').click(); return; }
+  if (ev === 'booster') { document.getElementById('homeLeagueCard').click(); return; }
+  try { playLeague(selectedLeagueIdx()); } catch (e) { document.getElementById('homeLeagueCard').click(); }
+}
+document.addEventListener('click', e => {
+  const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+  const tt = t.closest('[data-ttab]'); if (tt) { window._todayTab = tt.dataset.ttab; try { playUiTap(); } catch (err) {} renderToday(); return; }
+  const g = t.closest('[data-go]'); if (g) { goMission(g.dataset.go); return; }
+});
 function openToday() { renderToday(); document.getElementById('todayPanel').classList.add('show'); try { playUiTap(); } catch (e) {} }
 document.addEventListener('click', e => {
   const t = e.target && e.target.closest ? e.target : null; if (!t) return;
@@ -61269,6 +61417,7 @@ function checkFeatureUnlocks() {
   for (const id in FEATURE_UNLOCKS) if (!u[id] && FEATURE_UNLOCKS[id].when()) { u[id] = Date.now(); fresh.push(id); }
   if (fresh.length) { SAVE.save(); fresh.forEach((id, i) => setTimeout(() => showMessage(FEATURE_UNLOCKS[id].msg, '#FFC93A', 2600), 800 + i * 2800)); track('feature_unlocked', { features: fresh.join(',') }); }
   const tb = document.getElementById('todayBtn'); if (tb) tb.style.display = featureOn('today') ? '' : 'none';
+  try { maybeDailyPop(); } catch (e) {}
   const cb = document.getElementById('competeBtn'); if (cb) cb.style.display = (featureOn('compete') || featureOn('pass')) ? '' : 'none';   // EVENTS = Pass + Compete
   try { updateEventsBadge(); } catch (e) {}
 }

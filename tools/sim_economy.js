@@ -29,7 +29,11 @@ const need = lg => 28 + lg * 2.2;
 let LOSS = { base: 1, perLeague: 0.12, max: 3 };
 let DEALS = { on: true, common: { n: 5, price: 40 }, rare: { n: 3, price: 250 }, epic: { n: 2, price: 1200 }, legendary: { n: 1, price: 5000 } };
 // the daily rewards added in sprint 5 (calendar, gift, missions, trophy road, stars); EXTRAS.on = false = the old sim
-let EXTRAS = { on: true, calendar: [{ coins: 100 }, {}, { coins: 200 }, { gems: 20 }, { bag: 'silver' }, { coins: 400 }, { bag: 'gold', gems: 50 }],
+// Oct 30 (TODAY v3): daily gift and the weekly mission list removed; calendar raised; weekly gold bag + 1,500 coins for
+// opening the daily bag on 4 days a week. EXTRAS_OLD keeps the Oct 29 numbers for comparison (argv --old).
+let EXTRAS = { on: true, v3: true, calendar: [{ coins: 150 }, {}, { coins: 300 }, { gems: 25 }, { bag: 'silver' }, { coins: 600 }, { bag: 'gold', gems: 50 }],
+  gift: [{}, {}, {}, {}], dailyMissionCoins: 90, weeklyMissionCoins: 0, weekBagDays: 4, weekBagCoins: 1500 };
+if (process.argv.includes('--old')) EXTRAS = { on: true, calendar: [{ coins: 100 }, {}, { coins: 200 }, { gems: 20 }, { bag: 'silver' }, { coins: 400 }, { bag: 'gold', gems: 50 }],
   gift: [{ coins: 150 }, {}, { gems: 5 }, { bag: 'wooden' }], dailyMissionCoins: 90, weeklyMissionCoins: 450 };
 const trophyLoss = li => Math.min(LOSS.max, Math.round(LOSS.base + li * LOSS.perLeague));
 const lgFor = tr => { let i = 1; for (let k = 1; k < LG.length; k++) if (tr >= LG[k].unlock) i = k; return i; };
@@ -92,7 +96,9 @@ function run(P, M, days = 90) {
       const gift = EXTRAS.gift[(day - 1) % 4]; if (gift.coins) S.coins += gift.coins; if (gift.gems) S.gems += gift.gems; if (gift.bag) putBag(gift.bag);
       // missions: an average player finishes ~2 of 3 daily (all 3 every other day) and most weeklies
       S.coins += EXTRAS.dailyMissionCoins * (day % 2 ? 3 : 2); if (day % 2) putBag('bronze');
-      if (day % 7 === 0) { S.coins += EXTRAS.weeklyMissionCoins * 4; if (day % 14 === 0) putBag('gold'); }
+      if (EXTRAS.v3) { const wk = Math.floor((day - 1) / 7), first = wk * 7 + 1; let n = 0; for (let x = first; x <= day; x++) if (x % 2) n++;
+        if (n === EXTRAS.weekBagDays && day % 2) { S.coins += EXTRAS.weekBagCoins; putBag('gold'); } }
+      else if (day % 7 === 0) { S.coins += EXTRAS.weeklyMissionCoins * 4; if (day % 14 === 0) putBag('gold'); }
     }
     if (P.passBags) for (let k = 0; k < P.passBags; k++) { const i = S.slots.indexOf(null); if (i >= 0) S.slots[i] = 'gold'; }
     let playedPaid = 0;
