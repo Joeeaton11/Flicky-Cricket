@@ -61052,8 +61052,14 @@ document.addEventListener('click', e => {
 // buyRealMoney() grants straight away in local testing and otherwise says purchases arrive with the app.
 // ===================================================================================================
 function shopState() { const s = SAVE.section('shop'); s.firstBuy = s.firstBuy || {}; s.deals = s.deals || {}; s.jar = s.jar || 0; return s; }
+// Test purchases (Oct 30, Joe): open the game with ?test=1 to grant purchases free (remembered on this device;
+// ?test=0 turns it off). Lets the paid steps (Super Over, Pass, packs) be tested on the live web build.
+(function () { try { const q = new URLSearchParams(location.search).get('test'); if (q === '1') SAVE.setItem('flickyTestBuy', '1'); else if (q === '0') SAVE.removeItem('flickyTestBuy'); } catch (e) {} })();
+function testBuyOn() { try { return SAVE.getItem('flickyTestBuy') === '1'; } catch (e) { return false; } }
 function buyRealMoney(productId, price, grant) {
-  const local = location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '';
+  // NOTE for sprint 7: when the store plugin (IAP) is present this still grants straight away — it must wait for the
+  // store to confirm the payment (RevenueCat purchase promise) and only then call grant().
+  const local = location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '' || testBuyOn();
   const IAP = window.Capacitor && window.Capacitor.Plugins && (window.Capacitor.Plugins.Purchases || window.Capacitor.Plugins.InAppPurchase);
   if (!local && !IAP) { showMessage('Purchases arrive with the app', '#7fd0ff', 2000); return false; }
   const label = grant();
@@ -61340,7 +61346,7 @@ function renderDealStreak() {
       <div class="sbRow"><div class="sbOver"><div class="sbBw"><span class="lab">BOWLER</span><b class="hw">FLICKY</b><span class="lab">OVER 1</span></div><div class="sbBalls">${cells}</div>
           <div class="sbFig"><span class="lab">BALLS</span><b class="hw">${st.step}/${n}</b></div></div></div></div>
     <div class="sbFoot"><span class="lab">NOTES &amp; GENERAL REMARKS</span><span class="hw note">${st.step >= n ? 'Over complete — well bowled!' : st.step === n - 1 ? 'Last ball: the gold bag!' : 'Play every ball for the gold bag on ball 6.'}</span></div>
-    ${st.step < n ? `<button class="gcBuy sbGo${nx.free ? '' : ' paid'}" data-ds="${st.step}">${nx.free ? `BALL ${st.step + 1} · CLAIM FREE` : `BALL ${st.step + 1} · £${nx.price.toFixed(2)}`}</button>` : ''}</div>`;
+    ${st.step < n ? `<button class="gcBuy sbGo${nx.free ? '' : ' paid'}" data-ds="${st.step}">${nx.free ? 'CLAIM FREE HIT' : `BUY BALL ${st.step + 1} · £${nx.price.toFixed(2)}`}</button>` : ''}${testBuyOn() ? '<small class="sbTest">TEST MODE · purchases are free on this device</small>' : ''}</div>`;
   p.classList.add('show');
 }
 function dsClaim(i) {
@@ -61434,6 +61440,7 @@ document.addEventListener('click', e => {
   .sbFig .hw{font-size:22px}
   .sbFoot{display:flex;flex-direction:column;gap:2px;border:1.5px solid #5a6a6a;padding:4px 8px 6px;background:#eef1ec}
   .sbFoot .note{font-size:18px}
+  .sbTest{text-align:center;font:700 10px Arial,sans-serif;color:#c0262e;letter-spacing:.06em}
   .gcBuy.sbGo{align-self:stretch;width:100%;margin:2px 0 0;height:52px;font-size:20px}
   .so-book .c.sbPage > *{align-self:stretch}
   .so-book .c.sbPage > .x{align-self:auto}
