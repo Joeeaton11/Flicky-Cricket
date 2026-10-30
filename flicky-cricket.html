@@ -3886,7 +3886,7 @@ const GAME_CONFIG = {
     bagGemScale: 0.3,   // bags give 30% of the old gem amounts, so free gems land near ~30 a day (sim)
     offers: {
       starter:      { price: 0.99, trigger: 'first_win', hours: 48, once: true, contents: { bag: 'silver', gems: 100, coins: 1000, boosters: { power_bat: 3 } } },
-      leagueUnlock: { price: [2.99, 4.99], priceFromLeague: 11, trigger: 'league_unlocked', hours: 24 },
+      leagueUnlock: { price: [2.99, 4.99], priceFromLeague: 11, trigger: 'league_unlocked', hours: 24, gems: [275, 450] },   // gems added Oct 30 so every league pack is at least ×2 value
       gemJar:       { price: 2.99, perSix: 5, perFour: 3, cap: 600, buyableFrom: 300 },
       outOfCoins:   { gems: 30, coins: 500 },
       noAds:        { price: 2.99, gems: 100, triggerAfterAdsToday: 3 },
@@ -4681,7 +4681,7 @@ function getDailyAdWatches() {
 }
 function recordAdWatch() {
   setTimeout(() => { try { if (!adsRemoved && getDailyAdWatches() === GAME_CONFIG.shop.offers.noAds.triggerAfterAdsToday && !window._offerShownThisSession) { window._offerShownThisSession = true;
-    const el = document.getElementById('offerPop'); el.querySelector('.ofT').textContent = 'NO ADS'; el.querySelector('.ofC').textContent = 'No ads ever + 100 gems'; el.querySelector('.ofB').textContent = '£' + GAME_CONFIG.shop.offers.noAds.price.toFixed(2);
+    const el = document.getElementById('offerPop'); renderOfferPop({ id: 'noads', title: 'NO ADS', price: GAME_CONFIG.shop.offers.noAds.price, contents: { noAds: true, gems: GAME_CONFIG.shop.offers.noAds.gems } });
     el.dataset.kind = 'noads'; el.classList.add('show'); track('offer_shown', { offer: 'no_ads', trigger: 'third_ad' }); } } catch (e) {} }, 1200);
   const today = todayKey();
   const count = getDailyAdWatches() + 1;
@@ -61444,7 +61444,7 @@ function activeOffer() {
   const s = shopState(), now = Date.now(), O = GAME_CONFIG.shop.offers;
   if (s.starterUntil && now < s.starterUntil && !s.starterBought) return { id: 'starter', title: 'STARTER PACK', price: O.starter.price, until: s.starterUntil, contents: O.starter.contents, label: 'SILVER BAG · 100 GEMS · 1,000 COINS · 3 POWER BATS' };
   if (s.leagueUntil && now < s.leagueUntil && !s.leagueBought) { const lg = THEMED_LEAGUES[s.leagueIdx] || {}; const coins = Math.min(10000, 3000 + (s.leagueIdx || 0) * 250);
-    return { id: 'league', title: `${lg.name || 'LEAGUE'} PACK`, price: (s.leagueIdx || 0) >= O.leagueUnlock.priceFromLeague ? O.leagueUnlock.price[1] : O.leagueUnlock.price[0], until: s.leagueUntil, contents: { bag: lg.winChest || 'silver', coins }, label: `${(lg.winChest || 'silver').toUpperCase()} BAG · ${coins.toLocaleString()} COINS` }; }
+    return { id: 'league', title: `${lg.name || 'LEAGUE'} PACK`, price: (s.leagueIdx || 0) >= O.leagueUnlock.priceFromLeague ? O.leagueUnlock.price[1] : O.leagueUnlock.price[0], until: s.leagueUntil, contents: { bag: lg.winChest || 'silver', coins, gems: (O.leagueUnlock.gems || [0, 0])[(s.leagueIdx || 0) >= O.leagueUnlock.priceFromLeague ? 1 : 0] }, label: `${(lg.winChest || 'silver').toUpperCase()} BAG · ${(O.leagueUnlock.gems || [0, 0])[(s.leagueIdx || 0) >= O.leagueUnlock.priceFromLeague ? 1 : 0]} GEMS · ${coins.toLocaleString()} COINS` }; }
   return null;
 }
 function buyOffer() {
@@ -61475,9 +61475,37 @@ function maybeOfferPopup() {
   const o = activeOffer(); if (!o) return;
   window._offerShownThisSession = true;
   const el = document.getElementById('offerPop');
-  el.querySelector('.ofT').textContent = o.title; el.querySelector('.ofC').textContent = o.label; el.querySelector('.ofB').textContent = `£${o.price.toFixed(2)}`;
+  renderOfferPop(o); el.dataset.kind = '';
   el.classList.add('show');
   track('offer_shown', { offer: o.id, price: o.price, trigger: 'home' });
+}
+// Offer pop-up v2 (Oct 30): shows what's inside with art, an honest value multiple and a live timer
+function offerWorthGems(c) {   // value in gems at the cheapest pack rate: gems + coins (coin-pack rate) + instant-open cost of the bag + booster packs
+  const B = GAME_CONFIG.kit.boosterPack, nb = c.boosters ? Object.values(c.boosters).reduce((a, b) => a + b, 0) : 0;
+  return (c.gems || 0) + (c.coins || 0) / 500 * 30 + (c.bag && CHEST_TYPES[c.bag] ? Math.ceil(CHEST_TYPES[c.bag].openTime / 600) : 0) + nb * (B.gems / B.count);
+}
+function renderOfferPop(o) {
+  const el = document.getElementById('offerPop'), c = o.contents || {}, P = GAME_CONFIG.shop.gemPacks[0];
+  const worth = offerWorthGems(c) / P.gems * P.price, mult = Math.floor(worth / o.price * 2) / 2;
+  const tc = o.id === 'starter' ? '#FFC93A' : o.id === 'noads' ? '#7fd0ff' : '#c58bff';
+  const items = [];
+  if (c.bag) items.push(`<div class="of2It"><canvas class="of2Mini" data-bag="${c.bag}" width="120" height="96"></canvas><b>${(CHEST_TYPES[c.bag] || {}).name || c.bag}</b><small>BAG</small></div>`);
+  if (c.noAds) items.push(`<div class="of2It"><span class="of2NoAd">AD</span><b>NO ADS</b><small>FOREVER</small></div>`);
+  if (c.gems) items.push(`<div class="of2It"><img alt="" src="${REWARD_HEAP_ART[c.gems < 10 ? 'gems_s' : c.gems < 30 ? 'gems_m' : 'gems_l']}"><b>${c.gems.toLocaleString()}</b><small>GEMS</small></div>`);
+  if (c.coins) items.push(`<div class="of2It"><img alt="" src="${REWARD_HEAP_ART[c.coins < 250 ? 'coins_s' : c.coins < 800 ? 'coins_m' : 'coins_l']}"><b>${c.coins.toLocaleString()}</b><small>COINS</small></div>`);
+  if (c.boosters) Object.keys(c.boosters).forEach(id => items.push(`<div class="of2It">${boosterIconHtml(id)}<b>×${c.boosters[id]}</b><small>${(BOOSTER_INFO[id] || {}).short || id}</small></div>`));
+  const big = c.bag ? `<canvas id="of2Bag" width="240" height="180"></canvas>` : `<img alt="" class="of2Hero" src="${REWARD_HEAP_ART.gems_l}">`;
+  el.querySelector('.c').outerHTML = `<div class="c of2" style="--tc:${tc}">
+    <div class="of2Top"><small>${o.id === 'noads' ? 'ONE-OFF PURCHASE' : 'ONE-TIME OFFER'}</small><b>${o.title}</b></div>
+    <div class="of2Stage">${big}${mult >= 2 ? `<span class="of2Val"><b>×${mult}</b><small>VALUE</small></span>` : ''}${o.until ? `<span class="of2Time" data-until="${o.until}">ENDS IN ${fmtLeft(o.until - Date.now())}</span>` : ''}</div>
+    <div class="of2Grid n${items.length}">${items.join('')}</div>
+    ${mult >= 2 ? `<div class="of2Was">WORTH <s>£${worth.toFixed(2)}</s></div>` : ''}
+    <button id="ofBuy" class="of2Buy">£${o.price.toFixed(2)}</button>
+    <button id="ofNo" class="of2No">NOT NOW</button></div>`;
+  const big2 = document.getElementById('of2Bag'); if (big2) drawChestArt(big2, c.bag, 1, false);
+  el.querySelectorAll('.of2Mini').forEach(cv => drawChestArt(cv, cv.dataset.bag, 1, false));
+  clearInterval(window._of2T); window._of2T = setInterval(() => { const t = el.querySelector('.of2Time'); if (!t || !el.classList.contains('show')) return clearInterval(window._of2T);
+    t.textContent = 'ENDS IN ' + fmtLeft(+t.dataset.until - Date.now()); }, 30000);
 }
 function fmtLeft(ms) { const h = Math.max(0, Math.floor(ms / 3600e3)), m = Math.max(0, Math.floor(ms % 3600e3 / 60e3)); return h ? `${h}h ${m}m` : `${m}m`; }
 
@@ -61632,6 +61660,33 @@ function fmtLeft(ms) { const h = Math.max(0, Math.floor(ms / 3600e3)), m = Math.
   .sh2 .passBan b{font-weight:400;font-size:17px}
   #offerPop,#oddsPop{position:fixed;inset:0;z-index:310;display:none;align-items:center;justify-content:center;background:rgba(5,10,20,.66);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
   #offerPop.show,#oddsPop.show{display:flex}
+  #offerPop{background:rgba(3,7,16,.82)}
+  body:has(#offerPop.show) #fxLayer .fxToast{display:none}
+  #offerPop .c.of2{width:min(340px,90vw);padding:0;gap:0;overflow:hidden;background:#0E1C38;border:3px solid #050A14;box-shadow:0 0 0 3px var(--tc),0 14px 40px rgba(0,0,0,.6);align-items:stretch;animation:of2In .35s cubic-bezier(.3,1.4,.5,1)}
+  @keyframes of2In{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+  .of2Top{padding:10px 16px 8px;text-align:center;background:linear-gradient(color-mix(in srgb,var(--tc) 75%,#fff),color-mix(in srgb,var(--tc) 55%,#000));border-bottom:3px solid #050A14;display:flex;flex-direction:column}
+  .of2Top small{font-size:12px;letter-spacing:.14em;color:#2a1606;opacity:.85}
+  .of2Top b{font-weight:400;font-size:30px;line-height:1.05;text-shadow:0 3px 0 #050A14;letter-spacing:.03em}
+  .of2Stage{position:relative;height:clamp(130px,20vh,170px);display:flex;align-items:center;justify-content:center;overflow:hidden;
+    background:radial-gradient(ellipse 55% 70% at 50% 48%,color-mix(in srgb,var(--tc) 55%,#fff),transparent 70%),repeating-conic-gradient(from 0deg at 50% 48%,rgba(255,255,255,.1) 0 8deg,transparent 8deg 16deg),linear-gradient(#24488a,#0E1C38)}
+  .of2Stage::before{content:'';position:absolute;left:50%;bottom:22px;width:190px;height:30px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse at 50% 30%,rgba(255,255,255,.85),rgba(255,255,255,.25) 45%,transparent 72%)}
+  .of2Stage canvas,.of2Hero{position:relative;width:200px;height:auto;margin-top:-10px;filter:drop-shadow(0 8px 6px rgba(0,0,0,.45));animation:bi2Bob 2.6s ease-in-out infinite}
+  .of2Hero{width:130px}
+  .of2Val{position:absolute;right:12px;top:10px;width:64px;height:64px;border-radius:50%;border:3px solid #050A14;background:radial-gradient(circle at 35% 30%,#ff8a8a,#e8283c 60%,#a3101f);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(10deg);box-shadow:0 4px 0 rgba(0,0,0,.4);animation:of2Pulse 1.6s ease-in-out infinite}
+  .of2Val b{font-weight:400;font-size:24px;line-height:.95;text-shadow:0 2px 0 #050A14} .of2Val small{font-size:10px;letter-spacing:.08em}
+  @keyframes of2Pulse{50%{transform:rotate(10deg) scale(1.08)}}
+  .of2Time{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);padding:3px 12px;border-radius:14px;background:rgba(5,10,20,.88);border:2px solid rgba(255,201,58,.5);font-size:13px;white-space:nowrap}
+  .of2Grid{display:grid;grid-template-columns:repeat(var(--c,4),minmax(0,1fr));gap:6px;padding:10px 10px 4px}
+  .of2Grid.n1{--c:1} .of2Grid.n2{--c:2} .of2Grid.n3{--c:3}
+  .of2It{display:flex;flex-direction:column;align-items:center;gap:0;padding:6px 2px 6px;border-radius:12px;background:#14203a;border:2px solid #050A14;text-align:center}
+  .of2It img,.of2It canvas,.of2It .bIco,.of2It .of2NoAd{width:44px;height:36px;object-fit:contain;margin-bottom:2px}
+  .of2It .bIco{width:36px;height:36px}
+  .of2It b{font-weight:400;font-size:17px;line-height:1.05} .of2It small{font-size:10px;letter-spacing:.06em;color:#B4C2DD}
+  .of2NoAd{display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid #e8283c;border-radius:50%;width:36px !important;position:relative;color:#fff}
+  .of2NoAd::after{content:'';position:absolute;left:-2px;right:-2px;top:50%;height:3px;background:#e8283c;transform:rotate(-40deg)}
+  .of2Was{text-align:center;font-size:14px;color:#B4C2DD;margin-top:6px} .of2Was s{color:#fff;text-decoration-color:#e8283c;text-decoration-thickness:2px}
+  #offerPop .of2Buy{width:auto;margin:6px 14px 0;height:56px;font-size:26px;background:linear-gradient(#9cf26a,#3dbb2c 60%,#2a9a1e);color:#fff;text-shadow:0 2px 0 #1a6a10;box-shadow:0 5px 0 #1a6a10,inset 0 2px 0 rgba(255,255,255,.6)}
+  #offerPop .of2No{width:auto;margin:4px 14px 8px;height:38px;background:transparent;border:none;color:#B4C2DD;font-size:15px}
   #offerPop .c,#oddsPop .c{width:min(330px,88vw);max-height:86vh;overflow:auto;padding:18px;border-radius:22px;background:linear-gradient(160deg,#3a1a6a,#0E1C38);border:3px solid #FFC93A;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:mmIn .35s cubic-bezier(.2,1.6,.4,1) both}
   #offerPop button,#oddsPop button{width:100%;height:50px;border-radius:14px;border:3px solid #050A14;font:19px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
   #oddsPop table{width:100%;border-collapse:collapse;font-size:12px}

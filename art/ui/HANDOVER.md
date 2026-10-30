@@ -433,3 +433,9 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - UPGRADE NOW (yellow) appears beside COLLECT when any card is ready: it collects, then opens the kit tab (`track('bag_upgrade_now')`).
 - Big bags: the grid shrinks slightly (zoom down to 0.86), then the list scrolls with a fade at the bottom (`.csScroll`).
 - Background: the changing room under a dark overlay (Joe picked this look over the lighter room).
+
+## Offer pop-up v2 (Oct 30)
+- `renderOfferPop(o)` is used for the starter pack, league pack and No Ads offers. It has a tier-coloured title bar, the bag on a spotlight, tiles with art for each item, a ×N VALUE sticker, a live "ENDS IN" timer, a struck-through "WORTH £x" line and a big green price button. Feature toasts are hidden while it's open.
+- The value is honest (`offerWorthGems`): gems + coins at the coin-pack rate + the instant-open cost of the bag + booster packs, priced at the cheapest gem pack. The sticker only shows at ×2 or more.
+- League pack now adds gems (`leagueUnlock.gems: [275, 450]`), so every league pack is ×2–2.5 value (it was ×1.3–1.5).
+- For the UI sweep: the gem tile art is a treasure chest and could be mistaken for a bag. Replace it with a plain gem pile (Joe).
