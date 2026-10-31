@@ -491,3 +491,8 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Promotion: `showPromotion(L)` full-screen moment 2.3 s after the result: PROMOTED! slam, the new league's painted art, name, entry and win (+ bag), LET'S GO. The yellow NEW LEAGUE UNLOCKED strip is hidden in r3.
 - Research: one headline, all rewards on one screen (Gems of War players), one obvious next action (Overwatch post-game study), no overcrowding.
 - Follow-ups (Oct 31): the coins tile on a win says "PROFIT +n" (it was "ENTRY n"). On screens 780px+ tall the rewards panel, watch-ad button and chips are bigger, to fill the gap. Promotion button "PLAY <league>" starts a match in the new league right away (it uses the normal PLAY NEXT button, so the entry fee is charged; `track('promo_play_now')`); "LATER" just closes it.
+
+## End cards + nets (Oct 31)
+- `#netsEnd` (nets / challenge / tournament / endless) uses the result family: slam title (green won / red lost / gold neutral), outlined runs, outlined line, no gold box. `neLook(kind, title, again, cls, back)`. Challenge lost: "n SHORT" + purple "TRY AGAIN 💎10" (cost on the button). Nets: big yellow PLAY A MATCH (`#netsMatch`, `track('nets_to_match')`), blue PRACTISE AGAIN, small BACK.
+- Nets: intro slam "NETS / FREE PRACTICE · 1 WICKET / NETS BEST n" (tap to skip); its own best (`flickyNetsBest`, `netsBest()`) shown in the score bar and the intro; "NEW BEST! KEEP GOING" moment when passed; the over circles become "BALLS n · 4s · 6s"; the end card shows the timing tally (`chase.tw`: PERFECT/GOOD/EARLY/LATE) and "NEW NETS BEST!".
+- Fix: a late endGame() just after nets/challenge ended could show a league result too (`window._modeEndAt` guard, reset in startGame).
