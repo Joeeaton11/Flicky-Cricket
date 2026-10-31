@@ -516,3 +516,10 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Nets/challenge end card: any OUT word still on screen is removed first (it overlapped the title).
 - iPhone SE Leagues: the art crops to 134px so PLAY clears the menu bar.
 - Left as is (deliberate): Bags keeps its cream wood "BAGS" sign (changing-room theme); Leagues header shows coins only.
+
+## NEXT: Figma UI artwork round (Joe topped up Figma AI credits, Oct 31)
+Do one item at a time, show options side by side, Joe picks, then drop it in (island + SE checks, before/after, push only on sign-off):
+1. Icon sheet: shop headings (featured, kit deals, boosters, gems, coins, gifts), event badges (daily, weekly, endless, pass, Diwali), mission icons, booster icons (Power Bat, Lucky Grip, Fresh Legs, Golden Ball).
+2. Plain gem pile (s/m/l) to replace the treasure-chest gem art (`REWARD_HEAP_ART.gems_*`).
+3. New card back for the bag-opening flip cards (`#fcWrap/#fcCard`).
+After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm before grant in `buyRealMoney`, real AdMob IDs, haptics, native icons).
