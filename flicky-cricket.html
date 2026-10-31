@@ -6765,7 +6765,7 @@ function startGame() {
   if (!window.chase) setupChase('league', window._activeLeagueIdx != null ? window._activeLeagueIdx : selectedLeagueIdx());
   window._hudNeedShown = null; hideMoment();
   updateHud();
-  if (['league', 'challenge', 'tourney'].includes(window.chase.mode)) {
+  if (['league', 'challenge', 'tourney', 'nets'].includes(window.chase.mode)) {
     // intro moment: NEED x OFF y big in the pop-up area, then it shrinks into the scoreboard
     state = 'intro'; ball.active = false; window._introLong = false; window._introShort = false;
     showMoment('intro');
@@ -31547,6 +31547,7 @@ function doFlick(swipe) {
   const _tdz = z - zc;
   const _tWord = z < zc - timingWindow ? 'EARLY' : Math.abs(_tdz) <= 0.04 ? 'PERFECT' : (_tdz < 0 ? (_tdz > -0.12 ? 'GOOD' : 'EARLY') : (_tdz < 0.07 ? 'GOOD' : 'LATE'));
   window._timingWord = { text: _tWord, at: performance.now() };
+  if (window.chase) { const tw = window.chase.tw = window.chase.tw || {}; tw[_tWord] = (tw[_tWord] || 0) + 1; }
   const _perfect = _tWord === 'PERFECT';
   if (_perfect && window.chase && window.chase.mode === 'league') trackMission('perfect');
 
@@ -60939,6 +60940,9 @@ function chaseNewBatter() {
   #netsEnd #netsAgain.blue{background:linear-gradient(#6aa8ff,#2f6fe0 55%,#1d4fb0) !important;color:#fff !important;box-shadow:0 4px 0 #0e2f6e}
   #netsEnd #netsAgain.gem{background:linear-gradient(#d98fff,#a748f0 55%,#7e23d6) !important;color:#fff !important;box-shadow:0 4px 0 #4a1590}
   #netsEnd #netsAgain .hIco{width:22px;height:22px}
+  #netsEnd .neT{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  #netsEnd .neT{flex-wrap:nowrap !important;gap:4px !important} #netsEnd .neT b{white-space:nowrap;font-weight:400;font-size:13px;padding:2px 7px;border-radius:10px;background:rgba(5,10,20,.7);border:2px solid #050A14}
+  #netsEnd .neBest{display:block;margin-top:8px;font-size:22px;color:#7CF29A;-webkit-text-stroke:5px #050A14;paint-order:stroke fill}
   #netsEnd #netsBack{flex:.6;background:#1d3566 !important;color:#B4C2DD !important;box-shadow:0 4px 0 #050A14}
   #netsEnd #netsMatch{width:100%;flex:none;height:58px;margin-top:10px;font-size:22px;color:#5a3300;background:linear-gradient(#fff27f,#ffc61a 55%,#f0a000);box-shadow:0 4px 0 #8a5a00}
   `;
@@ -61034,7 +61038,10 @@ function showMoment(kind, d) {
   if (kind === 'intro') {
     try { document.querySelectorAll('#fxLayer .fxToast').forEach(t => t.remove()); } catch (e) {}   // Home messages never carry into a match
     const c = window.chase, L = curLook();
-    if ((window.INTRO_STYLE || 'slam') === 'slam' && c.mode !== 'tourney' && c.target) {   // Oct 30: one big number over the field, short
+    if (c.mode === 'nets') {
+      html = `<div class="mmS"><span class="msL">${lg.name || ''}</span><b class="msN" style="font-size:110px;color:#7fd0ff">NETS</b><span class="msO" style="font-size:26px;white-space:nowrap">FREE PRACTICE · 1 WICKET</span>${netsBest() > 0 ? `<span class="msWin">NETS BEST · <b style="color:#FFC93A">${netsBest()}</b></span>` : ''}</div>`;
+      ms = 1300; window._introShort = true; window._hudFadeAt = performance.now() + ms + 100;
+    } else if ((window.INTRO_STYLE || 'slam') === 'slam' && c.mode !== 'tourney' && c.target) {   // Oct 30: one big number over the field, short
       const bag = !c.mode || c.mode === 'league' ? (lg.winChest && CHEST_TYPES[lg.winChest]) : null;
       html = `<div class="mmS"><span class="msL">${c.mode === 'challenge' ? 'DAILY CHALLENGE' : (lg.name || '')}</span><span class="msNeed">NEED</span><b class="msN">${c.target}</b><span class="msO">OFF ${c.balls} BALLS</span>
         ${bag ? `<span class="msWin">WIN${lg.winCoins ? ` <i class="hIco hi-coin"></i>${lg.winCoins}` : ''} · <b style="color:${bag.color}">${bag.name} BAG</b></span>` : ''}</div>`;
@@ -61059,6 +61066,8 @@ function showMoment(kind, d) {
   } else if (kind === 'won') {
     html = `<span class="mmBig" style="font-size:68px;color:#FFC93A">WON!</span><div class="mmCard"><span style="font-size:17px">${d.spare > 0 ? `WITH ${d.spare} BALL${d.spare === 1 ? '' : 'S'} TO SPARE` : 'OFF THE LAST BALL!'}</span></div>`;
     ms = 2100;
+  } else if (kind === 'netsbest') {
+    html = `<span class="mmBig" style="font-size:54px;color:#7CF29A">NEW BEST!</span><span style="font-size:20px">KEEP GOING</span>`; ms = 1500;
   } else if (kind === 'lastball') {
     html = `<span class="mmBig" style="font-size:52px;color:#FFC93A">LAST BALL!</span><span style="font-size:24px;text-shadow:0 3px 0 #050A14">${d.need} TO WIN</span>`;
     haptic([40, 30, 40]);
@@ -61095,6 +61104,7 @@ function playNets(idx) {
   startGame();
 }
 // Oct 31: the end card for nets / challenge / tournament / endless uses the result family (slam word, outlined number, clear next step)
+function netsBest() { return parseInt(SAVE.getItem('flickyNetsBest') || '0') || 0; }
 function neLook(kind, title, again, againCls, back) {
   const ne = document.getElementById('netsEnd'); ne.dataset.kind = kind;
   document.querySelector('#netsEnd .card > span').textContent = title;
@@ -61113,6 +61123,10 @@ function netsEnd() {
   document.querySelector('#netsEnd .card > span:nth-of-type(4)').textContent = 'Practice only — no rewards or trophies.';
   document.getElementById('netsRuns').textContent = runs + ' RUNS';
   document.getElementById('netsLine').textContent = `${c.used || 0} ball${c.used === 1 ? "" : "s"} · ${thisRunFours} four${thisRunFours === 1 ? "" : "s"} · ${thisRunSixes} six${thisRunSixes === 1 ? "" : "es"}`;
+  { const tw = c.tw || {}, el = document.querySelector('#netsEnd .card > span:nth-of-type(4)');
+    if ((tw.PERFECT || 0) + (tw.GOOD || 0) + (tw.EARLY || 0) + (tw.LATE || 0) > 0)
+      el.innerHTML = `<span class="neT"><b style="color:#4fe36a">PERFECT ${tw.PERFECT || 0}</b><b style="color:#FFD23A">GOOD ${tw.GOOD || 0}</b><b style="color:#ff6a5a">EARLY ${tw.EARLY || 0}</b><b style="color:#ff6a5a">LATE ${tw.LATE || 0}</b></span>${runs > netsBest() && netsBest() > 0 ? '<span class="neBest">NEW NETS BEST!</span>' : ''}`; }
+  if (runs > netsBest()) SAVE.setItem('flickyNetsBest', String(runs));
   document.getElementById('netsEnd').classList.add('show');
 }
 document.addEventListener('click', e => {
@@ -61200,8 +61214,11 @@ function drawMatchHud() {
   const sc = `${runs}-${c.wkLost}`; ctx.fillText(sc, x0 + 10 * s, r2);
   const sw2 = ctx.measureText(sc).width;
   ctx.font = FONT(13); ctx.fillStyle = '#B4C2DD';
-  if (runsMode) ctx.fillText(c.mode === 'tourney' ? 'TOURNEY' : `BEST ${best}`, x0 + 10 * s + sw2 + 6 * s, r2);   // chase: the target is already in the line above
-  { const used = c.log.length, start = used === 0 ? 0 : Math.floor((used - 1) / 6) * 6, over = c.log.slice(start, start + 6);
+  if (runsMode) ctx.fillText(c.mode === 'tourney' ? 'TOURNEY' : `BEST ${c.mode === 'nets' ? netsBest() : best}`, x0 + 10 * s + sw2 + 6 * s, r2);   // chase: the target is already in the line above
+  if (c.mode === 'nets') { ctx.font = FONT(13); ctx.fillStyle = '#B4C2DD'; ctx.textAlign = 'right';
+    ctx.fillText(`BALLS ${c.used || 0} · 4s ${thisRunFours} · 6s ${thisRunSixes}`, x0 + bw - 10 * s, r2); ctx.textAlign = 'left';
+    if (netsBest() > 0 && runs > netsBest() && !c._bestShown) { c._bestShown = 1; setTimeout(() => { try { showMoment('netsbest'); playAchievementChime(); } catch (e) {} }, 300); } }
+  else { const used = c.log.length, start = used === 0 ? 0 : Math.floor((used - 1) / 6) * 6, over = c.log.slice(start, start + 6);
     const rr = 7 * s, gap = 3 * s; let bx = x0 + bw - 10 * s - 6 * 2 * rr - 5 * gap + rr; const by = r2 - 6 * s;
     for (let i = 0; i < 6; i++) {
       const v = over[i];
