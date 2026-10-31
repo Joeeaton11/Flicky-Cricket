@@ -32649,8 +32649,9 @@ function showResultScreen(d) {
       const ul = THEMED_LEAGUES[unlockIdx];
       $('r2UnlockName').textContent = ul.name;
       paintArt($('r2UnlockArt'), ul);
-      un.classList.remove('hidden'); un.style.animationDelay = '2s';
-      setTimeout(() => { try { playAchievementChime(); } catch (e) {} }, 2000);
+      if ($('resultScreen').classList.contains('r3')) { un.classList.add('hidden'); setTimeout(() => showPromotion(ul, paintArt), 2300); }
+      else { un.classList.remove('hidden'); un.style.animationDelay = '2s';
+      setTimeout(() => { try { playAchievementChime(); } catch (e) {} }, 2000); }
     } else un.classList.add('hidden');
   }
   { let pg = $('r2Prog'); if (!pg) { pg = document.createElement('div'); pg.id = 'r2Prog'; pg.className = 'r2Card r2-step'; road.insertAdjacentElement('afterend', pg); }
@@ -32673,7 +32674,7 @@ function showResultScreen(d) {
   if (d.streak && !d.streak.won && d.streak.canSave) ex.unshift(`<button id="r2StreakSave" style="flex:1 0 100%;height:46px;border-radius:14px;border:3px solid #050A14;background:linear-gradient(#c58bff,#8a3df0);color:#fff;font:16px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 0 #4a1a8a">${FLAME_SVG} KEEP YOUR STREAK OF ${d.streak.before} · ${GAME_CONFIG.streak.saver.gems} GEMS</button>`);
   else if (d.streak && !d.streak.won && d.streak.before >= 2) ex.push(`<span class="r2Badge">STREAK OF ${d.streak.before} ENDED</span>`);
   const nAch = (d.newlyUnlocked || []).length;
-  if (nAch) ex.push(`<span class="r2Badge gem"><i class="hIco hi-gem"></i>${nAch === 1 ? d.newlyUnlocked[0].name : nAch + ' AWARDS'}</span>`);
+  if (nAch && !$('resultScreen').classList.contains('r3')) ex.push(`<span class="r2Badge gem"><i class="hIco hi-gem"></i>${nAch === 1 ? d.newlyUnlocked[0].name : nAch + ' AWARDS'}</span>`);
   $('r2Extras').className = ex.some(x => x.includes('r2StreakSave')) ? 'r2-step' : 'r2-step badges';
   $('r2Extras').innerHTML = ex.join('');
   $('r2Extras').style.display = ex.length ? '' : 'none';
@@ -60974,6 +60975,33 @@ function hideMoment() { const el = document.getElementById('matchMoment'); if (e
   .msWin{display:flex;align-items:center;gap:5px;margin-top:8px;padding:4px 14px;border-radius:16px;background:rgba(5,10,20,.82);border:2px solid #050A14;font-size:20px;letter-spacing:.05em;opacity:0;animation:mxIn .25s ease-out .5s forwards}
   .msWin .hIco{width:24px;height:24px} .msWin b{font-weight:400}
   @keyframes mxOut{60%{opacity:1}to{transform:translate(var(--tx,0),var(--ty,-60%)) scale(var(--ts,.5));opacity:0}}
+`; document.head.appendChild(st); })();
+// League promotion (Oct 31): its own full-screen moment over the result screen
+function showPromotion(L, paintArt) {
+  let ov = document.getElementById('promoOv'); if (!ov) { ov = document.createElement('div'); ov.id = 'promoOv'; document.body.appendChild(ov); }
+  const bag = L.winChest && CHEST_TYPES[L.winChest];
+  ov.innerHTML = `<div class="prC"><b class="prW">PROMOTED!</b><div class="prArt"><canvas width="620" height="360"></canvas></div><b class="prN">${L.name}</b>
+    <div class="prR"><span><small>ENTRY</small><i class="hIco hi-coin"></i>${L.entry.toLocaleString()}</span><span><small>WIN</small><i class="hIco hi-coin"></i>${(L.winCoins || 0).toLocaleString()}${bag ? ` + <em style="color:${bag.color}">${bag.name} BAG</em>` : ''}</span></div>
+    <button class="prGo">LET'S GO</button></div>`;
+  try { paintArt(ov.querySelector('canvas'), L); } catch (e) {}
+  ov.classList.add('show');
+  try { playAchievementChime(); playCrowdCheer(true); hapticSix(); } catch (e) {}
+  try { _fireRayBurst && 0; } catch (e) {}
+  ov.querySelector('.prGo').onclick = () => { try { playUiTap(); } catch (e) {} ov.classList.remove('show'); };
+  track('league_promoted', { league: L.name });
+}
+(function () { const st = document.createElement('style'); st.textContent = `
+  #promoOv{position:fixed;inset:0;z-index:320;display:none;align-items:center;justify-content:center;background:rgba(3,7,16,.95);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff;padding:20px}
+  #promoOv.show{display:flex}
+  #promoOv .prC{width:min(360px,92vw);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+  #promoOv .prW{font-weight:400;font-size:58px;line-height:1;color:#FFC93A;-webkit-text-stroke:11px #050A14;paint-order:stroke fill;text-shadow:0 7px 0 #050A14,0 0 40px rgba(255,201,58,.6);--tilt:-3deg;transform:rotate(-3deg);animation:fxSlamIn .45s cubic-bezier(.25,1.7,.45,1) both}
+  #promoOv .prArt{width:100%;aspect-ratio:620/360;border-radius:18px;overflow:hidden;border:4px solid #050A14;box-shadow:0 0 0 3px #FFC93A,0 0 40px rgba(255,201,58,.45);animation:mxIn .4s ease-out .3s both}
+  #promoOv .prArt canvas{width:100%;height:100%;display:block}
+  #promoOv .prN{font-weight:400;font-size:34px;line-height:1.05;-webkit-text-stroke:7px #050A14;paint-order:stroke fill;text-shadow:0 4px 0 #050A14;animation:mxIn .35s ease-out .55s both}
+  #promoOv .prR{display:flex;gap:8px;animation:mxIn .35s ease-out .75s both}
+  #promoOv .prR span{display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:14px;background:#0E1C38;border:2px solid #050A14;font-size:17px;white-space:nowrap}
+  #promoOv .prR small{font-size:11px;letter-spacing:.1em;color:#B4C2DD;margin-right:3px} #promoOv .prR .hIco{width:20px;height:20px} #promoOv .prR em{font-style:normal}
+  #promoOv .prGo{margin-top:8px;width:100%;height:60px;border-radius:18px;border:3px solid #050A14;font:26px 'Lilita One','Arial Black',Arial,sans-serif;color:#5a3300;background:linear-gradient(#fff27f,#ffc61a 55%,#f0a000);box-shadow:0 5px 0 #8a5a00;cursor:pointer;animation:mxIn .35s ease-out 1s both}
 `; document.head.appendChild(st); })();
 function showMoment(kind, d) {
   const el = document.getElementById('matchMoment'); if (!el) return;

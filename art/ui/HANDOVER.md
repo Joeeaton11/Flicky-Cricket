@@ -482,3 +482,11 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Score bar: TGT n removed from row 2 in chases (the target is already on row 1). Energy bar thickens and pulses red with a TIRED label when low. The first time ever (`flickyTiredTip`), a white tooltip under the bar says "LOW ENERGY · Big hits go shorter. Soft shots refill it."
 - Timing word is about 60% bigger, thick outline, pops in; green PERFECT, yellow GOOD, red EARLY/LATE. Commentary line is in the game font with an outline.
 - Pause: shows "NEED n OFF m" (or runs), a 🔊 SOUND toggle, and END INNINGS as a small red link that needs a second tap ("counts as a loss").
+
+## Result screen v3 (Oct 31, Joe signed off) — `#resultScreen.r3` (`window.RESULT_STYLE = 'r2'` brings back the old one)
+- Hero: result word in the slam style (green YOU WON! / yellow SO CLOSE! / red OUT!, no pill), runs, star rating ★★★ (`#r2Stars`, "+n NEW" when gained), target as plain outlined text, one stats line (`#r2StatLine`: fours · sixes · balls). Speech bubble, the 4-box stats card and the italic line are hidden.
+- Rewards: one panel split in three (coins · trophies · bag). Watch-ad button stays.
+- Trophy Road is a slim bar with no card; PROGRESS card → two chips (MISSIONS n/n, PASS +xp; the weekly bag lives on Missions). Star chip and awards chip are gone from the badge row (awards show via the Stats badge).
+- Toasts are hidden while the result screen is up.
+- Promotion: `showPromotion(L)` full-screen moment 2.3 s after the result: PROMOTED! slam, the new league's painted art, name, entry and win (+ bag), LET'S GO. The yellow NEW LEAGUE UNLOCKED strip is hidden in r3.
+- Research: one headline, all rewards on one screen (Gems of War players), one obvious next action (Overwatch post-game study), no overcrowding.
