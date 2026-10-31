@@ -508,3 +508,11 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Awards: locked ones are faded (opacity .7).
 - Bag Odds (`showBagOdds(sel)`): navy pop-up with a gold title bar, five bag tabs (gold first), rarity bars with %, and cards/coins/gems/booster boxes.
 - Toasts are hidden on Stats, Kit/Bags/Shop, Player and Leagues (Home only).
+
+## Consistency pass (Oct 31)
+- "1 DAYS" → plural-aware everywhere (`passDaysLeft`, `passDaysLeftWeek`).
+- Pass welcome toast shortened to "TIER 1 FREE · WELCOME!" (it was cut off).
+- Bag info pop-up START UNLOCK is blue (`.bi2Go.start`) to match the lockers' START; green stays for OPEN/collect.
+- Nets/challenge end card: any OUT word still on screen is removed first (it overlapped the title).
+- iPhone SE Leagues: the art crops to 134px so PLAY clears the menu bar.
+- Left as is (deliberate): Bags keeps its cream wood "BAGS" sign (changing-room theme); Leagues header shows coins only.
