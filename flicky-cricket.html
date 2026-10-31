@@ -2390,7 +2390,15 @@
   #playerScreen { --plP:430px; }
   /* Oct 31 (Joe: keep the hero big): compact drawer — each option set is one swipe row, so the panel is shorter and nothing is cut off */
   #playerScreen:not(.mini) { --plP:404px; }
-  #playerScreen.create { --plP:430px; }
+  #playerScreen.create { --plP:402px; }
+  #playerScreen.create #plPanel { height:var(--plP) !important; }
+  #plSkip { display:none; flex:none; height:28px; margin-top:-4px; border:0; background:none; color:#B4C2DD; font:15px 'Lilita One','Arial Black',Arial,sans-serif; letter-spacing:.04em; cursor:pointer; }
+  #playerScreen.create #plSkip { display:block; }
+  #playerScreen.create.lastStep #plSkip { visibility:hidden; }
+  #playerScreen.create.lastStep { --plP:446px; }
+  #plReady { position:absolute; left:0; right:0; top:34%; z-index:7; text-align:center; pointer-events:none; font:400 76px 'Lilita One','Arial Black',Arial,sans-serif; color:#7CF29A;
+    -webkit-text-stroke:11px #050A14; paint-order:stroke fill; text-shadow:0 7px 0 #050A14,0 0 40px rgba(124,242,154,.6); --tilt:-4deg; animation:fxSlamIn .42s cubic-bezier(.25,1.7,.45,1) both; }
+  #playerScreen.readyPop #plCanvas { animation:luPop .55s cubic-bezier(.2,1.7,.4,1); }
   #playerScreen .plGender button { height:58px !important; flex-direction:row !important; align-items:center !important; justify-content:center !important; padding:0 10px !important; gap:6px !important; font-size:16px !important; }
   #playerScreen .plGender canvas { height:50px !important; }
   #playerScreen .plFaces, #playerScreen .plFlags, #playerScreen .plSets, #playerScreen .plSw { display:flex !important; gap:8px; overflow-x:auto; scrollbar-width:none; padding:4px 3px 12px; margin:0 -3px; scroll-snap-type:x proximity; }
@@ -29537,6 +29545,7 @@ function renderPlayerScreen() {
   const body = document.getElementById('plBody');
   const tabChanged = plTab !== window._plLastTab; window._plLastTab = plTab;
   if (tabChanged) setTimeout(() => { body.scrollTop = 0; }, 0);
+  document.getElementById('playerScreen').classList.toggle('lastStep', plMode === 'create' && plTab === 'name');
   { const sb = document.getElementById('plStart'); sb.textContent = (plMode === 'create' && plTab !== 'name') ? 'NEXT' : 'START'; sb.classList.toggle('next', plMode === 'create' && plTab !== 'name'); }
   if (plTab === 'body') {
     body.innerHTML = `<div class="plGender"><button data-g="m" class="${L.g === 'm' ? 'on' : ''}"><canvas></canvas>MALE</button><button data-g="f" class="${L.g === 'f' ? 'on' : ''}"><canvas></canvas>FEMALE</button></div>
@@ -29645,11 +29654,20 @@ document.getElementById('plStart').addEventListener('click', () => {
     plTab = plTab === 'body' ? 'kit' : 'name'; plPreview = null; renderPlayerScreen(); return;
   }
   savePlayerLook(); refreshPlayerArt();
-  const scrP = document.getElementById('playerScreen'); scrP.classList.add('hidden'); scrP.classList.remove('create');
+  const scrP = document.getElementById('playerScreen');
+  if (plMode === 'create' && !window._plReadyDone) {   // Oct 31: a short READY! reveal before leaving the creator
+    window._plReadyDone = true; const st = document.getElementById('plStage'), r = document.createElement('div'); r.id = 'plReady'; r.textContent = 'READY!'; st.appendChild(r);
+    scrP.classList.add('readyPop'); try { playAchievementChime(); playCrowdCheer(false); hapticBig(); } catch (e) {}
+    setTimeout(() => { r.remove(); scrP.classList.remove('readyPop'); document.getElementById('plStart').click(); }, 1300); return;
+  }
+  window._plReadyDone = false;
+  scrP.classList.add('hidden'); scrP.classList.remove('create');
   const held = window._fxHeld || []; window._fxHeld = []; held.forEach((m, i) => setTimeout(() => showMessage(...m), 500 + i * 250));
   if ((career.matchesPlayed || 0) === 0) { playLeague(selectedLeagueIdx()); return; }   // a brand-new player goes straight into their first match
   overlay.classList.remove('hidden'); updateMenuHUD(); showNav('');
 });
+{ const sk = document.createElement('button'); sk.id = 'plSkip'; sk.textContent = 'SKIP · KEEP THIS LOOK'; document.getElementById('plStart').insertAdjacentElement('afterend', sk);
+  sk.addEventListener('click', () => { playUiTap(); try { track('creator_skip', { step: plTab }); } catch (e) {} plTab = 'name'; document.getElementById('plStart').click(); }); }
 document.getElementById('playerNavBtn').addEventListener('click', () => { playUiTap(); hapticTap(); openPlayerScreen('edit'); });
 document.getElementById('homePlayer').addEventListener('click', () => { playUiTap(); hapticTap(); openPlayerScreen('edit'); });
 refreshPlayerArt();
