@@ -2486,6 +2486,20 @@
   .r3Chip { display:inline-flex; align-items:baseline; gap:5px; padding:5px 12px; border-radius:14px; background:rgba(5,10,20,.55); border:2px solid #050A14; font-size:16px; color:#fff; }
   .r3Chip small { font-size:11px; letter-spacing:.1em; color:#B4C2DD; } .r3Chip.hot { border-color:#4fd46a; box-shadow:0 0 10px rgba(79,212,106,.5); }
   #resultScreen.r3 #r2Wrap { gap:12px !important; }
+  /* r3 hero: result word in the slam style (no pill), stars as the rating, target as plain text */
+  #resultScreen.r3 #r2HeroR #r2Ribbon { background:none !important; border:0 !important; box-shadow:none !important; padding:0 4px !important; font-size:38px !important; line-height:1; white-space:nowrap;
+    -webkit-text-stroke:9px #050A14; paint-order:stroke fill; text-shadow:0 5px 0 #050A14; }
+  #resultScreen.r3 #r2Ribbon.win { color:#7CF29A !important; } #resultScreen.r3 #r2Ribbon.close { color:#FFD23A !important; } #resultScreen.r3 #r2Ribbon.lose { color:#ff6a5a !important; }
+  #resultScreen.r3 #r2HeroR #r2Badge { background:none !important; border:0 !important; box-shadow:none !important; padding:0 !important; font-size:14px !important; white-space:nowrap; max-width:none !important; color:#fff !important; -webkit-text-stroke:5px #050A14; paint-order:stroke fill; text-shadow:0 2px 0 #050A14; }
+  #resultScreen.r3 #r2HeroR { gap:3px !important; width:62% !important; }
+  #r2Stars { display:flex; align-items:center; justify-content:flex-end; gap:2px; margin:-2px 0 2px; }
+  #r2Stars i { font-style:normal; font-size:28px; line-height:1; color:#1d2a46; -webkit-text-stroke:5px #050A14; paint-order:stroke fill; }
+  #r2Stars i.on { color:#FFC93A; text-shadow:0 0 14px rgba(255,201,58,.7); animation:fxSlamIn .4s cubic-bezier(.25,1.7,.45,1) both; --tilt:0deg; }
+  #r2Stars small { margin-left:6px; font-size:13px; color:#FFC93A; -webkit-text-stroke:4px #050A14; paint-order:stroke fill; }
+  /* one rewards panel instead of three boxes */
+  #resultScreen.r3 #r2Rewards { gap:0 !important; border-radius:18px; border:3px solid #050A14; background:linear-gradient(#24447f,#13284f); box-shadow:0 5px 0 rgba(0,0,0,.5); overflow:hidden; }
+  #resultScreen.r3 .r2Rew { border:0 !important; border-radius:0 !important; background:none !important; box-shadow:none !important; }
+  #resultScreen.r3 .r2Rew + .r2Rew { border-left:2px solid rgba(5,10,20,.55) !important; }
   body:has(#resultScreen.rs-visible) #fxLayer .fxToast { display:none !important; }   /* the result already shows missions/pass; toasts only cluttered it */
   .r2PgHd { font-size:12px; letter-spacing:.1em; color:#B4C2DD; margin-bottom:6px; }
   .r2PgRow { display:grid; grid-template-columns:repeat(auto-fit,minmax(0,1fr)); gap:6px; }
@@ -32537,6 +32551,10 @@ function showResultScreen(d) {
   $('r2SR').textContent = d.balls ? Math.round(d.runs / d.balls * 100) : 0;
   { let sl = $('r2StatLine'); if (!sl) { sl = document.createElement('div'); sl.id = 'r2StatLine'; sl.className = 'r2-step'; $('r2Badge').insertAdjacentElement('afterend', sl); }
     sl.innerHTML = `<b>${d.fours}</b> FOURS · <b>${d.sixes}</b> SIXES · <b>${d.balls}</b> BALLS`; sl.style.setProperty('--d', '.55s'); }
+  { let st = $('r2Stars'); if (!st) { st = document.createElement('div'); st.id = 'r2Stars'; $('r2ScoreTop').insertAdjacentElement('afterend', st); }
+    const n = d.stars ? d.stars.n : 0;
+    st.innerHTML = d.stars ? [1, 2, 3].map(k => `<i class="${k <= n ? 'on' : ''}" style="animation-delay:${1.5 + k * .18}s">★</i>`).join('') + (d.stars.gained ? `<small>+${d.stars.gained} NEW</small>` : '') : '';
+    st.style.display = d.stars ? '' : 'none'; }
   $('resultScreen').classList.toggle('r3', (window.RESULT_STYLE || 'r3') === 'r3');
   const countUp = (el, to, delay, dur, fmt) => {
     el.textContent = fmt(0);
@@ -32649,7 +32667,7 @@ function showResultScreen(d) {
   const ex = [];
   if (d.isNewBest && d.runs > 0) ex.push(`<span class="r2Badge gold"><i class="hIco hi-trophy"></i>NEW BEST ${d.runs}</span>`);
   if (d.firstWinGems) ex.push(`<span class="r2Badge gem"><i class="hIco hi-gem"></i>+${d.firstWinGems} FIRST WIN</span>`);
-  if (d.stars) ex.unshift(`<span class="r2Badge gold">${'★'.repeat(d.stars.n)}<span style="opacity:.3">${'★'.repeat(3 - d.stars.n)}</span>${d.stars.gained ? ` · +${d.stars.gained} STAR${d.stars.gained === 1 ? '' : 'S'}` : ''}</span>`);
+  if (d.stars && !$('resultScreen').classList.contains('r3')) ex.unshift(`<span class="r2Badge gold">${'★'.repeat(d.stars.n)}<span style="opacity:.3">${'★'.repeat(3 - d.stars.n)}</span>${d.stars.gained ? ` · +${d.stars.gained} STAR${d.stars.gained === 1 ? '' : 'S'}` : ''}</span>`);
   if (d.stars && d.stars.extras && d.stars.extras.length) ex.push(`<span class="r2Badge gold">STAR REWARD · ${d.stars.extras.join(' · ')}</span>`);
   if (d.streak && d.streak.won && d.streak.current >= 2) ex.unshift(`<span class="r2Badge gold">${FLAME_SVG} STREAK ${d.streak.current}${d.streak.mult > 1 ? ` · ×${d.streak.mult}` : ''}${d.streak.bagUp ? ' · BAG UP' : ''}</span>`);
   if (d.streak && !d.streak.won && d.streak.canSave) ex.unshift(`<button id="r2StreakSave" style="flex:1 0 100%;height:46px;border-radius:14px;border:3px solid #050A14;background:linear-gradient(#c58bff,#8a3df0);color:#fff;font:16px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 0 #4a1a8a">${FLAME_SVG} KEEP YOUR STREAK OF ${d.streak.before} · ${GAME_CONFIG.streak.saver.gems} GEMS</button>`);
