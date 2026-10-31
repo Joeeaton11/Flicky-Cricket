@@ -6739,6 +6739,7 @@ if (new URLSearchParams(location.search).get('scene')) {
 
 // Central game-start — called after entry fee already deducted and _activeLeagueIdx set
 function startGame() {
+  window._modeEndAt = 0;
   getAudioCtx();
   resultText.style.display = 'none';
   document.getElementById('statusBlock').style.display = 'none';
@@ -32261,6 +32262,7 @@ function generateShareCard(result) {
 
 
 function endGame() {
+  if (!window.chase && window._modeEndAt && Date.now() - window._modeEndAt < 6000) return;   // nets/challenge already ended: a late call must not show a league result
   hideMoment();
   if (window.chase && window.chase.mode === 'nets') { netsEnd(); return; }
   if (window.chase && ['challenge', 'tourney', 'endless'].includes(window.chase.mode)) { modeEnd(); return; }
@@ -60926,6 +60928,19 @@ function chaseNewBatter() {
   #netsEnd .card{width:min(320px,86vw);padding:18px;border-radius:20px;background:#0E1C38;border:3px solid #FFC93A;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
   #netsEnd .row{display:flex;gap:10px;width:100%}
   #netsEnd button{flex:1;height:52px;border-radius:14px;border:3px solid #050A14;font:18px 'Lilita One','Arial Black',Arial;cursor:pointer}
+  #netsEnd{background:rgba(3,7,16,.88)}
+  #netsEnd .card{background:none;border:0;gap:6px;width:min(340px,90vw)}
+  #netsEnd .card > span:first-child{font-size:42px !important;letter-spacing:.02em !important;line-height:1;color:#FFC93A !important;-webkit-text-stroke:9px #050A14;paint-order:stroke fill;text-shadow:0 5px 0 #050A14;transform:rotate(-3deg);--tilt:-3deg;animation:fxSlamIn .4s cubic-bezier(.25,1.7,.45,1) both}
+  #netsEnd[data-kind=win] .card > span:first-child{color:#7CF29A !important} #netsEnd[data-kind=lose] .card > span:first-child{color:#ff6a5a !important}
+  #netsEnd #netsRuns{font-size:76px !important;-webkit-text-stroke:11px #050A14;paint-order:stroke fill;text-shadow:0 7px 0 #050A14;margin:4px 0 2px}
+  #netsEnd #netsLine{font-size:17px !important;color:#fff !important;-webkit-text-stroke:5px #050A14;paint-order:stroke fill}
+  #netsEnd .card > span:nth-of-type(4){font-size:14px !important;color:#B4C2DD !important;margin-bottom:10px}
+  #netsEnd #netsAgain{background:linear-gradient(#fff27f,#ffc61a 55%,#f0a000) !important;color:#5a3300 !important;box-shadow:0 4px 0 #8a5a00;display:flex;align-items:center;justify-content:center;gap:4px}
+  #netsEnd #netsAgain.blue{background:linear-gradient(#6aa8ff,#2f6fe0 55%,#1d4fb0) !important;color:#fff !important;box-shadow:0 4px 0 #0e2f6e}
+  #netsEnd #netsAgain.gem{background:linear-gradient(#d98fff,#a748f0 55%,#7e23d6) !important;color:#fff !important;box-shadow:0 4px 0 #4a1590}
+  #netsEnd #netsAgain .hIco{width:22px;height:22px}
+  #netsEnd #netsBack{flex:.6;background:#1d3566 !important;color:#B4C2DD !important;box-shadow:0 4px 0 #050A14}
+  #netsEnd #netsMatch{width:100%;flex:none;height:58px;margin-top:10px;font-size:22px;color:#5a3300;background:linear-gradient(#fff27f,#ffc61a 55%,#f0a000);box-shadow:0 4px 0 #8a5a00}
   `;
   document.head.appendChild(css);
   const el = document.createElement('div'); el.id = 'matchMoment'; el.setAttribute('aria-live', 'polite'); document.body.appendChild(el);
@@ -61079,19 +61094,30 @@ function playNets(idx) {
   closeAllScreens();
   startGame();
 }
+// Oct 31: the end card for nets / challenge / tournament / endless uses the result family (slam word, outlined number, clear next step)
+function neLook(kind, title, again, againCls, back) {
+  const ne = document.getElementById('netsEnd'); ne.dataset.kind = kind;
+  document.querySelector('#netsEnd .card > span').textContent = title;
+  const a = document.getElementById('netsAgain'), b = document.getElementById('netsBack');
+  a.innerHTML = again; a.className = againCls || ''; b.textContent = back || 'BACK';
+  let pm = document.getElementById('netsMatch');
+  if (kind === 'nets') { if (!pm) { pm = document.createElement('button'); pm.id = 'netsMatch'; document.querySelector('#netsEnd .row').insertAdjacentElement('afterend', pm); }
+    pm.textContent = 'PLAY A MATCH'; pm.style.display = ''; } else if (pm) pm.style.display = 'none';
+}
 function netsEnd() {
   state = 'menu';
   const c = window.chase || {};
   track('match_end', { mode: 'nets', runs, ballsUsed: c.used || 0, wickets: c.wkLost || 0 });
-  window.chase = null; window._activeLeagueIdx = null; window._netsAgainMode = null;
-  document.querySelector('#netsEnd .card > span').textContent = 'NETS · PRACTICE';
-  document.querySelector('#netsEnd .card > span:nth-of-type(4)').textContent = 'No rewards in the nets — just practice.';
+  window.chase = null; window._activeLeagueIdx = null; window._netsAgainMode = null; window._modeEndAt = Date.now();
+  neLook('nets', 'NETS', 'PRACTISE AGAIN', 'blue', 'BACK');
+  document.querySelector('#netsEnd .card > span:nth-of-type(4)').textContent = 'Practice only — no rewards or trophies.';
   document.getElementById('netsRuns').textContent = runs + ' RUNS';
   document.getElementById('netsLine').textContent = `${c.used || 0} ball${c.used === 1 ? "" : "s"} · ${thisRunFours} four${thisRunFours === 1 ? "" : "s"} · ${thisRunSixes} six${thisRunSixes === 1 ? "" : "es"}`;
   document.getElementById('netsEnd').classList.add('show');
 }
 document.addEventListener('click', e => {
   if (e.target && e.target.id === 'netsAgain') { document.getElementById('netsEnd').classList.remove('show'); if (window._netsAgainMode) { const m = window._netsAgainMode; window._netsAgainMode = null; playMode(m === 'tourney' ? 'tourney' : m); } else playNets(window._netsLeague); }
+  if (e.target && e.target.id === 'netsMatch') { document.getElementById('netsEnd').classList.remove('show'); try { track('nets_to_match', {}); playLeague(selectedLeagueIdx()); } catch (err) { document.getElementById('homeLeagueCard').click(); } return; }
   if (e.target && e.target.id === 'netsBack') {
     document.getElementById('netsEnd').classList.remove('show');
     closeAllScreens(); leagueScreen.classList.remove('hidden'); renderLeagueScreen(); showNav('league'); muteBtn.classList.remove('hidden');
@@ -62852,7 +62878,7 @@ function modeEnd() {
       if (ch.lastWin !== yest) { ch.streak = ch.lastWin === yk ? ch.streak + 1 : 1; ch.lastWin = yest;
         if (ch.streak % GAME_CONFIG.season.dailyChallenge.streakBagAt === 0) extra = 'STREAK REWARD: ' + grantReward({ bag: 'silver' }); }
       line = `${'★'.repeat(n)} · ${spare ? `${spare} ball${spare === 1 ? '' : 's'} spare` : 'off the last ball'} · challenge streak ${ch.streak}`; }
-    else line = `${runs} of ${c.target} · try again (${GAME_CONFIG.season.dailyChallenge.extraAttemptGems} gems)`;
+    else line = `${runs} of ${c.target} · ${spare ? spare + ' balls left' : 'all balls used'}`;
     SAVE.save();
   } else if (c.mode === 'tourney') {
     BACKEND.submit(c.board, runs); const st = tourneyStats(c.leagueIdx), rk = BACKEND.rank(c.board, st.mean, st.sd);
@@ -62864,9 +62890,12 @@ function modeEnd() {
     title = 'ENDLESS'; line = `${runs} runs · best ${rk.best} · rank #${rk.rank} of ${rk.of}`; if (fresh.length) extra = `BADGE: ${fresh.map(m => m + ' RUNS').join(' · ')}`;
   }
   track('match_end', { mode: c.mode, runs, won, ballsUsed: c.used || 0 });
-  window.chase = null; window._modeScene = null; window._activeLeagueIdx = null;
+  window.chase = null; window._modeScene = null; window._activeLeagueIdx = null; window._modeEndAt = Date.now();
   document.getElementById('netsRuns').textContent = runs + ' RUNS';
   document.querySelector('#netsEnd .card > span').textContent = title;
+  { const G = GAME_CONFIG.season.dailyChallenge.extraAttemptGems;
+    if (c.mode === 'challenge') neLook(won ? 'win' : 'lose', won ? 'CHALLENGE WON!' : `${Math.max(0, c.target - runs)} SHORT`, won ? 'PLAY AGAIN' : `TRY AGAIN <i class="hIco hi-gem"></i>${G}`, won ? '' : 'gem');
+    else neLook('mode', title, 'PLAY AGAIN', ''); }
   document.getElementById('netsLine').textContent = line;
   document.querySelector('#netsEnd .card > span:nth-of-type(4)').textContent = extra || (c.mode === 'challenge' ? 'A new challenge every day.' : 'Scores reset every Monday.');
   window._netsAgainMode = c.mode;
