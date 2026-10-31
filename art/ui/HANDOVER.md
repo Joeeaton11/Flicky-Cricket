@@ -523,3 +523,14 @@ Do one item at a time, show options side by side, Joe picks, then drop it in (is
 2. Plain gem pile (s/m/l) to replace the treasure-chest gem art (`REWARD_HEAP_ART.gems_*`).
 3. New card back for the bag-opening flip cards (`#fcWrap/#fcCard`).
 After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm before grant in `buyRealMoney`, real AdMob IDs, haptics, native icons).
+
+## Art pass: style rules for all UI art (Joe, Oct 31) — every new image must match the game's existing art
+- Reference = what's already in the game: nav icons (`.hi-*`), kit icons (`art/kit-icons/`), coin/gem heaps (`HEAP_ART`), bags (`CHEST_IMG_SRC`). Before showing Joe any new art, cut it out and put it beside these at the same size (one comparison image).
+- Look: premium soft-rendered 3D casual-game item art (Clash Royale / Golf Clash shop items) — rounded chunky volumes, smooth glossy painted shading, bright highlight top-left, warm golden rim light, rich saturated colour. **Very thin dark outline or none. Never thick black sticker outlines or flat cartoon** (first Shop sheet, Figma 307:191, failed on exactly this).
+- Palette: navy #0B2A5B, gold #FFC93A, cream/pale willow, cricket-ball red #C8102E, amethyst gems. Same size and slight 3/4 angle per sheet, lit top-left, no cast shadows.
+- Prompt: flat #01162C background, wide gaps, "no text, no labels, no letters" (the model adds labels otherwise). One row per sheet keyed out cleanly.
+- Reuse before generating: gem pile, coin heaps, no-ads TV, trophy, gift, bags already exist — don't redraw them.
+- Model: gemini-3.1-flash-image. Downloads: `get_screenshot` with `enableBase64Response:true`, copy the saved tool-result PNG (curl to figma.com is blocked).
+
+### Art pass order (Joe agreed a full pass, Oct 31)
+1 Shop ✅ art (Figma 307:192 → `art/ui/shop-icons/`: featured, kitdeals, boosters, gemjar, more; gems/coins/no-ads reuse game art) — built and live · 2 Events (mode badges, medals) · 3 Pass (key art, tier tiles) · 4 Missions (icons) · 5 Stats (award icons) · 6 Bag opening (card back) · 7 Settings (row icons) · 8 Daily / Super Over / Offer polish.
