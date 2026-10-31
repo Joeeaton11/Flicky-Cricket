@@ -500,3 +500,11 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 ## Player screen + creator (Oct 31)
 - Player: big hero kept (Joe). The drawer is compact: slim MALE/FEMALE toggle, every option set is one swipe row (looks, club colours, swatches, flags) with a right-edge fade, SURPRISE ME is a dice button on the stage (`#plRand` moved into `#plStage`), "COLLECTION" → "LOOKS n/n". `--plP` 404 (edit).
 - Creator ("NOW MAKE THEM YOURS"): tabs kept (Joe said no step dots). Same hero/panel size on all 3 steps and on READY! (step 3 tightens its fields, `.lastStep`). Blue NEXT, yellow START, "SKIP · KEEP THIS LOOK" link on steps 1–2 (`#plSkip`, `track('creator_skip')`). START shows a centred green READY! slam over the shoulders + pop/chime/cheer, then continues (`window._plReadyDone`; the pop uses `scale` so the canvas keeps its translateX centring). Logo kept and moved down (header 114px); small phones (≤720px tall) keep a 92px header and `--plP` 384 so the name tag clears the tabs. Toasts are hidden over the creator.
+
+## Stats + Bag Odds (Oct 31)
+- Career: best innings + average in one compact row (`.stHero.st2`), Recent Form moved to second.
+- Records = honours board (Joe, Lord's style): varnished wood, gilt frame, gold serif lettering; header "NAME · TEAM C.C. / HONOURS BOARD / FASTEST TO"; columns RUNS · GROUND · BALLS · DATE (`career.ftMeta[m] = {at, lg}` saved from now on; older records show "—"). The next milestone reads "NEXT TO CHASE"; the rest are empty lines.
+- A new record shows a wood/gilt chip on the result screen, "ON THE HONOURS BOARD · n RUNS ›" (`window._boardNew`); tapping it goes Home, then opens Stats on the Records tab (`window._openBoard`).
+- Awards: locked ones are faded (opacity .7).
+- Bag Odds (`showBagOdds(sel)`): navy pop-up with a gold title bar, five bag tabs (gold first), rarity bars with %, and cards/coins/gems/booster boxes.
+- Toasts are hidden on Stats, Kit/Bags/Shop, Player and Leagues (Home only).
