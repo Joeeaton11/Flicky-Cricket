@@ -490,3 +490,4 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - Toasts are hidden while the result screen is up.
 - Promotion: `showPromotion(L)` full-screen moment 2.3 s after the result: PROMOTED! slam, the new league's painted art, name, entry and win (+ bag), LET'S GO. The yellow NEW LEAGUE UNLOCKED strip is hidden in r3.
 - Research: one headline, all rewards on one screen (Gems of War players), one obvious next action (Overwatch post-game study), no overcrowding.
+- Follow-ups (Oct 31): the coins tile on a win says "PROFIT +n" (it was "ENTRY n"). On screens 780px+ tall the rewards panel, watch-ad button and chips are bigger, to fill the gap. Promotion button "PLAY <league>" starts a match in the new league right away (it uses the normal PLAY NEXT button, so the entry fee is charged; `track('promo_play_now')`); "LATER" just closes it.
