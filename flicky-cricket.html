@@ -2475,6 +2475,18 @@
   .r2Rew.off b, .r2Rew.off small { color:#7C8BA8; }
   #r2Road { padding:10px 12px 12px; }
   #r2Prog { padding:8px 10px 10px; }
+  /* Result v3 (Oct 31, Joe: too busy): one hero, one rewards row, one progress line */
+  #resultScreen.r3 #r2Say, #resultScreen.r3 #r2Line, #resultScreen.r3 #r2Score { display:none !important; }
+  #r2StatLine { display:none; }
+  #resultScreen.r3 #r2StatLine { display:block; margin-top:6px; font-size:14px; letter-spacing:.06em; color:#cfe0ff; text-shadow:0 2px 0 #050A14; white-space:nowrap; }
+  #resultScreen.r3 #r2StatLine b { font-weight:400; color:#fff; font-size:17px; }
+  #resultScreen.r3 #r2Road { background:none; border:0; box-shadow:none; padding:2px 4px 0; }
+  #resultScreen.r3 #r2Prog { background:none; border:0; box-shadow:none; padding:0; }
+  .r3Chips { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; }
+  .r3Chip { display:inline-flex; align-items:baseline; gap:5px; padding:5px 12px; border-radius:14px; background:rgba(5,10,20,.55); border:2px solid #050A14; font-size:16px; color:#fff; }
+  .r3Chip small { font-size:11px; letter-spacing:.1em; color:#B4C2DD; } .r3Chip.hot { border-color:#4fd46a; box-shadow:0 0 10px rgba(79,212,106,.5); }
+  #resultScreen.r3 #r2Wrap { gap:12px !important; }
+  body:has(#resultScreen.rs-visible) #fxLayer .fxToast { display:none !important; }   /* the result already shows missions/pass; toasts only cluttered it */
   .r2PgHd { font-size:12px; letter-spacing:.1em; color:#B4C2DD; margin-bottom:6px; }
   .r2PgRow { display:grid; grid-template-columns:repeat(auto-fit,minmax(0,1fr)); gap:6px; }
   .r2Pg { display:flex; flex-direction:column; gap:3px; min-width:0; padding:6px 7px; border-radius:12px; background:rgba(5,10,20,.55); border:2px solid #050A14; }
@@ -32523,6 +32535,9 @@ function showResultScreen(d) {
     + `  ·  ${_L.flag} ${_L.name} · BEST ${Math.max(best, career.bestScore || 0)}`;
   $('r2Fours').textContent = d.fours; $('r2Sixes').textContent = d.sixes; $('r2Balls').textContent = d.balls;
   $('r2SR').textContent = d.balls ? Math.round(d.runs / d.balls * 100) : 0;
+  { let sl = $('r2StatLine'); if (!sl) { sl = document.createElement('div'); sl.id = 'r2StatLine'; sl.className = 'r2-step'; $('r2Badge').insertAdjacentElement('afterend', sl); }
+    sl.innerHTML = `<b>${d.fours}</b> FOURS · <b>${d.sixes}</b> SIXES · <b>${d.balls}</b> BALLS`; sl.style.setProperty('--d', '.55s'); }
+  $('resultScreen').classList.toggle('r3', (window.RESULT_STYLE || 'r3') === 'r3');
   const countUp = (el, to, delay, dur, fmt) => {
     el.textContent = fmt(0);
     const t0 = performance.now() + delay;
@@ -32628,6 +32643,7 @@ function showResultScreen(d) {
     try { if (featureOn('pass')) { const P = GAME_CONFIG.season.pass, t = passTier(), into = passState().xp - t * P.xpPerTier, gain = P.xp.match + (d.beatTarget ? P.xp.win : 0);
       items.push({ k: 'PASS', v: `+${gain} XP`, pct: t >= P.tiers ? 100 : into / P.xpPerTier * 100, sub: t >= P.tiers ? 'max tier' : `tier ${t + 1} in ${P.xpPerTier - into} XP`, hot: passClaimable() > 0 }); } } catch (e) {}
     try { if (featureOn('today')) { const w = weekBagState(); items.push({ k: 'WEEKLY BAG', v: `${Math.min(w.wDays.length, T3_WEEK_DAYS)}/${T3_WEEK_DAYS}`, pct: Math.min(1, w.wDays.length / T3_WEEK_DAYS) * 100, sub: 'days with a daily bag' }); } } catch (e) {}
+    if ($('resultScreen').classList.contains('r3')) { pg.innerHTML = items.length ? `<div class="r3Chips">${items.filter(it => it.k !== 'WEEKLY BAG').map(it => `<span class="r3Chip${it.hot ? ' hot' : ''}"><small>${it.k}</small> ${it.v}</span>`).join('')}</div>` : ''; } else
     pg.innerHTML = items.length ? `<div class="r2PgHd">PROGRESS</div><div class="r2PgRow">${items.map(it => `<div class="r2Pg${it.hot ? ' hot' : ''}"><span class="k">${it.k}</span><b>${it.v}</b><div class="bar"><i style="width:${Math.max(4, it.pct)}%"></i></div><small>${it.sub}</small></div>`).join('')}</div>` : '';
     pg.style.display = items.length ? '' : 'none'; pg.style.setProperty('--d', '1.65s'); }
   const ex = [];
