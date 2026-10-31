@@ -475,3 +475,10 @@ Credits: a ground with the full kit ≈ 6–8 Figma credits; a reskin reusing th
 - The score bar is hidden during the intro and fades in as the intro flies into it (`window._hudFadeAt`, `_hudRect`, `_hudA`). The first ball comes at 1.75 s (it was 2.2 s). Tap anywhere (not on buttons) to skip.
 - Tournaments and endless use the old card (they have no target).
 - Fixed: feature-unlock toasts ("NEW IN EVENTS…") now only show on Home and wait if you're in a match; any toast is cleared at match start.
+
+## In-match pass (Oct 31)
+- The burst is gone everywhere (it was only removed on painted grounds before). `fxBig` non-painted = `.fxSlam`: one outlined word, slammed in with a tilt, no box or ribbon. SIX! gold 96 with glow and confetti, FOUR! white 76 with a blue glow and a shorter life, BOWLED!/CAUGHT! red 62 with "OUT · n RUNS" under. Painted grounds keep their painted words.
+- Small moments (+1 RUN, DOT BALL, CROSS-BAT) are outlined words with no navy pill (except on Gully, `body.gly`, which keeps its tin plate). Match moments (wicket card, LAST BALL!, n TO WIN!, WON!) are in the same family: thick outline, tilt, slam.
+- Score bar: TGT n removed from row 2 in chases (the target is already on row 1). Energy bar thickens and pulses red with a TIRED label when low. The first time ever (`flickyTiredTip`), a white tooltip under the bar says "LOW ENERGY · Big hits go shorter. Soft shots refill it."
+- Timing word is about 60% bigger, thick outline, pops in; green PERFECT, yellow GOOD, red EARLY/LATE. Commentary line is in the game font with an outline.
+- Pause: shows "NEED n OFF m" (or runs), a 🔊 SOUND toggle, and END INNINGS as a small red link that needs a second tap ("counts as a loss").
