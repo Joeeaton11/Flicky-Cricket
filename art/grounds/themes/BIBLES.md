@@ -23,6 +23,7 @@
 - Words: bold glossy 3D lettering, gold with a purple outline and a sparkle.
 
 ## Gully Cup — 1a `gully` (Mumbai neighbourhood)
+- CAMERA: 2 (medium-close). Plate: current `assets/themes/tg_gully.webp` (Joe, Nov 1).
 - THEME: the neighbourhood IS the stadium — pastel chawl tenements with packed balconies, washing lines, rooftop kids with kites and water tanks, chai stall, auto-rickshaws, scooters, fruit cart, marigolds, bunting, banyan tree; Mumbai skyline and sea beyond.
 - LIGHT: hot afternoon sun from picture-right. Field: sun-baked red-brown earth. Boundary: low painted kerb.
 - F1: skinny teen boy, orange sleeveless vest, blue shorts, flip-flops, messy black hair.
