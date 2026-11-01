@@ -25,4 +25,4 @@ Batter is shared across all scenes (not per scene).
 ## Status
 | Scene | Camera | 1 Plate | 2 HUD | 3 Props | 4 Words | 5 Card | Players |
 |-------|--------|---------|-------|---------|---------|--------|---------|
-| Gully 1a `tg_gully` | 2 | ✅ | ✅ truck-art frame + pause (Figma 328:191) | ✅ + extras: kites, pigeons, chai steam, fans (328:192) | ✅ | — | stand-ins |
+| Gully Cup — `tg_gully` (LIVE, Nov 1) | 2 | ✅ | ✅ truck-art frame + pause (Figma 328:191) | ✅ + extras: kites, pigeons, chai steam, fans (328:192) | ✅ | result backdrop ✅ (card: keep old, Joe) | stand-ins |

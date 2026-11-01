@@ -6261,6 +6261,7 @@ Object.keys(THEME_ART).forEach(k => {
 });
 function themeArt() { const k = currentTimeOfDay && currentTimeOfDay.key; return (k && THEME_ART[k]) || null; }
 const _tImgs = {};
+const RESULT_ART = { gully: 'assets/themes/gully/result.webp' };   // result-screen backdrops cut from the ground plates
 // league crests (Nov 1, Figma 329:191-194, 330:191, 331:191): one painted medallion per league, keyed by sceneKey
 function crestSrc(lg) { const k = lg && lg.sceneKey; if (!k) return ''; return 'assets/crests/' + (k === 'tg_gully' ? 'gully' : k) + '.webp'; }
 function crestImg(lg) { const src = crestSrc(lg); if (!src) return null; let i = _tImgs[src];
@@ -7159,7 +7160,7 @@ function updateNextOpponentDisplay() {
 // Home league card: the current league's own card art, entry cost and trophy progress
 function updateHomeLeagueCard(lg, nextLg, trophies) {
   // warm up the Gully Cup art while the player is on Home, so the first match starts fully painted
-  try { if (lg && lg.sceneKey === 'gully' && typeof gullyLoadArt === 'function') setTimeout(() => { try { gullyLoadArt(); } catch (e) {} }, 1200); } catch (e) {}
+  try { (lg && lg.scenes || []).forEach(k => { if (typeof floodPlateKey === 'function' && floodPlateKey(k)) setTimeout(() => { try { floodPlate(k); } catch (e) {} }, 1200); }); } catch (e) {}   // warm up the league's painted ground
   const nameEl = document.getElementById('homeLeagueName');
   if (!nameEl) return;
   nameEl.innerHTML = crestTag(lg, 'lcCrest') + lg.name.replace(/</g, '&lt;');
@@ -28258,7 +28259,7 @@ const THEMED_LEAGUES = [
 
   // 1a ── GULLY CUP ──────────────────────────────────────────────────────────
   {
-    scenes: ['gully'],
+    scenes: ['tg_gully'],   // Nov 1: the new painted Gully 1a is the real Gully Cup ground (old 'gully' scene kept for the card art)
     sceneKey: 'gully',
     name: "GULLY CUP",
     subtitle: "Street Cricket · 6 Grounds · Random Draw",
@@ -32816,6 +32817,13 @@ function showResultScreen(d) {
   const cv = $('r2ArtCanvas'), cx = cv.getContext('2d');
   // painted league art (same still frame as the Leagues card), falling back to the plain art
   const paintArt = (canvas, L) => {
+    // a painted result backdrop cut from the league's ground plate, when it has one (Gully, Nov 1)
+    const rs = L && RESULT_ART[L.sceneKey];
+    if (rs) { let im = _tImgs[rs]; if (!im) { im = _tImgs[rs] = new Image(); im.src = rs; }
+      const draw = () => { canvas.width = 620; canvas.height = 360; const c2 = canvas.getContext('2d');
+        const k = Math.max(620 / im.naturalWidth, 360 / im.naturalHeight); c2.drawImage(im, (620 - im.naturalWidth * k) / 2, (360 - im.naturalHeight * k) / 2, im.naturalWidth * k, im.naturalHeight * k); };
+      if (im.complete && im.naturalWidth) { draw(); return; }
+      im.onload = draw; }
     const live = L && LEAGUE_LIVE_ART[L.name];
     canvas.width = 620; canvas.height = live ? 355 : 360;
     const c2 = canvas.getContext('2d'); c2.clearRect(0, 0, canvas.width, canvas.height);
@@ -61960,6 +61968,8 @@ function starsFor(spare, balls) { const sc = (balls || 12) / 12, st = GAME_CONFI
 function starsState() { return SAVE.section('stars'); }
 function totalStars() { return Object.values(starsState()).filter(v => typeof v === 'number').reduce((a, b) => a + b, 0); }
 function leagueStars(idx) { const lg = THEMED_LEAGUES[idx]; const sc = (lg && (lg.scenes || [lg.sceneKey])) || []; return { have: sc.reduce((t, k) => t + (starsState()[k] || 0), 0), max: sc.length * 3 }; }
+// Nov 1: Gully Cup moved from the old 'gully' ground to 'tg_gully' — carry earned stars across once
+try { const S0 = starsState(); if (S0.gully && !S0.tg_gully) { S0.tg_gully = S0.gully; SAVE.save(); } } catch (e) {}
 function awardStars(groundKey, n, leagueIdx) {
   const S = starsState(), before = S[groundKey] || 0;
   if (n <= before) return { gained: 0, best: before };
