@@ -45,3 +45,9 @@
 - THEME: our match on one big flat sun-faded concrete rooftop; around it neighbouring rooftops at different heights, blue/black water tanks, satellite dishes, aerials, washing lines with saris, tulsi pots, chai corner with plastic chairs, kids flying kites, neighbours cheering over parapets, aunties on chairs, cat, pigeon coop, fairy lights, marigold bunting, pastel stairwell huts; pastel chawls + glass towers and a glowing sunset sky with kites at the top.
 - HUD: teal-blue corrugated tin on a yellow bamboo frame lashed with orange rope, fairy lights along the top. Words: chunky yellow painted-tin letters with teal extrusion and bolt dots.
 - Props: chalk-drawn pitch on concrete, natural bamboo stumps with red tape, bamboo bail, tennis ball in red tape, tulsi-pot boundary, chalk-cross ring markers. Extras: kites, pigeons, a pink sari on the line.
+
+## Gully Cup — 1.d `ts_school` (Mumbai school sports morning)
+- CAMERA: 3. LIGHT: fresh morning sun from picture-left.
+- THEME: huge dusty playground; cream + sky-blue three-storey school with balconies of cheering kids in white shirts and navy shorts/pinafores; stage with flag pole, teachers in saris with whistles, banyan with stone seat, swings and slide, yellow school bus, bike rack, water cooler, school bell, bunting, chalkboard on an easel.
+- HUD: green chalkboard in a honey varnished wood frame. Words: sports-day poster letters (red/yellow/blue/orange, white chalky outline, navy extrusion); digits white.
+- Props: faded green coir matting pitch on dusty earth, orange plastic school stumps, red ball, orange PE cones as the boundary, yellow PE disc ring markers. Extras: crows, a paper plane, a school pennant.
