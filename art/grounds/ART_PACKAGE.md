@@ -7,7 +7,7 @@ Every scene gets this package. Layout = RULE #1 (art/ui/HANDOVER.md) and `layout
 |---|-------|--------------|-------------|
 | 1 | Ground plate | Background at the chosen camera level, plain empty field, fitted to the coded oval | 1 |
 | 2 | HUD sheet | Scoreboard frame (badge slot, chase panel, 2 wicket slots, score area, 6 ball sockets, energy track), pause button, energy icon | 1 |
-| 3 | Props sheet | Pitch strip, stump, bail, ball, boundary rope segment, boundary flag/marker, 30-yard ring marker, 3–5 moving extras (kite, bird, waving flag, steam…) | 1 |
+| 3 | Props sheet | Pitch strip + stumps/bails MADE FOR THIS SCENE (theme material, worn into the ground — Joe's rule), ball, boundary rope segment, boundary flag/marker, 30-yard ring marker, 3–5 moving extras (kite, bird, waving flag, steam…) | 1 |
 | 4 | Words sheet | FOUR!, SIX!, OUT!, BOWLED!, CAUGHT! in the scene's lettering + scoreboard digits 0–9 | 1 |
 | 5 | League card + result backdrop | Cut from the ground plate | 0 |
 

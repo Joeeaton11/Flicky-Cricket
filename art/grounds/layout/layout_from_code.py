@@ -297,7 +297,8 @@ BEST score is not on the match screen; it shows on the result screen.
 ## 3. Props sheet: pitch, stump, bail, ball (one generation)
 ```
 On the flat key background, each piece separate, evenly spaced, nothing touching:
-- PITCH: a themed cricket pitch strip [e.g. ship's deck planks], top-down, trapezoid {px(pi['top_w'],'x')} px wide at the top, {px(pi['bottom_w'],'x')} px at the bottom, {pitch_h} px tall, painted crease lines at each end, nothing on it.
+- PITCH (the playing strip / wicket — ALWAYS made for this scene, never generic): a cricket pitch strip in the same material, colour, light and wear as this ground's surface [e.g. chalk-drawn on sun-faded concrete for a rooftop, dusty worn clay for a maidan, cracked concrete for a gully, ship's deck planks for a pirate ship], scuffed and used so it sits INTO the ground rather than looking clean and crisp, top-down, trapezoid {px(pi['top_w'],'x')} px wide at the top, {px(pi['bottom_w'],'x')} px at the bottom, {pitch_h} px tall, crease lines at each end in the scene's style (chalk, paint, scratched, roped…) and slightly worn, nothing on it.
+The stumps and bails are also made for the scene [e.g. taped sticks, bamboo, weathered club stumps], in real slender proportions.
 - ONE themed stump [e.g. carved wooden post, brass cap], upright, 3/4 view.
 - ONE themed bail.
 - ONE themed ball [e.g. dark red leather, gold seam], seen from above.

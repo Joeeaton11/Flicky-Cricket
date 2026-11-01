@@ -5,6 +5,9 @@ Joe wants every screen of Flicky Cricket redesigned, **one screen per chat**, de
 ## RULE #1 FOR EVERY GROUND / SCENE (Joe, Oct 28) — never break this
 Every ground design follows the game's layout EXACTLY, always: field oval (centre 0.50W / 0.60H, radii 0.46W / 0.335H → top 26.5%, bottom 93.5%), pitch (0.50–0.665H, widths 0.076W top / 0.116W bottom), scoreboard box (0.107–0.893W, 7.3–14%H), BEST pill (bottom centre) and name plate (bottom left). Template: `art/grounds/layout/layout_1170x2532.png`. Paint only AROUND the oval; the field interior is plain empty grass (no painted pitch, stumps, players); nothing important under the scoreboard/HUD boxes. Never show Joe free concept art — check every image against the template and only ever present it as an in-game screenshot at 390×844 with the real HUD.
 
+## RULE #2 FOR EVERY GROUND (Joe, Nov 1) — the playing strip (wicket) is made for the scene
+Every scene gets its OWN pitch strip and stumps that suit its theme and surface (material, colour, light, wear) — never a generic or reused clean strip. It must sit into the ground (worn, scuffed, same light), not look crisp and pasted on. Examples so far: Gully = concrete strip + taped sticks; Maidan = dusty worn clay + maroon-band club stumps; Rooftop = chalk on concrete + bamboo. The props-sheet prompt in PROMPTS.md now says this.
+
 ## Themed grounds — asset plan (Joe, Oct 28)
 - Layout source of truth = the game code. `art/grounds/layout/layout_from_code.py` reads FIELD_*, PITCH_*, the inner ring, stumps, umpire and `THEMED_HUD` from flicky-cricket.html and writes `layout.json`, `layout_1170x2532.png` and `PROMPTS.md`. `--check img.png` overlays the template. It stops if a value can't be found or HUD boxes overlap.
 - Art fills the whole canvas, top to bottom (no empty header/footer bands). No fielder positions on the template (they move).
