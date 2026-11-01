@@ -49,7 +49,7 @@ def frac_hud():
 
 # ---- per-board source measurements (original px, 760 wide). slots = the board's own HUD fractions ----
 B = {
- 'village2': dict(k=.921, Ri=(30, 72, 728, 290), mat=(139, 147, 380, 560), amp=.9, badgeRing=(110, 100, 55), overBand=(18, 47, 30, 730), overKind='toran', chaseFrom='score', deco=[('rails', [(126, 140, 300, 560), (231, 245, 300, 560)], (48, 712))],
+ 'village2': dict(k=.921, Ri=(30, 27, 728, 290), mat=(139, 147, 380, 560), amp=.9, badgeRing=(110, 100, 55), chaseFrom='score', deco=[('rails', [(126, 140, 300, 560), (231, 245, 300, 560)], (48, 712))],
    chase=[0.2474, 0.0618, 0.9342, 0.1605], wk=[0.7697, 0.0816, 0.8289, 0.1421], score=[0.0684, 0.2237, 0.3947, 0.2895],
    sock=[0.4539, 0.2382, 0.0355], badge=[0.0724, 0.0592, 0.2171, 0.2039], eIcon=[0.1184, 0.3487, 0.0197], eBar=[0.1645, 0.3355, 0.8947, 0.3711]),
  'school2': dict(k=.921, Ri=(18, 30, 742, 284), mat=(108, 113, 200, 560), amp=.8, badgeRing=(86, 70, 37), deco=[('rails', [(114, 128, 200, 500), (212, 226, 200, 500)], (52, 708))],
