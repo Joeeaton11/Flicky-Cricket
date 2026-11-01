@@ -49,6 +49,9 @@ def frac_hud():
 
 # ---- per-board source measurements (original px, 760 wide). slots = the board's own HUD fractions ----
 B = {
+ 'village2': dict(k=.921, Ri=(30, 72, 728, 290), mat=(139, 147, 380, 560), amp=.9, badgeRing=(110, 100, 55), overBand=(18, 47, 30, 730), overKind='toran', chaseFrom='score', deco=[('rails', [(126, 140, 300, 560), (231, 245, 300, 560)], (48, 712))],
+   chase=[0.2474, 0.0618, 0.9342, 0.1605], wk=[0.7697, 0.0816, 0.8289, 0.1421], score=[0.0684, 0.2237, 0.3947, 0.2895],
+   sock=[0.4539, 0.2382, 0.0355], badge=[0.0724, 0.0592, 0.2171, 0.2039], eIcon=[0.1184, 0.3487, 0.0197], eBar=[0.1645, 0.3355, 0.8947, 0.3711]),
  'school2': dict(k=.921, Ri=(18, 30, 742, 284), mat=(108, 113, 200, 560), amp=.8, badgeRing=(86, 70, 37), deco=[('rails', [(114, 128, 200, 500), (212, 226, 200, 500)], (52, 708))],
    chase=[0.1974, 0.0421, 0.9474, 0.1395], wk=[0.7763, 0.0579, 0.8421, 0.1263], score=[0.0526, 0.1776, 0.4105, 0.2711],
    sock=[0.4697, 0.2237, 0.0276], badge=[0.0632, 0.0421, 0.1632, 0.1421], eIcon=[0.1105, 0.3316, 0.0171], eBar=[0.1658, 0.3132, 0.8526, 0.35]),
@@ -218,7 +221,7 @@ def build(name, src, P):
                 paste(out, st, sx1, gy - st.shape[0] / 2)
     if 'sockPanel' in P:
         put_panel(P['sockPanel'], t['sockPanel'])
-    put_panel(pr('chase'), t['chase'], mirror=True)
+    put_panel(pr(P.get('chaseFrom', 'chase')), t['chase'], mirror=True)   # chaseFrom: borrow another panel's art when garlands hang over the original
     put_panel(pr('score'), t['score'])
     put_panel(pr('eBar'), t['eBar'], c=10)
     w = pr('wk')
@@ -243,7 +246,14 @@ def build(name, src, P):
         y1, y2, x1, x2 = P['overBand']; fr = f[:BODY]; rgb = fr[..., :3] / 255.0
         green = (rgb[..., 1] > rgb[..., 0] + .06) & (rgb[..., 1] > rgb[..., 2] + .06)
         cream = (rgb.min(-1) > .62) & (rgb.max(-1) - rgb.min(-1) < .28)
-        m = np.zeros(fr.shape[:2], bool); m[y1:y2, x1:x2] = (green | cream)[y1:y2, x1:x2]
+        if P.get('overKind') == 'toran':
+            r_, g_, b_ = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+            leaf = (g_ > r_ + .05) & (g_ > b_ + .1) & (g_ > .3)
+            mari = (r_ > .8) & (g_ > .35) & (b_ < .3) & ((r_ - b_) > .55)
+            sel = leaf | mari
+        else:
+            sel = green | cream
+        m = np.zeros(fr.shape[:2], bool); m[y1:y2, x1:x2] = sel[y1:y2, x1:x2]
         from PIL import ImageFilter
         mi = Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(.8))
         al = np.array(mi).astype(np.float32)[..., None] / 255.0
