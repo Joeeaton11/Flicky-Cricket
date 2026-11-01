@@ -14,6 +14,7 @@ import numpy as np
 from PIL import Image
 
 CW, CH, BODY = 760, 316, 300
+BOX = (30, 20, 730, 281)   # Gully's frame outline inside the canvas (760*.92 wide from x 30.4; body 283*.92 tall from y 20)
 GK, GOX, GOY = 0.92, 30.4, 20.0          # Gully placed at 0.92, offset (30.4, 20)
 
 # Gully's signed-off slot fractions (of 760 width), from THEME_ART.tg_gully.hud2
@@ -47,25 +48,25 @@ def frac_hud():
 
 # ---- per-board source measurements (original px, 760 wide). slots = the board's own HUD fractions ----
 B = {
- 'maidan3': dict(k=1.0, Ri=(36, 49, 724, 254), mat=(130, 193, 214, 226), overBand=(14, 52, 30, 730), deco=[('rails', [(111, 125, 300, 500), (194, 208, 300, 500)], (36, 724))],
+ 'maidan3': dict(k=.75, Ri=(36, 49, 724, 254), mat=(130, 193, 214, 226), overBand=(28, 62, 34, 726), deco=[('rails', [(111, 125, 300, 500), (194, 208, 300, 500)], (40, 720))],
    chase=[0.1829, 0.0711, 0.7566, 0.1395], wk=[0.7711, 0.0711, 0.8395, 0.1395], score=[0.0671, 0.1711, 0.2763, 0.2539],
    sock=[0.3434, 0.2132, 0.0355], badge=[0.0526, 0.0789, 0.0592, 0.0855], eIcon=[0.1171, 0.3053, 0.0197], eBar=[0.1803, 0.2842, 0.925, 0.3237]),
- 'maidan2': dict(k=.84, Ri=(38, 56, 722, 300), mat=(141, 150, 150, 560), amp=.7, deco=[('rails', [(148, 162, 200, 420), (239, 254, 200, 420)], (31, 729))],
+ 'maidan2': dict(k=.6, Ri=(38, 56, 722, 300), mat=(141, 150, 150, 560), amp=.7, deco=[('rails', [(148, 162, 200, 420), (239, 254, 200, 420)], (31, 729))],
    chase=[.1473, .0853, .9457, .1843], wk=[.7717, .0965, .845, .1688], score=[.056, .2127, .5831, .3075],
    sock=[.6184, .2601, .0237], badge=[.0594, .0913, .1335, .1783], eIcon=[.0805, .3549, .0215], eBar=[.1146, .3342, .9457, .3773]),
- 'rooftop': dict(k=.82, Ri=(40, 62, 722, 290), mat=(64, 84, 60, 700), sockPanel=(482, 160, 692, 218), deco=[('sections', [(58, 86, 700, 150), (58, 156, 700, 222), (58, 224, 700, 268)], 7, 8)], secFill=(124, 96, 129, 140),
+ 'rooftop': dict(k=.6, Ri=(40, 62, 722, 290), mat=(64, 84, 60, 700), sockPanel=(482, 160, 692, 218), deco=[('sections', [(58, 86, 700, 150), (58, 156, 700, 222), (58, 224, 700, 268)], 7, 8)], secFill=(124, 96, 129, 140),
    chase=[.1709, .1216, .9084, .1909], wk=[.7806, .1316, .8322, .1824], score=[.087, .2171, .6228, .2818],
    sock=[.6636, .2502, .0154], badge=[.087, .1216, .1609, .1909], eIcon=[.1089, .3233, .0131], eBar=[.1339, .3102, .8999, .3372]),
  'school': dict(k=1.0, Ri=(16, 16, 744, 220), mat=(99, 106, 150, 560), amp=.55,
    chase=[.149, .0428, .9529, .1293], wk=[.7723, .0488, .8493, .1224], score=[.0479, .1413, .5086, .2269],
    sock=[.5539, .1849, .0274], badge=[.0445, .0454, .1378, .1353], eIcon=[.0689, .2547, .0167], eBar=[.0976, .2406, .9486, .268]),
- 'village': dict(k=.75, Ri=(46, 84, 714, 314), mat=(150, 172, 50, 710), flowersOver=True, deco=[('rails', [(150, 168, 150, 450), (256, 278, 150, 450)], (34, 726))],
+ 'village': dict(k=.6, Ri=(46, 84, 714, 314), mat=(150, 172, 50, 710), flowersOver=True, deco=[('rails', [(150, 168, 150, 450), (256, 278, 150, 450)], (40, 720))],
    chase=[.1677, .1085, .9311, .1946], wk=[.7889, .1198, .8458, .1826], score=[.0749, .2298, .6145, .3174],
    sock=[.6647, .2713, .021], badge=[.0749, .1108, .1527, .1924], eIcon=[.0932, .3817, .0157], eBar=[.119, .3675, .9281, .396]),
- 'railway': dict(k=1.0, Ri=(48, 48, 712, 250), mat=(129, 140, 150, 560), amp=.55,
+ 'railway': dict(k=.75, Ri=(48, 48, 712, 250), mat=(129, 140, 150, 560), amp=.55,
    chase=[.1817, .0683, .9317, .1676], wk=[.742, .0798, .8218, .1596], score=[.0691, .1871, .4938, .2819],
    sock=[.5598, .2349, .0244], badge=[.07, .0691, .1622, .1676], eIcon=[.0869, .316, .016], eBar=[.1206, .3005, .9309, .3307]),
- 'evening': dict(k=.8, cropTop=74, clock=(330, 40, 432, 132), Ri=(80, 132, 682, 292), mat=(187, 194, 150, 560), amp=.6, sockPanel=(386, 193, 692, 246),
+ 'evening': dict(k=.55, cropTop=74, clock=(330, 40, 432, 132), Ri=(80, 132, 682, 292), mat=(187, 194, 150, 560), amp=.6, sockPanel=(386, 193, 692, 246),
    chase=[.1678, .1804, .9098, .2445], wk=[.7808, .1847, .8356, .2411], score=[.0919, .2572, .4966, .3212],
    sock=[.5443, .2896, .0211], badge=[.0947, .1829, .1526, .2395], eIcon=[.11, .3478, .0131], eBar=[.1366, .3364, .9098, .36]),
 }
@@ -176,8 +177,11 @@ def build(name, src, P):
     k = P['k']
     if k != 1:
         f = rs4(f, f.shape[1] * k, f.shape[0] * k)
-    f = fit_axis(f, 1, CW); f = fit_axis(f, 0, BODY)
-    out = np.zeros((CH, CW, 4), np.float32); out[:BODY] = f
+    # every frame lives INSIDE the signed-off Gully outline (BOX) — never bigger (Joe, Nov 1)
+    bx1, by1, bx2, by2 = BOX
+    f = fit_axis(f, 1, bx2 - bx1); f = fit_axis(f, 0, by2 - by1)
+    out = np.zeros((CH, CW, 4), np.float32); out[by1:by2, bx1:bx2] = f
+    f = out.copy()
     # 3. the board's own panels, 9-sliced onto the locked template rects
     t = TPL
     def put_panel(srcrect, trect, mirror=False, c=12):
