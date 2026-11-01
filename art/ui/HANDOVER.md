@@ -629,3 +629,4 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 
 ## Gully Cup 1.e Village Pitch (Nov 1) — branch village-1e, preview ?scene=tv_village
 - Camera 5 with the field still filling the width ("everything around it TINY, like a toy model village") → scale 2.18, no softness problem. 5 generations (plate 344:191 round → 344:195 with "rugby ball on end, TWICE as tall"; still 1.4:1, so 99 middle rows repeated). HUD sheet gave a spare blank badge; props sheet labelled again (biggest-blob cut). Words green-keyed → rim despill applied straight away.
+- 1.e polish (Joe picked 1 + 5): pitch recoloured to the field's own bald-earth patches (Lab median of the bald patches), lower contrast, paler dust at both ends, soft ragged edges; plate given a warmer grade, warm glow from the top-left sun and soft mist bands over the hills and low over the paddies (never on the field).
