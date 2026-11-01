@@ -26,4 +26,4 @@ Batter is shared across all scenes (not per scene).
 | Scene | Camera | 1 Plate | 2 HUD | 3 Props | 4 Words | 5 Card | Players |
 |-------|--------|---------|-------|---------|---------|--------|---------|
 | Gully Cup — `tg_gully` (LIVE, Nov 1) | 2 | ✅ | ✅ truck-art frame + pause (Figma 328:191) | ✅ + extras: kites, pigeons, chai steam, fans (328:192) | ✅ | result backdrop ✅ (card: keep old, Joe) | stand-ins |
-| 1.b Maidan — `tm_maidan` (preview) | 4 | ✅ Figma 332:195 | ✅ green club board, widened by repeating arch periods (332:196) | ✅ clay pitch, leather ball, boundary stones, white discs (332:194); Gully stumps | ✅ signwriter words + digits (332:193) | — | stand-ins (whites + caps) |
+| 1.b Maidan — `tm_maidan` (preview) | 4 | ✅ v2 Figma 333:191 (open maidan, many matches) | ✅ green club board, widened by repeating arch periods (332:196) | ✅ clay pitch, leather ball, boundary stones, white discs (332:194); Gully stumps | ✅ signwriter words + digits (332:193) | — | stand-ins (whites + caps) |
