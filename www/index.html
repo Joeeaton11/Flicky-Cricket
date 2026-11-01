@@ -29981,13 +29981,46 @@ function statsClaimable() {
 }
 function statsClaim(a) {
   if (!a || claimedAchievementGems.includes(a.key)) return;
-  claimedAchievementGems.push(a.key);
-  saveClaimedAchievementGems();
-  grantGems(a.gems);
-  showMessage(`💎 +${a.gems} GEMS!`, '#a855f7', 1800);
-  hapticBig();
-  renderStatsScreen();
-  updateStatsNavBadge();
+  statsClaimList([a]);
+}
+// Nov 1 (Joe: "when I've collected a reward nothing happens"): claiming opens a celebration — the badge(s) in full
+// colour on rays, the gems total, and COLLECT sends gems flying into the gem pill, which counts up.
+function statsClaimList(list) {
+  list = list.filter(a => !claimedAchievementGems.includes(a.key)); if (!list.length) return;
+  const total = list.reduce((t, a) => t + (a.gems || 0), 0), before = gems;
+  list.forEach(a => claimedAchievementGems.push(a.key));
+  saveClaimedAchievementGems(); grantGems(total); updateStatsNavBadge();
+  let el = document.getElementById('awWow'); if (!el) { el = document.createElement('div'); el.id = 'awWow'; document.body.appendChild(el); }
+  const badge = (a, i) => `<div class="awB" style="--d:${0.3 + i * 0.12}s"><span class="stMed aw aw-${a.key}"${ST_AW_NUM[a.key] ? ` data-n="${ST_AW_NUM[a.key][0]}" data-t="${ST_AW_NUM[a.key][1]}"` : ''}></span>${list.length > 1 ? `<b>${a.name}</b>` : ''}</div>`;
+  const shown = list.slice(0, 6);
+  el.innerHTML = `<div class="pwIn"><div class="pwRays"></div><b class="pwTitle">${list.length > 1 ? 'AWARDS' : 'AWARD'} COMPLETE!</b>` +
+    (list.length === 1 ? `<small class="pwSub">${list[0].name} · ${ST_ACH_DESC[list[0].key] || list[0].desc}</small>` : `<small class="pwSub">${list.length} AWARDS UNLOCKED</small>`) +
+    `<div class="awGrid${list.length === 1 ? ' one' : ''}">${shown.map(badge).join('')}${list.length > 6 ? `<div class="awMore">+${list.length - 6} MORE</div>` : ''}</div>` +
+    `<div class="awGems"><i class="hIco hi-gem"></i>+${total}</div><button class="gcBuy pwOk">COLLECT</button></div>`;
+  el.classList.add('show');
+  try { playTone({ freq:523, duration:0.12, volume:0.14, type:'triangle' }); setTimeout(() => playTone({ freq:784, duration:0.14, volume:0.14, type:'triangle' }), 140); setTimeout(() => playTone({ freq:1047, duration:0.3, volume:0.14, type:'triangle' }), 300); hapticBig(); } catch (e) {}
+  try { _fireRayBurst && _fireRayBurst('#a855f7', { big: true }); } catch (e) {}
+  const pill = document.getElementById('statsGemPill');
+  if (pill) pill.innerHTML = '<i class="hIco hi-gem"></i>' + before.toLocaleString();
+  const ok = el.querySelector('.pwOk');
+  ok.onclick = () => {
+    if (ok.disabled) return; ok.disabled = true;
+    const from = el.querySelector('.awGems').getBoundingClientRect(), to = pill ? pill.getBoundingClientRect() : { left: innerWidth - 60, top: 20, width: 40, height: 30 };
+    const n = Math.min(12, Math.max(5, Math.round(total / 4))), fx = from.left + from.width / 2, fy = from.top + from.height / 2, tx = to.left + 18, ty = to.top + to.height / 2;
+    el.classList.add('flying');
+    for (let i = 0; i < n; i++) {
+      const g = document.createElement('i'); g.className = 'hIco hi-gem awFly';
+      const sx = fx + (Math.random() - 0.5) * 90, sy = fy + (Math.random() - 0.5) * 50;
+      g.style.left = sx + 'px'; g.style.top = sy + 'px'; document.body.appendChild(g);
+      g.animate([{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1.15)', opacity: 1, offset: .2 },
+        { transform: `translate(calc(-50% + ${tx - sx}px), calc(-50% + ${ty - sy}px)) scale(.6)`, opacity: 1 }],
+        { duration: 650 + i * 45, delay: i * 40, easing: 'cubic-bezier(.5,0,.75,.4)', fill: 'forwards' }).onfinish = () => {
+          g.remove(); try { playTone({ freq: 900 + i * 40, duration: 0.05, volume: 0.06, type: 'triangle' }); } catch (e) {}
+          if (pill) { const v = Math.round(before + total * (i + 1) / n); pill.innerHTML = '<i class="hIco hi-gem"></i>' + v.toLocaleString(); pill.classList.remove('awBump'); void pill.offsetWidth; pill.classList.add('awBump'); }
+        };
+    }
+    setTimeout(() => { el.classList.remove('show', 'flying'); renderStatsScreen(); }, 700 + n * 85);
+  };
 }
 
 // "NEW" record flags: set when a record is beaten, shown (and cleared) the next time that Stats tab is opened
@@ -30127,12 +30160,7 @@ ${(`<div class="stCard" style="padding:12px 14px">
     }
     const cb = document.getElementById('statsClaimBtn');
     if (cb) cb.addEventListener('click', () => {
-      const list = statsClaimable(); if (!list.length) return;
-      const total = list.reduce((t, a) => t + a.gems, 0);
-      list.forEach(a => claimedAchievementGems.push(a.key));
-      saveClaimedAchievementGems(); grantGems(total);
-      showMessage(`💎 +${total} GEMS!`, '#a855f7', 1800); hapticBig();
-      renderStatsScreen(); updateStatsNavBadge();
+      statsClaimList(statsClaimable());
     });
   }
 }
@@ -63210,6 +63238,27 @@ function buyPass(plus) {
   .prLeft{display:inline-block;margin-right:4px;vertical-align:1px;padding:2px 9px;border-radius:9px;background:#e8283c;border:2px solid #050A14;font-size:11px;box-shadow:0 2px 0 rgba(0,0,0,.4)}
   #passPanel.ps-road .psPlusLink{color:#FFE27A !important;opacity:1 !important;font-size:13px;text-decoration:underline;text-shadow:0 1px 0 #050A14;margin-top:4px}
   #passPanel.ps-road .psAct small{font-size:11px;opacity:.95}
+  #awWow{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(3,8,20,.84);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #awWow.show{display:flex} #awWow.flying .pwIn > :not(.awGems):not(.pwRays){opacity:.35;transition:opacity .3s}
+  #awWow .pwTitle{font-size:34px;text-align:center}
+  #awWow .pwSub{text-align:center;max-width:300px}
+  .awGrid{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:14px 10px;width:100%;margin:10px 0 4px;justify-items:center}
+  .awGrid.one{grid-template-columns:1fr}
+  .awB{display:flex;flex-direction:column;align-items:center;gap:12px;animation:pwPop .5s cubic-bezier(.3,1.5,.5,1) both;animation-delay:var(--d)}
+  .awB b{font-weight:400;font-size:11px;text-align:center;text-shadow:0 1px 0 #050A14}
+  #awWow .stMed.aw{position:relative;display:block;width:84px;height:84px;background-position:center;background-size:contain;background-repeat:no-repeat;filter:drop-shadow(0 6px 6px rgba(0,0,0,.5)) drop-shadow(0 0 14px rgba(255,214,90,.45))}
+  #awWow .awGrid.one .stMed.aw{width:150px;height:150px}
+  #awWow .stMed.aw[data-n]::after{content:attr(data-n);position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);min-width:30px;padding:1px 7px 0;border-radius:9px;border:2px solid #050A14;font-size:14px;line-height:17px;text-align:center;white-space:nowrap;color:#3a2300;background:linear-gradient(#ffe48a,#e8a521);box-shadow:0 2px 0 rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.6)}
+  #awWow .awGrid.one .stMed.aw[data-n]::after{font-size:20px;line-height:24px;min-width:44px;bottom:-6px}
+  #awWow .stMed.aw[data-t="b"]::after{color:#fff;background:linear-gradient(#e7a477,#a85a2c);text-shadow:0 1px 0 rgba(0,0,0,.35)}
+  #awWow .stMed.aw[data-t="s"]::after{color:#1d2a3c;background:linear-gradient(#ffffff,#a9b6c6)}
+  #awWow .stMed.aw[data-t="p"]::after{color:#24324a;background:linear-gradient(115deg,#f4f7ff 0%,#cfd8ea 38%,#ffffff 50%,#b9c4da 62%,#eef2fb 100%)}
+  .awMore{grid-column:1/-1;font-size:22px;color:#FFE27A;text-shadow:0 2px 0 #050A14}
+  .awGems{position:relative;display:flex;align-items:center;gap:6px;font-size:40px;color:#fff;-webkit-text-stroke:1.5px #050A14;text-shadow:0 3px 0 #050A14;animation:pwPop .45s .6s cubic-bezier(.3,1.5,.5,1) both}
+  .awGems .hIco{width:48px;height:48px;filter:drop-shadow(0 0 10px rgba(168,85,247,.8))}
+  .awFly{position:fixed;z-index:9100;width:34px;height:34px;pointer-events:none;filter:drop-shadow(0 0 8px rgba(168,85,247,.9))}
+  .stPill.awBump{animation:awBump .25s ease-out}
+  @keyframes awBump{50%{transform:scale(1.18)}}
   #passWow{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(3,8,20,.82);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
   #passWow.show{display:flex}
   .pwIn{position:relative;width:min(360px,92vw);display:flex;flex-direction:column;align-items:center;gap:8px}
