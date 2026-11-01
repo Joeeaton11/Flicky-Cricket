@@ -36487,10 +36487,12 @@ function floodPlateKey(k) { return FLOOD_PLATES[k] ? k : null; }
 const FLOOD_INFO = { dusk_stadium: { lamps: [[0.081, 0.129], [0.918, 0.129]], stands: [0.05, 0.15, 0.90, 0.10], pitch: '#cdb07a', led: true, flames: [[0.18, 0.872], [0.82, 0.872]] } };
 // ---------- moving extras painted for a plate (Gully 1a, Nov 1: Figma 328:192). Positions are fractions of the screen = the plate. ----------
 const THEMED_EXTRAS = {
-  ts_school: {   // a paper plane drifting off the balconies, crows, a school pennant fluttering on the railing
+  ts_school: {   // paper plane off the balconies, crows, pennants waved by kids on the balconies, the school bell (rings on a wicket)
     pigeons: { y: [.06, .12], every: 9, w: .04, up: 'x_crow_up', dn: 'x_crow_dn' },
     kites: [{ img: 'x_plane', x: .72, y: .2, w: .035, hold: [.72, .2], ph: 1 }],
-    flags: [{ x: .965, y: .3, w: .04, img: 'x_flag' }],
+    flags: [{ x: .965, y: .3, w: .04, img: 'x_flag' }, { x: .62, y: .06, w: .024, img: 'x_flag', ph: .4 }, { x: .79, y: .1, w: .024, img: 'x_flag', ph: 1.9 },
+      { x: .56, y: .145, w: .024, img: 'x_flag', ph: 3.1 }, { x: .9, y: .165, w: .024, img: 'x_flag', ph: 2.4 }],
+    bell: { x: .8393, y: .207, w: .0496, img: 'x_bell' },
   },
   tr_rooftop: {   // sunset rooftops, Camera 1 plate (Figma 341:195): kites flown by the kids on the next roofs, pigeons, a sari flapping on the line
     kites: [{ img: 'x_kite1', x: .6, y: .03, w: .06, hold: [.33, .2], ph: 0 }, { img: 'x_kite1', x: .26, y: .05, w: .045, hold: [.15, .25], ph: 2.3 }],
@@ -36510,6 +36512,14 @@ const THEMED_EXTRAS = {
     fans: [{ x: .955, y: .6, w: .055 }, { x: .03, y: .7, w: .05, ph: 1.3 }],
   },
 };
+function playBellDing() {   // two-tone school bell for the Schoolyard ground
+  if (audioMuted) return;
+  const ac = getAudioCtx();
+  const now = ac.currentTime;
+  [[1318, 0], [1046, .18], [1318, .36]].forEach(([f, d]) => { const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, now + d); g.gain.exponentialRampToValueAtTime(0.18, now + d + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + d + 0.5); o.connect(g); g.connect(ac.destination); o.start(now + d); o.stop(now + d + 0.55); });
+}
 function _xImg(img, cx, cy, w, rot, a) {
   const I = tImg(img); if (!I) return;
   const h = w * I.naturalHeight / I.naturalWidth;
@@ -36539,6 +36549,15 @@ function drawThemedExtras(t) {
     _xImg(st.img || 'x_steam', W * (st.x + .01 * Math.sin(t + i * 2)), H * (st.y - f * .045), W * st.w * (.5 + f * .6), 0, (f < .2 ? f / .2 : 1 - (f - .2) / .8) * .75); } });
   // paper fans waving in the crowd
   (X.fans || []).forEach(fn => _xImg(fn.img || 'x_fan', W * fn.x, H * fn.y, W * fn.w, fn.spin ? t * 6 + (fn.ph || 0) : Math.sin(t * 5 + (fn.ph || 0)) * .35));
+  // a hanging bell: gentle sway, swings hard and rings for 2.5 s after a wicket falls
+  if (X.bell) { const B = X.bell, I = tImg(B.img); if (I) {
+    const c = window.chase, lost = c ? c.wkLost : 0;
+    if (window._bellLost == null || !c) window._bellLost = lost;
+    if (c && lost > window._bellLost) { window._bellLost = lost; window._bellAt = performance.now(); try { playBellDing(); } catch (e) {} }
+    const age = window._bellAt ? (performance.now() - window._bellAt) / 1000 : 99;
+    const ang = 0.04 * Math.sin(t * 1.4) + (age < 2.5 ? 0.55 * Math.exp(-age * 1.3) * Math.sin(age * 11) : 0);
+    const w = W * B.w, h = w * I.naturalHeight / I.naturalWidth;
+    ctx.save(); ctx.translate(W * B.x, H * B.y); ctx.rotate(ang); ctx.drawImage(I, -w / 2, 0, w, h); ctx.restore(); } }
   // flags flapping on their poles (squash-and-stretch from the pole side)
   (X.flags || []).forEach(fl => { const I = tImg(fl.img); if (!I) return; const w = W * fl.w, h = w * I.naturalHeight / I.naturalWidth, k = 1 + 0.08 * Math.sin(t * 6 + (fl.ph || 0));
     ctx.save(); ctx.translate(W * fl.x - w / 2, H * fl.y - h / 2); ctx.scale(k, 2 - k); ctx.drawImage(I, 0, 0, w, h); ctx.restore(); });
