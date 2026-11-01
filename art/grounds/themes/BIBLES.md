@@ -41,7 +41,7 @@
 - Props: worn clay pitch with footmarks, red leather ball, whitewashed boundary stones, white disc ring markers; slim weathered willow stumps with a maroon band + cream rings, turned bails. Extras: crows, a pinwheel.
 
 ## Gully Cup — 1.c `tr_rooftop` (Mumbai rooftop at sunset)
-- CAMERA: 3 (medium). LIGHT: low golden sunset from picture-right.
+- CAMERA: 1 (close-up — Joe's pick). LIGHT: low golden sunset from picture-right.
 - THEME: our match on one big flat sun-faded concrete rooftop; around it neighbouring rooftops at different heights, blue/black water tanks, satellite dishes, aerials, washing lines with saris, tulsi pots, chai corner with plastic chairs, kids flying kites, neighbours cheering over parapets, aunties on chairs, cat, pigeon coop, fairy lights, marigold bunting, pastel stairwell huts; pastel chawls + glass towers and a glowing sunset sky with kites at the top.
 - HUD: teal-blue corrugated tin on a yellow bamboo frame lashed with orange rope, fairy lights along the top. Words: chunky yellow painted-tin letters with teal extrusion and bolt dots.
 - Props: chalk-drawn pitch on concrete, natural bamboo stumps with red tape, bamboo bail, tennis ball in red tape, tulsi-pot boundary, chalk-cross ring markers. Extras: kites, pigeons, a pink sari on the line.

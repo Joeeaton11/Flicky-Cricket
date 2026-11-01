@@ -23,7 +23,7 @@ The field oval is fixed by the layout, so the field, pitch and players are the s
 4 FAR: the camera is far away and high above. The whole stadium bowl is visible and grand, the crowd is small, and the wider scene beyond the far stand (coast, skyline, landscape, sky) is clearly visible.
 5 FAR AWAY: the camera is very far away and very high. The stadium is a small part of a huge landscape: the stands are a thin ring, the crowd is tiny specks of colour, and city, countryside, coast or terrain fills most of the picture around the field, with sky only at the very top.
 ```
-References in the game: 1 close-up (none yet) · 2 medium-close ≈ Gully 1a (`tg_gully`) · 3 medium = Wizard (`tw_wizard`), Pirate (`tp_pirate`) · 4 far = Chennai (`chennai_night`), T20 (`t20_night`) · 5 far away (none yet).
+References in the game: 1 close-up = Rooftop (`tr_rooftop`) · 2 medium-close ≈ Gully 1a (`tg_gully`) · 3 medium = Wizard (`tw_wizard`), Pirate (`tp_pirate`) · 4 far = Chennai (`chennai_night`), T20 (`t20_night`) · 5 far away (none yet).
 
 ## 1. Ground — surroundings, themed field, boundary rope
 ```
