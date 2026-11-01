@@ -49,7 +49,7 @@ def frac_hud():
 
 # ---- per-board source measurements (original px, 760 wide). slots = the board's own HUD fractions ----
 B = {
- 'rooftop2': dict(k=.921, Ri=(52, 72, 722, 296), mat=(127, 133, 400, 560), badgeRing=(118, 84, 48), deco=[('rails', [(135, 147, 300, 500), (233, 245, 300, 500)], (55, 705))],
+ 'rooftop2': dict(k=.921, underLights=True, Ri=(52, 72, 722, 296), mat=(127, 133, 400, 560), badgeRing=(118, 84, 48), deco=[('rails', [(135, 147, 300, 500), (233, 245, 300, 500)], (55, 705))],
    chase=[0.2895, 0.0566, 0.9382, 0.1632], wk=[0.7566, 0.0724, 0.8276, 0.1461], score=[0.0566, 0.2053, 0.2632, 0.3],
    sock=[0.3447, 0.2513, 0.0355], badge=[0.0921, 0.0474, 0.2184, 0.1737], eIcon=[0.1592, 0.3579, 0.0224], eBar=[0.3053, 0.3368, 0.9368, 0.3763]),
  'maidan4': dict(k=.921, Ri=(32, 32, 728, 290), mat=(101, 108, 200, 680), amp=.8, badgeRing=(97, 67, 34), deco=[('rails', [(107, 116, 192, 480), (218, 227, 192, 480)], (58, 702))],
@@ -230,6 +230,8 @@ def build(name, src, P):
     ex, ey, er = [v * 760 for v in P['eIcon']]; er2 = er * 1.45
     pc = rs4(a[int(ey - er2):int(ey + er2), int(ex - er2):int(ex + er2)], 2 * t['eIcon'][2] * 1.45, 2 * t['eIcon'][2] * 1.45); pc = circ(pc, 0.86)
     paste(out, pc, t['eIcon'][0] - t['eIcon'][2] * 1.45, t['eIcon'][1] - t['eIcon'][2] * 1.45)
+    if P.get('underLights'):   # Joe's one exception to the box rule: fairy lights strung along the underside, hanging below the board
+        out = under_lights(out)
     if 'badgeRing' in P:   # the board's own round recess, centred on the crest spot (MATCH_HUD_CREST) so the crest sits in it
         bx, by, br = P['badgeRing']; R2 = br * 1.12
         pc = circ(rs4(a[int(by - R2):int(by + R2), int(bx - R2):int(bx + R2)], 2 * CREST[2] * 1.12, 2 * CREST[2] * 1.12), 0.9)
@@ -254,6 +256,32 @@ def build(name, src, P):
         al = np.array(mi).astype(np.float32)[..., None] / 255.0
         out[:BODY, :, :3] = out[:BODY, :, :3] * (1 - al) + fr[..., :3] * al
     return out
+
+def under_lights(out, y0=278, xs=(46, 160, 268, 380, 492, 604, 714), sag=17, step=27):
+    from PIL import ImageDraw, ImageFilter
+    SS = 4; H, W = out.shape[:2]
+    wire = Image.new('RGBA', (W * SS, H * SS), (0, 0, 0, 0)); dw = ImageDraw.Draw(wire)
+    glow = Image.new('RGBA', (W * SS, H * SS), (0, 0, 0, 0)); dg = ImageDraw.Draw(glow)
+    bulbs = []
+    for xa, xb in zip(xs[:-1], xs[1:]):
+        pts = []
+        for i in range(41):
+            t = i / 40; x = xa + (xb - xa) * t; y = y0 + sag * 4 * t * (1 - t); pts.append((x * SS, y * SS))
+        dw.line(pts, fill=(40, 34, 30, 255), width=2 * SS, joint='curve')
+        n = max(2, round((xb - xa) / step))
+        for j in range(1, n):
+            t = j / n; bulbs.append((xa + (xb - xa) * t, y0 + sag * 4 * t * (1 - t)))
+    for (x, y) in bulbs:
+        cx, cy = x * SS, (y + 7) * SS
+        dg.ellipse([cx - 11 * SS, cy - 11 * SS, cx + 11 * SS, cy + 11 * SS], fill=(255, 205, 110, 110))
+        dw.rectangle([cx - 2.2 * SS, (y + 0.5) * SS, cx + 2.2 * SS, (y + 3.2) * SS], fill=(70, 62, 52, 255))
+        dw.ellipse([cx - 3.4 * SS, cy - 4.4 * SS, cx + 3.4 * SS, cy + 4.6 * SS], fill=(255, 226, 140, 255))
+        dw.ellipse([cx - 1.6 * SS, cy - 2.8 * SS, cx + 0.6 * SS, cy + 0.2 * SS], fill=(255, 252, 228, 255))
+    glow = glow.filter(ImageFilter.GaussianBlur(5 * SS)).resize((W, H), Image.LANCZOS)
+    wire = wire.resize((W, H), Image.LANCZOS)
+    base = Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
+    base.alpha_composite(glow); base.alpha_composite(wire)
+    return np.array(base).astype(np.float32)
 
 def build_gully(src):
     a = Image.open(src).convert('RGBA')
