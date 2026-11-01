@@ -101,6 +101,13 @@ function run(P, M, days = 90) {
       else if (day % 7 === 0) { S.coins += EXTRAS.weeklyMissionCoins * 4; if (day % 14 === 0) putBag('gold'); }
     }
     if (P.passBags) for (let k = 0; k < P.passBags; k++) { const i = S.slots.indexOf(null); if (i >= 0) S.slots[i] = 'gold'; }
+    // Nov 1: real premium Pass track (30 tiers × 400 XP, 30-day seasons). XP ≈ matches×10 + wins×20 + missions.
+    if (P.track) { const dayInSeason = (day - 1) % 30; if (dayInSeason === 0) { S.passXp = 0; S.passTier = 0; }
+      S.passXp += (P.matches * 10 + (S.winsToday || 0) * 20 + (day % 2 ? 150 : 100) + (day % 7 === 0 ? 200 : 0));
+      const t = Math.min(30, Math.floor(S.passXp / 400) + 1);
+      for (let k = (S.passTier || 0) + 1; k <= t; k++) { const r = PASS_TRACK[P.track](k); if (r.gems) S.gems += r.gems; if (r.coins) S.coins += r.coins; if (r.bag) putBag(r.bag); if (r.boosters) rep.boosters = (rep.boosters || 0) + r.boosters; rep.passCoins = (rep.passCoins || 0) + (r.coins || 0); }
+      S.passTier = t; }
+    S.winsToday = 0;
     let playedPaid = 0;
     for (let session = 0; session < 3; session++) {
       // bags: open what's ready, start the next (timers move on between sessions; spenders skip timers)
@@ -126,7 +133,7 @@ function run(P, M, days = 90) {
         S.coins -= LG[li].entry;
         const p = Math.max(0.08, Math.min(0.95, 0.6 + 0.022 * (myStat() - need(li)) + (P.skill || 0)));
         if (rnd() < p) {
-          S.streak++; const t = STREAK.filter(x => S.streak >= x[0]).pop();
+          S.streak++; S.winsToday = (S.winsToday || 0) + 1; const t = STREAK.filter(x => S.streak >= x[0]).pop();
           S.coins += Math.round(LG[li].winCoins * t[1]);
           const trBefore = S.tr;
           if (li >= lgFor(S.tr)) S.tr += LG[li].winTrophy + 1 + (rnd() < .4 ? 1 : 0);
@@ -152,14 +159,20 @@ function run(P, M, days = 90) {
   rep.upgradeDayCount = rep.upgradeDays.size; delete rep.upgradeDays; rep.endCoins = S.coins; rep.endGems = S.gems;
   return rep;
 }
+// premium Pass tracks: 'old' = Oct 30 (23 × 26 gems, gold bags every 5, platinum 30); 'road' = Nov 1 (4 × 150 gems, coins/boosters between)
+const PASS_TRACK = {
+  old: t => t === 1 || t === 15 ? {} : t === 30 ? { bag: 'platinum' } : t % 5 === 0 ? { bag: 'gold' } : { gems: t === 29 ? 28 : 26 },
+  road: t => t === 1 || t === 15 ? {} : t === 30 ? { bag: 'platinum' } : [6, 12, 18, 24].includes(t) ? { gems: 150 } : t % 5 === 0 ? { bag: 'gold' } : t % 2 ? { coins: 1000 } : { boosters: 3 },
+};
 const PLAYERS = { free: { matches: 10, seed: 11 }, pass: { matches: 12, passBags: 1, seed: 12 }, spender: { matches: 14, passBags: 2, timerSpeed: 2, seed: 13 } };
+if (process.argv.includes('--pass')) { Object.assign(PLAYERS, { passOld: { matches: 12, track: 'old', seed: 12 }, passRoad: { matches: 12, track: 'road', seed: 12 } }); delete PLAYERS.pass; delete PLAYERS.spender; }
 function avg(P, M, n = 6) { const out = []; for (let s = 0; s < n; s++) out.push(run(Object.assign({}, P, { seed: P.seed * 100 + s }), M)); return out; }
 function summary(name, reps) {
   const med = a => { const b = a.filter(x => x != null).sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : '—'; };
   const tm = r => med(reps.map(x => x.tierMaxDay[r] == null ? 999 : x.tierMaxDay[r])), fm = r => med(reps.map(x => x.firstMax[r] == null ? 999 : x.firstMax[r]));
   const lg = d => med(reps.map(x => x.leagueByDay[d - 1])), st = d => med(reps.map(x => x.statByDay[d - 1]));
   return `${name.padEnd(8)} first item maxed (day): C ${fm('common')} R ${fm('rare')} E ${fm('epic')} L ${fm('legendary')} | whole tier maxed: C ${tm('common')} R ${tm('rare')} E ${tm('epic')} L ${tm('legendary')}\n` +
-    `         league d7 ${lg(7)} d14 ${lg(14)} d30 ${lg(30)} d60 ${lg(60)} d90 ${lg(90)} | kit stat d7 ${st(7)} d30 ${st(30)} d90 ${st(90)} | upgrade days ${med(reps.map(r => r.upgradeDayCount))}/90 | coin-stuck days ${med(reps.map(r => r.stuckDays))} | day-90 bank: ${med(reps.map(r => r.endCoins)).toLocaleString()} coins, ${med(reps.map(r => r.endGems))} gems`;
+    `         league d7 ${lg(7)} d14 ${lg(14)} d30 ${lg(30)} d60 ${lg(60)} d90 ${lg(90)} | kit stat d7 ${st(7)} d30 ${st(30)} d90 ${st(90)} | upgrade days ${med(reps.map(r => r.upgradeDayCount))}/90 | coin-stuck days ${med(reps.map(r => r.stuckDays))} | day-90 bank: ${med(reps.map(r => r.endCoins)).toLocaleString()} coins, ${med(reps.map(r => r.endGems))} gems${reps[0].passCoins != null ? ` | pass coins ${med(reps.map(r => r.passCoins || 0)).toLocaleString()}, boosters ${med(reps.map(r => r.boosters || 0))}` : ''}`;
 }
 function score(M) {
   const reps = avg(PLAYERS.free, M, 5), med = a => { const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
@@ -185,7 +198,7 @@ if (process.argv[2] === '--search') {
 }
 if (require.main === module && process.argv[2] !== '--search') {
   // default = the numbers in GAME_CONFIG.kit.tierCost / tierUnlockLeague (Oct 29)
-  const M = JSON.parse(process.argv[2] || 'null') || { cards: { common: .15, rare: .25, epic: .4, legendary: .6 }, coins: { common: .5, rare: 2.5, epic: 10, legendary: 30 }, unlock: { rare: 9, epic: 16, legendary: 21 }, loss: { base: 1, perLeague: 0.12, max: 3 },
+  const M = JSON.parse((process.argv[2] && process.argv[2][0] === '{') ? process.argv[2] : 'null') || { cards: { common: .15, rare: .25, epic: .4, legendary: .6 }, coins: { common: .5, rare: 2.5, epic: 10, legendary: 30 }, unlock: { rare: 9, epic: 16, legendary: 21 }, loss: { base: 1, perLeague: 0.12, max: 3 },
     gemScale: 0.3, deals: { common: { n: 5, price: 80 }, rare: { n: 3, price: 400 }, epic: { n: 2, price: 2000 }, legendary: { n: 1, price: 8000 } } };
   console.log(JSON.stringify(M));
   for (const [k, P] of Object.entries(PLAYERS)) console.log(summary(k, avg(P, M)));
