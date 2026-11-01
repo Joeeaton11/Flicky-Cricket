@@ -49,7 +49,7 @@ def frac_hud():
 
 # ---- per-board source measurements (original px, 760 wide). slots = the board's own HUD fractions ----
 B = {
- 'railway2': dict(k=.921, Ri=(20, 58, 740, 298), mat=(104, 110, 300, 560), amp=.9, badgeRing=(104, 77, 50), deco=[('rails', [(110, 124, 300, 540), (215, 228, 300, 540)], (44, 716))],
+ 'railway2': dict(k=.921, topSprites=[((14, 14, 56, 58), (49, 39), 38), ((702, 14, 746, 58), (711, 39), 38)], Ri=(20, 58, 740, 298), mat=(104, 110, 300, 560), amp=.9, badgeRing=(104, 77, 50), deco=[('rails', [(110, 124, 300, 540), (215, 228, 300, 540)], (44, 716))],
    chase=[0.2566, 0.0421, 0.9211, 0.1342], wk=[0.7566, 0.0553, 0.8237, 0.125], score=[0.0487, 0.1816, 0.3237, 0.2697],
    sock=[0.3908, 0.2237, 0.0342], badge=[0.0658, 0.0316, 0.2079, 0.1711], eIcon=[0.1487, 0.3447, 0.0224], eBar=[0.3368, 0.3237, 0.9487, 0.3711]),
  'village2': dict(k=.921, Ri=(30, 27, 728, 290), mat=(139, 147, 380, 560), amp=.9, badgeRing=(110, 100, 55), chaseFrom='score', deco=[('rails', [(126, 140, 300, 560), (231, 245, 300, 560)], (48, 712))],
@@ -241,6 +241,10 @@ def build(name, src, P):
     paste(out, pc, t['eIcon'][0] - t['eIcon'][2] * 1.45, t['eIcon'][1] - t['eIcon'][2] * 1.45)
     if P.get('underLights'):   # Joe's one exception to the box rule: fairy lights strung along the underside, hanging below the board
         out = under_lights(out)
+    for (sx1, sy1, sx2, sy2), (cx, cy), size in P.get('topSprites', []):   # bits of the board's own art layered on top (e.g. corner signal lamps)
+        piece = a[sy1:sy2, sx1:sx2]; k2 = size / max(piece.shape[:2])
+        pc = rs4(piece, piece.shape[1] * k2, piece.shape[0] * k2)
+        paste(out, pc, cx - pc.shape[1] / 2, cy - pc.shape[0] / 2)
     if 'badgeRing' in P:   # the board's own round recess, centred on the crest spot (MATCH_HUD_CREST) so the crest sits in it
         bx, by, br = P['badgeRing']; R2 = br * 1.12
         pc = circ(rs4(a[int(by - R2):int(by + R2), int(bx - R2):int(bx + R2)], 2 * CREST[2] * 1.12, 2 * CREST[2] * 1.12), 0.9)
