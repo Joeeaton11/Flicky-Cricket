@@ -47,6 +47,9 @@ def frac_hud():
 
 # ---- per-board source measurements (original px, 760 wide). slots = the board's own HUD fractions ----
 B = {
+ 'maidan3': dict(k=1.0, Ri=(36, 49, 724, 254), mat=(130, 193, 214, 226), overBand=(14, 52, 30, 730), deco=[('rails', [(111, 125, 300, 500), (194, 208, 300, 500)], (36, 724))],
+   chase=[0.1829, 0.0711, 0.7566, 0.1395], wk=[0.7711, 0.0711, 0.8395, 0.1395], score=[0.0671, 0.1711, 0.2763, 0.2539],
+   sock=[0.3434, 0.2132, 0.0355], badge=[0.0526, 0.0789, 0.0592, 0.0855], eIcon=[0.1171, 0.3053, 0.0197], eBar=[0.1803, 0.2842, 0.925, 0.3237]),
  'maidan2': dict(k=.84, Ri=(38, 56, 722, 300), mat=(141, 150, 150, 560), amp=.7, deco=[('rails', [(148, 162, 200, 420), (239, 254, 200, 420)], (31, 729))],
    chase=[.1473, .0853, .9457, .1843], wk=[.7717, .0965, .845, .1688], score=[.056, .2127, .5831, .3075],
    sock=[.6184, .2601, .0237], badge=[.0594, .0913, .1335, .1783], eIcon=[.0805, .3549, .0215], eBar=[.1146, .3342, .9457, .3773]),
@@ -216,6 +219,15 @@ def build(name, src, P):
     ex, ey, er = [v * 760 for v in P['eIcon']]; er2 = er * 1.45
     pc = rs4(a[int(ey - er2):int(ey + er2), int(ex - er2):int(ex + er2)], 2 * t['eIcon'][2] * 1.45, 2 * t['eIcon'][2] * 1.45); pc = circ(pc, 0.86)
     paste(out, pc, t['eIcon'][0] - t['eIcon'][2] * 1.45, t['eIcon'][1] - t['eIcon'][2] * 1.45)
+    if 'overBand' in P:   # e.g. a tent valance that drapes over the top panel: its green + cream stripes go back on top
+        y1, y2, x1, x2 = P['overBand']; fr = f[:BODY]; rgb = fr[..., :3] / 255.0
+        green = (rgb[..., 1] > rgb[..., 0] + .06) & (rgb[..., 1] > rgb[..., 2] + .06)
+        cream = (rgb.min(-1) > .62) & (rgb.max(-1) - rgb.min(-1) < .28)
+        m = np.zeros(fr.shape[:2], bool); m[y1:y2, x1:x2] = (green | cream)[y1:y2, x1:x2]
+        from PIL import ImageFilter
+        mi = Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(.8))
+        al = np.array(mi).astype(np.float32)[..., None] / 255.0
+        out[:BODY, :, :3] = out[:BODY, :, :3] * (1 - al) + fr[..., :3] * al
     if P.get('flowersOver'):   # marigolds hang over the top panel, as on the original
         import colorsys
         fr = f[:BODY].copy(); rgb = fr[..., :3] / 255.0
