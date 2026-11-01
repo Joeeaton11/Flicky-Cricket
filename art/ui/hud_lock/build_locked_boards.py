@@ -47,22 +47,22 @@ def frac_hud():
 
 # ---- per-board source measurements (original px, 760 wide). slots = the board's own HUD fractions ----
 B = {
- 'maidan2': dict(k=.84, Ri=(38, 56, 722, 300), mat=(141, 150, 150, 560), amp=.35,
+ 'maidan2': dict(k=.84, Ri=(38, 56, 722, 300), mat=(141, 150, 150, 560), amp=.7, deco=[('rails', [(148, 162, 200, 420), (239, 254, 200, 420)], (31, 729))],
    chase=[.1473, .0853, .9457, .1843], wk=[.7717, .0965, .845, .1688], score=[.056, .2127, .5831, .3075],
    sock=[.6184, .2601, .0237], badge=[.0594, .0913, .1335, .1783], eIcon=[.0805, .3549, .0215], eBar=[.1146, .3342, .9457, .3773]),
- 'rooftop': dict(k=.82, Ri=(40, 62, 722, 290), mat=(64, 84, 60, 700), sockPanel=(482, 160, 692, 218),
+ 'rooftop': dict(k=.82, Ri=(40, 62, 722, 290), mat=(64, 84, 60, 700), sockPanel=(482, 160, 692, 218), deco=[('sections', [(58, 86, 700, 150), (58, 156, 700, 222), (58, 224, 700, 268)], 7, 8)], secFill=(124, 96, 129, 140),
    chase=[.1709, .1216, .9084, .1909], wk=[.7806, .1316, .8322, .1824], score=[.087, .2171, .6228, .2818],
    sock=[.6636, .2502, .0154], badge=[.087, .1216, .1609, .1909], eIcon=[.1089, .3233, .0131], eBar=[.1339, .3102, .8999, .3372]),
- 'school': dict(k=1.0, Ri=(16, 16, 744, 220), mat=(99, 106, 150, 560), amp=.35,
+ 'school': dict(k=1.0, Ri=(16, 16, 744, 220), mat=(99, 106, 150, 560), amp=.55,
    chase=[.149, .0428, .9529, .1293], wk=[.7723, .0488, .8493, .1224], score=[.0479, .1413, .5086, .2269],
    sock=[.5539, .1849, .0274], badge=[.0445, .0454, .1378, .1353], eIcon=[.0689, .2547, .0167], eBar=[.0976, .2406, .9486, .268]),
- 'village': dict(k=.75, Ri=(46, 84, 714, 314), mat=(150, 172, 50, 710),
+ 'village': dict(k=.75, Ri=(46, 84, 714, 314), mat=(150, 172, 50, 710), flowersOver=True, deco=[('rails', [(150, 168, 150, 450), (256, 278, 150, 450)], (34, 726))],
    chase=[.1677, .1085, .9311, .1946], wk=[.7889, .1198, .8458, .1826], score=[.0749, .2298, .6145, .3174],
    sock=[.6647, .2713, .021], badge=[.0749, .1108, .1527, .1924], eIcon=[.0932, .3817, .0157], eBar=[.119, .3675, .9281, .396]),
- 'railway': dict(k=1.0, Ri=(48, 48, 712, 250), mat=(129, 140, 150, 560), amp=.35,
+ 'railway': dict(k=1.0, Ri=(48, 48, 712, 250), mat=(129, 140, 150, 560), amp=.55,
    chase=[.1817, .0683, .9317, .1676], wk=[.742, .0798, .8218, .1596], score=[.0691, .1871, .4938, .2819],
    sock=[.5598, .2349, .0244], badge=[.07, .0691, .1622, .1676], eIcon=[.0869, .316, .016], eBar=[.1206, .3005, .9309, .3307]),
- 'evening': dict(k=.8, cropTop=74, clock=(330, 40, 432, 132), Ri=(80, 132, 682, 292), mat=(187, 194, 150, 560), amp=.35, sockPanel=(386, 193, 692, 246),
+ 'evening': dict(k=.8, cropTop=74, clock=(330, 40, 432, 132), Ri=(80, 132, 682, 292), mat=(187, 194, 150, 560), amp=.6, sockPanel=(386, 193, 692, 246),
    chase=[.1678, .1804, .9098, .2445], wk=[.7808, .1847, .8356, .2411], score=[.0919, .2572, .4966, .3212],
    sock=[.5443, .2896, .0211], badge=[.0947, .1829, .1526, .2395], eIcon=[.11, .3478, .0131], eBar=[.1366, .3364, .9098, .36]),
 }
@@ -180,6 +180,25 @@ def build(name, src, P):
     def put_panel(srcrect, trect, mirror=False, c=12):
         pc = nine(a, srcrect, trect[2] - trect[0], trect[3] - trect[1], c=c, mirror_right=mirror)
         paste(out, pc, trect[0], trect[1])
+    # board details between the panels (section boxes, divider rails) — the board's own, re-laid to the template
+    L, R_ = t['score'][0], t['chase'][2]
+    rows = [(t['chase'][1], t['chase'][3]), (t['score'][1], t['score'][3]), (t['eBar'][1], t['eBar'][3])]
+    for kind, *args in P.get('deco', []):
+        if kind == 'sections':     # args: list of 3 source section boxes (top row, middle row, energy row); pad, corner
+            boxes, pad, c = args
+            for sb, (ry1, ry2) in zip(boxes, rows):
+                tr = [L - pad, ry1 - pad, R_ + pad, ry2 + pad]
+                pc = nine(a, sb, tr[2] - tr[0], tr[3] - tr[1], c=c)
+                ix1, iy1, ix2, iy2 = P['secFill']; inner = np.median(a[iy1:iy2, ix1:ix2].reshape(-1, 4), 0)
+                pc[c:-c, c:-c, 3] = 0   # rim only — the board material shows inside, as on the original
+                paste(out, pc, tr[0], tr[1])
+        if kind == 'rails':        # args: list of 2 source strips (y1, y2, x1, x2) placed in the two gaps between rows; x span
+            strips, (sx1, sx2) = args
+            for (y1, y2, x1, x2), gy in zip(strips, [(rows[0][1] + rows[1][0]) / 2, (rows[1][1] + rows[2][0]) / 2]):
+                st = a[y1:y2, x1:x2]
+                reps = -(-(int(sx2 - sx1)) // st.shape[1]) + 1
+                st = np.concatenate([st, st[:, ::-1]] * reps, 1)[:, :int(sx2 - sx1)]
+                paste(out, st, sx1, gy - st.shape[0] / 2)
     if 'sockPanel' in P:
         put_panel(P['sockPanel'], t['sockPanel'])
     put_panel(pr('chase'), t['chase'], mirror=True)
@@ -197,6 +216,16 @@ def build(name, src, P):
     ex, ey, er = [v * 760 for v in P['eIcon']]; er2 = er * 1.45
     pc = rs4(a[int(ey - er2):int(ey + er2), int(ex - er2):int(ex + er2)], 2 * t['eIcon'][2] * 1.45, 2 * t['eIcon'][2] * 1.45); pc = circ(pc, 0.86)
     paste(out, pc, t['eIcon'][0] - t['eIcon'][2] * 1.45, t['eIcon'][1] - t['eIcon'][2] * 1.45)
+    if P.get('flowersOver'):   # marigolds hang over the top panel, as on the original
+        import colorsys
+        fr = f[:BODY].copy(); rgb = fr[..., :3] / 255.0
+        mx, mn = rgb.max(-1), rgb.min(-1); sat = (mx - mn) / np.maximum(mx, 1e-3)
+        m = (rgb[..., 0] > .85) & (rgb[..., 1] > .42) & (rgb[..., 1] < .8) & (rgb[..., 2] < .25) & (sat > .75)
+        m[int(t['chase'][1] + 22):] = False
+        from PIL import ImageFilter
+        mi = Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.GaussianBlur(1.2))
+        al = np.array(mi).astype(np.float32)[..., None] / 255.0
+        out[:BODY, :, :3] = out[:BODY, :, :3] * (1 - al) + fr[..., :3] * al
     return out
 
 def build_gully(src):
