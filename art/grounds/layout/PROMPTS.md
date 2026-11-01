@@ -4,7 +4,7 @@ Replace [THEME] and the [e.g. …] parts per ground. Every result is checked wit
 
 ## Shared block (top of every prompt)
 ```
-ART STYLE: glossy, ultra-vibrant 3D-rendered cartoon mobile-game key art, like Clash of Clans / Boom Beach promo art: hyper-saturated colours that pop (vivid turquoise water, lush emerald foliage, rich golds and reds), warm glowing lanterns and lights with soft bloom, strong rim lighting, deep ambient-occlusion shadows, crisp chunky detail, high contrast, everything polished and shiny. Chunky cute proportions (big heads, short bodies). Fantasy themes go big: fun, cool, over the top. Camera: high 3/4 top-down view from far away and high above, looking straight up a cricket ground in portrait: a wide view where the stadium is big and grand and the wider scene around it (skyline, landscape, sky) is visible beyond the stands.
+ART STYLE: glossy, ultra-vibrant 3D-rendered cartoon mobile-game key art, like Clash of Clans / Boom Beach promo art: hyper-saturated colours that pop (vivid turquoise water, lush emerald foliage, rich golds and reds), warm glowing lanterns and lights with soft bloom, strong rim lighting, deep ambient-occlusion shadows, crisp chunky detail, high contrast, everything polished and shiny. Chunky cute proportions (big heads, short bodies). Fantasy themes go big: fun, cool, over the top. Camera: high 3/4 top-down view looking straight up a cricket ground in portrait. CAMERA DISTANCE: [CAMERA — paste ONE of the 5 camera lines below, the one chosen for this ground].
 THEME: [THEME].
 LIGHT: soft sunlight from [LIGHT — chosen per ground, whatever looks best, e.g. top-left]. Use this same light direction on every asset for this ground.
 SHADOWS: the ground and stadium may have painted shadows. Characters, props and HUD pieces have NO shadow under or behind them (the game adds those).
@@ -13,6 +13,17 @@ SMALL ON SCREEN: characters show about 30 px tall on a phone, so bold simple sil
 LEFT/RIGHT: "picture-left" and "picture-right" mean the left and right of the image as you look at it.
 No text, letters, numbers or logos anywhere unless asked.
 ```
+
+## Camera distance — 5 levels (Joe, Nov 1). Pick ONE per ground, paste its line into [CAMERA]
+The field oval is fixed by the layout, so the field, pitch and players are the same size at every level. The camera level only changes how big the world AROUND the rope looks. Each ground's level is recorded in themes/BIBLES.md and never changes between its generations.
+```
+1 CLOSE-UP: the camera is low and close. Only the first few rows of the crowd are visible, and they are big and detailed (faces, flags, banners readable), pressed right up against the boards. The stand fills every part of the picture outside the field, top to bottom. No sky, no roofline, no skyline.
+2 MEDIUM-CLOSE: the camera is fairly close. A big crowd with chunky, readable people and big props fills the stands; the tops of the stands and a thin strip of roofline or sky show only along the very top edge.
+3 MEDIUM: the camera is at middle distance. The whole ring of stands is visible with the crowd still readable as individual people, and a band of big landmarks or scenery shows above the far stand.
+4 FAR: the camera is far away and high above. The whole stadium bowl is visible and grand, the crowd is small, and the wider scene beyond the far stand (coast, skyline, landscape, sky) is clearly visible.
+5 FAR AWAY: the camera is very far away and very high. The stadium is a small part of a huge landscape: the stands are a thin ring, the crowd is tiny specks of colour, and city, countryside, coast or terrain fills most of the picture around the field, with sky only at the very top.
+```
+References in the game: 1 close-up (none yet) · 2 medium-close ≈ Gully 1a (`tg_gully`) · 3 medium = Wizard (`tw_wizard`), Pirate (`tp_pirate`) · 4 far = Chennai (`chennai_night`), T20 (`t20_night`) · 5 far away (none yet).
 
 ## 1. Ground — surroundings, themed field, boundary rope
 ```
