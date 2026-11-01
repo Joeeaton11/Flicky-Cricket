@@ -57,3 +57,9 @@
 - THEME: our field ringed by a red-earth lane; terraced emerald paddies with farmers, palm groves, lotus ponds with ducks, terracotta-roof houses, white temple with saffron flag, banyans on stone platforms with villagers watching, well, haystacks, goats, bullock cart, bikes; misty hills + waterfall + blue sky at the top.
 - HUD: sun-bleached wooden planks in a bamboo frame lashed with jute, marigold garland. Words: carved wood, marigold/turmeric faces, brown extrusion, white rangoli dots; cream digits.
 - Props: hand-rolled red-earth pitch with cracks, grass tufts and bare footmarks; whittled peeled-stick stumps and twig bails; scuffed old leather ball; twisted jute rope boundary; river-pebble ring markers. Extras: egrets, saffron flag, wood smoke.
+
+## Gully Cup — 1.f `ty_railway` (Mumbai railway yard at blue-hour dusk)
+- CAMERA: 2. LIGHT: warm sodium lamps from picture-right, cool dusk from above.
+- THEME: packed-earth ground between curving tracks; yellow-and-maroon local train with commuters cheering from the doors; rusty goods wagon with kids on the roof; footbridge of watchers; platform with chai stall, porter and trolley; signal post; sodium lamps; stacked sleepers, oil drums, a dog, crows on the wires; lit skyline.
+- HUD: glossy sunflower-yellow enamel station sign, black border, rivets. Words: yellow painted-steel letters, black extrusion, rivets; white digits.
+- Props: pitch of old oil-stained railway sleepers with gravel between; red-and-white signal-post stumps + bails; orange rubber ball; rusty rail boundary; rusty hex-nut ring markers. Extras: crows, steam, green signal flag.
