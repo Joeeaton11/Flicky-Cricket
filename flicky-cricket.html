@@ -4304,7 +4304,8 @@ const GAME_CONFIG = {
     tournament: { bands: [[1, 8], [9, 18], [19, 28]], rewards: { top1: { bag: 'gold', gems: 200 }, top10: { bag: 'gold' }, top50: { bag: 'silver' }, all: { bag: 'bronze' } } },
     endless: { wickets: 1, ticketGems: 20, secondLifeGems: 30, milestones: [50, 100, 200] },
     ranked: { resetFraction: 0.5 },
-    pass: { tiers: 30, xpPerTier: 400,   // 400 (not the blueprint's 100): ~10 matches a day + missions ≈ 420 XP/day, so tier 30 lands around day 28
+    pass: { road: { milestones: [6, 12, 18, 24], msGems: 150, fillCoins: 1000, fillBoosters: 3 },   // Pass v3 'The Road' (Joe, Nov 1): 4 big gem moments + final platinum
+      tiers: 30, xpPerTier: 400,   // 400 (not the blueprint's 100): ~10 matches a day + missions ≈ 420 XP/day, so tier 30 lands around day 28
             xp: { match: 10, win: 20, dailyMission: 50, weeklyMission: 200, dailyChallenge: 30 }, premium: 4.99, plus: 9.99 },
     eventDays: [7, 14],
   },
@@ -32926,7 +32927,11 @@ function showResultScreen(d) {
     try { if (featureOn('pass')) { const P = GAME_CONFIG.season.pass, t = passTier(), into = passState().xp - t * P.xpPerTier, gain = P.xp.match + (d.beatTarget ? P.xp.win : 0);
       items.push({ k: 'PASS', v: `+${gain} XP`, pct: t >= P.tiers ? 100 : into / P.xpPerTier * 100, sub: t >= P.tiers ? 'max tier' : `tier ${t + 1} in ${P.xpPerTier - into} XP`, hot: passClaimable() > 0 }); } } catch (e) {}
     try { if (featureOn('today')) { const w = weekBagState(); items.push({ k: 'WEEKLY BAG', v: `${Math.min(w.wDays.length, T3_WEEK_DAYS)}/${T3_WEEK_DAYS}`, pct: Math.min(1, w.wDays.length / T3_WEEK_DAYS) * 100, sub: 'days with a daily bag' }); } } catch (e) {}
-    if ($('resultScreen').classList.contains('r3')) { pg.innerHTML = items.length ? `<div class="r3Chips">${items.filter(it => it.k !== 'WEEKLY BAG').map(it => `<span class="r3Chip${it.hot ? ' hot' : ''}"><small>${it.k}</small> ${it.v}</span>`).join('')}</div>` : ''; } else
+    let msChip = '';
+    try { const mt = window._passMsEarned; if (mt && featureOn('pass') && !passState().premium) { const r = passReward(mt, true);
+      msChip = `<span class="r3Chip hot passEarn" data-openpass><small>PASS</small> ${r.gems ? r.gems + ' GEMS' : bagNm(r.bag) + ' BAG'} EARNED · UNLOCK ›</span>`; track('pass_nudge_shown', { tier: mt }); }
+      window._passMsEarned = 0; } catch (e) {}
+    if ($('resultScreen').classList.contains('r3')) { pg.innerHTML = items.length || msChip ? `<div class="r3Chips">${msChip}${items.filter(it => it.k !== 'WEEKLY BAG' && !(msChip && it.k === 'PASS')).map(it => `<span class="r3Chip${it.hot ? ' hot' : ''}"><small>${it.k}</small> ${it.v}</span>`).join('')}</div>` : ''; } else
     pg.innerHTML = items.length ? `<div class="r2PgHd">PROGRESS</div><div class="r2PgRow">${items.map(it => `<div class="r2Pg${it.hot ? ' hot' : ''}"><span class="k">${it.k}</span><b>${it.v}</b><div class="bar"><i style="width:${Math.max(4, it.pct)}%"></i></div><small>${it.sub}</small></div>`).join('')}</div>` : '';
     pg.style.display = items.length ? '' : 'none'; pg.style.setProperty('--d', '1.65s'); }
   const ex = [];
@@ -62879,6 +62884,8 @@ function passTier() { const P = GAME_CONFIG.season.pass; return Math.min(P.tiers
 function addPassXP(n, why) {
   const p = passState(), before = passTier(); p.xp += n; SAVE.save();
   const after = passTier(); if (after > before) { window._passToast = `PASS TIER ${after}!`; try { updateTodayBadge(); } catch (e) {} }
+  if (after > before && !p.premium) { const ms = GAME_CONFIG.season.pass.road.milestones.concat([GAME_CONFIG.season.pass.tiers]).filter(m => m > before && m <= after);
+    if (ms.length) window._passMsEarned = ms[ms.length - 1]; }
 }
 function passPremiumActive() { return !!passState().premium; }
 function passReward(tier, premium) {
@@ -62890,8 +62897,10 @@ function passReward(tier, premium) {
   }
   if (tier === 1) return { cos: 'pass' + key, kind: 'shirt', label: 'MONTH KIT SHIRT' };
   if (tier === 15 || tier === 30) return tier === 30 ? { bag: 'platinum' } : { cos: 'passtrim' + key, kind: 'trim', label: 'PASS+ TRIM', plus: true };
+  const R = GAME_CONFIG.season.pass.road;
+  if (R.milestones.includes(tier)) return { gems: R.msGems, milestone: true };   // 4 × 150 = 600 gems (Nov 1: big moments)
   if (tier % 5 === 0) return { bag: 'gold' };
-  return { gems: tier === 29 ? 28 : 26 };   // 23 gem tiers = 600 gems exactly (Oct 30)
+  return tier % 2 ? { coins: R.fillCoins } : { booster: ['power_bat', 'golden_ball', 'lucky_grip', 'fresh_legs'][(tier / 2) % 4 | 0], boosterCount: R.fillBoosters };
 }
 function passRewardLabel(r) { return r.cos ? r.label : rewardLabel(r); }
 function claimPassTier(tier, premium) {
@@ -62909,6 +62918,9 @@ function buyPass(plus) {
   buyRealMoney(plus ? 'pass_plus' : 'pass_premium', price, () => {
     const p = passState(); p.premium = true; if (plus) { p.plus = true; p.xp += 10 * P.xpPerTier; } SAVE.save(); syncBagSlots();
     track('offer_bought', { offer: plus ? 'pass_plus' : 'pass', price });
+    // Nov 1: pay out everything already earned the moment they buy (no buyer's regret), with a celebration
+    try { const got = []; for (let i = 1; i <= passTier(); i++) { const r = passReward(i, true), l = claimPassTier(i, true); if (l) got.push(r); }
+      setTimeout(() => passCelebrate(got, plus), 250); } catch (e) {}
     return plus ? 'PASS+ ACTIVE · +10 TIERS' : 'FLICKY PASS ACTIVE';
   });
   renderPass();
@@ -62926,6 +62938,74 @@ function buyPass(plus) {
   #passPanel.fs .sheet{width:min(440px,100%);height:100%;max-height:none;border:0;border-radius:0;overflow:hidden;background:radial-gradient(ellipse 120% 50% at 50% 0%,#3a2a6a,#14204a 55%,#01162C);
     padding:calc(var(--hdrTop,8px) + 2px) 0 calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px}
   #passPanel.fs .evTop{padding:0 12px}
+  /* ===== Pass v3 'The Road' (Joe, Nov 1) ===== */
+  #passPanel.ps-road .sheet{display:flex;flex-direction:column;gap:8px;background:radial-gradient(ellipse 120% 45% at 50% 0%,#17346e,#01162C 60%) !important}
+  .prFinal{position:relative;flex:none;margin:0 12px;height:clamp(120px,17vh,150px);border-radius:20px;border:3px solid #050A14;overflow:hidden;
+    background:linear-gradient(90deg,rgba(5,12,28,.94) 0%,rgba(5,12,28,.55) 52%,rgba(5,12,28,.1)),var(--prBg,#13306a) center/cover;box-shadow:0 0 0 2px #FFC93A inset,0 8px 20px rgba(0,0,0,.55)}
+  .prFinal .k{position:absolute;left:14px;top:11px;font-size:12px;color:#FFE27A;letter-spacing:.08em}
+  .prFinal h2{position:absolute;left:14px;top:28px;font-weight:400;font-size:22px;line-height:1.02;text-shadow:0 2px 0 #050A14;z-index:2}
+  .prFinal .s{position:absolute;left:14px;bottom:11px;width:52%;font-size:11px;line-height:1.2;color:#cfe0ff;z-index:2}.prFinal .s b{color:#ff8a8a;font-weight:400}
+  .prFinal .bag{position:absolute;right:52px;bottom:4px;width:44%;max-width:170px;filter:drop-shadow(0 0 16px rgba(210,235,255,.6));z-index:1}
+  .prFinal .pl{position:absolute;right:-8px;bottom:-14px;height:112%;width:auto;z-index:1;filter:drop-shadow(0 4px 6px rgba(0,0,0,.6))}
+  .prXp{flex:none;display:flex;align-items:center;gap:10px;margin:0 14px}.prXp .t{font-size:13px;color:#cfe0ff;white-space:nowrap}.prXp .t b{color:#FFE27A;font-weight:400;font-size:20px}
+  .prXp .bar{flex:1;height:18px;border-radius:9px;background:#050A14;border:2px solid #1d3266;overflow:hidden;position:relative}
+  .prXp .bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#9cf26a,#2fb84a)}.prXp .bar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;text-shadow:0 1px 0 #050A14}
+  .prXp .psHow{position:static;flex:none}
+  #passPanel.ps-road .psHowBox{margin:0 14px}
+  .prLanes{flex:none;display:flex;justify-content:space-between;padding:0 24px;font-size:12px;letter-spacing:.08em;color:#cfe0ff}.prLanes .pr{color:#FFC93A}
+  .prRoad{position:relative;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-webkit-mask:linear-gradient(transparent,#000 14px,#000 calc(100% - 22px),transparent)}
+  .prRoad::-webkit-scrollbar{display:none}
+  .prRows{position:relative;padding:10px 0 18px}
+  .prRows::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:46px;margin-left:-23px;background:linear-gradient(90deg,#b8935a,#e6cf98 28%,#ecd9a6 50%,#e6cf98 72%,#b8935a);
+    border-left:2px solid #6a4a1a;border-right:2px solid #6a4a1a;opacity:.92}
+  .prRow{position:relative;display:flex;align-items:center;justify-content:space-between;padding:6px 14px;min-height:96px}
+  .prRow.ms{min-height:124px}
+  .prBall{position:absolute;left:50%;top:50%;width:42px;height:42px;margin:-21px 0 0 -21px;z-index:2;border-radius:50%;border:3px solid #050A14;overflow:hidden;
+    background:radial-gradient(circle at 35% 30%,#9aa6bd,#4a5570 70%);display:flex;align-items:center;justify-content:center;font-size:17px;text-shadow:0 2px 0 #050A14}
+  .prBall::after{content:'';position:absolute;top:-3px;bottom:-3px;left:44%;width:7px;border-left:2px dashed rgba(255,255,255,.5);border-right:2px dashed rgba(255,255,255,.5);transform:rotate(25deg)}
+  .prBall span{position:relative;z-index:1}
+  .prRow.on .prBall{background:radial-gradient(circle at 32% 28%,#ff8a8a,#d8262e 55%,#7a0d0d)}
+  .prRow.cur .prBall{box-shadow:0 0 0 3px #FFC93A,0 0 16px #FFC93A}
+  .prT{position:relative;width:calc(50% - 36px);max-width:150px;height:82px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  .prT:not(.prem){background:linear-gradient(#2c5aa8,#14306a);border:3px solid #050A14;box-shadow:0 4px 0 rgba(0,0,0,.4)}
+  .prT.prem{border-style:solid;border-color:transparent;border-width:9px;border-image:var(--prFr) 20% fill / 9px stretch;box-shadow:0 4px 8px rgba(0,0,0,.45)}
+  .prT .pa{height:46px;display:flex;align-items:center;justify-content:center}.prT .pa img{max-height:46px;max-width:92px;object-fit:contain;filter:drop-shadow(0 3px 2px rgba(0,0,0,.45))}
+  .prT .pa .bIco{width:44px;height:44px}.prT .pa .kitCrop{width:62px;height:50px}
+  .prT b{font-weight:400;font-size:12px;text-shadow:0 1px 0 #050A14;white-space:nowrap}
+  .prT.ms{height:104px;max-width:162px}.prT.ms .pa{height:64px}.prT.ms .pa img{max-height:64px;max-width:110px}.prT.ms b{font-size:14px}
+  .prT.prem.ms{box-shadow:0 0 0 2px rgba(255,226,122,.7),0 0 22px rgba(255,201,58,.75)}
+  .prT.got{filter:saturate(.35) brightness(.75)}
+  .prT.can{cursor:pointer;box-shadow:0 0 0 3px #FFC93A,0 0 18px rgba(255,201,58,.7);animation:evPulse 1.4s ease-in-out infinite}
+  .prT .tick{position:absolute;right:-8px;top:-8px;width:24px;height:24px;border-radius:50%;background:#4fd46a;border:2px solid #050A14;color:#04310f;font-style:normal;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .prT .pad{position:absolute;right:-12px;bottom:-12px;width:26px;height:28px;font-style:normal;font-size:11px;color:#5a3a00;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;
+    background:var(--prPad) center/contain no-repeat;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))}
+  .prT .tap,.prT .ern{position:absolute;bottom:-12px;padding:1px 9px;border-radius:9px;border:2px solid #050A14;font-size:11px}
+  .prT .tap{background:linear-gradient(#9cf26a,#3dbb2c);text-shadow:0 1px 0 #1a6a10}
+  .prT .ern{top:-13px;bottom:auto;background:linear-gradient(#7CF29A,#2fb84a);text-shadow:0 1px 0 #0d4a1a}
+  .prT.prem.earned{box-shadow:0 0 0 2px #7CF29A,0 0 14px rgba(124,242,154,.5)}
+  .prOver{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;height:30px;margin:2px 64px 0;font-size:11px;letter-spacing:.1em;color:#FFE27A;z-index:3}
+  .prOver span{padding:2px 10px;border-radius:9px;background:#0b1e42;border:2px solid #FFC93A}
+  .prOver em{position:absolute;right:-56px;font-style:normal;padding:2px 8px;border-radius:9px;background:#e8283c;border:2px solid #050A14;color:#fff;font-size:10px;letter-spacing:0;white-space:nowrap;animation:evPulse 1.6s ease-in-out infinite}
+  .prCta{flex:none;margin:0 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  #passPanel.ps-road .psCta{background:none !important;border:0 !important;box-shadow:none !important}
+  #passPanel.ps-road .evTop .evTitle{position:static;transform:none;flex:1;margin-left:4px;font-weight:400}
+  #passPanel.ps-road .evTop{display:flex;align-items:center;gap:8px}
+  .prLoss{text-align:center;font-size:12px;color:#FFE27A;margin-bottom:6px}.prLoss b{color:#7CF29A;font-weight:400}
+  #passPanel.ps-road .psAct small{font-size:11px;opacity:.95}
+  #passWow{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(3,8,20,.82);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #passWow.show{display:flex}
+  .pwIn{position:relative;width:min(360px,92vw);display:flex;flex-direction:column;align-items:center;gap:8px}
+  .pwRays{position:absolute;left:50%;top:40px;width:560px;height:560px;margin:-280px 0 0 -280px;border-radius:50%;background:repeating-conic-gradient(rgba(255,214,90,.22) 0 9deg,transparent 9deg 20deg);
+    -webkit-mask:radial-gradient(circle,#000 18%,transparent 62%);animation:pwSpin 14s linear infinite;pointer-events:none}
+  @keyframes pwSpin{to{transform:rotate(360deg)}}
+  .pwTitle{position:relative;font-weight:400;font-size:40px;color:#FFE27A;-webkit-text-stroke:2px #050A14;text-shadow:0 4px 0 #050A14,0 0 20px rgba(255,201,58,.6);transform:rotate(-4deg);animation:pwSlam .5s cubic-bezier(.3,1.6,.5,1) both}
+  @keyframes pwSlam{from{transform:scale(2.4) rotate(-4deg);opacity:0}to{transform:scale(1) rotate(-4deg);opacity:1}}
+  .pwSub{position:relative;font-size:14px;color:#cfe0ff;letter-spacing:.08em}
+  .pwGrid{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;margin:6px 0 4px}
+  .pwT{height:96px;border:8px solid transparent;border-image:var(--prFr) 20% fill / 8px stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;animation:pwPop .45s cubic-bezier(.3,1.5,.5,1) both;animation-delay:var(--d)}
+  .pwT img{max-height:46px;max-width:80px;object-fit:contain}.pwT .bIco{width:42px;height:42px}.pwT .kitCrop{width:60px;height:50px}.pwT b{font-weight:400;font-size:10px;text-align:center;text-shadow:0 1px 0 #050A14}
+  @keyframes pwPop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+  .pwOk{position:relative;width:70%;height:52px;font-size:20px}
   .psHero{position:relative;margin:0 12px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:18px;border:3px solid #050A14;background:linear-gradient(135deg,#6a4a0a,#2a1a04);box-shadow:0 0 0 2px #f5a800 inset}
   .psHero .t{display:flex;flex-direction:column;flex:none}.psHero .t b{font-weight:400;font-size:20px;text-shadow:0 2px 0 #050A14}.psHero .t span{font-size:12px;color:#f3e2b8}.psHero em{font-style:normal;color:#FFC93A}
   .psXP2{flex:1;display:flex;align-items:center;min-width:0}
@@ -63091,7 +63171,68 @@ async function paintKitCrop(cv) {
 }
 (function () { const go = () => document.querySelectorAll('canvas[data-kitcrop]').forEach(paintKitCrop);
   try { new MutationObserver(go).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) {} })();
+const PASS_PADLOCK = 'data:image/webp;base64,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';
+function passWorthGems() {   // honest value of the premium track, priced like the offer pop-ups (offerWorthGems)
+  const P = GAME_CONFIG.season.pass; let g = 0;
+  for (let i = 1; i <= P.tiers; i++) { const r = passReward(i, true); if (r.plus || r.cos) continue;
+    g += offerWorthGems({ gems: r.gems, coins: r.coins, bag: r.bag, boosters: r.booster ? { x: r.boosterCount || 1 } : null }); }
+  return Math.round(g / 50) * 50;
+}
+function passRoadTile(r, t, prem, st) {   // st: { got, can, locked, earned }
+  const art = r.cos ? `<canvas class="kitCrop" data-kitcrop="${r.kind === 'trim' ? 'trim' : 'shirt'}" data-shirt="${'pass' + passSeasonKey().replace('-', '')}"></canvas>` : t3RewardArt(r);
+  const txt = r.cos ? (r.kind === 'trim' ? 'GOLD TRIM' : 'MONTH KIT') : r.bag ? `${bagNm(r.bag)} BAG` : r.gems ? `${r.gems} GEMS` : r.coins ? r.coins.toLocaleString() : r.booster ? `×${r.boosterCount || 1} ${BOOSTER_INFO[r.booster] ? BOOSTER_INFO[r.booster].short : 'BOOSTER'}` : '';
+  return `<div class="prT${prem ? ' prem' : ''}${st.got ? ' got' : ''}${st.can ? ' can' : ''}${st.earned ? ' earned' : ''}${r.milestone || t === GAME_CONFIG.season.pass.tiers ? ' ms' : ''}"${st.can ? ` data-pass="${t}:${prem ? 1 : 0}" role="button"` : ''}>
+    <div class="pa">${art}</div><b>${txt}</b>${st.got ? '<i class="tick">✓</i>' : st.locked ? `<i class="pad">${r.plus ? '+' : ''}</i>` : ''}${st.can ? '<span class="tap">TAP</span>' : st.earned ? '<span class="ern">EARNED</span>' : ''}</div>`;
+}
+function renderPassRoad(sh) {
+  { const R0 = document.documentElement; if (!R0._prVars) { R0._prVars = 1; try { R0.style.setProperty('--prFr', 'url(' + KIT_CARD_FRAME.legendary + ')'); R0.style.setProperty('--prBg', 'url(' + EV_KEY_ART.pass + ')'); R0.style.setProperty('--prPad', 'url(' + PASS_PADLOCK + ')'); } catch (e) {} } }
+  const P = GAME_CONFIG.season.pass, p = passState(), t = passTier(), into = p.xp - t * P.xpPerTier, m = _nowDate().getMonth(), R = P.road;
+  const MS = R.milestones.concat([P.tiers]), nextMs = MS.find(x => x > t);
+  let rows = '', earned = 0, earnedGems = 0;
+  for (let i = P.tiers; i >= 1; i--) {
+    const fr = passReward(i, false), pr = passReward(i, true), reached = i <= t;
+    const fGot = p.claimedFree.includes(i), pGot = p.claimedPrem.includes(i), pLocked = !p.premium || (pr.plus && !p.plus);
+    if (reached && pLocked && !pGot && !pr.plus) { earned++; earnedGems += pr.gems || 0; }
+    const ms = MS.includes(i);
+    if (i % 6 === 0) rows += `<div class="prOver${ms ? ' ms' : ''}"><span>${i === P.tiers ? 'LAST BALL · SEASON PRIZE' : `OVER ${i / 6} · BALL 6`}</span>${i === nextMs ? `<em>${nextMs - t} TIER${nextMs - t === 1 ? '' : 'S'} TO GO</em>` : ''}</div>`;
+    rows += `<div class="prRow${ms ? ' ms' : ''}${reached ? ' on' : ''}${i === t + 1 ? ' cur' : ''}" data-tier="${i}">
+      ${passRoadTile(fr, i, false, { got: fGot, can: reached && !fGot })}
+      <div class="prBall"><span>${i}</span></div>
+      ${passRoadTile(pr, i, true, { got: pGot, can: reached && !pGot && !pLocked, locked: pLocked && !pGot, earned: reached && pLocked && !pGot })}</div>`;
+  }
+  const fin = passReward(P.tiers, true), worth = passWorthGems(), left = passDaysLeft();
+  sh.innerHTML = `<div class="evTop"><button class="evBack" id="passClose" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b class="evTitle">FLICKY PASS</b>
+      <span class="lgPill"><i class="hIco hi-coin"></i><span>${career.coins.toLocaleString()}</span></span><span class="lgPill"><i class="hIco hi-gem"></i><span>${gems.toLocaleString()}</span></span></div>
+    <div class="prFinal"><span class="k">TIER ${P.tiers} · SEASON PRIZE</span><h2>${bagNm(fin.bag)} BAG<br>+ ${PASS_MONTH_NAMES[m]} KIT</h2>
+      <span class="s">${PASS_MONTH_NAMES[m]} kit only this month · <b>${left} DAY${left === 1 ? '' : 'S'} LEFT</b></span>
+      <img class="bag" alt="" src="${CHEST_IMG_SRC[fin.bag]}"><canvas class="pl" id="psPlayer" width="10" height="10"></canvas></div>
+    <div class="prXp"><span class="t">TIER <b>${t}</b></span><div class="bar"><i style="width:${t >= P.tiers ? 100 : into / P.xpPerTier * 100}%"></i><span>${t >= P.tiers ? 'MAX' : into + ' / ' + P.xpPerTier + ' XP'}</span></div><button class="psHow" data-pshow>i</button></div>
+    <div class="psHowBox">XP: ${P.xp.match} a match · +${P.xp.win} a win · ${P.xp.dailyMission} a daily mission · ${P.xp.weeklyMission} the weekly bag. Ball 6 of every over is a big one: ${R.msGems} gems, then the ${bagNm(fin.bag)} bag at tier ${P.tiers}.</div>
+    <div class="prLanes"><span>FREE</span><span class="pr">PREMIUM</span></div>
+    <div class="prRoad"><div class="prStrip"></div><div class="prRows">${rows}</div></div>
+    <div class="psCta prCta">${p.premium ? `<div class="psOn">${p.plus ? 'PASS+' : 'PREMIUM'} ACTIVE<small>+1 bag slot · bags open 10% faster${p.plus ? '' : ' · gold trim at tier 15 with Pass+'}</small></div>
+        ${p.plus ? '' : `<button class="gcBuy psPlus" data-buypass="plus">PASS+ · +10 TIERS · £${P.plus.toFixed(2)}</button>`}`
+      : `${earned ? `<div class="prLoss">You've already earned <b>${earned} premium reward${earned === 1 ? '' : 's'}</b>${earnedGems ? ` incl. <b>${earnedGems} gems</b>` : ''} — unlock to claim</div>` : ''}
+        <button class="gcBuy psAct" data-buypass="prem"><small>ACTIVATE · WORTH ${worth.toLocaleString()} GEMS</small>FLICKY PASS · £${P.premium.toFixed(2)}</button>
+        <button class="psPlusLink" data-buypass="plus">or PASS+ · jump 10 tiers + gold trim · £${P.plus.toFixed(2)}</button>`}</div>`;
+  { const pc = sh.querySelector('#psPlayer'); if (pc) paintPlayerTo(pc, Object.assign({}, curLook(), { shirt: 'pass' + passSeasonKey().replace('-', '') })); }
+  const road = sh.querySelector('.prRoad');
+  requestAnimationFrame(() => { const tg = sh.querySelector('.prT.can') ? sh.querySelector('.prT.can').closest('.prRow') : sh.querySelector('.prRow.cur') || sh.querySelector('.prRow[data-tier="1"]');
+    if (road && window._prKeepY != null) { road.scrollTop = window._prKeepY; window._prKeepY = null; } else if (tg && road) road.scrollTop = Math.max(0, tg.offsetTop - road.clientHeight * 0.62); });
+  if (!p.premium && earned) track('pass_earned_shown', { earned, gems: earnedGems });
+  updatePassBtn();
+}
+function passCelebrate(list, plus) {   // instant payoff after buying: everything already earned flies in at once
+  let el = document.getElementById('passWow'); if (!el) { el = document.createElement('div'); el.id = 'passWow'; document.body.appendChild(el); }
+  const tiles = list.map((r, i) => `<div class="pwT" style="--d:${0.45 + i * 0.12}s">${r.cos ? `<canvas class="kitCrop" data-kitcrop="${r.kind === 'trim' ? 'trim' : 'shirt'}" data-shirt="${'pass' + passSeasonKey().replace('-', '')}"></canvas>` : t3RewardArt(r)}<b>${r.cos ? (r.kind === 'trim' ? 'GOLD TRIM' : 'MONTH KIT') : t3RewardText(r)}</b></div>`).join('');
+  el.innerHTML = `<div class="pwIn"><div class="pwRays"></div><b class="pwTitle">${plus ? 'PASS+' : 'PASS'} ACTIVATED!</b><small class="pwSub">${list.length ? `${list.length} REWARD${list.length === 1 ? '' : 'S'} UNLOCKED` : 'YOUR PREMIUM TRACK IS OPEN'}</small><div class="pwGrid">${tiles}</div><button class="gcBuy pwOk">BRILLIANT</button></div>`;
+  el.classList.add('show');
+  try { playTone({ freq:523, duration:0.12, volume:0.14, type:'triangle' }); setTimeout(() => playTone({ freq:784, duration:0.14, volume:0.14, type:'triangle' }), 140); setTimeout(() => playTone({ freq:1047, duration:0.3, volume:0.14, type:'triangle' }), 300); hapticBig(); } catch (e) {}
+  try { _fireRayBurst && _fireRayBurst('#FFC93A', { big: true, coins: true }); } catch (e) {}
+  el.querySelector('.pwOk').onclick = () => { el.classList.remove('show'); renderPass(); };
+}
 function renderPass() {
+  if ((window.PASS_LAYOUT || 'road') === 'road') { const sh0 = document.querySelector('#passPanel .sheet'); if (!sh0) return; { const pp = document.getElementById('passPanel'); pp.classList.add('fs', 'ps-road'); pp.classList.remove('ps-book'); } { const P0 = GAME_CONFIG.season.pass, p0 = passState(); if (!p0.gift1) { p0.gift1 = true; if (p0.xp < P0.xpPerTier) { p0.xp = P0.xpPerTier; setTimeout(() => showMessage('TIER 1 FREE · WELCOME!', '#FFC93A', 2600), 400); } SAVE.save(); } } return renderPassRoad(sh0); }
   // PASS v2 (Oct 30, Joe's Golf Pass reference): full screen; one horizontal track you swipe along — free rewards
   // above the line, premium below on gold with padlocks, numbered tier nodes on the line that fill as you earn XP,
   // tap a glowing reward to claim it. One big ACTIVATE button (Pass+ as the smaller second option).
@@ -63142,7 +63283,7 @@ document.addEventListener('click', e => {
   if (t.closest('#passBtn')) { renderPass(); document.getElementById('passPanel').classList.add('show'); try { playUiTap(); } catch (err) {} return; }
   if (t.closest('#passClose') || t.id === 'passPanel') { document.getElementById('passPanel').classList.remove('show'); updatePassBtn(); return; }
   if (t.closest('[data-pshow]')) { const b = document.querySelector('#passPanel .psHowBox'); if (b) b.classList.toggle('open'); return; }
-  const c = t.closest('[data-pass]'); if (c) { const [tier, prem] = c.dataset.pass.split(':').map(Number); const tr = document.querySelector('#passPanel .psTrack'), x = tr ? tr.scrollLeft : 0; const l = claimPassTier(tier, !!prem); if (l) { showMessage('+ ' + l, '#FFC93A', 2000); try { hapticBig(); } catch (err) {} } renderPass(); requestAnimationFrame(() => { const t2 = document.querySelector('#passPanel .psTrack'); if (t2) t2.scrollLeft = x; }); return; }
+  const c = t.closest('[data-pass]'); if (c) { const [tier, prem] = c.dataset.pass.split(':').map(Number); const rd = document.querySelector('#passPanel .prRoad'), ry = rd ? rd.scrollTop : 0; window._prKeepY = ry; const tr = document.querySelector('#passPanel .psTrack'), x = tr ? tr.scrollLeft : 0; const l = claimPassTier(tier, !!prem); if (l) { showMessage('+ ' + l, '#FFC93A', 2000); try { hapticBig(); } catch (err) {} } renderPass(); requestAnimationFrame(() => { const t2 = document.querySelector('#passPanel .psTrack'); if (t2) t2.scrollLeft = x; }); return; }
   const b = t.closest('[data-buypass]'); if (b) { buyPass(b.dataset.buypass === 'plus'); return; }
 });
 FEATURE_UNLOCKS.pass = { when: () => (career.matchesPlayed || 0) >= 5, msg: 'NEW! FLICKY PASS · TAP EVENTS' };
