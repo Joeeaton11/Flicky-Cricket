@@ -6296,7 +6296,7 @@ THEME_ART.ty_railway = { dir: 'assets/themes/railway/', lightX: 1, ropeT: 0.016,
     sock: { xs: [.5598, .6285, .6973, .7655, .8342, .9025], y: .2349, r: .0244 }, eIcon: [.0869, .316, .016], eBar: [.1206, .3005, .9309, .3307] },
   extras: true };
 // Floodlit Series 2.a Evening (Nov 1): Camera 4 county ground at early evening; white-and-green pavilion scoreboard, cream club lettering, county pitch, ash stumps, white ball, white rope
-THEME_ART.te_evening = { dir: 'assets/themes/evening/', lightX: -1, ropeT: 0.012, flags: 0, ringN: 26, ringS: 0.02, fielderH: 0.044,
+THEME_ART.te_evening = { dir: 'assets/themes/evening/', lightX: -1, ropeT: 0.012, flags: 0, ringN: 26, ringS: 0.013, fielderH: 0.044,
   pitch: { ct: 76, cb: 598, wb: 331 },
   hud2: { aspect: 0.3505, body: 0.3505, badge: [0.0654, 0.0542, 0.1542, 0.1402], chase: [0.1692, 0.0551, 0.9383, 0.1318],
     wk: [[0.7822, 0.0607, 0.8477, 0.1252], [0.8645, 0.0607, 0.9299, 0.1252]], score: [0.0645, 0.1664, 0.5252, 0.2402],
@@ -36562,7 +36562,7 @@ function floodPlate(k) {
 }
 function floodPlateKey(k) { return FLOOD_PLATES[k] ? k : null; }
 // per-ground extras: lamp head centres, big-screen rect (fractions of the screen) and stand band for camera flashes
-const FLOOD_INFO = { dusk_stadium: { lamps: [[0.081, 0.129], [0.918, 0.129]], stands: [0.05, 0.15, 0.90, 0.10], pitch: '#cdb07a', led: true, flames: [[0.18, 0.872], [0.82, 0.872]] } };
+const FLOOD_INFO = { te_evening: { lamps: [[0.05, 0.075], [0.955, 0.075], [0.035, 0.87], [0.965, 0.87]], stands: [0.02, 0.19, 0.96, 0.12], deepen: true }, dusk_stadium: { lamps: [[0.081, 0.129], [0.918, 0.129]], stands: [0.05, 0.15, 0.90, 0.10], pitch: '#cdb07a', led: true, flames: [[0.18, 0.872], [0.82, 0.872]] } };
 // ---------- moving extras painted for a plate (Gully 1a, Nov 1: Figma 328:192). Positions are fractions of the screen = the plate. ----------
 const THEMED_EXTRAS = {
   te_evening: {   // moths round the floodlights, the club flag on the pavilion
@@ -36691,12 +36691,19 @@ function drawFloodPlateScene() {
   ctx.drawImage(window._floodCache, 0, 0, W, H);
   const t = performance.now() / 1000;
   if (themeArt() && themeArt().extras) { try { drawThemedExtras(t); } catch (e) {} }
+  // 'deepen': the evening darkens and the floodlights take over as the chase goes on (Floodlit Series)
+  let lampK = 1;
+  if (I.deepen) { const c = window.chase, prog = c && c.balls ? Math.min(1, (c.log ? c.log.length : 0) / c.balls) : 0;
+    window._duskP = (window._duskP == null ? prog : window._duskP + (prog - window._duskP) * 0.02);
+    const p = window._duskP; lampK = 0.7 + 0.55 * p;
+    const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, `rgba(30,24,80,${0.32 * p})`); g.addColorStop(0.35, `rgba(20,20,60,${0.18 * p})`); g.addColorStop(1, `rgba(10,10,40,${0.12 * p})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
   if (I.led) drawFloodLed(t, I);
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   // light beams from each lamp head down onto the field, gently breathing
   (I.lamps || []).forEach(([lx, ly], i) => {
     const x0 = W * lx, y0 = H * ly, tx = W * (0.5 + (lx < 0.5 ? -0.12 : 0.12)), ty = H * 0.56, sp = W * 0.34;
-    const a = 0.11 + 0.025 * Math.sin(t * 0.7 + i * 2);
+    const a = (0.11 + 0.025 * Math.sin(t * 0.7 + i * 2)) * lampK;
     const g = ctx.createLinearGradient(x0, y0, tx, ty);
     g.addColorStop(0, `rgba(255,248,225,${a * 2.2})`); g.addColorStop(0.35, `rgba(255,245,215,${a})`); g.addColorStop(1, 'rgba(255,245,215,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x0 - W * 0.03, y0); ctx.lineTo(x0 + W * 0.03, y0); ctx.lineTo(tx + sp / 2, ty); ctx.lineTo(tx - sp / 2, ty); ctx.closePath(); ctx.fill();
