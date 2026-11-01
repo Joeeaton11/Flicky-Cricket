@@ -94,6 +94,8 @@ if '--radial' in sys.argv:
     qu_x, qu_y = cx + (px_ - tcx) / su, cy + (py_ - tcy) / su
     if '--cut' in sys.argv:   # no blend: scenery at one scale, field cut in exactly (its plain surface can stretch unseen)
         wgt = np.clip((1.0 - rho) / 0.004, 0, 1)
+    if '--scenery-only' in sys.argv:   # the whole picture at the uniform scenery scale (used to blend the field into its surroundings)
+        wgt = np.zeros_like(rho)
     mx, my = wgt * qe_x + (1 - wgt) * qu_x, wgt * qe_y + (1 - wgt) * qu_y
     _rho = rho
     print(f'radial warp: uniform scale {su:.3f}, rows used {my.min():.0f}..{my.max():.0f} of {h0}')
