@@ -33,3 +33,9 @@
 - KEEPER: small kid in a yellow T-shirt with huge mismatched keeping gloves. BOWLER: lanky teen, purple T-shirt, red headband. UMPIRE: moustached auto-rickshaw driver in khaki uniform with sunglasses.
 - Props: concrete strip pitch with chalk creases; taped wooden-stick stumps; tennis ball wrapped in red tape; boundary of painted old tyres; ring marker small orange brick.
 - HUD: Mumbai truck-art — bright painted tin with flowers, mirrors and tassels. Words: truck-art hand lettering.
+
+## Gully Cup — 1.b `tm_maidan` (Mumbai Maidan)
+- CAMERA: 4 (far). LIGHT: morning sun from picture-left. Field: sunny, slightly dry maidan grass. Boundary: ring of whitewashed stones.
+- THEME: huge open park ground in old Bombay on a Sunday morning; crowds on the grass, rain trees, scorers' tent, peanut cart, coconut seller, bicycles, kit bags, kids' matches; Victorian-Gothic university + clock tower (showpiece, upper right), Art-Deco blocks, palms, skyline.
+- HUD: glossy bottle-green painted wood, cream moulded trim, brass corners/rivets, Gothic arch row on top. Words: vintage Bombay signwriter lettering, cream/marigold with bottle-green extrusion and thin red outline.
+- Props: dry clay pitch, red leather ball, whitewashed boundary stones, white disc ring markers; shares Gully's stick stumps. Extras: crows, tent flag, cart smoke, paper pinwheels.
