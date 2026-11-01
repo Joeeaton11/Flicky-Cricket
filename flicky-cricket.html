@@ -6205,6 +6205,7 @@ const MATCH_HUD = {
 };
 // Scaling: the scorebug and its parts keep their shape on every phone. Width = 59% of W, height from the
 // 230:98 aspect, top-left anchored 3px under the safe area. (Plain fractions of H squash it ~20% on an SE.)
+const MATCH_HUD_CREST = { x: 0.072, dy: 0.049, d: 0.108 };   // league crest on painted boards, fractions of screen width; same in every scene
 const MATCH_HUD_SCALE = { box:'scorebug', widthOfW:0.590, aspect:230/98, gapUnderSafeTop:3, baseW:230 };   // one size for every league (no wide version)
 // Text spec at the 230px-wide scorebug (scale by actual width / 230). Theme display font, tabular (fixed-width)
 // digits so ticking numbers don't jiggle. 'longest' is the widest text each slot must fit.
@@ -61748,12 +61749,12 @@ function drawMatchHud() {
   const bdx = HI ? hx((HD.badge[0] + HD.badge[2]) / 2) : x0 + 15 * s, bdy = HI ? hy((HD.badge[1] + HD.badge[3]) / 2) : y0 + tbH / 2;
   if (!HI) { ctx.fillStyle = '#FFC93A'; ctx.fillRect(x0, y0, 30 * s, tbH); }
   const _sk = currentTimeOfDay && currentTimeOfDay.key, _slg = _sk && THEMED_LEAGUES.find(L => (L.scenes || [L.sceneKey]).includes(_sk));
-  const CR = crestImg(_slg || lg);   // crest follows the ground's own league (also right in ?scene= previews)
-  if (CR) { const cd = HI ? (HD.badge[2] - HD.badge[0]) * bw * (HD.badgeK || 1.08) : 26 * s, k = cd / Math.min(CR.naturalWidth, CR.naturalHeight);
+  const CR = crestImg(_slg || lg);
+  if (!HI) { if (CR) { const cd = 26 * s, k = cd / Math.min(CR.naturalWidth, CR.naturalHeight);
     ctx.drawImage(CR, bdx - CR.naturalWidth * k / 2, bdy - CR.naturalHeight * k / 2, CR.naturalWidth * k, CR.naturalHeight * k); }
   else {
   ctx.fillStyle = lg.accentColor || '#2457D6'; ctx.beginPath(); ctx.arc(bdx, bdy, 10 * s, 0, 7); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = FONT(11); ctx.textAlign = 'center'; ctx.fillText(((lg.name || 'N')[0] || 'N'), bdx, bdy + 4 * s); }
+  ctx.fillStyle = '#fff'; ctx.font = FONT(11); ctx.textAlign = 'center'; ctx.fillText(((lg.name || 'N')[0] || 'N'), bdx, bdy + 4 * s); } }
   const won = c.won;
   const runsMode = c.mode === 'nets' || c.mode === 'tourney' || c.mode === 'endless';
   if (HI) { if (won || close) { ctx.fillStyle = won ? 'rgba(13,110,46,.75)' : 'rgba(200,34,44,.6)'; const q = HD.chase; _hudRR(hx(q[0]), hy(q[1]), (q[2] - q[0]) * bw, (q[3] - q[1]) * bw, 4 * s); ctx.fill(); } }
@@ -61835,6 +61836,10 @@ function drawMatchHud() {
     if (low) { ctx.save(); ctx.font = FONT(14); ctx.textAlign = 'right'; ctx.lineWidth = 4 * s; ctx.strokeStyle = '#050A14'; ctx.globalAlpha = (0.65 + 0.35 * p) * (window._hudA == null ? 1 : window._hudA);
       ctx.strokeText('TIRED', ex + ew - 4 * s, ey + 5 * s); ctx.fillStyle = '#ff8a8a'; ctx.fillText('TIRED', ex + ew - 4 * s, ey + 5 * s); ctx.restore(); } }
   ctx.restore();   // clip
+  // League crest on painted boards: one size, one spot, every scene (Joe, Nov 1) — a medal pinned over the board's top-left corner, no slot
+  if (HI && CR) { const C = MATCH_HUD_CREST, cd = C.d * W, cx = C.x * W, cy = y0 + C.dy * W, k = cd / Math.min(CR.naturalWidth, CR.naturalHeight);
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 5 * s; ctx.shadowOffsetY = 2 * s;
+    ctx.drawImage(CR, cx - CR.naturalWidth * k / 2, cy - CR.naturalHeight * k / 2, CR.naturalWidth * k, CR.naturalHeight * k); ctx.restore(); }
   if (!HI) { ctx.globalAlpha = ha; ctx.strokeStyle = close ? '#ff5a5a' : '#050A14'; ctx.lineWidth = 2 * s; _hudRR(x0, y0, bw, bh, 12 * s); ctx.stroke(); } ctx.globalAlpha = 1;
   window._hudBottom = y0 + bh;
   // timing word, floats up beside the batter for 0.8 s
