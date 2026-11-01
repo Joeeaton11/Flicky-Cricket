@@ -63610,6 +63610,7 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .evNode .tick{position:absolute;right:-4px;bottom:-4px;width:24px;height:24px;border-radius:50%;background:#4fd46a;border:2px solid #050A14;font-size:13px;display:flex;align-items:center;justify-content:center;color:#04310f}
   .evNode span{font-size:13px}.evNode small{font-size:10px;color:#B4C2DD;letter-spacing:.04em}
   .evNodeIco{width:36px !important;height:36px !important}
+  .evWait{display:block;margin-top:2px;font-size:12px;color:#FFE27A;letter-spacing:.04em}
   .evSwatch{width:34px;height:34px;border-radius:9px;border:3px solid #050A14;box-shadow:inset 0 -7px 0 rgba(0,0,0,.25)}
   .evMedal{width:40px;height:40px;border-radius:50%;border:3px solid #050A14;display:flex;align-items:center;justify-content:center;font-size:13px;color:#3a2300;background:radial-gradient(circle at 35% 30%,#fff3c0,#e0a020 70%)}
   .evMedal.mwin{background:radial-gradient(circle at 35% 30%,#d8fff0,#2BB3A0 70%);font-size:0}
@@ -63751,11 +63752,12 @@ function renderCompeteV2() {
       btn: play('endless', todo.endless, S.endless.ticketGems + '<i class="hIco hi-gem"></i>') }));
   }
   if (featureOn('pass')) { const P = GAME_CONFIG.season.pass, t = passTier(), into = passState().xp - t * P.xpPerTier, c = passClaimable(); todo.pass = c > 0;
-    const tiersN = [t + 1, t + 2, t + 3].filter(i => i <= P.tiers);
+    const MS = P.road.milestones.concat([P.tiers]), msN = MS.filter(i => i > t).slice(0, 3);   // Nov 1: show the big moments ahead, not the next small tiers
+    let waitN = 0; if (!passPremiumActive()) for (let i = 1; i <= t; i++) if (!passReward(i, true).plus) waitN++;
     posters.push(poster({ k: 'pass', ico: 'pass', col: '#FFC93A', key: 'pass', big: bag('gold', 'evBigArt'), timer: `ENDS IN <b>${passDaysLeft()} DAY${passDaysLeft() === 1 ? '' : 'S'}</b>`, name: `FLICKY PASS · ${PASS_MONTH_NAMES[now.getMonth()]}`, tag: passPremiumActive() ? 'PREMIUM ACTIVE' : 'FREE TRACK · PREMIUM £' + P.premium.toFixed(2),
-      goal: `TIER <em>${t}</em> / ${P.tiers}`,
-      road: track(tiersN.map((i, k) => ({ r: passReward(i, false), label: `TIER ${i}`, sub: rewardLabel(passReward(i, false)).replace(/^\+\s*/, '').slice(0, 14), next: k === 0 })), into / P.xpPerTier * 50),
-      rules: `Earn XP from every match (+${P.xp.match}), wins (+${P.xp.win}) and missions. Premium adds this month's kit, 600 gems, gold bags and 10% faster bags.`,
+      goal: `TIER <em>${t}</em> / ${P.tiers}${waitN ? `<small class="evWait">${waitN} PREMIUM REWARD${waitN === 1 ? '' : 'S'} WAITING</small>` : ''}`,
+      road: track(msN.map((i, k) => { const r = passReward(i, true); return { r, label: `TIER ${i}`, sub: r.gems ? r.gems + ' GEMS' : bagNm(r.bag) + ' BAG', next: k === 0 }; }), msN.length ? Math.min(100, (t + into / P.xpPerTier) / msN[0] * 50) : 100),
+      rules: `Earn XP from every match (+${P.xp.match}), wins (+${P.xp.win}) and missions. Ball 6 of every over is a big one: ${P.road.msGems} gems at tiers ${P.road.milestones.join(', ')}, the ${bagNm(passReward(P.tiers, true).bag)} bag at ${P.tiers}. Premium also gives this month's kit, gold bags, boosters and 10% faster bags.`,
       btn: `<button class="gcBuy evGo${c ? ' claim' : ''}" data-openpass>${c ? `CLAIM ${c}` : 'OPEN PASS'}</button>` })); }
   if (on) { const ev = activeEvent(), nx = nextEvent();
     if (ev) { const st = eventState(ev), left = Math.max(0, Math.ceil((new Date(ev.end + 'T23:59:59') - now) / 864e5)), nextAt = (st.claimed + 1) * ev.every, can = st.claimed < ev.track.length && st.cur >= nextAt; todo.event = can;
