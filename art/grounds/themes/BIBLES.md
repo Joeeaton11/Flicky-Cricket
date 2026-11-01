@@ -51,3 +51,9 @@
 - THEME: huge dusty playground; cream + sky-blue three-storey school with balconies of cheering kids in white shirts and navy shorts/pinafores; stage with flag pole, teachers in saris with whistles, banyan with stone seat, swings and slide, yellow school bus, bike rack, water cooler, school bell, bunting, chalkboard on an easel.
 - HUD: green chalkboard in a honey varnished wood frame. Words: sports-day poster letters (red/yellow/blue/orange, white chalky outline, navy extrusion); digits white.
 - Props: faded green coir matting pitch on dusty earth, orange plastic school stumps, red ball, orange PE cones as the boundary, yellow PE disc ring markers. Extras: crows, a paper plane, a school pennant.
+
+## Gully Cup — 1.e `tv_village` (Indian village after the monsoon)
+- CAMERA: 5 (far away, tilt-shift miniature). LIGHT: fresh morning sun from picture-left.
+- THEME: our field ringed by a red-earth lane; terraced emerald paddies with farmers, palm groves, lotus ponds with ducks, terracotta-roof houses, white temple with saffron flag, banyans on stone platforms with villagers watching, well, haystacks, goats, bullock cart, bikes; misty hills + waterfall + blue sky at the top.
+- HUD: sun-bleached wooden planks in a bamboo frame lashed with jute, marigold garland. Words: carved wood, marigold/turmeric faces, brown extrusion, white rangoli dots; cream digits.
+- Props: hand-rolled red-earth pitch with cracks, grass tufts and bare footmarks; whittled peeled-stick stumps and twig bails; scuffed old leather ball; twisted jute rope boundary; river-pebble ring markers. Extras: egrets, saffron flag, wood smoke.
