@@ -29993,48 +29993,56 @@ const ST_ACH_DESC = { half_century:'50+ runs in one innings', century:'100+ runs
 function statsClaimable() {
   return ACHIEVEMENTS.filter(a => unlockedAchievements.includes(a.key) && a.gems && !claimedAchievementGems.includes(a.key));
 }
-function statsClaim(a) {
+function statsClaim(a, srcEl) {
   if (!a || claimedAchievementGems.includes(a.key)) return;
-  statsClaimList([a]);
+  statsClaimList([a], srcEl);
 }
-// Nov 1 (Joe: "when I've collected a reward nothing happens"): claiming opens a celebration — the badge(s) in full
-// colour on rays, the gems total, and COLLECT sends gems flying into the gem pill, which counts up.
-function statsClaimList(list) {
+// Nov 1 (Joe): every tap gives feedback — the gems pop up out of what you tapped (a card or the CLAIM button),
+// then fly into the gem pill at the top, which bumps and counts up as each one lands.
+let _stFlying = 0;
+function statsClaimList(list, srcEl) {
   list = list.filter(a => !claimedAchievementGems.includes(a.key)); if (!list.length) return;
-  const total = list.reduce((t, a) => t + (a.gems || 0), 0), before = gems;
+  const total = list.reduce((t, a) => t + (a.gems || 0), 0);
+  const pill = document.getElementById('statsGemPill');
+  const shown = pill ? (parseInt((pill.textContent || '').replace(/[^0-9]/g, ''), 10) || gems) : gems;
   list.forEach(a => claimedAchievementGems.push(a.key));
   saveClaimedAchievementGems(); grantGems(total); updateStatsNavBadge();
-  let el = document.getElementById('awWow'); if (!el) { el = document.createElement('div'); el.id = 'awWow'; document.body.appendChild(el); }
-  const badge = (a, i) => `<div class="awB" style="--d:${0.3 + i * 0.12}s"><span class="stMed aw aw-${a.key}"${ST_AW_NUM[a.key] ? ` data-n="${ST_AW_NUM[a.key][0]}" data-t="${ST_AW_NUM[a.key][1]}"` : ''}></span>${list.length > 1 ? `<b>${a.name}</b>` : ''}</div>`;
-  const shown = list.slice(0, 6);
-  el.innerHTML = `<div class="pwIn"><div class="pwRays"></div><b class="pwTitle">${list.length > 1 ? 'AWARDS' : 'AWARD'} COMPLETE!</b>` +
-    (list.length === 1 ? `<small class="pwSub">${list[0].name} · ${ST_ACH_DESC[list[0].key] || list[0].desc}</small>` : `<small class="pwSub">${list.length} AWARDS UNLOCKED</small>`) +
-    `<div class="awGrid${list.length === 1 ? ' one' : ''}">${shown.map(badge).join('')}${list.length > 6 ? `<div class="awMore">+${list.length - 6} MORE</div>` : ''}</div>` +
-    `<div class="awGems"><i class="hIco hi-gem"></i>+${total}</div><button class="gcBuy pwOk">COLLECT</button></div>`;
-  el.classList.add('show');
-  try { playTone({ freq:523, duration:0.12, volume:0.14, type:'triangle' }); setTimeout(() => playTone({ freq:784, duration:0.14, volume:0.14, type:'triangle' }), 140); setTimeout(() => playTone({ freq:1047, duration:0.3, volume:0.14, type:'triangle' }), 300); hapticBig(); } catch (e) {}
-  try { _fireRayBurst && _fireRayBurst('#a855f7', { big: true }); } catch (e) {}
-  const pill = document.getElementById('statsGemPill');
-  if (pill) pill.innerHTML = '<i class="hIco hi-gem"></i>' + before.toLocaleString();
-  const ok = el.querySelector('.pwOk');
-  ok.onclick = () => {
-    if (ok.disabled) return; ok.disabled = true;
-    const from = el.querySelector('.awGems').getBoundingClientRect(), to = pill ? pill.getBoundingClientRect() : { left: innerWidth - 60, top: 20, width: 40, height: 30 };
-    const n = Math.min(12, Math.max(5, Math.round(total / 4))), fx = from.left + from.width / 2, fy = from.top + from.height / 2, tx = to.left + 18, ty = to.top + to.height / 2;
-    el.classList.add('flying');
-    for (let i = 0; i < n; i++) {
-      const g = document.createElement('i'); g.className = 'hIco hi-gem awFly';
-      const sx = fx + (Math.random() - 0.5) * 90, sy = fy + (Math.random() - 0.5) * 50;
-      g.style.left = sx + 'px'; g.style.top = sy + 'px'; document.body.appendChild(g);
-      g.animate([{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1.15)', opacity: 1, offset: .2 },
-        { transform: `translate(calc(-50% + ${tx - sx}px), calc(-50% + ${ty - sy}px)) scale(.6)`, opacity: 1 }],
-        { duration: 650 + i * 45, delay: i * 40, easing: 'cubic-bezier(.5,0,.75,.4)', fill: 'forwards' }).onfinish = () => {
-          g.remove(); try { playTone({ freq: 900 + i * 40, duration: 0.05, volume: 0.06, type: 'triangle' }); } catch (e) {}
-          if (pill) { const v = Math.round(before + total * (i + 1) / n); pill.innerHTML = '<i class="hIco hi-gem"></i>' + v.toLocaleString(); pill.classList.remove('awBump'); void pill.offsetWidth; pill.classList.add('awBump'); }
-        };
-    }
-    setTimeout(() => { el.classList.remove('show', 'flying'); renderStatsScreen(); }, 700 + n * 85);
-  };
+  try { hapticBig(); playTone({ freq:784, duration:0.1, volume:0.13, type:'triangle' }); setTimeout(() => playTone({ freq:1047, duration:0.16, volume:0.13, type:'triangle' }), 90); } catch (e) {}
+  if (pill) pill.innerHTML = '<i class="hIco hi-gem"></i>' + shown.toLocaleString();
+  const from = srcEl ? srcEl.getBoundingClientRect() : { left: innerWidth / 2 - 40, top: innerHeight / 2 - 20, width: 80, height: 40 };
+  if (srcEl) { srcEl.classList.add('stGot'); srcEl.style.pointerEvents = 'none';
+    const f = srcEl.querySelector('.stF'); if (f) f.innerHTML = '✔ COLLECTED'; }
+  const fx = from.left + from.width / 2, fy = from.top + from.height / 2;
+  const plus = document.createElement('div'); plus.className = 'stPlus'; plus.innerHTML = `<i class="hIco hi-gem"></i>+${total}`;
+  plus.style.left = fx + 'px'; plus.style.top = fy + 'px'; document.body.appendChild(plus);
+  setTimeout(() => plus.remove(), 1100);
+  const to = pill ? pill.getBoundingClientRect() : { left: innerWidth - 60, top: 20, width: 40, height: 30 };
+  const tx = to.left + 18, ty = to.top + to.height / 2, n = Math.min(10, Math.max(4, Math.round(total / 5)));
+  _stFlying++;
+  let landed = 0;
+  for (let i = 0; i < n; i++) {
+    const g = document.createElement('i'); g.className = 'hIco hi-gem awFly';
+    const ang = Math.PI * 2 * i / n + Math.random() * .5, r = 34 + Math.random() * 26;
+    const px = fx + Math.cos(ang) * r, py = fy + Math.sin(ang) * r * .7 - 10;
+    g.style.left = fx + 'px'; g.style.top = fy + 'px'; document.body.appendChild(g);
+    g.animate([
+      { transform: 'translate(-50%,-50%) scale(.3)', opacity: 0 },
+      { transform: `translate(calc(-50% + ${px - fx}px), calc(-50% + ${py - fy}px)) scale(1.1)`, opacity: 1, offset: .32 },
+      { transform: `translate(calc(-50% + ${px - fx}px), calc(-50% + ${py - fy - 6}px)) scale(1)`, opacity: 1, offset: .45 },
+      { transform: `translate(calc(-50% + ${tx - fx}px), calc(-50% + ${ty - fy}px)) scale(.55)`, opacity: 1 }],
+      { duration: 900 + i * 50, delay: i * 30, easing: 'cubic-bezier(.45,0,.7,.45)', fill: 'forwards' }).onfinish = () => {
+        g.remove(); landed++;
+        try { playTone({ freq: 880 + landed * 45, duration: 0.05, volume: 0.06, type: 'triangle' }); } catch (e) {}
+        if (pill) { pill.innerHTML = '<i class="hIco hi-gem"></i>' + Math.round(shown + total * landed / n).toLocaleString(); pill.classList.remove('awBump'); void pill.offsetWidth; pill.classList.add('awBump'); }
+        if (landed === n) { _stFlying--; setTimeout(() => { if (!_stFlying) renderStatsScreen(); }, 350); }
+      };
+  }
+  // the header totals update straight away so the tap reads as done
+  const hd = document.querySelector('.stAwHead span'); if (hd) { const e = ACHIEVEMENTS.filter(x => claimedAchievementGems.includes(x.key)).reduce((t, x) => t + (x.gems || 0), 0); hd.textContent = e + ' GEMS EARNED'; }
+  const cb = document.getElementById('statsClaimBtn');
+  if (cb) { const left = statsClaimable(); if (!left.length) { cb.classList.add('stGot'); cb.innerHTML = '✔ COLLECTED'; cb.style.pointerEvents = 'none'; }
+    else cb.innerHTML = `CLAIM <i class="hIco hi-gem" aria-hidden="true"></i>${left.reduce((t, x) => t + x.gems, 0)}${left.length > 1 ? ` · ${left.length} REWARDS` : ` · ${left[0].name}`}`; }
+  if (!srcEl || srcEl.id === 'statsClaimBtn') list.forEach(x => { const c = document.querySelector(`#statsAchGrid .stAch.claim[data-k="${x.key}"]`); if (c) { c.classList.add('stGot'); c.style.pointerEvents = 'none'; const f = c.querySelector('.stF'); if (f) f.innerHTML = '✔ COLLECTED'; } });
 }
 
 // "NEW" record flags: set when a record is beaten, shown (and cleared) the next time that Stats tab is opened
@@ -30161,7 +30169,7 @@ ${(`<div class="stCard" style="padding:12px 14px">
       }
       el.innerHTML = `<span class="stMed aw aw-${a.key}"${ST_AW_NUM[a.key] ? ` data-n="${ST_AW_NUM[a.key][0]}" data-t="${ST_AW_NUM[a.key][1]}"` : ''}></span>
         <span class="stT"><span class="stN">${a.name}</span><span class="stD">${ST_ACH_DESC[a.key] || a.desc}</span>${foot}</span>`;
-      if (canClaim) el.addEventListener('click', () => statsClaim(a));
+      if (canClaim) { el.dataset.k = a.key; el.addEventListener('click', () => statsClaim(a, el)); }
       if (rank(a) === 2) { doneEls.push(el); el.classList.add('stDoneItem'); if (!statsShowDone) el.style.display = 'none'; }
       grid.appendChild(el);
     });
@@ -30174,7 +30182,7 @@ ${(`<div class="stCard" style="padding:12px 14px">
     }
     const cb = document.getElementById('statsClaimBtn');
     if (cb) cb.addEventListener('click', () => {
-      statsClaimList(statsClaimable());
+      statsClaimList(statsClaimable(), cb);
     });
   }
 }
@@ -63257,6 +63265,13 @@ function buyPass(plus) {
   .prLeft{display:inline-block;margin-right:4px;vertical-align:1px;padding:2px 9px;border-radius:9px;background:#e8283c;border:2px solid #050A14;font-size:11px;box-shadow:0 2px 0 rgba(0,0,0,.4)}
   #passPanel.ps-road .psPlusLink{color:#FFE27A !important;opacity:1 !important;font-size:13px;text-decoration:underline;text-shadow:0 1px 0 #050A14;margin-top:4px}
   #passPanel.ps-road .psAct small{font-size:11px;opacity:.95}
+  .stAch.stGot{animation:stGot .45s cubic-bezier(.3,1.6,.5,1);border-color:#6EE787 !important;box-shadow:0 0 0 2px #6EE787,0 0 16px rgba(110,231,135,.55) !important}
+  .stAch.stGot .stF{color:#6EE787 !important}
+  .stClaim.stGot{background:linear-gradient(#7CF29A,#2a9a3e) !important;animation:stGot .45s cubic-bezier(.3,1.6,.5,1)}
+  @keyframes stGot{40%{transform:scale(1.06)}}
+  .stPlus{position:fixed;z-index:9100;display:flex;align-items:center;gap:4px;font-family:'Lilita One','Arial Black',Arial,sans-serif;font-size:30px;color:#fff;-webkit-text-stroke:1.5px #050A14;text-shadow:0 3px 0 #050A14;pointer-events:none;transform:translate(-50%,-50%);animation:stPlus 1.1s ease-out forwards}
+  .stPlus .hIco{width:32px;height:32px}
+  @keyframes stPlus{0%{transform:translate(-50%,-30%) scale(.4);opacity:0}25%{transform:translate(-50%,-90%) scale(1.15);opacity:1}70%{transform:translate(-50%,-120%) scale(1);opacity:1}100%{transform:translate(-50%,-150%) scale(.9);opacity:0}}
   #awWow{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(3,8,20,.84);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
   #awWow.show{display:flex} #awWow.flying .pwIn > :not(.awGems):not(.pwRays){opacity:.35;transition:opacity .3s}
   #awWow .pwTitle{font-size:34px;text-align:center}
