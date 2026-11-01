@@ -16,7 +16,7 @@ for i in range(1,n2):
   if max(w_,h_)>60 and a<0.3*w_*h_: keep|=(l2==i).astype(np.uint8)
 pale=keep
 img=cv2.inpaint(img,cv2.dilate(pale,np.ones((5,5),np.uint8))*255,7,cv2.INPAINT_TELEA).astype(np.float32)
-s=2*rx/(fr-fl)*1.05; L=int(round(2*ry/s-(fb-ft))); print('scale',round(s,3),'repeat',L)
+s=2*rx/(fr-fl); L=int(round(2*ry/s-(fb-ft))); print('scale',round(s,3),'repeat',L)
 mid=(ft+fb)//2; k=max(1,int(np.ceil(L/90))); Lb=int(round(L/k)); a0=mid-Lb//2; F=16; w=np.linspace(0,1,F)[:,None,None]
 b=img[a0:a0+Lb].copy(); b[:F]=img[a0+Lb-F:a0+Lb]*(1-w)+b[:F]*w
 rest=img[a0+Lb:].copy(); rest[:F]=b[-F:]*(1-w)+rest[:F]*w
