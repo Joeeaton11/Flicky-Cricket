@@ -549,3 +549,4 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - Corners (Joe: NEW spaced better): NEW tab top-left, LV tab top-right; the green upgrade chevron is hidden on grid tiles (the pill already says UPGRADE!).
 - Unlock reveal (Joe: the WHOLE card incl. border flips, `kbRvFlip` on `.kbItem.kbRv`): items owned but not in `flickyKitRevealed` (first run seeds it with everything already owned) render with `.kbRv` — the locked card (`.kbRvCard`) flips to the item with a burst (`.kbRvBurst`) and a rising two-note chime, staggered 0.35s per item. Reduced-motion skips it.
 - Gotcha: the `border` shorthand with !important wipes border-image-source — use border-width/style/color longhands.
+- Legendary shimmer on locked legendary cards (Joe picked it): slow foil sweep every 3.6s via `.kbTile::after`, alternate cards offset 1.2s; off for reduced motion.
