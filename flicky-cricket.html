@@ -6244,7 +6244,13 @@ THEME_ART.tw_wizard = { dir: 'assets/themes/wizard/', lightX: -1, ropeT: 0.011, 
 THEME_ART.tg_gully = { dir: 'assets/themes/gully/', lightX: 1, ropeT: 0.016, flags: 6, ringN: 24, ringS: 0.024, fielderH: 0.044,
   pitch: { ct: 131, cb: 744, wb: 322 },
   board: { slices: [[0, .06, 0], [.06, .47, 1], [.47, .53, 0], [.53, .94, 1], [.94, 1, 0]], L: [.072, .391, .459, .732], R: [.541, .391, .928, .732], lL: [.161, .25, .371, .341], lR: [.629, .247, .839, .341] },
-  energy: { cap: .1, ch: [.1, .211, .9, .711] }, six: { cy: .345, r: .055, xs: [.1095, .2655, .422, .579, .7345, .8905] }, best: { p: [.098, .505, .898, .892] } };
+  energy: { cap: .1, ch: [.1, .211, .9, .711] }, six: { cy: .345, r: .055, xs: [.1095, .2655, .422, .579, .7345, .8905] }, best: { p: [.098, .505, .898, .892] },
+  // Nov 1: painted truck-art frame for the corner scoreboard (Figma 328:191). All slots are fractions of the frame WIDTH (x and y).
+  hud2: { aspect: .4187, body: .3728, badge: [.0495, .0477, .1378, .136], chase: [.1634, .038, .9602, .1449],
+    wk: [[.7721, .0477, .8569, .136], [.8675, .0477, .9505, .136]], score: [.0389, .1723, .3975, .2721],
+    sock: { xs: [.4527, .5455, .6374, .7301, .822, .9148], y: .2231, r: .034 }, eIcon: [.0746, .3216, .0212], eBar: [.1175, .3048, .9505, .3357] },
+  // moving extras painted for this plate (Figma 328:192)
+  extras: true };
 // Chennai shares the IPL kit (HUD, props, words) with yellow-shirted fielders — first league-sharing test
 THEME_ART.chennai_night = Object.assign({}, THEME_ART.t20_night, { dir: 'assets/themes/chennai/', lightX: 0 });
 Object.keys(THEME_ART).forEach(k => {
@@ -36421,6 +36427,45 @@ function floodPlate(k) {
 function floodPlateKey(k) { return FLOOD_PLATES[k] ? k : null; }
 // per-ground extras: lamp head centres, big-screen rect (fractions of the screen) and stand band for camera flashes
 const FLOOD_INFO = { dusk_stadium: { lamps: [[0.081, 0.129], [0.918, 0.129]], stands: [0.05, 0.15, 0.90, 0.10], pitch: '#cdb07a', led: true, flames: [[0.18, 0.872], [0.82, 0.872]] } };
+// ---------- moving extras painted for a plate (Gully 1a, Nov 1: Figma 328:192). Positions are fractions of the screen = the plate. ----------
+const THEMED_EXTRAS = {
+  tg_gully: {
+    kites: [{ img: 'x_kite1', x: .74, y: .055, w: .085, hold: [.975, .1], ph: 0 }, { img: 'x_kite2', x: .66, y: .165, w: .07, hold: [.985, .23], ph: 2.1 }],
+    pigeons: { y: [.205, .245], every: 11, w: .05 },
+    steam: [{ x: .245, y: .955, w: .06 }],
+    fans: [{ x: .955, y: .6, w: .055 }, { x: .03, y: .7, w: .05, ph: 1.3 }],
+  },
+};
+function _xImg(img, cx, cy, w, rot, a) {
+  const I = tImg(img); if (!I) return;
+  const h = w * I.naturalHeight / I.naturalWidth;
+  ctx.save(); ctx.translate(cx, cy); if (rot) ctx.rotate(rot); if (a != null) ctx.globalAlpha *= a;
+  ctx.drawImage(I, -w / 2, -h / 2, w, h); ctx.restore();
+}
+function drawThemedExtras(t) {
+  const X = THEMED_EXTRAS[currentTimeOfDay.key]; if (!X) return;
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; if (reduce) t = 0;
+  // kites: drift on the breeze, strings down to the rooftop flyers
+  (X.kites || []).forEach(k => {
+    const kx = W * (k.x + .012 * Math.sin(t * .7 + k.ph) + .006 * Math.sin(t * 1.9 + k.ph)), ky = H * (k.y + .006 * Math.sin(t * 1.1 + k.ph));
+    const w = W * k.w, tail = Math.sin(t * 2.4 + k.ph) * .12;
+    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(kx, ky + w * .3); ctx.quadraticCurveTo((kx + W * k.hold[0]) / 2, ky + H * .06, W * k.hold[0], H * k.hold[1]); ctx.stroke(); ctx.restore();
+    _xImg(k.img, kx, ky, w, tail);
+  });
+  // pigeons: a little flock flaps across the street every few seconds
+  if (X.pigeons) { const P = X.pigeons, cyc = t % P.every, dur = 4.2;
+    if (cyc < dur) { const run = Math.floor(t / P.every), dir = run % 2 ? -1 : 1, yb = P.y[0] + (P.y[1] - P.y[0]) * ((run * 0.37) % 1);
+      for (let i = 0; i < 3; i++) { const f = (cyc - i * .25) / dur; if (f < 0 || f > 1) continue;
+        const px = dir > 0 ? -0.08 + f * 1.16 : 1.08 - f * 1.16, py = yb + i * .012 - .02 * Math.sin(f * Math.PI);
+        const up = Math.floor(t * 9 + i) % 2;
+        ctx.save(); ctx.translate(W * px, H * py); ctx.scale(-dir, 1); _xImg(up ? 'x_pigeon_up' : 'x_pigeon_dn', 0, 0, W * P.w * (1 - i * .12)); ctx.restore(); } } }
+  // chai steam: puffs rise, grow and fade
+  (X.steam || []).forEach(st => { for (let i = 0; i < 3; i++) { const f = ((t * .45) + i / 3) % 1;
+    _xImg('x_steam', W * (st.x + .01 * Math.sin(t + i * 2)), H * (st.y - f * .045), W * st.w * (.5 + f * .6), 0, (f < .2 ? f / .2 : 1 - (f - .2) / .8) * .75); } });
+  // paper fans waving in the crowd
+  (X.fans || []).forEach(fn => _xImg('x_fan', W * fn.x, H * fn.y, W * fn.w, Math.sin(t * 5 + (fn.ph || 0)) * .35));
+}
 function drawFloodPlateScene() {
   const k = currentTimeOfDay.key, P = floodPlate(k), I = FLOOD_INFO[k] || {}, key = k + W + 'x' + H + '@' + DPR;
   if (!P) {
@@ -36439,6 +36484,7 @@ function drawFloodPlateScene() {
   }
   ctx.drawImage(window._floodCache, 0, 0, W, H);
   const t = performance.now() / 1000;
+  if (themeArt() && themeArt().extras) { try { drawThemedExtras(t); } catch (e) {} }
   if (I.led) drawFloodLed(t, I);
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   // light beams from each lamp head down onto the field, gently breathing
@@ -61439,7 +61485,9 @@ function drawMatchHud() {
   const baseW = MATCH_HUD_SCALE.baseW;
   const s = (W * MATCH_HUD_SCALE.widthOfW) / MATCH_HUD_SCALE.baseW;   // keeps its shape on every phone
   const x0 = W * MATCH_HUD.scorebug.l, y0 = Math.max(SAFE_TOP + MATCH_HUD_SCALE.gapUnderSafeTop, H * MATCH_HUD.scorebug.t);
-  const bw = baseW * s, bh = 98 * s, now = performance.now();
+  const _ta = themeArt(), HD = _ta && _ta.hud2, HI = HD && tImg('hud2');   // painted frame for this ground, when it has one
+  const bw = baseW * s, bh = HI ? HD.body * bw : 98 * s, now = performance.now();
+  const hx = f => x0 + f * bw, hy = f => y0 + f * bw;
   const FONT = (px) => `${Math.round(px * s)}px 'Lilita One','Arial Black',Arial,sans-serif`;
   const close = chaseClose();
   // Oct 30: hidden while the TV intro plays, then fades in as the intro band flies up into it
@@ -61454,21 +61502,25 @@ function drawMatchHud() {
     ctx.strokeStyle = 'rgba(255,90,90,' + (0.55 + 0.35 * p) + ')'; ctx.lineWidth = 3 * s; _hudRR(x0 - 1.5 * s, y0 - 1.5 * s, bw + 3 * s, bh + 3 * s, 13 * s); ctx.stroke(); ctx.restore();
   }
   // frame
+  if (HI) { ctx.drawImage(HI, x0, y0, bw, bw * HD.aspect); }
+  else {
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; _hudRR(x0, y0 + 3 * s, bw, bh, 12 * s); ctx.fill();
-  ctx.fillStyle = '#0E1C38'; _hudRR(x0, y0, bw, bh, 12 * s); ctx.fill();
+  ctx.fillStyle = '#0E1C38'; _hudRR(x0, y0, bw, bh, 12 * s); ctx.fill(); }
   ctx.save(); _hudRR(x0, y0, bw, bh, 12 * s); ctx.clip();
   // top band: badge + chase panel
   const tbH = 46 * s;
   const lg = THEMED_LEAGUES[c.leagueIdx] || {};
-  ctx.fillStyle = '#FFC93A'; ctx.fillRect(x0, y0, 30 * s, tbH);
-  ctx.fillStyle = lg.accentColor || '#2457D6'; ctx.beginPath(); ctx.arc(x0 + 15 * s, y0 + tbH / 2, 10 * s, 0, 7); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = FONT(11); ctx.textAlign = 'center'; ctx.fillText(((lg.name || 'N')[0] || 'N'), x0 + 15 * s, y0 + tbH / 2 + 4 * s);
+  const bdx = HI ? hx((HD.badge[0] + HD.badge[2]) / 2) : x0 + 15 * s, bdy = HI ? hy((HD.badge[1] + HD.badge[3]) / 2) : y0 + tbH / 2;
+  if (!HI) { ctx.fillStyle = '#FFC93A'; ctx.fillRect(x0, y0, 30 * s, tbH); }
+  ctx.fillStyle = lg.accentColor || '#2457D6'; ctx.beginPath(); ctx.arc(bdx, bdy, 10 * s, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = FONT(11); ctx.textAlign = 'center'; ctx.fillText(((lg.name || 'N')[0] || 'N'), bdx, bdy + 4 * s);
   const won = c.won;
   const runsMode = c.mode === 'nets' || c.mode === 'tourney' || c.mode === 'endless';
-  ctx.fillStyle = won ? '#0d6e2e' : runsMode ? '#1e3a8a' : close ? '#c8222c' : '#7a1420';
-  ctx.fillRect(x0 + 30 * s, y0, bw - 30 * s, tbH);
+  if (HI) { if (won || close) { ctx.fillStyle = won ? 'rgba(13,110,46,.75)' : 'rgba(200,34,44,.6)'; const q = HD.chase; _hudRR(hx(q[0]), hy(q[1]), (q[2] - q[0]) * bw, (q[3] - q[1]) * bw, 4 * s); ctx.fill(); } }
+  else { ctx.fillStyle = won ? '#0d6e2e' : runsMode ? '#1e3a8a' : close ? '#c8222c' : '#7a1420';
+  ctx.fillRect(x0 + 30 * s, y0, bw - 30 * s, tbH); }
   ctx.textAlign = 'left';
-  const tx = x0 + 40 * s, mid = y0 + tbH / 2;
+  const tx = HI ? hx(HD.chase[0]) + 7 * s : x0 + 40 * s, mid = HI ? hy((HD.chase[1] + HD.chase[3]) / 2) : y0 + tbH / 2;
   if (runsMode) {
     ctx.fillStyle = '#fff'; ctx.font = FONT(28); ctx.fillText(String(runs), tx, mid + 10 * s);
     const nw = ctx.measureText(String(runs)).width;
@@ -61491,23 +61543,26 @@ function drawMatchHud() {
   // wickets: stump sets on the right of the chase panel (lost ones greyed, lost from the left)
   { const n = c.wickets, sw = 14 * s, sh = 20 * s, gap = 4 * s;
     let sx = x0 + bw - 10 * s - n * sw - (n - 1) * gap;
-    for (let i = 0; i < n; i++) { _hudStumps(sx, mid - sh / 2, sw, sh, i >= c.wkLost, s); sx += sw + gap; } }
+    for (let i = 0; i < n; i++) { const q = HI && n === 2 && HD.wk[i];
+      if (q) _hudStumps(hx((q[0] + q[2]) / 2) - sw / 2, hy((q[1] + q[3]) / 2) - sh / 2, sw, sh, i >= c.wkLost, s);
+      else _hudStumps(sx, mid - sh / 2, sw, sh, i >= c.wkLost, s); sx += sw + gap; } }
   // row 2: score + target, this over
-  const r2 = y0 + tbH + 24 * s;
+  const r2 = HI ? hy((HD.score[1] + HD.score[3]) / 2) + 7 * s : y0 + tbH + 24 * s, scx = HI ? hx(HD.score[0]) + 7 * s : x0 + 10 * s;
   ctx.font = FONT(20); ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
-  const sc = `${runs}-${c.wkLost}`; ctx.fillText(sc, x0 + 10 * s, r2);
+  const sc = `${runs}-${c.wkLost}`; ctx.fillText(sc, scx, r2);
   const sw2 = ctx.measureText(sc).width;
   ctx.font = FONT(13); ctx.fillStyle = '#B4C2DD';
-  if (runsMode) ctx.fillText(c.mode === 'tourney' ? 'TOURNEY' : `BEST ${c.mode === 'nets' ? netsBest() : best}`, x0 + 10 * s + sw2 + 6 * s, r2);   // chase: the target is already in the line above
+  if (runsMode) ctx.fillText(c.mode === 'tourney' ? 'TOURNEY' : `BEST ${c.mode === 'nets' ? netsBest() : best}`, scx + sw2 + 6 * s, r2);   // chase: the target is already in the line above
   if (c.mode === 'nets') { ctx.font = FONT(13); ctx.fillStyle = '#B4C2DD'; ctx.textAlign = 'right';
     ctx.fillText(`BALLS ${c.used || 0} · 4s ${thisRunFours} · 6s ${thisRunSixes}`, x0 + bw - 10 * s, r2); ctx.textAlign = 'left';
     if (netsBest() > 0 && runs > netsBest() && !c._bestShown) { c._bestShown = 1; setTimeout(() => { try { showMoment('netsbest'); playAchievementChime(); } catch (e) {} }, 300); } }
   else { const used = c.log.length, start = used === 0 ? 0 : Math.floor((used - 1) / 6) * 6, over = c.log.slice(start, start + 6);
-    const rr = 7 * s, gap = 3 * s; let bx = x0 + bw - 10 * s - 6 * 2 * rr - 5 * gap + rr; const by = r2 - 6 * s;
+    const rr = HI ? HD.sock.r * bw * 0.82 : 7 * s, gap = 3 * s; let bx = x0 + bw - 10 * s - 6 * 2 * rr - 5 * gap + rr; const by = HI ? hy(HD.sock.y) : r2 - 6 * s;
     for (let i = 0; i < 6; i++) {
       const v = over[i];
+      if (HI) bx = hx(HD.sock.xs[i]);
       ctx.beginPath(); ctx.arc(bx, by, rr, 0, 7);
-      if (v === undefined) { ctx.strokeStyle = 'rgba(180,194,221,.7)'; ctx.lineWidth = 1.5 * s; ctx.stroke(); }
+      if (v === undefined) { if (!HI) { ctx.strokeStyle = 'rgba(180,194,221,.7)'; ctx.lineWidth = 1.5 * s; ctx.stroke(); } }
       else {
         const isW = v === 'W', bg = isW ? '#c8222c' : v === 6 ? '#ff8a1e' : v === 4 ? '#ffd23a' : '#fff6df';
         ctx.fillStyle = bg; ctx.fill();
@@ -61518,21 +61573,21 @@ function drawMatchHud() {
     }
   }
   // row 3: energy icon + bar
-  { const ey = y0 + bh - 12 * s, ex = x0 + 22 * s, ew = bw - 32 * s, f = Math.max(0, Math.min(1, energy / MAX_ENERGY));
+  { const ey = HI ? hy((HD.eBar[1] + HD.eBar[3]) / 2) : y0 + bh - 12 * s, ex = HI ? hx(HD.eBar[0]) + 3 * s : x0 + 22 * s, ew = HI ? (HD.eBar[2] - HD.eBar[0]) * bw - 6 * s : bw - 32 * s, f = Math.max(0, Math.min(1, energy / MAX_ENERGY));
     const col = f > 0.5 ? '#4fd46a' : f >= 0.25 ? '#ffd23a' : '#ff5a5a';
     const low = f < 0.25, p = low ? 0.5 + 0.5 * Math.sin(now / 140) : 1;
     window._energyRect = { x: ex, y: ey, w: ew, s };
     if (low && !c._tiredShown && state !== 'intro') { c._tiredShown = 1; setTimeout(() => { try { fxTired(); } catch (e) {} }, 0); }
     ctx.fillStyle = low ? `rgba(255,90,90,${0.6 + 0.4 * p})` : '#FFC93A';
-    ctx.beginPath(); const bx = x0 + 10 * s, byy = ey - 6 * s;
+    ctx.beginPath(); const bx = HI ? hx(HD.eIcon[0]) - 5 * s : x0 + 10 * s, byy = ey - 6 * s;
     ctx.moveTo(bx + 6 * s, byy); ctx.lineTo(bx, byy + 7.5 * s); ctx.lineTo(bx + 4 * s, byy + 7.5 * s); ctx.lineTo(bx + 3 * s, byy + 13 * s); ctx.lineTo(bx + 10 * s, byy + 5 * s); ctx.lineTo(bx + 6 * s, byy + 5 * s); ctx.closePath(); ctx.fill();
     const bh2 = low ? 9 * s : 6 * s;   // the bar thickens when low so it gets noticed
-    ctx.fillStyle = '#050A14'; _hudRR(ex, ey - bh2 / 2, ew, bh2, bh2 / 2); ctx.fill();
+    if (!HI) { ctx.fillStyle = '#050A14'; _hudRR(ex, ey - bh2 / 2, ew, bh2, bh2 / 2); ctx.fill(); }
     ctx.fillStyle = col; _hudRR(ex, ey - bh2 / 2, Math.max(6 * s, ew * f), bh2, bh2 / 2); ctx.fill();
     if (low) { ctx.save(); ctx.font = FONT(14); ctx.textAlign = 'right'; ctx.lineWidth = 4 * s; ctx.strokeStyle = '#050A14'; ctx.globalAlpha = (0.65 + 0.35 * p) * (window._hudA == null ? 1 : window._hudA);
       ctx.strokeText('TIRED', ex + ew - 4 * s, ey + 5 * s); ctx.fillStyle = '#ff8a8a'; ctx.fillText('TIRED', ex + ew - 4 * s, ey + 5 * s); ctx.restore(); } }
   ctx.restore();   // clip
-  ctx.globalAlpha = ha; ctx.strokeStyle = close ? '#ff5a5a' : '#050A14'; ctx.lineWidth = 2 * s; _hudRR(x0, y0, bw, bh, 12 * s); ctx.stroke(); ctx.globalAlpha = 1;
+  if (!HI) { ctx.globalAlpha = ha; ctx.strokeStyle = close ? '#ff5a5a' : '#050A14'; ctx.lineWidth = 2 * s; _hudRR(x0, y0, bw, bh, 12 * s); ctx.stroke(); } ctx.globalAlpha = 1;
   window._hudBottom = y0 + bh;
   // timing word, floats up beside the batter for 0.8 s
   { const tw = window._timingWord, age = tw ? now - tw.at : 1e9;
@@ -61547,9 +61602,12 @@ function drawMatchHud() {
     } }
   // pause button, top-right (tap target is the #pauseHit button placed by pausePlace)
   { const pr = 22 * s, px = W * MATCH_HUD.pause_button.r - pr, py = y0 + pr + 2 * s;
+    const PI2 = HD && tImg('pause2');
+    if (PI2) { ctx.globalAlpha = ha; ctx.drawImage(PI2, px - pr * 1.12, py - pr * 1.12, pr * 2.24, pr * 2.24); ctx.globalAlpha = 1; }
+    else {
     ctx.fillStyle = 'rgba(14,28,56,.85)'; ctx.beginPath(); ctx.arc(px, py, pr, 0, 7); ctx.fill();
     ctx.strokeStyle = '#050A14'; ctx.lineWidth = 2.5 * s; ctx.stroke();
-    ctx.fillStyle = '#FFC93A'; ctx.fillRect(px - 6 * s, py - 7 * s, 4 * s, 14 * s); ctx.fillRect(px + 2 * s, py - 7 * s, 4 * s, 14 * s);
+    ctx.fillStyle = '#FFC93A'; ctx.fillRect(px - 6 * s, py - 7 * s, 4 * s, 14 * s); ctx.fillRect(px + 2 * s, py - 7 * s, 4 * s, 14 * s); }
     window._pauseSpot = { x: px, y: py, r: pr, t: now }; }
   ctx.restore();
 }
