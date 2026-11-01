@@ -6295,12 +6295,12 @@ THEME_ART.ty_railway = { dir: 'assets/themes/railway/', lightX: 1, ropeT: 0.016,
     wk: [[.742, .0798, .8218, .1596], [.8395, .0798, .9193, .1596]], score: [.0691, .1871, .4938, .2819],
     sock: { xs: [.5598, .6285, .6973, .7655, .8342, .9025], y: .2349, r: .0244 }, eIcon: [.0869, .316, .016], eBar: [.1206, .3005, .9309, .3307] },
   extras: true };
-// Floodlit Series 2.a Evening (Nov 1): Camera 4 county ground at early evening; white-and-green pavilion scoreboard, cream club lettering, county pitch, ash stumps, white ball, white rope
+// Floodlit Series 2.a Evening (Nov 1): Camera 4 county ground at early evening; marquee pavilion scoreboard (green lacquer, gold filigree, bulbs, clock — Figma 355:191), cream club lettering, county pitch, ash stumps, white ball, white rope
 THEME_ART.te_evening = { dir: 'assets/themes/evening/', lightX: -1, ropeT: 0.012, flags: 0, ringN: 26, ringS: 0.013, fielderH: 0.044,
   pitch: { ct: 76, cb: 598, wb: 331 },
-  hud2: { aspect: 0.3505, body: 0.3505, badge: [0.0654, 0.0542, 0.1542, 0.1402], chase: [0.1692, 0.0551, 0.9383, 0.1318],
-    wk: [[0.7822, 0.0607, 0.8477, 0.1252], [0.8645, 0.0607, 0.9299, 0.1252]], score: [0.0645, 0.1664, 0.5252, 0.2402],
-    sock: { xs: [0.5757, 0.643, 0.7103, 0.7776, 0.8458, 0.9121], y: 0.2, r: 0.0262 }, eIcon: [0.0799, 0.2864, 0.0178], eBar: [0.1159, 0.2738, 0.9364, 0.3] },
+  hud2: { l: .02, w: 1.24, txt: .82, aspect: 0.4427, body: 0.4427, badge: [0.0877, 0.183, 0.1594, 0.2504], chase: [0.1678, 0.1804, 0.9098, 0.2445],
+    wk: [[0.7808, 0.1847, 0.8356, 0.2411], [0.8491, 0.1847, 0.9056, 0.2411]], score: [0.0919, 0.2572, 0.4966, 0.3212],
+    sock: { xs: [0.5443, 0.6109, 0.6779, 0.7445, 0.8116, 0.8782], y: 0.2896, r: 0.0211 }, eIcon: [0.11, 0.3478, 0.0131], eBar: [0.1366, 0.3364, 0.9098, 0.36] },
   extras: true };
 // Chennai shares the IPL kit (HUD, props, words) with yellow-shirted fielders — first league-sharing test
 THEME_ART.chennai_night = Object.assign({}, THEME_ART.t20_night, { dir: 'assets/themes/chennai/', lightX: 0 });
@@ -61716,11 +61716,13 @@ function drawMatchHud() {
   if (!inPlay) return;                                   // nothing over the scene on menus
   const baseW = MATCH_HUD_SCALE.baseW;
   const s = (W * MATCH_HUD_SCALE.widthOfW) / MATCH_HUD_SCALE.baseW;   // keeps its shape on every phone
-  const x0 = W * MATCH_HUD.scorebug.l, y0 = Math.max(SAFE_TOP + MATCH_HUD_SCALE.gapUnderSafeTop, H * MATCH_HUD.scorebug.t);
   const _ta = themeArt(), HD = _ta && _ta.hud2, HI = HD && tImg(window.HUD_VARIANT ? 'hud2_' + window.HUD_VARIANT : 'hud2');   // painted frame for this ground, when it has one
-  const bw = baseW * s, bh = HI ? HD.body * bw : 98 * s, now = performance.now();
+  // a frame with a deep decorative border can be drawn wider (HD.w) from further left (HD.l), with its text scaled to its panels (HD.txt)
+  const x0 = W * (HI && HD.l != null ? HD.l : MATCH_HUD.scorebug.l), y0 = Math.max(SAFE_TOP + MATCH_HUD_SCALE.gapUnderSafeTop, H * MATCH_HUD.scorebug.t);
+  const bw = baseW * s * (HI && HD.w || 1), bh = HI ? HD.body * bw : 98 * s, now = performance.now();
   const hx = f => x0 + f * bw, hy = f => y0 + f * bw;
-  const FONT = (px) => `${Math.round(px * s)}px 'Lilita One','Arial Black',Arial,sans-serif`;
+  const _ts = HI && HD.txt || 1, sT = s * _ts;
+  const FONT = (px) => `${Math.round(px * s * _ts)}px 'Lilita One','Arial Black',Arial,sans-serif`;
   const close = chaseClose();
   // Oct 30: hidden while the TV intro plays, then fades in as the intro band flies up into it
   const ha = window._hudFadeAt ? Math.max(0, Math.min(1, (now - window._hudFadeAt) / 300)) : 1; window._hudA = ha;
@@ -61759,10 +61761,10 @@ function drawMatchHud() {
   ctx.textAlign = 'left';
   const tx = HI ? hx(HD.chase[0]) + 7 * s : x0 + 40 * s, mid = HI ? hy((HD.chase[1] + HD.chase[3]) / 2) : y0 + tbH / 2;
   if (runsMode) {
-    ctx.fillStyle = '#fff'; ctx.font = FONT(28); ctx.fillText(String(runs), tx, mid + 10 * s);
+    ctx.fillStyle = '#fff'; ctx.font = FONT(28); ctx.fillText(String(runs), tx, mid + 10 * sT);
     const nw = ctx.measureText(String(runs)).width;
-    ctx.font = FONT(12); ctx.fillStyle = '#c9d8ff'; ctx.fillText('RUNS', tx + nw + 6 * s, mid - 2 * s);
-    ctx.font = FONT(13); ctx.fillStyle = '#fff'; ctx.fillText(c.mode === 'tourney' ? (chaseBallsLeft() === 1 ? 'LAST BALL' : `${chaseBallsLeft()} BALLS LEFT`) : c.mode === 'endless' ? 'ENDLESS · NO LIMIT' : 'NETS · NO LIMIT', tx + nw + 6 * s, mid + 12 * s);
+    ctx.font = FONT(12); ctx.fillStyle = '#c9d8ff'; ctx.fillText('RUNS', tx + nw + 6 * sT, mid - 2 * sT);
+    ctx.font = FONT(13); ctx.fillStyle = '#fff'; ctx.fillText(c.mode === 'tourney' ? (chaseBallsLeft() === 1 ? 'LAST BALL' : `${chaseBallsLeft()} BALLS LEFT`) : c.mode === 'endless' ? 'ENDLESS · NO LIMIT' : 'NETS · NO LIMIT', tx + nw + 6 * sT, mid + 12 * sT);
   } else {
     // ticking: the shown number counts down towards the real one
     const need = chaseNeed();
@@ -61770,12 +61772,12 @@ function drawMatchHud() {
     window._hudNeedShown += (need - window._hudNeedShown) * 0.18;
     if (Math.abs(window._hudNeedShown - need) < 0.5) window._hudNeedShown = need;
     const shown = won ? 'WON!' : String(Math.round(window._hudNeedShown));
-    let nw = HI ? _hudPaintedNum(shown, tx, mid + 11 * s, 25 * s) : -1;
-    if (nw < 0) { ctx.fillStyle = '#fff'; ctx.font = FONT(won ? 22 : 28); ctx.fillText(shown, tx, mid + 10 * s); nw = ctx.measureText(shown).width; }
+    let nw = HI ? _hudPaintedNum(shown, tx, mid + 11 * sT, 25 * sT) : -1;
+    if (nw < 0) { ctx.fillStyle = '#fff'; ctx.font = FONT(won ? 22 : 28); ctx.fillText(shown, tx, mid + 10 * sT); nw = ctx.measureText(shown).width; }
     const left = chaseBallsLeft();
-    ctx.font = FONT(12); ctx.fillStyle = '#ffd2d2'; ctx.fillText(won ? 'CHASED' : 'TO WIN', tx + nw + 6 * s, mid - 2 * s);
+    ctx.font = FONT(12); ctx.fillStyle = '#ffd2d2'; ctx.fillText(won ? 'CHASED' : 'TO WIN', tx + nw + 6 * sT, mid - 2 * sT);
     ctx.font = FONT(13); ctx.fillStyle = '#fff';
-    ctx.fillText(won ? `${left} SPARE` : left === 1 ? 'LAST BALL' : `OFF ${left} BALLS`, tx + nw + 6 * s, mid + 12 * s);
+    ctx.fillText(won ? `${left} SPARE` : left === 1 ? 'LAST BALL' : `OFF ${left} BALLS`, tx + nw + 6 * sT, mid + 12 * sT);
   }
   // wickets: stump sets on the right of the chase panel (lost ones greyed, lost from the left)
   { const n = c.wickets, sw = 14 * s, sh = 20 * s, gap = 4 * s;
@@ -61784,12 +61786,12 @@ function drawMatchHud() {
       if (q) _hudStumps(hx((q[0] + q[2]) / 2) - sw / 2, hy((q[1] + q[3]) / 2) - sh / 2, sw, sh, i >= c.wkLost, s);
       else _hudStumps(sx, mid - sh / 2, sw, sh, i >= c.wkLost, s); sx += sw + gap; } }
   // row 2: score + target, this over
-  const r2 = HI ? hy((HD.score[1] + HD.score[3]) / 2) + 7 * s : y0 + tbH + 24 * s, scx = HI ? hx(HD.score[0]) + 7 * s : x0 + 10 * s;
+  const r2 = HI ? hy((HD.score[1] + HD.score[3]) / 2) + 7 * sT : y0 + tbH + 24 * s, scx = HI ? hx(HD.score[0]) + 7 * s : x0 + 10 * s;
   ctx.font = FONT(20); ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
   const sc = `${runs}-${c.wkLost}`; ctx.fillText(sc, scx, r2);
   const sw2 = ctx.measureText(sc).width;
   ctx.font = FONT(13); ctx.fillStyle = '#B4C2DD';
-  if (runsMode) ctx.fillText(c.mode === 'tourney' ? 'TOURNEY' : `BEST ${c.mode === 'nets' ? netsBest() : best}`, scx + sw2 + 6 * s, r2);   // chase: the target is already in the line above
+  if (runsMode) ctx.fillText(c.mode === 'tourney' ? 'TOURNEY' : `BEST ${c.mode === 'nets' ? netsBest() : best}`, scx + sw2 + 6 * sT, r2);   // chase: the target is already in the line above
   if (c.mode === 'nets') { ctx.font = FONT(13); ctx.fillStyle = '#B4C2DD'; ctx.textAlign = 'right';
     ctx.fillText(`BALLS ${c.used || 0} · 4s ${thisRunFours} · 6s ${thisRunSixes}`, x0 + bw - 10 * s, r2); ctx.textAlign = 'left';
     if (netsBest() > 0 && runs > netsBest() && !c._bestShown) { c._bestShown = 1; setTimeout(() => { try { showMoment('netsbest'); playAchievementChime(); } catch (e) {} }, 300); } }

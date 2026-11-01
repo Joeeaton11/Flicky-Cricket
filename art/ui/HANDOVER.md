@@ -647,3 +647,7 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - 2.a Evening (branch floodlit-2a, replaces 'evening' in the league's scenes on the branch): 4 generations (354:191-194). Plate fit = remove the painted white line (thin pale tophat curves on green), ONE even scale by field width, repeat 157 rows as short bands at the oval's widest point. Words on magenta with a glow → pink fringe: despill min(r,b)-g on the rim + 3 px alpha erode.
 - 2.a polish (Joe: do all 5): plate 5% bigger so the painted ad boards clear the rope; FLOOD_INFO.te_evening lamps (4 towers) → light beams + crowd camera flashes; board/pause green darkened and white boards toned to warm cream; ring discs smaller (ringS .013) and softer; new FLOOD_INFO 'deepen' flag — the sky darkens and the beams strengthen as the chase goes on (window._duskP eases toward balls used / balls).
 - 2.a: size reverted (Joe); instead the ad boards under the rope were inpainted (non-green tall thin blobs in the band 0.93<rho<1.035). Boards outside the rope kept.
+
+### 2.a Evening scoreboard v2 (Nov 1)
+- Joe: old board "a bit boring". New marquee pavilion board = Figma 355:191 → assets/themes/evening/hud2.webp + pause2.webp.
+- New optional hud2 fields for frames with deep decorative borders: `l` (left, frac of W), `w` (width multiplier), `txt` (text scale). Evening uses l .02, w 1.24, txt .82. Other scenes unaffected (defaults).
