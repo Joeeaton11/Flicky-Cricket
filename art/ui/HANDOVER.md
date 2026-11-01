@@ -658,3 +658,5 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - New boards: generate the art, then run it through the same script (add a `B` entry) — never give a board its own slot fractions again.
 - Crest: `MATCH_HUD_CREST` (the signed-off Gully size + spot), drawn over the board, same on every scene.
 - Exception (Joe, Nov 1): Rooftop's fairy lights hang BELOW the board (like Gully's tassels) — the only thing allowed outside the box. `under_lights()` in build_locked_boards.py.
+- 2.b Twilight (branch floodlit-2b, key `te_twilight`, replaces 'twilight' in the league's scenes): Camera 3 seaside stadium at blue hour (Figma 364:191–195). Plate fit = art/grounds/twilight/build.py (same as Evening: remove painted line, one scale by field width, repeat equator bands). Cuts = art/grounds/twilight/cut.py. Board on the locked layout ('twilight' entry in build_locked_boards.py; life rings layered on top from twilight_sprites.webp).
+- 2.a signed off by Joe (Nov 1) along with all locked boards.

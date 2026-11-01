@@ -49,6 +49,9 @@ def frac_hud():
 
 # ---- per-board source measurements (original px, 760 wide). slots = the board's own HUD fractions ----
 B = {
+ 'twilight': dict(k=.921, spriteFile=True, topSprites=[((3, 6, 64, 70), (49, 39), 40), ((696, 6, 757, 70), (711, 39), 40)], Ri=(24, 22, 738, 290), mat=(277, 285, 300, 560), amp=.9, badgeRing=(110, 77, 45), deco=[('rails', [(132, 142, 300, 560), (221, 231, 300, 560)], (40, 720))],
+   chase=[0.25, 0.0513, 0.9079, 0.1553], wk=[0.7368, 0.0658, 0.8079, 0.1395], score=[0.0816, 0.1987, 0.3855, 0.2803],
+   sock=[0.4461, 0.2382, 0.0355], badge=[0.0855, 0.0421, 0.2039, 0.1605], eIcon=[0.1447, 0.3408, 0.0276], eBar=[0.2079, 0.3211, 0.9026, 0.3579]),
  'evening2': dict(k=.921, Ri=(28, 28, 732, 282), mat=(130, 137, 300, 560), amp=.9, badgeRing=(93, 77, 38), deco=[('rails', [(123, 130, 300, 560), (212, 219, 300, 560)], (40, 720))],
    chase=[0.2105, 0.0553, 0.9289, 0.1474], wk=[0.7632, 0.0684, 0.8316, 0.1368], score=[0.0605, 0.1842, 0.3566, 0.2697],
    sock=[0.4145, 0.2263, 0.0355], badge=[0.0724, 0.0526, 0.1724, 0.1513], eIcon=[0.1, 0.3276, 0.0224], eBar=[0.1553, 0.3079, 0.9303, 0.3487]),
@@ -244,8 +247,9 @@ def build(name, src, P):
     paste(out, pc, t['eIcon'][0] - t['eIcon'][2] * 1.45, t['eIcon'][1] - t['eIcon'][2] * 1.45)
     if P.get('underLights'):   # Joe's one exception to the box rule: fairy lights strung along the underside, hanging below the board
         out = under_lights(out)
+    spr = np.array(Image.open(src.replace('_orig.webp', '_sprites.webp')).convert('RGBA')).astype(np.float32) if P.get('spriteFile') else a
     for (sx1, sy1, sx2, sy2), (cx, cy), size in P.get('topSprites', []):   # bits of the board's own art layered on top (e.g. corner signal lamps)
-        piece = a[sy1:sy2, sx1:sx2]; k2 = size / max(piece.shape[:2])
+        piece = spr[sy1:sy2, sx1:sx2]; k2 = size / max(piece.shape[:2])
         pc = rs4(piece, piece.shape[1] * k2, piece.shape[0] * k2)
         paste(out, pc, cx - pc.shape[1] / 2, cy - pc.shape[0] / 2)
     if 'badgeRing' in P:   # the board's own round recess, centred on the crest spot (MATCH_HUD_CREST) so the crest sits in it
