@@ -35,7 +35,7 @@
 - HUD: Mumbai truck-art — bright painted tin with flowers, mirrors and tassels. Words: truck-art hand lettering.
 
 ## Gully Cup — 1.b `tm_maidan` (Mumbai Maidan)
-- CAMERA: 4 (neighbouring players small and far, ours the hero). LIGHT: golden afternoon sun from picture-left.
-- THEME: one giant shared grass field with lots of real matches jumbled together at random angles, overlapping fielders, whites and bright coloured T-shirts; showpiece = giant banyan tree with kids in it (top right) + colourful balconied buildings and skyline; colour pops: rickshaw, umbrellas, bags, orange flags. Our field = the same sun-dried patchy grass; the game's boundary is the only marking.
-- HUD: glossy heritage-maroon painted wood, cream trim, brass corners, Gothic arch row (recoloured from green: green blended into the grass). Words: vintage Bombay signwriter lettering.
-- Props: dry clay pitch, red leather ball, whitewashed boundary stones, white disc ring markers; Gully's stick stumps. Extras: crows, a pinwheel.
+- CAMERA: 5 (far away, bird's-eye tilt-shift miniature). LIGHT: golden late-afternoon sun from picture-left.
+- THEME: the great maidan by the sea; our empty oval in the centre; tiny other matches at random angles, food carts with striped umbrellas, rain trees; ring road with taxis, red double-deckers, rickshaws; Art-Deco + balconied buildings, Gothic clock tower; sea promenade, palms and the Arabian Sea with boats at the top. No painted rope/fence round our oval.
+- HUD: heritage-maroon painted wood, cream trim, brass corners, Gothic arch row. Words: vintage Bombay signwriter lettering.
+- Props: worn clay pitch with footmarks, red leather ball, whitewashed boundary stones, white disc ring markers; slim weathered willow stumps with a maroon band + cream rings, turned bails. Extras: crows, a pinwheel.
