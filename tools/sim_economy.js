@@ -162,7 +162,7 @@ function run(P, M, days = 90) {
 // premium Pass tracks: 'old' = Oct 30 (23 × 26 gems, gold bags every 5, platinum 30); 'road' = Nov 1 (4 × 150 gems, coins/boosters between)
 const PASS_TRACK = {
   old: t => t === 1 || t === 15 ? {} : t === 30 ? { bag: 'platinum' } : t % 5 === 0 ? { bag: 'gold' } : { gems: t === 29 ? 28 : 26 },
-  road: t => t === 1 || t === 15 ? {} : t === 30 ? { bag: 'platinum' } : [6, 12, 18, 24].includes(t) ? { gems: 150 } : t % 5 === 0 ? { bag: 'gold' } : t % 2 ? { coins: 1000 } : { boosters: 3 },
+  road: t => t === 1 || t === 15 ? {} : t === 30 ? { bag: 'platinum' } : [6, 12, 18, 24].includes(t) ? { gems: 150 } : t % 5 === 0 ? { bag: 'gold' } : t % 2 ? { coins: 500 } : { boosters: 3 },
 };
 const PLAYERS = { free: { matches: 10, seed: 11 }, pass: { matches: 12, passBags: 1, seed: 12 }, spender: { matches: 14, passBags: 2, timerSpeed: 2, seed: 13 } };
 if (process.argv.includes('--pass')) { Object.assign(PLAYERS, { passOld: { matches: 12, track: 'old', seed: 12 }, passRoad: { matches: 12, track: 'road', seed: 12 } }); delete PLAYERS.pass; delete PLAYERS.spender; }
