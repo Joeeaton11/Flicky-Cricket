@@ -3717,7 +3717,7 @@
   @keyframes bpCoin { 0% { transform:translate(0,0) scale(.4) rotateY(0); opacity:1; } 45% { transform:translate(calc(var(--x) * .8), var(--y)) scale(1) rotateY(360deg); opacity:1; }
     100% { transform:translate(var(--x), calc(var(--y) + 330px)) scale(.9) rotateY(720deg); opacity:0; } }
   #chestOpenOverlay.bagJolt { animation:bagJolt .42s ease-out; }
-  @keyframes bagJolt { 0% { transform:translate(0,0); } 15% { transform:translate(-8px,6px); } 30% { transform:translate(7px,-6px); } 45% { transform:translate(-5px,4px); } 60% { transform:translate(4px,-2px); } 80% { transform:translate(-2px,1px); } 100% { transform:none; } }
+  @keyframes bagJolt { 0% { transform:none; } 30% { transform:translateY(3px); } 65% { transform:translateY(-1px); } 100% { transform:none; } }
   #chestRevealChestCanvas.bagHop { animation:bagHop .5s cubic-bezier(.3,.7,.4,1); transform-origin:50% 90%; }
   @keyframes bagHop { 0% { transform:none; } 14% { transform:scale(1.12,.84); } 34% { transform:translateY(-34px) scale(.92,1.1) rotate(-5deg); }
     50% { transform:translateY(-38px) rotate(4deg); } 68% { transform:translateY(0) scale(1.1,.88) rotate(-2deg); } 82% { transform:scale(.97,1.04) rotate(1deg); } 100% { transform:none; } }
@@ -60459,7 +60459,7 @@ let _chestAnimFrame = null;
 let _chestOpenPhase = 'idle';
 let _chestOpenType  = null;
 let _chestOpenRewards = null;
-let _chestShakeT = 0;
+let _chestShakeT = 0, _chestLandFx = 0;
 let _chestOpenAfterCallback = null;
 let _revealItems = [];
 let _revealIndex = 0;
@@ -60499,20 +60499,31 @@ function _chestAnimLoop() {
   ctx.clearRect(0, 0, W, H);
 
   if (_chestOpenPhase === 'shake') {
-    _chestShakeT += 0.032;
-    chestOpenTitle.style.opacity = Math.min(1, _chestShakeT * 4).toString();
-    const k = Math.min(1, _chestShakeT / 1.6), amp = 1 + k * k * 9;
-    const shakeX   = Math.sin(_chestShakeT * 34) * amp;
-    const shakeY   = -Math.abs(Math.sin(_chestShakeT * 5.2)) * 14 * k;            // little hops that get bigger
-    const shakeRot = Math.sin(_chestShakeT * 27) * amp * 0.7 * Math.PI / 180;
-    const sq = 1 + Math.sin(_chestShakeT * 10.4) * 0.05 * k;
+    // Nov 1 (Joe: "too violent — a bump bump pop would suffice"): two soft hops with squash & stretch, a little
+    // crouch to wind up, then the pop. No jitter, no random buzzing — one light tap per landing.
+    _chestShakeT += 1 / 60;
+    const t = _chestShakeT;
+    chestOpenTitle.style.opacity = Math.min(1, t * 4).toString();
+    const hop = (t0, dur, h) => { const u = (t - t0) / dur; return u <= 0 || u >= 1 ? null : u; };
+    let y = 0, sx = 1, rot = 0;
+    const ease = u => Math.sin(Math.PI * u);
+    const bump = (t0, dur, h, tilt) => { const u = hop(t0, dur, 0); if (u === null) return false;
+      if (u < .18) { const k = u / .18; sx = 1 + .1 * Math.sin(Math.PI / 2 * k); y = 0; }                    // squat
+      else if (u < .82) { const k = (u - .18) / .64; y = -ease(k) * h; sx = 1 - .06 * ease(k); rot = tilt * ease(k); } // up & over
+      else { const k = (u - .82) / .18; sx = 1 + .12 * ease(k); y = 0; }                                             // land squash
+      return true; };
+    const land = (tAt) => { if (_chestLandFx < tAt && t >= tAt) { _chestLandFx = tAt; try { haptic(14); playTone({ freq: 180, duration: 0.08, volume: 0.13, type: 'triangle' }); } catch (e) {} } };
+    if (t < .12) _chestLandFx = 0;
+    if (!bump(.18, .42, 16, -3) && !bump(.72, .46, 24, 3.5)) {
+      if (t > 1.24 && t < 1.5) { const k = (t - 1.24) / .26; sx = 1 + .14 * Math.sin(Math.PI / 2 * k); }            // crouch, wind up
+    }
+    land(.18 + .42 * .82); land(.72 + .46 * .82);
     ctx.save();
-    ctx.translate(W/2 + shakeX, H/2 - 10 + shakeY);
-    ctx.rotate(shakeRot); ctx.scale(sq, 2 - sq);
-    if (Math.random() < 0.06 * k) { try { haptic(12); } catch (e) {} }
+    ctx.translate(W/2, H/2 - 10 + y);
+    ctx.rotate(rot * Math.PI / 180); ctx.translate(0, 40); ctx.scale(sx, 2 - sx); ctx.translate(0, -40);
     _drawChestCentered(ctx, _chestOpenType, 0);
     ctx.restore();
-    if (_chestShakeT > 1.6) {
+    if (t > 1.5) {
       _chestOpenPhase = 'burst';
       chestTapHint.style.display = 'none';
       playBagOpenSound(_chestOpenType);
@@ -60555,7 +60566,7 @@ function _fireRayBurst(col, opts) {
   fx.innerHTML = h;
   chestOpenOverlay.appendChild(fx);
   setTimeout(() => fx.remove(), 1700);
-  if (big) { chestOpenOverlay.classList.remove('bagJolt'); void chestOpenOverlay.offsetWidth; chestOpenOverlay.classList.add('bagJolt'); setTimeout(() => chestOpenOverlay.classList.remove('bagJolt'), 450); }
+  if (big && opts.jolt) { chestOpenOverlay.classList.remove('bagJolt'); void chestOpenOverlay.offsetWidth; chestOpenOverlay.classList.add('bagJolt'); setTimeout(() => chestOpenOverlay.classList.remove('bagJolt'), 450); }
 }
 // the bag hops and spits out the next reward
 function _bagHop() {
