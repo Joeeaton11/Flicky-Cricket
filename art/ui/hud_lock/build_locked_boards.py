@@ -14,7 +14,8 @@ import numpy as np
 from PIL import Image
 
 CW, CH, BODY = 760, 316, 300
-BOX = (30, 20, 730, 281)   # Gully's frame outline inside the canvas (760*.92 wide from x 30.4; body 283*.92 tall from y 20)
+BOX = (30, 20, 730, 281)
+CREST = (95.7, 84.1, 40.0)   # crest centre + recess radius in canvas px (MATCH_HUD_CREST on screen; crest itself is 66px across)   # Gully's frame outline inside the canvas (760*.92 wide from x 30.4; body 283*.92 tall from y 20)
 GK, GOX, GOY = 0.92, 30.4, 20.0          # Gully placed at 0.92, offset (30.4, 20)
 
 # Gully's signed-off slot fractions (of 760 width), from THEME_ART.tg_gully.hud2
@@ -48,6 +49,9 @@ def frac_hud():
 
 # ---- per-board source measurements (original px, 760 wide). slots = the board's own HUD fractions ----
 B = {
+ 'maidan4': dict(k=.921, Ri=(32, 32, 728, 290), mat=(101, 108, 200, 680), amp=.8, badgeRing=(97, 67, 34), deco=[('rails', [(107, 116, 192, 480), (218, 227, 192, 480)], (58, 702))],
+   chase=[0.2079, 0.0487, 0.9329, 0.1316], wk=[0.7579, 0.0618, 0.8184, 0.1211], score=[0.0684, 0.1658, 0.3, 0.2776],
+   sock=[0.3658, 0.2184, 0.0342], badge=[0.0855, 0.0447, 0.1711, 0.1329], eIcon=[0.1816, 0.3408, 0.0237], eBar=[0.3237, 0.3171, 0.9303, 0.3645]),
  'maidan3': dict(k=.75, Ri=(36, 49, 724, 254), mat=(130, 193, 214, 226), deco=[('rails', [(111, 125, 300, 500), (194, 208, 300, 500)], (40, 720))],
    chase=[0.1829, 0.0711, 0.7566, 0.1395], wk=[0.7711, 0.0711, 0.8395, 0.1395], score=[0.0671, 0.1711, 0.2763, 0.2539],
    sock=[0.3434, 0.2132, 0.0355], badge=[0.0526, 0.0789, 0.0592, 0.0855], eIcon=[0.1171, 0.3053, 0.0197], eBar=[0.1803, 0.2842, 0.925, 0.3237]),
@@ -223,6 +227,10 @@ def build(name, src, P):
     ex, ey, er = [v * 760 for v in P['eIcon']]; er2 = er * 1.45
     pc = rs4(a[int(ey - er2):int(ey + er2), int(ex - er2):int(ex + er2)], 2 * t['eIcon'][2] * 1.45, 2 * t['eIcon'][2] * 1.45); pc = circ(pc, 0.86)
     paste(out, pc, t['eIcon'][0] - t['eIcon'][2] * 1.45, t['eIcon'][1] - t['eIcon'][2] * 1.45)
+    if 'badgeRing' in P:   # the board's own round recess, centred on the crest spot (MATCH_HUD_CREST) so the crest sits in it
+        bx, by, br = P['badgeRing']; R2 = br * 1.12
+        pc = circ(rs4(a[int(by - R2):int(by + R2), int(bx - R2):int(bx + R2)], 2 * CREST[2] * 1.12, 2 * CREST[2] * 1.12), 0.9)
+        paste(out, pc, CREST[0] - CREST[2] * 1.12, CREST[1] - CREST[2] * 1.12)
     if 'overBand' in P:   # e.g. a tent valance that drapes over the top panel: its green + cream stripes go back on top
         y1, y2, x1, x2 = P['overBand']; fr = f[:BODY]; rgb = fr[..., :3] / 255.0
         green = (rgb[..., 1] > rgb[..., 0] + .06) & (rgb[..., 1] > rgb[..., 2] + .06)
