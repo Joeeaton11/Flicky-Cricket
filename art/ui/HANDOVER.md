@@ -651,3 +651,9 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 ### 2.a Evening scoreboard v2 (Nov 1)
 - Joe: old board "a bit boring". New marquee pavilion board = Figma 355:191 → assets/themes/evening/hud2.webp + pause2.webp.
 - New optional hud2 fields for frames with deep decorative borders: `l` (left, frac of W), `w` (width multiplier), `txt` (text scale). Evening uses l .02, w 1.24, txt .82. Other scenes unaffected (defaults).
+
+### RULE: one locked scoreboard layout (Joe, Nov 1)
+- Every painted board uses `HUD2_LOCK` (one set of slot positions). Text, wicket slots, ball sockets, energy bar and crest sit in exactly the same place in every scene.
+- Template = the signed-off Gully board at 0.92 inside a 760x316 canvas. Other boards are rebuilt to it with `art/ui/hud_lock/build_locked_boards.py` (own frame scaled uniformly + middle-band repeat, own material, own panels 9-sliced onto the template). Originals kept in the script's orig dir as `<name>_orig.webp` (copy from git history before Nov 1 if needed).
+- New boards: generate the art, then run it through the same script (add a `B` entry) — never give a board its own slot fractions again.
+- Crest: `MATCH_HUD_CREST` (the signed-off Gully size + spot), drawn over the board, same on every scene.
