@@ -762,3 +762,8 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - Fairground Cup (league 4) all four grounds built: fair-4a … fair-4d (each carries the earlier ones). Draw: tf_funfair, tf_circus, tf_themepark, tf_fright.
 
 - Pause buttons (Joe, Nov 2: Fright pause cut off): the cut box clipped the pumpkin's sides AND the game draws pause2 into a square, squashing tall pauses (Storm's wheel + lantern). Fixed: wider cut box for 4.d, and art/grounds/pad_pause.py pads every new pause onto a centred transparent square (run it after any cut.py). Rule: check pause2 is square and whole before showing.
+
+## ECL (league 5) — 6 real county grounds, cartoon versions, no logos/sponsor text (Joe, Nov 2: 'go ahead, you should be ok — say if struggling'). Order: 5.a Lord's, 5.b The Oval, 5.c Headingley, 5.d Edgbaston, 5.e Old Trafford, 5.f Trent Bridge.
+- 5.a Lord's (branch ecl-5a, `tl_lords`): 5 generations. Plate 399:191 is very recognisable but painted the field nearly round (1.28:1) → fitsearch.py picks rows×0.85 + scale×1.02 (edge within ~12 phone px; repeating all 242 rows made straight sides). v2 399:195 asked 'TWICE as tall, curved sides' — came out a rounded rectangle with the Media Centre pod over the field bottom → rejected. Sky above the painting: painted sky blurred + deepening blue + soft procedural clouds (303 px).
+- **Real stadium grounds tend to come out round** — expect fitsearch, or accept ~12 px.
+
