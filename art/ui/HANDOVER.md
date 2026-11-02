@@ -740,3 +740,5 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - Coastal Cup LIVE on main (Nov 2): merged coastal-3e (main's mocap work merged in, www rebuilt). Checked a real Coastal Cup match draws tc_* grounds.
 
 ## Fairground Cup (league 4) — 4 bespoke grounds, Camera 2 (Nov 2). 2.e Dusk already has the Caribbean carnival, so: 4.a Funfair (sunny British funfair, key carnival), 4.b Circus Big Top (circus_night), 4.c Theme Park (fairground), 4.d Fright Fair (Halloween ghost-train fair at night, carnival_parade).
+- 4.a Funfair (branch fair-4a, `tf_funfair`, replaces 'carnival' in the league's scenes): 4 generations, all first time; plate ratio 1.605 → no rows, scale 1.657. Field top asked at three tenths → painting reaches the screen top. Board: carousel horse on the bottom-left couldn't be cut cleanly from the gold frame (energy icon lands there) → dropped, corner rebuilt from the bottom-right corner flipped. sceneKey stays 'carnival' (crest/card).
+
