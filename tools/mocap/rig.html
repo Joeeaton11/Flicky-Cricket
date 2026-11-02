@@ -50,8 +50,16 @@ function weightsFor(m) {
   const S_ = side;
   const isArm = y > -.14 && ((y < .12 && az > .14) || (y >= .12 && y < .23 && az > .15));
   if (isArm) return smoothW(p, [S_+'Arm', S_+'ForeArm', S_+'Hand', S_+'Shoulder', 'Spine2'], 7);
-  if (y < -.105 && az > .005) return smoothW(p, [S_+'UpLeg', S_+'Leg', S_+'Foot', S_+'ToeBase', 'Hips'], 7);
-  if (y > .27) return smoothW(p, ['Neck', 'Head', 'Spine2'], 8);
+  if (y < -.105 && az > .005) {
+    if (MODEL === 'batter') {      // pads are rigid shells: the whole pad rides the shin; short soft bands at the knee top and ankle
+      if (y >= -.405 && y <= -.215) return { [S_+'Leg']: 1 };
+      if (y > -.215 && y < -.17) { const k = (y + .215) / .045; return { [S_+'Leg']: 1 - k, [S_+'UpLeg']: k }; }
+      if (y < -.405 && y > -.43) { const k = (-.405 - y) / .025; return { [S_+'Leg']: 1 - k * .7, [S_+'Foot']: k * .7 }; }
+    }
+    return smoothW(p, [S_+'UpLeg', S_+'Leg', S_+'Foot', S_+'ToeBase', 'Hips'], 7);
+  }
+  if (y > .305) return { Head: 1 };                                    // head + helmet: one rigid piece
+  if (y > .265) { const k = (y - .265) / .04; return { Head: k, Neck: 1 - k }; }   // a short soft band at the neck
   return smoothW(p, ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'LeftShoulder', 'RightShoulder', 'LeftArm', 'RightArm', 'LeftUpLeg', 'RightUpLeg'], 5);
 }
 // ---------- load ----------
