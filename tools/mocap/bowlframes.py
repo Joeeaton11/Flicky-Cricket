@@ -13,13 +13,14 @@ async def render(mode):
         await pg.goto('http://localhost:8765/bowl.html?w=360&h=480'+({'mask':'&mask','normal':'&pass=normal','depth':'&pass=depth'}.get(mode,''))); await pg.wait_for_function('window.READY',timeout=180000)
         if mode == 'depth': await pg.evaluate(f'window.CAMNF=[{R-260},{R+260}]')
         out=[]; meta={}
+        FF=await pg.evaluate('(()=>{const p=JSON.parse(prepLock()).Left.find(l=>l.t0<3.25&&l.t1>3.25).p; return [p.x,p.y,0]})()') if mode=='color' else None   # front-foot landing spot (toe), world-fixed
         for n,t in SEQ:
             h=await pg.evaluate(f'pose({t})'); ax,ay=h[0],h[1]
             C=[ax+R*math.cos(math.radians(AZ))*math.cos(math.radians(EL)), ay+R*math.sin(math.radians(AZ))*math.cos(math.radians(EL)), 85+R*math.sin(math.radians(EL))]
             d=await pg.evaluate(f'cam({json.dumps(C)},[{ax},{ay},85],{FOV})')
             out.append((n,Image.open(io.BytesIO(base64.b64decode(d.split(',')[1]))).convert('RGBA')))
             if mode == 'color':
-                pts=await pg.evaluate(f"proj({json.dumps(C)},[{ax},{ay},85],{FOV},[[{ax},{ay},0],bpos('RightHand'),bpos('Head'),[{ax},{ay},175]])")
+                pts=await pg.evaluate(f"proj({json.dumps(C)},[{ax},{ay},85],{FOV},[[{ax},{ay},0],bpos('RightHand'),bpos('Head'),[{ax},{ay},175],{json.dumps(FF)}])")
                 meta[n]=pts
         await b.close(); return out,meta
 async def main():
