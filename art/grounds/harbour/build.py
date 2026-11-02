@@ -3,8 +3,8 @@
 # Usage: python3 build.py  (run in art/grounds/beach)
 import numpy as np, cv2
 W,H=1170,2532; cx,cy,rx,ry=.5*W,.6*H,.46*W,.335*H
-img=cv2.imread('raw/plate_388-191.png'); h0,w0=img.shape[:2]
-ex,ey,ew,eh=np.load('ell.npy')  # from find_ell (rays from the centre to the windbreak foot, robust fitEllipse)
+img=cv2.imread('raw/plate_ext.png'); h0,w0=img.shape[:2]   # extended upward by extend_top.py (Joe: fix the top)
+ex,ey,ew,eh=np.load('ell.npy'); ey+=int(np.load('ext_rows.npy')[0])  # from find_ell (rays from the centre to the windbreak foot, robust fitEllipse)
 print('sand ellipse',ex,ey,ew,eh,'ratio',round(eh/ew,3))
 s=2*rx/ew; L=max(0,int(round(2*ry/s-eh))); print('scale',round(s,4),'rows',L)
 img=img.astype(np.float32); F=24; w=np.linspace(0,1,F)[:,None,None]
