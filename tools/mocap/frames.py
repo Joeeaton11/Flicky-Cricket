@@ -1,7 +1,7 @@
 import asyncio,base64,io,math,json,re
 from playwright.async_api import async_playwright
 from PIL import Image, ImageOps
-SEQ=[('stance',0.0),('back',1.3)]+[(f'hit{i}',t) for i,t in enumerate([1.42,1.46,1.5,1.54,1.58,1.63,1.68,1.74,1.8,1.87,1.95])]
+SEQ=[('stance',0.0)]+[(f'lift{i}',t) for i,t in enumerate([1.08,1.16,1.23,1.3])]+[(f'hit{i}',round(1.47+i*0.03,3)) for i in range(17)]
 import sys
 MASK='mask' in sys.argv
 async def main():
