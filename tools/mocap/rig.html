@@ -3,16 +3,25 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-const WD = 360, HT = 480;
-const R = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:true }); R.setPixelRatio(2); R.setSize(WD,HT); R.setClearColor(0,0); R.outputColorSpace = THREE.SRGBColorSpace; document.body.appendChild(R.domElement);
+const WD = +(new URLSearchParams(location.search).get('w') || 720), HT = +(new URLSearchParams(location.search).get('h') || 960);
+const MASKM = /mask/.test(location.search);
+const R = new THREE.WebGLRenderer({ antialias: !MASKM, alpha:true, preserveDrawingBuffer:true }); R.setPixelRatio(2); R.setSize(WD,HT); R.setClearColor(0,0); R.outputColorSpace = MASKM ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace; document.body.appendChild(R.domElement);
 const S = new THREE.Scene();
-S.add(new THREE.AmbientLight(0xffffff, 1.7)); const key = new THREE.DirectionalLight(0xfff3e0, 1.5); key.position.set(-200, 300, 400); S.add(key);
-const fill = new THREE.DirectionalLight(0xdfe8ff, .6); fill.position.set(300, -200, 200); S.add(fill);
+S.add(new THREE.HemisphereLight(0xffffff, 0x7a8a66, 2.25)); const key = new THREE.DirectionalLight(0xfff1dc, 1.9); key.position.set(-200, 300, 400); S.add(key);
+const fill = new THREE.DirectionalLight(0xdfe8ff, .5); fill.position.set(300, -200, 200); S.add(fill);
+const rim = new THREE.DirectionalLight(0xfff6e0, 1.6); rim.position.set(260, -520, 380); S.add(rim);
 const SC = 175;                                          // mesh is 1 unit tall → 175 cm
 // mesh coords: x forward, y up, z = his right.  bind world: X forward, Z up, -Y = his right
 const toW = (x, y, z) => new THREE.Vector3(x * SC, -z * SC, (y + .5) * SC);
-const J = { Hips:[-.02,-.08,0], Spine:[-.02,0,0], Spine1:[-.015,.08,0], Spine2:[-.02,.16,0], Neck:[-.01,.29,0], Head:[0,.34,0], HeadEnd:[0,.5,0] };
-for (const [s, k] of [[1,'Right'],[-1,'Left']]) Object.assign(J, {
+const MODEL = new URLSearchParams(location.search).get('m') || 'base';
+const J = MODEL === 'nopads' ? { Hips:[-.03,-.08,0], Spine:[-.03,0,0], Spine1:[-.03,.08,0], Spine2:[-.03,.16,0], Neck:[-.01,.29,0], Head:[0,.34,0], HeadEnd:[0,.49,0] }
+  : MODEL === 'batter' ? { Hips:[-.03,-.08,0], Spine:[-.03,0,0], Spine1:[-.03,.08,0], Spine2:[-.03,.16,0], Neck:[-.01,.29,0], Head:[0,.34,0], HeadEnd:[0,.49,0] }
+  : { Hips:[-.02,-.08,0], Spine:[-.02,0,0], Spine1:[-.015,.08,0], Spine2:[-.02,.16,0], Neck:[-.01,.29,0], Head:[0,.34,0], HeadEnd:[0,.5,0] };
+for (const [s, k] of [[1,'Right'],[-1,'Left']]) Object.assign(J, MODEL === 'nopads' ? {
+  [k+'Shoulder']:[-.03,.24,.04*s], [k+'Arm']:[-.035,.17,.15*s], [k+'ForeArm']:[-.03,.065,.205*s], [k+'Hand']:[-.02,-.005,.265*s], [k+'HandEnd']:[-.01,-.115,.30*s],
+  [k+'UpLeg']:[-.04,-.11,.065*s], [k+'Leg']:[-.05,-.27,.092*s], [k+'Foot']:[-.055,-.43,.115*s], [k+'ToeBase']:[.02,-.47,.125*s], [k+'ToeEnd']:[.08,-.48,.125*s] } : MODEL === 'batter' ? {
+  [k+'Shoulder']:[-.03,.24,.04*s], [k+'Arm']:[-.035,.17,.15*s], [k+'ForeArm']:[-.03,.07,.21*s], [k+'Hand']:[-.02,0,.275*s], [k+'HandEnd']:[-.01,-.11,.315*s],
+  [k+'UpLeg']:[-.03,-.11,.065*s], [k+'Leg']:[-.035,-.27,.095*s], [k+'Foot']:[-.045,-.43,.12*s], [k+'ToeBase']:[.03,-.47,.125*s], [k+'ToeEnd']:[.09,-.48,.125*s] } : {
   [k+'Shoulder']:[-.03,.24,.04*s], [k+'Arm']:[-.035,.17,.15*s], [k+'ForeArm']:[-.025,.05,.215*s], [k+'Hand']:[-.015,-.035,.27*s], [k+'HandEnd']:[-.005,-.085,.30*s],
   [k+'UpLeg']:[-.02,-.11,.065*s], [k+'Leg']:[-.04,-.28,.093*s], [k+'Foot']:[-.045,-.43,.12*s], [k+'ToeBase']:[.04,-.48,.125*s], [k+'ToeEnd']:[.1,-.49,.125*s] });
 const PAR = { Spine:'Hips', Spine1:'Spine', Spine2:'Spine1', Neck:'Spine2', Head:'Neck' };
@@ -33,21 +42,43 @@ function chainWeights(p, chain) {            // chain = [bone names]; segments j
   else if (best.t > 1 - blend && best.i < chain.length - 1) { const k = .5 + .5 * (1 - best.t) / blend; w[b] = k; w[chain[best.i + 1]] = 1 - k; }
   return w;
 }
-function weightsFor(m) {                     // m = mesh-space vertex
+const SEGS = {}; function seg(n) { return SEGS[n] || (SEGS[n] = [JW[n], JW[CH[n]]]); }
+function smoothW(p, allowed, sharp = 6) {
+  const d = allowed.map(n => { const [a, b] = seg(n); return Math.max(.5, segT(p, a, b)[1]); });
+  const dmin = Math.min(...d); const w = {}; let tot = 0;
+  allowed.forEach((n, i) => { const v = Math.pow(dmin / d[i], sharp); if (v > .01) { w[n] = v; tot += v; } });
+  for (const n in w) w[n] /= tot; return w;
+}
+function weightsFor(m, col) {
   const [x, y, z] = m, p = toW(x, y, z), side = z > 0 ? 'Right' : 'Left', az = Math.abs(z);
-  const torso = ['Hips','Spine','Spine1','Spine2','Neck','Head'];
-  const armReg = y > -.14 && ((y < .12 && az > .14) || (y >= .12 && y < .23 && az > .15));
-  if (armReg) { const w = chainWeights(p, [side+'Arm', side+'ForeArm', side+'Hand']);
-    if (w[side+'Arm'] && y > .13) { const k = THREE.MathUtils.clamp((az - .12) / .05, 0, 1); for (const b in w) w[b] *= (.35 + .65 * k); w.Spine2 = (w.Spine2 || 0) + (1 - (.35 + .65 * k)); }
+  const S_ = side;
+  const isArm = y > -.14 && ((y < .12 && az > .14) || (y >= .12 && y < .23 && az > .15));
+  if (isArm) { const w = smoothW(p, [S_+'Arm', S_+'ForeArm', S_+'Hand', S_+'Shoulder', 'Spine2'], 7);
+    // top of the shoulder / sleeve cap: shared with the collarbone and chest so raising the arm doesn't pull up a hood
+    const k = THREE.MathUtils.clamp((y - .11) / .08, 0, 1) * THREE.MathUtils.clamp((.22 - az) / .06, 0, 1) * .6;
+    if (k > 0) { for (const b in w) w[b] *= 1 - k; w[S_+'Shoulder'] = (w[S_+'Shoulder'] || 0) + k * .55; w.Spine2 = (w.Spine2 || 0) + k * .45; }
     return w; }
-  if (y < -.105 && az > .005) { const w = chainWeights(p, [side+'UpLeg', side+'Leg', side+'Foot', side+'ToeBase']);
-    if (w[side+'UpLeg'] && y > -.17) { const k = THREE.MathUtils.clamp((-.105 - y) / .065, 0, 1); for (const b in w) w[b] *= (.4 + .6 * k); w.Hips = (w.Hips || 0) + (1 - (.4 + .6 * k)); }
-    return w; }
-  const w = chainWeights(p, torso);
-  if (y > .2 && y < .3 && az > .06) { const k = THREE.MathUtils.clamp((az - .06) / .08, 0, 1) * .5; for (const b in w) w[b] *= 1 - k; w[side+'Shoulder'] = (w[side+'Shoulder'] || 0) + k; }
-  return w;
+  if (y < -.105 && az > .005) {
+    if (MODEL === 'batter') {      // Nov 2 (Joe): the pad, knee roll included, is one rigid shell on the shin — it never bends with the thigh
+      const [r, g, b] = col || [0, 0, 0], mx = Math.max(r, g, b), mn = Math.min(r, g, b), padCol = mn > 95 && mx - mn < 40;   // white pad / grey straps (trousers are dark grey)
+      const front = x > -.045;                                            // front + sides of the leg = the pad shell
+      if (y > -.415 && y < -.125 && az < .2 && (front || padCol)) return { [S_+'Leg']: 1 };   // the pad layer (split into its own mesh below)
+      // trousers: bend naturally with the thigh and knee
+      if (y < -.405 && y > -.43) { const k = (-.405 - y) / .025; return { [S_+'Leg']: 1 - k * .7, [S_+'Foot']: k * .7 }; }
+    }
+    return smoothW(p, [S_+'UpLeg', S_+'Leg', S_+'Foot', S_+'ToeBase'], 7);   // below the crotch the thigh owns the trouser, inside and out
+  }
+  if (y > .295) return { Head: 1 };                                    // head + helmet: one rigid piece
+  if (y > .255) { const k = (y - .255) / .04; return { Head: k, Neck: 1 - k }; }   // a short soft band at the neck
+  if (y < .02) { const w = smoothW(p, ['Hips', 'Spine', 'Spine1'], 5), k = THREE.MathUtils.clamp((.0 - y) / .1, 0, 1) * (az < .03 ? .55 : .7);   // seat: blend into own thigh towards the crotch
+    for (const b in w) w[b] *= 1 - k; w[S_+'UpLeg'] = (w[S_+'UpLeg'] || 0) + k; return w; }
+  return smoothW(p, ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'LeftShoulder', 'RightShoulder', 'LeftArm', 'RightArm'], 5);
 }
 // ---------- load ----------
+const CLS = id => { const v = (id * 16 + 8) / 255; return [v, 0, 0]; };   // colour-guide class id in red (see m3Recolor)
+const OUTW = +(new URLSearchParams(location.search).get('ol') || 1.0);
+function outlineMat() { const m = new THREE.MeshBasicMaterial({ color: 0x0b1322, side: THREE.BackSide, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
+  m.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <skinning_vertex>', '#include <skinning_vertex>\n  transformed += normalize(objectNormal) * ' + OUTW.toFixed(2) + ';'); }; return m; }
 let mocap, mixer, mb = {}, BB, bbMix, rb, skel, bones = {}, smesh, bat;
 const PIV = { polySurface177: { off:[-14.029458050023521,-40.10203095733637,28.029906357128823], rp:[125.53572368503063,130.6779735002109,11.738496044371978], sp:[125.53572368503063,97.67797350021088,10.738496044371976] },
   BallAnimations: { off:[0,-144.31561279296886,108.32642364501953], rp:[144.19986724853516,126.32101821899414,17.99459457397461], sp:[144.19986724853516,126.32101821899414,17.99459457397461] },
@@ -57,7 +88,7 @@ function fixPiv() { BB.traverse(c => { const p = PIV[c.name]; if (!p) return; c.
   const Sp = new THREE.Matrix4().makeTranslation(...p.sp), Sc = new THREE.Matrix4().makeScale(...c.scale.toArray());
   c.matrix.copy(T).multiply(Ro).multiply(Rp).multiply(Rr).multiply(Rp.clone().invert()).multiply(Sp).multiply(Sc).multiply(Sp.clone().invert()); }); }
 const fl = new FBXLoader();
-Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r => fl.load('src/ballbat.fbx', r)), new Promise(r => new GLTFLoader().load('src/base.glb', r))]).then(([mc, bb, g]) => {
+Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r => fl.load('src/ballbat.fbx', r)), new Promise(r => new GLTFLoader().load(MODEL === 'batter' ? 'src/batter.glb' : MODEL === 'nopads' ? 'src/nopads.glb' : 'src/base.glb', r)), new Promise(r => MODEL === 'nopads' ? new GLTFLoader().load('src/batter.glb', r) : r(null))]).then(([mc, bb, g, padSrc]) => {
   mocap = mc; mixer = new THREE.AnimationMixer(mc); mixer.clipAction(mc.animations[0]).play(); mc.traverse(c => { if (c.isBone) mb[c.name.replace('DannyGear_','')] = c; });
   S.add(mc); mc.visible = false;
   BB = bb; S.add(bb); bbMix = new THREE.AnimationMixer(bb); bbMix.clipAction(bb.animations[0]).play();
@@ -71,16 +102,122 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
   const geo = src.geometry.clone(); geo.applyMatrix4(src.matrixWorld);
   const pos = geo.attributes.position, n = pos.count, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
   const idx = Object.fromEntries(NAMES.map((nm, i) => [nm, i]));
-  for (let i = 0; i < n; i++) { const m = [pos.getX(i), pos.getY(i), pos.getZ(i)]; const w = weightsFor(m);
+  const MV = new Float32Array(n * 3), VC = new Uint8Array(n * 3);
+  { const img = src.material.map.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
+    const px = cx.getImageData(0, 0, cv.width, cv.height).data, uv = geo.attributes.uv, flipY = src.material.map.flipY;
+    for (let i = 0; i < n; i++) { const X = Math.min(cv.width - 1, Math.max(0, Math.round(uv.getX(i) * (cv.width - 1)))), Y = Math.min(cv.height - 1, Math.max(0, Math.round((flipY ? 1 - uv.getY(i) : uv.getY(i)) * (cv.height - 1)))); const o = (Y * cv.width + X) * 4; VC[i*3] = px[o]; VC[i*3+1] = px[o+1]; VC[i*3+2] = px[o+2]; } }
+  window._VC = VC;
+  for (let i = 0; i < n; i++) { const m = [pos.getX(i), pos.getY(i), pos.getZ(i)]; MV.set(m, i * 3); const w = weightsFor(m, [VC[i*3], VC[i*3+1], VC[i*3+2]]);
     const ent = Object.entries(w).sort((a, b) => b[1] - a[1]).slice(0, 4); const tot = ent.reduce((t, e) => t + e[1], 0);
     ent.forEach(([b, v], k) => { si[i*4+k] = idx[b]; sw[i*4+k] = v / tot; });
     const p = toW(...m); pos.setXYZ(i, p.x, p.y, p.z); }
   geo.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4)); geo.computeVertexNormals();
-  const mat = src.material.clone(); mat.roughness = .85; mat.metalness = 0;
-  smesh = new THREE.SkinnedMesh(geo, mat); smesh.add(bones.Hips); smesh.updateMatrixWorld(true); smesh.bind(skel); S.add(smesh); smesh.frustumCulled = false;
+  let mat = src.material.clone(); mat.roughness = .85; mat.metalness = 0;
+  if (/bonedbg/.test(location.search)) { const pal = {}; const cols = new Float32Array(n * 3); const hue = nm => { let h = 0; for (const ch of nm) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+    for (let i = 0; i < n; i++) { const b = NAMES[si[i*4]]; const c = new THREE.Color().setHSL(hue(b) / 360, .8, .5); cols.set([c.r, c.g, c.b], i * 3); }
+    geo.setAttribute('color', new THREE.BufferAttribute(cols, 3)); mat = new THREE.MeshBasicMaterial({ vertexColors: true }); }
+  if (/mask/.test(location.search)) {
+    const img = src.material.map.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
+    const px = cx.getImageData(0, 0, cv.width, cv.height).data, uv = geo.attributes.uv, col = new Float32Array(n * 3), flipY = src.material.map.flipY;
+    for (let i = 0; i < n; i++) { const u = uv.getX(i), v = uv.getY(i); const X = Math.min(cv.width - 1, Math.max(0, Math.round(u * (cv.width - 1)))), Y = Math.min(cv.height - 1, Math.max(0, Math.round((flipY ? 1 - v : v) * (cv.height - 1))));
+      const o = (Y * cv.width + X) * 4, r = px[o], g = px[o+1], b = px[o+2], mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+      const my = MV[i*3+1], mz = Math.abs(MV[i*3+2]); let id = 0;
+      const navy = b > r + 14 && b >= g && mx < 190 && mx - mn > 14, white = mn > 150 && mx - mn < 45, gold = r > 140 && r > b + 50 && g > b + 15, metal = mx - mn < 30 && mn > 70 && mx < 205;
+      if (my > .28) id = navy ? 2 : gold ? 3 : metal ? 3 : 0;                                   // helmet shell / stripe + grille + ear guards
+      else if (mz > .2 && my < .06 && my > -.17) id = navy ? 5 : white || metal ? 4 : 0;           // gloves / cuff
+      else if (my < -.415) id = white ? 8 : mx < 120 ? 9 : 8;                                   // shoes / soles
+      else if (navy) id = 1;                                                                   // shirt
+      else if (mx < 125 && mx - mn < 32 && my < .03) id = 10;                                  // trousers
+      const c = CLS(id);
+      col.set(c, i * 3); }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); mat = new THREE.MeshBasicMaterial({ vertexColors: true });
+  }
+  // Nov 2 (Joe: "the pads should be their own layer attached to the lower leg, not joined to the trousers"):
+  // the fused Tripo surface is split — pad faces become their own mesh, 100% on the shin; trouser legs are added underneath
+  const isPad = new Uint8Array(n);
+  if (MODEL === 'batter') for (let i = 0; i < n; i++) { const x = MV[i*3], y = MV[i*3+1], az = Math.abs(MV[i*3+2]), r = VC[i*3], g = VC[i*3+1], b = VC[i*3+2], mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+    if (y > -.415 && y < -.125 && az > .005 && az < .2 && (x > -.045 || (mn > 95 && mx - mn < 40))) isPad[i] = 1; }
+  const IX = geo.index ? geo.index.array : Array.from({ length: n }, (_, i) => i), bodyI = [], padI = [];
+  for (let f = 0; f < IX.length; f += 3) { const a = IX[f], b = IX[f+1], c = IX[f+2], k = isPad[a] + isPad[b] + isPad[c];
+    if (k === 3) padI.push(a, b, c); else if (k === 0) bodyI.push(a, b, c); }   // the seam strip (half pad, half trouser) is dropped: the trouser legs underneath fill it
+  const parts = [];
+  for (const I of [bodyI, padI]) { if (!I.length) continue; const g2 = geo.clone(); g2.setIndex(I); const sm = new THREE.SkinnedMesh(g2, mat); parts.push(sm); }
+  smesh = parts[0]; smesh.add(bones.Hips); smesh.updateMatrixWorld(true); smesh.bind(skel); S.add(smesh); smesh.frustumCulled = false;
+  for (const sm of parts.slice(1)) { sm.bind(skel, smesh.bindMatrix); sm.frustumCulled = false; S.add(sm); }
+  window.PADFACES = padI.length / 3;
+  if (MODEL === 'nopads' && padSrc) {
+    let ps; padSrc.scene.updateMatrixWorld(true); padSrc.scene.traverse(c => { if (c.isMesh) ps = c; });
+    const pg = ps.geometry.clone(); pg.applyMatrix4(ps.matrixWorld); const P = pg.attributes.position, N = P.count;
+    const img = ps.material.map.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
+    const px = cx.getImageData(0, 0, cv.width, cv.height).data, uvA = pg.attributes.uv, fy = ps.material.map.flipY, side = new Int8Array(N);
+    const OLD = s => ({ knee: [-.035, -.27, .095 * s] });
+    for (let i = 0; i < N; i++) { const x = P.getX(i), y = P.getY(i), z = P.getZ(i), az = Math.abs(z);
+      const X = Math.min(cv.width - 1, Math.max(0, Math.round(uvA.getX(i) * (cv.width - 1)))), Y = Math.min(cv.height - 1, Math.max(0, Math.round((fy ? 1 - uvA.getY(i) : uvA.getY(i)) * (cv.height - 1)))), o = (Y * cv.width + X) * 4;
+      const mx = Math.max(px[o], px[o+1], px[o+2]), mn = Math.min(px[o], px[o+1], px[o+2]);
+      if (y > -.415 && y < -.125 && az > .005 && az < .2 && mn > 92 && mx - mn < 42) side[i] = z > 0 ? 1 : -1; }
+    const PI = pg.index.array;
+    for (const sd of [1, -1]) { const k = sd > 0 ? 'Right' : 'Left', I = [];
+      for (let f = 0; f < PI.length; f += 3) if (side[PI[f]] === sd && side[PI[f+1]] === sd && side[PI[f+2]] === sd) {
+        const bx = Math.max(P.getX(PI[f]), P.getX(PI[f+1]), P.getX(PI[f+2]));
+        if (bx < -.058) continue;          // the strap pieces behind the leg were cut ragged — clean straps are built below
+        I.push(PI[f], PI[f+1], PI[f+2]); }
+      const g2 = pg.clone(); g2.setIndex(I); const gp = g2.attributes.position, ok = OLD(sd).knee, nk = J[k + 'Leg'];
+      for (let i = 0; i < gp.count; i++) { const w = toW(gp.getX(i) - ok[0] + nk[0], gp.getY(i) - ok[1] + nk[1], gp.getZ(i) - ok[2] + nk[2]).sub(JW[k + 'Leg']); gp.setXYZ(i, w.x, w.y, w.z); }
+      g2.computeVertexNormals(); g2.deleteAttribute('skinIndex'); g2.deleteAttribute('skinWeight');
+      let pm;
+      if (/mask/.test(location.search)) { const cols = new Float32Array(gp.count * 3), ua = g2.attributes.uv;
+        for (let i = 0; i < gp.count; i++) { const X = Math.min(cv.width - 1, Math.max(0, Math.round(ua.getX(i) * (cv.width - 1)))), Y = Math.min(cv.height - 1, Math.max(0, Math.round((fy ? 1 - ua.getY(i) : ua.getY(i)) * (cv.height - 1)))), o = (Y * cv.width + X) * 4;
+          cols.set(CLS(Math.min(px[o], px[o+1], px[o+2]) > 128 ? 6 : 7), i * 3); }
+        g2.setAttribute('color', new THREE.BufferAttribute(cols, 3)); pm = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }); }
+      else { pm = ps.material.clone(); pm.side = THREE.DoubleSide; pm.roughness = .85; pm.metalness = 0; }
+      const pad = new THREE.Mesh(g2, pm); pad.name = 'pad' + k; bones[k + 'Leg'].add(pad);
+      // three clean straps round the back of the leg (ankle, mid-shin, above the knee), fixed to the pad
+      { const SB = [[-.39, -.055, .11, .062, .05], [-.295, -.05, .093, .058, .05], [-.215, -.038, .08, .056, .049]];   // y, centre x, |centre z|, radius x, radius z
+        const sw = .016, th = .006;
+        for (const [yy, cx2, cz, rx, rz] of SB) { const N2 = 22, sp = [], BONE = yy > -.25 ? k + 'UpLeg' : k + 'Leg';   // the top strap wraps the thigh
+          for (let j = 0; j < N2; j++) for (const [a0, a1] of [[j / N2, (j + 1) / N2]]) {
+            const ang = t => Math.PI * (.42 + 1.16 * t), pt = (t, dy, out) => { const A = ang(t); return toW(cx2 + (rx + out) * Math.cos(A), yy + dy, sd * (cz + (rz + out) * Math.sin(A) * sd)).sub(JW[BONE]); };
+            for (const out of [0, th]) { const q = [pt(a0, -sw, out), pt(a1, -sw, out), pt(a1, sw, out), pt(a0, sw, out)]; sp.push(q[0], q[1], q[2], q[0], q[2], q[3]); } }
+          const sg = new THREE.BufferGeometry().setFromPoints(sp); sg.computeVertexNormals();
+          let smat; if (/mask/.test(location.search)) { const cc = new Float32Array(sp.length * 3); for (let i = 0; i < sp.length; i++) cc.set(CLS(7), i * 3); sg.setAttribute('color', new THREE.BufferAttribute(cc, 3)); smat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }); }
+          else smat = new THREE.MeshStandardMaterial({ color: new THREE.Color('#9da2a8').convertSRGBToLinear(), roughness: .8, side: THREE.DoubleSide });
+          bones[BONE].add(new THREE.Mesh(sg, smat)); } }
+      if (!/mask/.test(location.search) && OUTW > 0) { const og = g2.clone(), op = og.attributes.position, on = og.attributes.normal, acc = new Map(), kk = i => Math.round(op.getX(i) * 4) + ',' + Math.round(op.getY(i) * 4) + ',' + Math.round(op.getZ(i) * 4);
+        for (let i = 0; i < op.count; i++) { const q = kk(i); const a = acc.get(q) || [0, 0, 0]; a[0] += on.getX(i); a[1] += on.getY(i); a[2] += on.getZ(i); acc.set(q, a); }
+        for (let i = 0; i < op.count; i++) { const a = acc.get(kk(i)), l = Math.hypot(...a) || 1; on.setXYZ(i, a[0] / l, a[1] / l, a[2] / l); }
+        const om = new THREE.MeshBasicMaterial({ color: 0x0b1322, side: THREE.BackSide, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
+        om.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += normalize(objectNormal) * ' + OUTW.toFixed(2) + ';'); };
+        bones[k + 'Leg'].add(new THREE.Mesh(og, om)); }
+    }
+  }
+  // trouser legs under the pads (thigh on UpLeg, shin on Leg, blended over the knee), in the model's trouser grey
+  if (MODEL === 'batter') {
+    let tr = [0, 0, 0], tn = 0; for (let i = 0; i < n; i++) if (MV[i*3+1] < -.13 && MV[i*3+1] > -.4 && MV[i*3] < -.06 && Math.max(VC[i*3], VC[i*3+1], VC[i*3+2]) < 90) { tr[0] += VC[i*3]; tr[1] += VC[i*3+1]; tr[2] += VC[i*3+2]; tn++; }
+    const tcol = tn ? new THREE.Color(tr[0] / tn / 255, tr[1] / tn / 255, tr[2] / tn / 255).convertSRGBToLinear() : new THREE.Color('#3c3e42');
+    const legMat = /mask/.test(location.search) ? new THREE.MeshBasicMaterial({ color: '#000' }) : new THREE.MeshStandardMaterial({ color: tcol, roughness: .9 });
+    for (const sd of ['Left', 'Right']) {
+      const pieces = [], tube = (a, b, r0, r1, bone) => { const L = a.distanceTo(b), g3 = new THREE.CylinderGeometry(r1, r0, L, 16, 6, true); g3.translate(0, L / 2, 0);
+        g3.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize())); g3.translate(a.x, a.y, a.z); return [g3.toNonIndexed(), bone]; };
+      const hip = JW[sd + 'UpLeg'].clone().add(new THREE.Vector3(0, 0, -4)), knee = JW[sd + 'Leg'], ank = JW[sd + 'Foot'].clone().add(new THREE.Vector3(0, 0, 6));
+      pieces.push(tube(hip, knee, 8.6, 7.4, sd + 'UpLeg'), tube(knee, ank, 7.0, 5.6, sd + 'Leg'));
+      const ks = new THREE.SphereGeometry(7.3, 16, 12); ks.translate(knee.x, knee.y, knee.z); pieces.push([ks.toNonIndexed(), 'knee']);
+      for (const [g3, bone] of pieces) { const c = g3.attributes.position.count, s4 = new Uint16Array(c * 4), w4 = new Float32Array(c * 4);
+        for (let i = 0; i < c; i++) { const z = g3.attributes.position.getZ(i); let wl = bone === sd + 'Leg' ? 1 : bone === 'knee' ? THREE.MathUtils.clamp((knee.z + 4 - z) / 8, 0, 1) : THREE.MathUtils.clamp((knee.z + 5 - z) / 10, 0, 1) * .5;
+          s4[i*4] = idx[sd + 'Leg']; w4[i*4] = wl; s4[i*4+1] = idx[sd + 'UpLeg']; w4[i*4+1] = 1 - wl; }
+        g3.setAttribute('skinIndex', new THREE.BufferAttribute(s4, 4)); g3.setAttribute('skinWeight', new THREE.BufferAttribute(w4, 4));
+        const lm = new THREE.SkinnedMesh(g3, legMat); lm.bind(skel, smesh.bindMatrix); lm.frustumCulled = false; S.add(lm); }
+    }
+  }
+  if (!/mask/.test(location.search) && OUTW > 0) {
+    // outline normals: averaged over every copy of a point, so the hull doesn't split at the model's UV seams
+    for (const part of parts) {
+    const og = part.geometry.clone(), op = og.attributes.position, on = og.attributes.normal, acc = new Map(), keyOf = i => Math.round(op.getX(i) * 4) + ',' + Math.round(op.getY(i) * 4) + ',' + Math.round(op.getZ(i) * 4);
+    for (let i = 0; i < op.count; i++) { const k = keyOf(i); const a = acc.get(k) || [0, 0, 0]; a[0] += on.getX(i); a[1] += on.getY(i); a[2] += on.getZ(i); acc.set(k, a); }
+    for (let i = 0; i < op.count; i++) { const a = acc.get(keyOf(i)), l = Math.hypot(...a) || 1; on.setXYZ(i, a[0] / l, a[1] / l, a[2] / l); }
+    const ol = new THREE.SkinnedMesh(og, outlineMat()); ol.bind(skel, smesh.bindMatrix); ol.frustumCulled = false; S.add(ol); } }
 
   // ---------- batting gear (rigid pieces on the bones) ----------
-  if (!window.NOGEAR) {
+  if (!window.NOGEAR && !/nogear/.test(location.search)) {
     const Mt = (c, r = .6) => new THREE.MeshStandardMaterial({ color:c, roughness:r, metalness:0 });
     const navy = Mt('#1d2b5e', .45), gold = Mt('#c9a24a', .4), steel = Mt('#9aa3ad', .35), padW = Mt('#f2f0ea', .7), padG = Mt('#b9bcc2', .7), glove = Mt('#f5f5f2', .7);
     const at = (bone, obj, wpos) => { obj.position.copy(wpos).sub(JW[bone]); bones[bone].add(obj); return obj; };
@@ -115,12 +252,21 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
       at(k+'Hand', gl, hw.clone().lerp(he, .45));
     }
   }
-  // bat
+  // bat: Joe's own bat mesh (ballbat.fbx), coloured here (the export carried no texture)
   bat = new THREE.Group(); S.add(bat);
-  { const M = c => new THREE.MeshStandardMaterial({ color:c, roughness:.7 });
-    const hnd = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 26, 12), M('#2a3d8f')); hnd.position.y = 3; bat.add(hnd);
-    const bl = new THREE.BoxGeometry(10.5, 56, 3.8, 2, 8, 2); const bp = bl.attributes.position; for (let i = 0; i < bp.count; i++) { const y = bp.getY(i), z = bp.getZ(i); if (z > 0) bp.setZ(i, z + 1.8 * Math.cos((y / 56) * Math.PI)); } bl.computeVertexNormals();
-    const blade = new THREE.Mesh(bl, M('#e9cd96')); blade.position.y = 44; bat.add(blade); }
+  { const g = rb.geometry.clone(), P = g.attributes.position, col = new Float32Array(P.count * 3);
+    g.computeBoundingBox(); const bb = g.boundingBox;
+    for (let i = 0; i < P.count; i++) { const x = P.getX(i), y = P.getY(i), z = P.getZ(i); let c;
+      if (y > 113.5) { const band = Math.floor((y - 113.5) / 2.6) % 2; c = band ? [.13, .2, .5] : [.17, .26, .62]; if (y > 138.5) c = [.1, .1, .12]; }   // grip, rubber bands, cap
+      else { const edge = Math.min(Math.abs(x - bb.min.x), Math.abs(x - bb.max.x)), toe = y - bb.min.y, back = (z < 10.4) ? 1 : 0;
+        const k = Math.min(1, edge / 1.6) * Math.min(1, toe / 2.2); c = [.95 - .18 * (1 - k) - .06 * back, .78 - .18 * (1 - k) - .07 * back, .50 - .16 * (1 - k) - .07 * back];
+        if (y > 101 && y < 108 && z > 11 && !back) c = [.12, .18, .42]; }   // a navy maker's band on the face
+      col.set(c, i * 3); }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
+    if (/mask/.test(location.search)) { const cc = new Float32Array(P.count * 3); for (let i = 0; i < P.count; i++) { const y = P.getY(i), c0 = col.slice(i * 3, i * 3 + 3); cc.set(CLS(y > 113.5 ? 12 : (c0[2] > c0[0] ? 13 : 11)), i * 3); } g.setAttribute('color', new THREE.BufferAttribute(cc, 3)); }
+    const bm = /mask/.test(location.search) ? new THREE.MeshBasicMaterial({ vertexColors: true }) : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .55 });
+    const real = new THREE.Mesh(g, bm); bat.add(real);
+    if (!/mask/.test(location.search) && OUTW > 0) { const om = new THREE.MeshBasicMaterial({ color: 0x0b1322, side: THREE.BackSide }); om.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += normalize(objectNormal) * ' + (OUTW * .8).toFixed(2) + ';'); }; bat.add(new THREE.Mesh(g, om)); } }
   // reference pose for retargeting
   setMocap(0); window.REF = {};
   const q = n => mb[n].getWorldQuaternion(new THREE.Quaternion()), P = n => mb[n].getWorldPosition(new THREE.Vector3());
@@ -131,17 +277,65 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
       const fw = new THREE.Vector3().crossVectors(up, rt);     // forward = up × right
       const Mc = new THREE.Matrix4().makeBasis(fw, rt.clone().negate(), up);     // columns: X fwd, Y = -right, Z up
       Q = new THREE.Quaternion().setFromRotationMatrix(Mc); }
-    else if (nm === 'Head') Q = REF.Neck.Q.clone();
+    else if (nm === 'Head') {   // at the stance the batter looks at the bowler (−Y, a touch down), head upright
+      const fw = new THREE.Vector3(0, -1, -.12).normalize(), up0 = new THREE.Vector3(0, 0, 1); up0.sub(fw.clone().multiplyScalar(up0.dot(fw))).normalize();
+      const Mc = new THREE.Matrix4().makeBasis(fw, new THREE.Vector3().crossVectors(up0, fw), up0);   // columns: X fwd, Y left, Z up (bind frame of the model)
+      Q = new THREE.Quaternion().setFromRotationMatrix(Mc); }
+    else if (/Hand$/.test(nm)) {  // full orientation: along the hand and across the knuckles (index → pinky), not just the direction
+      const sd = nm.replace('Hand', ''), dm = JW[sd + 'HandEnd'].clone().sub(JW[nm]).normalize(), am = new THREE.Vector3(1, 0, 0);   // model: knuckles across = forward (thumb/index side)
+      am.sub(dm.clone().multiplyScalar(am.dot(dm))).normalize();
+      const dc = P(sd + 'HandMiddle1').sub(P(nm)).normalize(), ac = P(sd + 'HandIndex1').sub(P(sd + 'HandPinky1')); ac.sub(dc.clone().multiplyScalar(ac.dot(dc))).normalize();
+      const Bm = new THREE.Matrix4().makeBasis(dm, am, new THREE.Vector3().crossVectors(dm, am)), Bc = new THREE.Matrix4().makeBasis(dc, ac, new THREE.Vector3().crossVectors(dc, ac));
+      Q = new THREE.Quaternion().setFromRotationMatrix(Bc.multiply(Bm.invert())); }
     else { const cn = CH[nm]; const mcChild = cn.endsWith('End') ? (nm.endsWith('Hand') ? nm.replace('Hand','HandMiddle1') : nm.endsWith('ToeBase') ? nm.replace('ToeBase','ToeBase1') : null) : cn;
       const dm = JW[cn].clone().sub(JW[nm]).normalize(); const dc = (mcChild && mb[mcChild] ? P(mcChild) : P(nm).add(dm)).sub(P(nm)).normalize();
       Q = new THREE.Quaternion().setFromUnitVectors(dm, dc); }
     REF[nm] = { Q, M0: q(nm) };
   }
+  if (/scene/.test(location.search)) buildScene();
   window.READY = 1;
 });
+// ---------- a simple cricket ground around the batter (Nov 2, Joe: "build me a scene with the animation playing") ----------
+let BALL = null;
+function buildScene() {
+  R.shadowMap.enabled = true; R.shadowMap.type = THREE.PCFSoftShadowMap; R.setClearColor(0x000000, 1);
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(4200, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false,
+    vertexShader: 'varying vec3 vp; void main(){ vp = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',
+    fragmentShader: 'varying vec3 vp; void main(){ float h = clamp(normalize(vp).z, 0., 1.); vec3 c = mix(vec3(.93,.90,.80), vec3(.36,.60,.90), pow(h, .55)); gl_FragColor = vec4(c, 1.); }' }));
+  S.add(sky);
+  const sun = new THREE.DirectionalLight(0xfff0d8, 1.5); sun.position.set(-500, 700, 1100); sun.target.position.set(0, 0, 0); S.add(sun, sun.target);
+  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -260, right: 260, top: 260, bottom: -260, near: 10, far: 4000 }); sun.shadow.bias = -.0008; sun.shadow.normalBias = 2;
+  const cvs = document.createElement('canvas'); cvs.width = 1024; cvs.height = 1024; const g = cvs.getContext('2d');
+  for (let i = 0; i < 16; i++) { g.fillStyle = i % 2 ? '#5f9a3e' : '#68a744'; g.fillRect(0, i * 64, 1024, 64); }
+  for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? '30,60,20' : '170,210,120'},${Math.random() * .08})`; g.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2); }
+  const gt = new THREE.CanvasTexture(cvs); gt.colorSpace = THREE.SRGBColorSpace; gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(7, 7); gt.anisotropy = 4;
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(4100, 96), new THREE.MeshStandardMaterial({ map: gt, roughness: 1 })); ground.receiveShadow = true; ground.position.z = -.5; S.add(ground);
+  const rope = new THREE.Mesh(new THREE.TorusGeometry(2900, 9, 8, 160), new THREE.MeshStandardMaterial({ color: '#f2f2ee', roughness: .6 })); rope.position.set(0, -900, 4); S.add(rope);
+  const ST = 182, BS = ST - 2012;   // popping crease (ST − 122) just in front of his back foot
+  const pc = document.createElement('canvas'); pc.width = 256; pc.height = 2048; const q = pc.getContext('2d');
+  const grd = q.createLinearGradient(0, 0, 256, 0); grd.addColorStop(0, '#b8a56e'); grd.addColorStop(.5, '#cdbb85'); grd.addColorStop(1, '#b8a56e'); q.fillStyle = grd; q.fillRect(0, 0, 256, 2048);
+  for (let i = 0; i < 6000; i++) { q.fillStyle = `rgba(${Math.random() < .5 ? '110,95,55' : '235,225,190'},${Math.random() * .12})`; q.fillRect(Math.random() * 256, Math.random() * 2048, 2, 2); }
+  q.fillStyle = 'rgba(120,100,60,.25)'; for (const yy of [210, 1838]) q.fillRect(30, yy - 60, 196, 120);
+  const pt = new THREE.CanvasTexture(pc); pt.colorSpace = THREE.SRGBColorSpace;
+  const pitch = new THREE.Mesh(new THREE.PlaneGeometry(305, 2300), new THREE.MeshStandardMaterial({ map: pt, roughness: .95 })); pitch.position.set(-10, (ST + BS) / 2, 0); pitch.receiveShadow = true; S.add(pitch);
+  const white = new THREE.MeshBasicMaterial({ color: '#f4f4ef' }), line = (x0, y0, x1, y1) => { const L = Math.hypot(x1 - x0, y1 - y0), m = new THREE.Mesh(new THREE.PlaneGeometry(L, 5), white); m.position.set((x0 + x1) / 2, (y0 + y1) / 2, .4); m.rotation.z = Math.atan2(y1 - y0, x1 - x0); S.add(m); };
+  for (const [sy, dir] of [[ST, -1], [BS, 1]]) {
+    line(-142, sy, 122, sy); line(-190, sy + dir * 122, 170, sy + dir * 122);
+    for (const sx of [-142, 122]) line(sx, sy + dir * -20, sx, sy + dir * 244);
+    const wood = new THREE.MeshStandardMaterial({ color: '#efe3c4', roughness: .5 });
+    for (const dx of [-11.4, 0, 11.4]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 71, 12), wood); st.rotation.x = Math.PI / 2; st.position.set(-10 + dx, sy, 35.5); st.castShadow = true; S.add(st); }
+    for (const dx of [-5.7, 5.7]) { const bl = new THREE.Mesh(new THREE.CylinderGeometry(.9, .9, 11, 8), wood); bl.rotation.z = Math.PI / 2; bl.position.set(-10 + dx, sy, 72); bl.castShadow = true; S.add(bl); }
+  }
+  BALL = new THREE.Mesh(new THREE.SphereGeometry(3.6, 24, 16), new THREE.MeshStandardMaterial({ color: '#b5121b', roughness: .35 })); BALL.castShadow = true; S.add(BALL);
+  BALL.add(new THREE.Mesh(new THREE.TorusGeometry(3.62, .35, 6, 32), new THREE.MeshStandardMaterial({ color: '#f1e6c8' })));
+  S.traverse(o => { if (o.isMesh && o !== ground && o !== pitch && o !== sky) o.castShadow = true; });
+}
+window.sceneBall = t => { if (!BALL) return; let bm; BB.traverse(c => { if (c.name == 'BallAnimations') bm = c; }); bm.geometry.computeBoundingSphere();
+  const c = bm.geometry.boundingSphere.center.clone().applyMatrix4(bm.matrixWorld); const k = THREE.MathUtils.smoothstep(t, 1.0, 1.5);
+  BALL.position.copy(c.add(window._batOff ? window._batOff.clone().multiplyScalar(k) : new THREE.Vector3())); BALL.rotation.set(t * 40, t * 13, 0); BALL.visible = t > .02; };
 function setMocap(t) { mixer.setTime(t); mocap.updateMatrixWorld(true); }
 const _v = new THREE.Vector3();
-window.pose = (t, opts = {}) => {
+window.pose = (t, opts = {}) => { window._lastT = t;
   setMocap(t); bbMix.setTime(t); fixPiv(); BB.updateMatrixWorld(true);
   const W = {};
   for (const nm of NAMES) { const Mt = mb[nm].getWorldQuaternion(new THREE.Quaternion()); W[nm] = Mt.multiply(REF[nm].M0.clone().invert()).multiply(REF[nm].Q); }
@@ -153,17 +347,56 @@ window.pose = (t, opts = {}) => {
   const meshLow = Math.min(fz('LeftToeBase'), fz('RightToeBase'), fz('LeftFoot') - 7, fz('RightFoot') - 7);
   const mcLow = Math.min(mb.LeftToeBase.getWorldPosition(_v).z, mb.RightToeBase.getWorldPosition(new THREE.Vector3()).z);
   bones.Hips.position.z += (mcLow - meshLow) - 2; smesh.updateMatrixWorld(true);
-  // bat: the mocap bat, moved by how far the model's hands sit from the mocap hands
+  // bat: Joe's bat on its own animated frame, moved with the chest (model vs mocap); then two-bone IK puts each
+  // glove on the handle exactly where the mocap hand holds it (Nov 2, Joe: hands were 40+ cm apart, not 15)
+  const gw = (o, n) => o[n].getWorldPosition(new THREE.Vector3());
+  // the cartoon's arms are ~30% shorter than the mocap's: bring the bat in towards the shoulders by that ratio
+  const armL = (o2, sd, end) => gw(o2, sd + 'Arm').distanceTo(gw(o2, sd + 'ForeArm')) + gw(o2, sd + 'ForeArm').distanceTo(gw(o2, sd + 'Hand')) + end;
+  const ratio = (armL(bones, 'Left', 8.5) + armL(bones, 'Right', 8.5)) / (armL(mb, 'Left', gw(mb,'LeftHand').distanceTo(gw(mb,'LeftHandMiddle1'))) + armL(mb, 'Right', gw(mb,'RightHand').distanceTo(gw(mb,'RightHandMiddle1'))));
+  const shM = gw(mb, 'LeftArm').add(gw(mb, 'RightArm')).multiplyScalar(.5), shB = gw(bones, 'LeftArm').add(gw(bones, 'RightArm')).multiplyScalar(.5);
+  const gripM = gw(mb, 'LeftHandMiddle1').add(gw(mb, 'RightHandMiddle1')).multiplyScalar(.5);
+  const off = shB.clone().add(gripM.clone().sub(shM).multiplyScalar(ratio * (window.REACH || .96))).sub(gripM); window._batOff = off;
   bat.matrixAutoUpdate = false;
-  const bm = rb.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(125.5, 132, 11)).multiply(new THREE.Matrix4().makeRotationX(Math.PI));
-  { const p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3(); bm.decompose(p, q, s);
-    const mid = n => mb[n].getWorldPosition(new THREE.Vector3()), me = n => bones[n].getWorldPosition(new THREE.Vector3());
-    const off = me('LeftHand').add(me('RightHand')).multiplyScalar(.5).sub(mid('LeftHand').add(mid('RightHand')).multiplyScalar(.5));
-    p.add(off); bat.matrix.compose(p, q, new THREE.Vector3(1,1,1)); }
+  { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); rb.matrixWorld.decompose(p, q, sc); bat.matrix.compose(p.add(off), q, new THREE.Vector3(1,1,1)); bat.matrixWorld.copy(bat.matrix); }
+  const rbInv = rb.matrixWorld.clone().invert();
+  for (const sd of ['Left','Right']) {
+    // where the mocap hand holds the bat, in bat space → the same spot on the moved bat
+    const hold = gw(mb, sd + 'HandMiddle1').applyMatrix4(rbInv); hold.x = 125.5; hold.z = 11;          // snap onto the handle's axis
+    const tgtC = hold.clone().applyMatrix4(rb.matrixWorld).add(off);
+    const A = bones[sd + 'Arm'], F = bones[sd + 'ForeArm'], Hn = bones[sd + 'Hand'];
+    const S0 = gw(bones, sd + 'Arm'), E0 = gw(bones, sd + 'ForeArm'), H0 = gw(bones, sd + 'Hand');
+    const hdir = JW[sd + 'HandEnd'].clone().sub(JW[sd + 'Hand']).normalize().applyQuaternion(W[sd + 'Hand']);
+    const T = tgtC.clone().sub(hdir.multiplyScalar(8.5));                                                 // wrist sits behind the glove's centre
+    const la = S0.distanceTo(E0), lb = E0.distanceTo(H0); let d = Math.min(S0.distanceTo(T), la + lb - .5);
+    const st = T.clone().sub(S0).normalize(), Tc = S0.clone().add(st.clone().multiplyScalar(d));
+    const pole = E0.clone().sub(S0); pole.sub(st.clone().multiplyScalar(pole.dot(st))); if (pole.lengthSq() < 1e-6) pole.set(0, 0, -1); pole.normalize();
+    const ca = THREE.MathUtils.clamp((la * la + d * d - lb * lb) / (2 * la * d), -1, 1), E1 = S0.clone().add(st.clone().multiplyScalar(la * ca)).add(pole.multiplyScalar(la * Math.sqrt(1 - ca * ca)));
+    const R1 = new THREE.Quaternion().setFromUnitVectors(E0.clone().sub(S0).normalize(), E1.clone().sub(S0).normalize());
+    const H1 = E1.clone().add(H0.clone().sub(E0).applyQuaternion(R1)); const R2 = new THREE.Quaternion().setFromUnitVectors(H1.clone().sub(E1).normalize(), Tc.clone().sub(E1).normalize());
+    W[sd + 'Arm'] = R1.clone().multiply(W[sd + 'Arm']); W[sd + 'ForeArm'] = R2.clone().multiply(R1).multiply(W[sd + 'ForeArm']);
+    for (const nm of [sd + 'Arm', sd + 'ForeArm', sd + 'Hand']) bones[nm].quaternion.copy(W[PAR[nm]].clone().invert().multiply(W[nm]));
+    smesh.updateMatrixWorld(true);
+    { const Hw = gw(bones, sd + 'Hand'), hd2 = JW[sd + 'HandEnd'].clone().sub(JW[sd + 'Hand']).normalize().applyQuaternion(bones[sd + 'Hand'].getWorldQuaternion(new THREE.Quaternion()));
+      (window.IKR = window.IKR || {})[sd] = { reach: Math.round(S0.distanceTo(T)), max: Math.round(la + lb), wristErr: Math.round(Hw.distanceTo(T)), gloveErr: Math.round(Hw.clone().add(hd2.multiplyScalar(8.5)).distanceTo(tgtC)) }; }
+  }
   bat.visible = opts.bat !== false; S.updateMatrixWorld(true);
 };
+window.legPos = n => bones[n].getWorldPosition(new THREE.Vector3()).toArray();
+window.ikr = t => { pose(t); return window.IKR; };
+window.handMid = () => { const a = bones.LeftHand.getWorldPosition(new THREE.Vector3()), c = bones.RightHand.getWorldPosition(new THREE.Vector3()); return a.add(c).multiplyScalar(.5).toArray(); };
+window.handInfo = t => { pose(t); const g = (o, n) => o[n].getWorldPosition(new THREE.Vector3());
+  const top = new THREE.Vector3(125.5, 138, 11).applyMatrix4(rb.matrixWorld), low = new THREE.Vector3(125.5, 115, 11).applyMatrix4(rb.matrixWorld);
+  const mcL = g(mb,'LeftHandMiddle1'), mcR = g(mb,'RightHandMiddle1');
+  return { mocapHandsApart: Math.round(mcL.distanceTo(mcR)), mocapL_top: Math.round(mcL.distanceTo(top)), mocapR_top: Math.round(mcR.distanceTo(top)), mocapL_handle: Math.round(segD(mcL, top, low)), mocapR_handle: Math.round(segD(mcR, top, low)),
+    meshHandsApart: Math.round(g(bones,'LeftHand').distanceTo(g(bones,'RightHand'))), meshL_handle: Math.round(segD(g(bones,'LeftHand'), top.clone().applyMatrix4(new THREE.Matrix4()).add(new THREE.Vector3()), low)) }; };
+function segD(p, a, b) { const ab = b.clone().sub(a), t = Math.max(0, Math.min(1, p.clone().sub(a).dot(ab) / ab.lengthSq())); return a.clone().add(ab.multiplyScalar(t)).distanceTo(p); }
 window.dbg = t => { pose(t); const o = {}; for (const n of ['Hips','RightUpLeg','RightLeg','RightFoot','RightToeBase','LeftUpLeg','LeftLeg','LeftFoot','RightArm','RightForeArm','RightHand']) { const a = bones[n].getWorldPosition(new THREE.Vector3()), c = mb[n].getWorldPosition(new THREE.Vector3()); o[n] = [a.toArray().map(Math.round), c.toArray().map(Math.round)]; } return o; };
 window.wstat = () => { const si = smesh.geometry.attributes.skinIndex, sw = smesh.geometry.attributes.skinWeight, c = {}; for (let i = 0; i < si.count; i++) { const b = NAMES[si.getX(i)]; c[b] = (c[b] || 0) + 1; } return { c, inv: skel.boneInverses.slice(0,4).map(m => m.elements.map(v => Math.round(v))) , names: NAMES }; };
-window.cam = (pos, look, fov) => { const c = new THREE.PerspectiveCamera(fov || 30, WD/HT, 1, 5000); c.up.set(0,0,1); c.position.set(...pos); c.lookAt(new THREE.Vector3(...look)); R.render(S, c); return R.domElement.toDataURL('image/png'); };
+window.proj = (pos, look, fov, pts) => { const c = new THREE.PerspectiveCamera(fov || 30, WD/HT, 1, 5000); c.up.set(0,0,1); c.position.set(...pos); c.lookAt(new THREE.Vector3(...look)); c.updateMatrixWorld(); c.updateProjectionMatrix();
+  return pts.map(p => { const v = (Array.isArray(p) ? new THREE.Vector3(...p) : p).clone().project(c); return [(v.x + 1) / 2 * WD * 2, (1 - v.y) / 2 * HT * 2]; }); };
+window.headPts = () => { const h = bones.Head.getWorldPosition(new THREE.Vector3()), q = bones.Head.getWorldQuaternion(new THREE.Quaternion()); const c = new THREE.Vector3(0, 0, 12).applyQuaternion(q).add(h); const out = [];
+  for (const dx of [-17, 17]) for (const dy of [-17, 17]) for (const dz of [-14, 17]) out.push(c.clone().add(new THREE.Vector3(dx, dy, dz))); return out; };
+window.footPt = () => { const f = n => bones[n].getWorldPosition(new THREE.Vector3()); return [f('LeftFoot'), f('RightFoot'), f('LeftToeBase'), f('RightToeBase')].map(v => v.toArray()); };
+window.cam = (pos, look, fov) => { if (BALL) sceneBall(window._lastT || 0); const c = new THREE.PerspectiveCamera(fov || 30, WD/HT, 1, 5000); c.up.set(0,0,1); c.position.set(...pos); c.lookAt(new THREE.Vector3(...look)); R.render(S, c); return R.domElement.toDataURL('image/png'); };
 window.bindView = (pos, look) => { for (const nm of NAMES) bones[nm].quaternion.identity(); bones.Hips.position.copy(JW.Hips); smesh.updateMatrixWorld(true); bat.visible = false; return cam(pos, look, 30); };
 </script></body></html>
