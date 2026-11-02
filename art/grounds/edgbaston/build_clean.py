@@ -5,7 +5,7 @@
 import numpy as np, cv2
 from measure import measure
 W,H=1170,2532; cx,cy,rx,ry=.5*W,.6*H,.46*W,.335*H
-img=cv2.imread('raw/plate_411-191.png').astype(np.float32); ex,ey,ew,eh=np.load('ell.npy')
+img=cv2.imread('raw/plate_412-191.png').astype(np.float32); ex,ey,ew,eh=np.load('ell.npy')
 def make(sx,sy,dx=0,dy=0):
   up=cv2.resize(img,(round(img.shape[1]*sx),round(img.shape[0]*sy)),interpolation=cv2.INTER_CUBIC)
   ox=int(round(ex*sx-cx+dx)); oy=int(round(ey*sy-cy+dy))
