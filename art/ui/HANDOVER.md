@@ -811,3 +811,4 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Pacing: after a scoring ball the next ball waits 1000 ms (was 650). Closing call-outs hold the next ball back until they've been read (`window._momentHold`, used by `nextOrEnd`): LAST BALL 1.9 s, X TO WIN 1.6 s, LAST OVER (12-ball chases) 1.6 s, and NEED X OFF Y on every one of the last 3 balls 1.4 s (red when the ask is more than 2 a ball). They pulse like a heartbeat (`.mmUrg`, `mmBeat`), and the run-in to a close ball gets two low thumps (`chaseHeartbeat`). Wicket card 1.7 s (was 1.25).
 - Winner on the result screen steps in from the side and then just breathes (`r2WinIn`, `r2Idle`) instead of bouncing.
 - Stat line plurals: 1 FOUR / 1 SIX / 1 BALL.
+- Every other ball now gets a small summary too: NEED X / OFF Y BALLS (`showMoment('summary')`, `.mmSum`), the number green / amber / red by the rate needed; holds the next ball 0.7 s.
