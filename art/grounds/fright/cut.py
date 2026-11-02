@@ -59,7 +59,7 @@ if len(segs)!=10:
   a0,b0=segs[0][0],segs[-1][1]; e=np.linspace(a0,b0,11).astype(int); segs=[(e[i],e[i+1]) for i in range(10)]
 for d,(a,b) in enumerate(segs[:10]):
   im=biggest_in(Wd,(10+a,y0,10+b,y1),'d%d'%d,dil=1,save=False); im.resize((round(im.width*130/im.height),130),Image.LANCZOS).save(D+'d%d.webp'%d,quality=90)
-Hd=keyed('raw/hud_398-192.png',(0,255,0)); biggest_in(Hd,(1185,280,1440,650),'pause2',160)
+Hd=keyed('raw/hud_398-192.png',(0,255,0)); biggest_in(Hd,(1180,265,1530,665),'pause2',160)
 print('ok')
 # smoke + splash: magenta tinted the soft edges purple -> pull those pixels to neutral grey (keeps the orange glow, which has g<b)
 for n in ['x_fog']:
