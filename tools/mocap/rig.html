@@ -189,15 +189,48 @@ window.pose = (t, opts = {}) => {
   const meshLow = Math.min(fz('LeftToeBase'), fz('RightToeBase'), fz('LeftFoot') - 7, fz('RightFoot') - 7);
   const mcLow = Math.min(mb.LeftToeBase.getWorldPosition(_v).z, mb.RightToeBase.getWorldPosition(new THREE.Vector3()).z);
   bones.Hips.position.z += (mcLow - meshLow) - 2; smesh.updateMatrixWorld(true);
-  // bat: the mocap bat, moved by how far the model's hands sit from the mocap hands
+  // bat: Joe's bat on its own animated frame, moved with the chest (model vs mocap); then two-bone IK puts each
+  // glove on the handle exactly where the mocap hand holds it (Nov 2, Joe: hands were 40+ cm apart, not 15)
+  const gw = (o, n) => o[n].getWorldPosition(new THREE.Vector3());
+  // the cartoon's arms are ~30% shorter than the mocap's: bring the bat in towards the shoulders by that ratio
+  const armL = (o2, sd, end) => gw(o2, sd + 'Arm').distanceTo(gw(o2, sd + 'ForeArm')) + gw(o2, sd + 'ForeArm').distanceTo(gw(o2, sd + 'Hand')) + end;
+  const ratio = (armL(bones, 'Left', 8.5) + armL(bones, 'Right', 8.5)) / (armL(mb, 'Left', gw(mb,'LeftHand').distanceTo(gw(mb,'LeftHandMiddle1'))) + armL(mb, 'Right', gw(mb,'RightHand').distanceTo(gw(mb,'RightHandMiddle1'))));
+  const shM = gw(mb, 'LeftArm').add(gw(mb, 'RightArm')).multiplyScalar(.5), shB = gw(bones, 'LeftArm').add(gw(bones, 'RightArm')).multiplyScalar(.5);
+  const gripM = gw(mb, 'LeftHandMiddle1').add(gw(mb, 'RightHandMiddle1')).multiplyScalar(.5);
+  const off = shB.clone().add(gripM.clone().sub(shM).multiplyScalar(ratio * (window.REACH || .96))).sub(gripM);
   bat.matrixAutoUpdate = false;
-  { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); rb.matrixWorld.decompose(p, q, sc);
-    const mid = n => mb[n].getWorldPosition(new THREE.Vector3()), me = n => bones[n].getWorldPosition(new THREE.Vector3());
-    const off = me('LeftHand').add(me('RightHand')).multiplyScalar(.5).sub(mid('LeftHand').add(mid('RightHand')).multiplyScalar(.5));
-    // rotate about the grip, so moving the bat keeps its handle in the hands
-    bat.matrix.compose(p.add(off), q, new THREE.Vector3(1, 1, 1)); }
+  { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); rb.matrixWorld.decompose(p, q, sc); bat.matrix.compose(p.add(off), q, new THREE.Vector3(1,1,1)); bat.matrixWorld.copy(bat.matrix); }
+  const rbInv = rb.matrixWorld.clone().invert();
+  for (const sd of ['Left','Right']) {
+    // where the mocap hand holds the bat, in bat space → the same spot on the moved bat
+    const hold = gw(mb, sd + 'HandMiddle1').applyMatrix4(rbInv); hold.x = 125.5; hold.z = 11;          // snap onto the handle's axis
+    const tgtC = hold.clone().applyMatrix4(rb.matrixWorld).add(off);
+    const A = bones[sd + 'Arm'], F = bones[sd + 'ForeArm'], Hn = bones[sd + 'Hand'];
+    const S0 = gw(bones, sd + 'Arm'), E0 = gw(bones, sd + 'ForeArm'), H0 = gw(bones, sd + 'Hand');
+    const hdir = JW[sd + 'HandEnd'].clone().sub(JW[sd + 'Hand']).normalize().applyQuaternion(W[sd + 'Hand']);
+    const T = tgtC.clone().sub(hdir.multiplyScalar(8.5));                                                 // wrist sits behind the glove's centre
+    const la = S0.distanceTo(E0), lb = E0.distanceTo(H0); let d = Math.min(S0.distanceTo(T), la + lb - .5);
+    const st = T.clone().sub(S0).normalize(), Tc = S0.clone().add(st.clone().multiplyScalar(d));
+    const pole = E0.clone().sub(S0); pole.sub(st.clone().multiplyScalar(pole.dot(st))); if (pole.lengthSq() < 1e-6) pole.set(0, 0, -1); pole.normalize();
+    const ca = THREE.MathUtils.clamp((la * la + d * d - lb * lb) / (2 * la * d), -1, 1), E1 = S0.clone().add(st.clone().multiplyScalar(la * ca)).add(pole.multiplyScalar(la * Math.sqrt(1 - ca * ca)));
+    const R1 = new THREE.Quaternion().setFromUnitVectors(E0.clone().sub(S0).normalize(), E1.clone().sub(S0).normalize());
+    const H1 = E1.clone().add(H0.clone().sub(E0).applyQuaternion(R1)); const R2 = new THREE.Quaternion().setFromUnitVectors(H1.clone().sub(E1).normalize(), Tc.clone().sub(E1).normalize());
+    W[sd + 'Arm'] = R1.clone().multiply(W[sd + 'Arm']); W[sd + 'ForeArm'] = R2.clone().multiply(R1).multiply(W[sd + 'ForeArm']);
+    for (const nm of [sd + 'Arm', sd + 'ForeArm', sd + 'Hand']) bones[nm].quaternion.copy(W[PAR[nm]].clone().invert().multiply(W[nm]));
+    smesh.updateMatrixWorld(true);
+    { const Hw = gw(bones, sd + 'Hand'), hd2 = JW[sd + 'HandEnd'].clone().sub(JW[sd + 'Hand']).normalize().applyQuaternion(bones[sd + 'Hand'].getWorldQuaternion(new THREE.Quaternion()));
+      (window.IKR = window.IKR || {})[sd] = { reach: Math.round(S0.distanceTo(T)), max: Math.round(la + lb), wristErr: Math.round(Hw.distanceTo(T)), gloveErr: Math.round(Hw.clone().add(hd2.multiplyScalar(8.5)).distanceTo(tgtC)) }; }
+  }
   bat.visible = opts.bat !== false; S.updateMatrixWorld(true);
 };
+window.ikr = t => { pose(t); return window.IKR; };
+window.handMid = () => { const a = bones.LeftHand.getWorldPosition(new THREE.Vector3()), c = bones.RightHand.getWorldPosition(new THREE.Vector3()); return a.add(c).multiplyScalar(.5).toArray(); };
+window.handInfo = t => { pose(t); const g = (o, n) => o[n].getWorldPosition(new THREE.Vector3());
+  const top = new THREE.Vector3(125.5, 138, 11).applyMatrix4(rb.matrixWorld), low = new THREE.Vector3(125.5, 115, 11).applyMatrix4(rb.matrixWorld);
+  const mcL = g(mb,'LeftHandMiddle1'), mcR = g(mb,'RightHandMiddle1');
+  return { mocapHandsApart: Math.round(mcL.distanceTo(mcR)), mocapL_top: Math.round(mcL.distanceTo(top)), mocapR_top: Math.round(mcR.distanceTo(top)), mocapL_handle: Math.round(segD(mcL, top, low)), mocapR_handle: Math.round(segD(mcR, top, low)),
+    meshHandsApart: Math.round(g(bones,'LeftHand').distanceTo(g(bones,'RightHand'))), meshL_handle: Math.round(segD(g(bones,'LeftHand'), top.clone().applyMatrix4(new THREE.Matrix4()).add(new THREE.Vector3()), low)) }; };
+function segD(p, a, b) { const ab = b.clone().sub(a), t = Math.max(0, Math.min(1, p.clone().sub(a).dot(ab) / ab.lengthSq())); return a.clone().add(ab.multiplyScalar(t)).distanceTo(p); }
 window.dbg = t => { pose(t); const o = {}; for (const n of ['Hips','RightUpLeg','RightLeg','RightFoot','RightToeBase','LeftUpLeg','LeftLeg','LeftFoot','RightArm','RightForeArm','RightHand']) { const a = bones[n].getWorldPosition(new THREE.Vector3()), c = mb[n].getWorldPosition(new THREE.Vector3()); o[n] = [a.toArray().map(Math.round), c.toArray().map(Math.round)]; } return o; };
 window.wstat = () => { const si = smesh.geometry.attributes.skinIndex, sw = smesh.geometry.attributes.skinWeight, c = {}; for (let i = 0; i < si.count; i++) { const b = NAMES[si.getX(i)]; c[b] = (c[b] || 0) + 1; } return { c, inv: skel.boneInverses.slice(0,4).map(m => m.elements.map(v => Math.round(v))) , names: NAMES }; };
 window.proj = (pos, look, fov, pts) => { const c = new THREE.PerspectiveCamera(fov || 30, WD/HT, 1, 5000); c.up.set(0,0,1); c.position.set(...pos); c.lookAt(new THREE.Vector3(...look)); c.updateMatrixWorld(); c.updateProjectionMatrix();
