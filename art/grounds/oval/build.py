@@ -4,9 +4,17 @@
 import numpy as np, cv2, sys
 from measure import measure
 W,H=1170,2532; cx,cy,rx,ry=.5*W,.6*H,.46*W,.335*H
-img=cv2.imread('raw/plate_403-192.png').astype(np.float32); ex,ey,ew,eh=np.load('ell.npy')
+img=cv2.imread('raw/plate_405-191.png').astype(np.float32); ex,ey,ew,eh=np.load('ell.npy')
 def cut(L):
-  if L<=0: return img,ey
+  if L<0:   # field painted too SHORT: repeat -L rows at the equator (sides ~vertical there), seam where the side crowds match
+    L=-L; F=30; w=np.linspace(0,1,F)[:,None,None]; best=None
+    xl,xr=int(ex-ew/2),int(ex+ew/2); side=np.zeros(img.shape[1],np.float32); side[:max(xl-5,1)]=1; side[xr+5:]=1
+    for a0 in range(int(ey)-L//2-120,int(ey)-L//2+121,2):
+      d=(np.abs(img[a0+L:a0+L+F]-img[a0:a0+F]).mean(axis=(0,2))*(0.2+side)).sum()
+      if best is None or d<best[0]: best=(d,a0)
+    a0=best[1]; top=img[:a0+L+F]; seam=top[-F:]*(1-w)+img[a0:a0+F]*w
+    return np.concatenate([top[:-F],seam,img[a0+F:]],0), ey+L/2
+  if L==0: return img,ey
   F=30; w=np.linspace(0,1,F)[:,None,None]; best=None
   for a0 in range(int(ey)-L//2-80,int(ey)-L//2+81,2):
     d=np.abs(img[a0+L-F:a0+L]-img[a0-F:a0]).mean()   # rows a0..a0+L removed; compare what will meet

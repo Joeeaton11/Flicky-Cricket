@@ -43,7 +43,7 @@ for x in range(W):
     out[y,x]=o[sy,srcx]
 # b) field/old-board pixels just outside the new boards -> the stand front copied in RIGIDLY per angle (one offset per angle,
 #    smoothed round the ring, so no streaks): gap width e(angle) = how far grass/old boards reach beyond the new boards
-oldb=(hsv[...,0]>=34)&(hsv[...,0]<=85)&(hsv[...,1]>80)&(hsv[...,2]<170)   # dark green painted boards
+oldb=((hsv[...,0]>=34)&(hsv[...,0]<=85)&(hsv[...,1]>80)&(hsv[...,2]<170)) | ((hsv[...,0]<=22)&(hsv[...,1]>110)&(hsv[...,2]<190)&(hsv[...,2]>40))   # painted boards: dark green (Lord's) or chocolate brown (Oval)
 fieldish=(grass|oldb)
 N=1440; e=np.zeros(N)
 for i in range(N):
