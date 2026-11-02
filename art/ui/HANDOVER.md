@@ -785,3 +785,4 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 
 - 5.c Headingley built (th_headingley) on branch ecl-5c, same recipe as The Oval. Next: 5.d Edgbaston.
 - 5.d Edgbaston built (th_edgbaston) on branch ecl-5d. Next: 5.e Old Trafford.
+- 5.d Edgbaston signed off (Nov 2). Board composed by art/ui/hud_lock/compose_edgbaston.py (not the generic builder). Next: 5.e Old Trafford — use the FULL PROMPTS.md template (STYLE LOCK + ART STYLE + camera line + section 1) from the first generation.
