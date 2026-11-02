@@ -665,3 +665,9 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - 2.b: coded rope off (`noRope: true` in THEME_ART) — the painted navy/orange boards ring is the only boundary (Joe, Nov 2). rope.webp kept but unused.
 - 2.b REVERTED (Joe, Nov 2): v2 plate looked obviously stretched → back to v1 plate (364:191) with the coded rope, boundary markers off. Lesson: the sunburst tall-oval plate fit (build2 + close_gap) reads as stretched; don't use close_gap.
 - 2.c Afterglow (branch floodlit-2c, key te_afterglow): Camera 4, Figma 366:192 (366:191 came out a small round field — rejected). Rules applied: locked board + crest, no boundary markers (flags 0), coded rope only, plate fitted with build.py (no close_gap). Board prompt with % numbers printed labels (367:191) — describe the layout in words only.
+
+### Rules added Nov 2 (Joe)
+- BESPOKE: every ground totally unique in every way (architecture, palette, landmarks, board, pause, pitch, stumps, ball, rope, extras, lettering). Don't repeat looks between grounds.
+- ONE boundary: the game's rope only. Plate prompt no longer asks for a ring of boards — the stand's own wall meets the grass; no painted rope / LED ring / boards line. No boundary markers.
+- NO GAP between rope and stadium: after build.py, run close_gap.py (boards pulled in rigidly, stand eased back over ~380 px) when the painted edge leaves grass outside the rope. Used on 2.c (gaps ≤ 38 px → no visible stretch). Check zooms before showing.
+- Scoreboards: no props on the top corners unless essential (2.c lanterns removed; Railway lamps kept — Joe asked for them).
