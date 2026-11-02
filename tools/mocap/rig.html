@@ -13,9 +13,12 @@ const SC = 175;                                          // mesh is 1 unit tall 
 // mesh coords: x forward, y up, z = his right.  bind world: X forward, Z up, -Y = his right
 const toW = (x, y, z) => new THREE.Vector3(x * SC, -z * SC, (y + .5) * SC);
 const MODEL = new URLSearchParams(location.search).get('m') || 'base';
-const J = MODEL === 'batter' ? { Hips:[-.03,-.08,0], Spine:[-.03,0,0], Spine1:[-.03,.08,0], Spine2:[-.03,.16,0], Neck:[-.01,.29,0], Head:[0,.34,0], HeadEnd:[0,.49,0] }
+const J = MODEL === 'nopads' ? { Hips:[-.03,-.08,0], Spine:[-.03,0,0], Spine1:[-.03,.08,0], Spine2:[-.03,.16,0], Neck:[-.01,.29,0], Head:[0,.34,0], HeadEnd:[0,.49,0] }
+  : MODEL === 'batter' ? { Hips:[-.03,-.08,0], Spine:[-.03,0,0], Spine1:[-.03,.08,0], Spine2:[-.03,.16,0], Neck:[-.01,.29,0], Head:[0,.34,0], HeadEnd:[0,.49,0] }
   : { Hips:[-.02,-.08,0], Spine:[-.02,0,0], Spine1:[-.015,.08,0], Spine2:[-.02,.16,0], Neck:[-.01,.29,0], Head:[0,.34,0], HeadEnd:[0,.5,0] };
-for (const [s, k] of [[1,'Right'],[-1,'Left']]) Object.assign(J, MODEL === 'batter' ? {
+for (const [s, k] of [[1,'Right'],[-1,'Left']]) Object.assign(J, MODEL === 'nopads' ? {
+  [k+'Shoulder']:[-.03,.24,.04*s], [k+'Arm']:[-.035,.17,.15*s], [k+'ForeArm']:[-.03,.065,.205*s], [k+'Hand']:[-.02,-.005,.265*s], [k+'HandEnd']:[-.01,-.115,.30*s],
+  [k+'UpLeg']:[-.04,-.11,.065*s], [k+'Leg']:[-.05,-.27,.092*s], [k+'Foot']:[-.055,-.43,.115*s], [k+'ToeBase']:[.02,-.47,.125*s], [k+'ToeEnd']:[.08,-.48,.125*s] } : MODEL === 'batter' ? {
   [k+'Shoulder']:[-.03,.24,.04*s], [k+'Arm']:[-.035,.17,.15*s], [k+'ForeArm']:[-.03,.07,.21*s], [k+'Hand']:[-.02,0,.275*s], [k+'HandEnd']:[-.01,-.11,.315*s],
   [k+'UpLeg']:[-.03,-.11,.065*s], [k+'Leg']:[-.035,-.27,.095*s], [k+'Foot']:[-.045,-.43,.12*s], [k+'ToeBase']:[.03,-.47,.125*s], [k+'ToeEnd']:[.09,-.48,.125*s] } : {
   [k+'Shoulder']:[-.03,.24,.04*s], [k+'Arm']:[-.035,.17,.15*s], [k+'ForeArm']:[-.025,.05,.215*s], [k+'Hand']:[-.015,-.035,.27*s], [k+'HandEnd']:[-.005,-.085,.30*s],
@@ -54,15 +57,17 @@ function weightsFor(m, col) {
     if (MODEL === 'batter') {      // Nov 2 (Joe): the pad, knee roll included, is one rigid shell on the shin — it never bends with the thigh
       const [r, g, b] = col || [0, 0, 0], mx = Math.max(r, g, b), mn = Math.min(r, g, b), padCol = mn > 95 && mx - mn < 40;   // white pad / grey straps (trousers are dark grey)
       const front = x > -.045;                                            // front + sides of the leg = the pad shell
-      if (y > -.415 && y < -.125 && (front || padCol)) return { [S_+'Leg']: 1 };     // shoes (below −0.415) stay with the feet
-      if (y >= -.405 && y <= -.215) return { [S_+'Leg']: 1 };              // anything under the pad (trousers, buckles)
+      if (y > -.415 && y < -.125 && az < .2 && (front || padCol)) return { [S_+'Leg']: 1 };   // the pad layer (split into its own mesh below)
+      // trousers: bend naturally with the thigh and knee
       if (y < -.405 && y > -.43) { const k = (-.405 - y) / .025; return { [S_+'Leg']: 1 - k * .7, [S_+'Foot']: k * .7 }; }
     }
-    return smoothW(p, [S_+'UpLeg', S_+'Leg', S_+'Foot', S_+'ToeBase', 'Hips'], 7);
+    return smoothW(p, [S_+'UpLeg', S_+'Leg', S_+'Foot', S_+'ToeBase'], 7);   // below the crotch the thigh owns the trouser, inside and out
   }
   if (y > .305) return { Head: 1 };                                    // head + helmet: one rigid piece
   if (y > .265) { const k = (y - .265) / .04; return { Head: k, Neck: 1 - k }; }   // a short soft band at the neck
-  return smoothW(p, ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'LeftShoulder', 'RightShoulder', 'LeftArm', 'RightArm', 'LeftUpLeg', 'RightUpLeg'], 5);
+  if (y < .02) { const w = smoothW(p, ['Hips', 'Spine', 'Spine1'], 5), k = THREE.MathUtils.clamp((.0 - y) / .1, 0, 1) * (az < .03 ? .55 : .7);   // seat: blend into own thigh towards the crotch
+    for (const b in w) w[b] *= 1 - k; w[S_+'UpLeg'] = (w[S_+'UpLeg'] || 0) + k; return w; }
+  return smoothW(p, ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'LeftShoulder', 'RightShoulder', 'LeftArm', 'RightArm'], 5);
 }
 // ---------- load ----------
 const OUTW = +(new URLSearchParams(location.search).get('ol') || 1.0);
@@ -77,7 +82,7 @@ function fixPiv() { BB.traverse(c => { const p = PIV[c.name]; if (!p) return; c.
   const Sp = new THREE.Matrix4().makeTranslation(...p.sp), Sc = new THREE.Matrix4().makeScale(...c.scale.toArray());
   c.matrix.copy(T).multiply(Ro).multiply(Rp).multiply(Rr).multiply(Rp.clone().invert()).multiply(Sp).multiply(Sc).multiply(Sp.clone().invert()); }); }
 const fl = new FBXLoader();
-Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r => fl.load('src/ballbat.fbx', r)), new Promise(r => new GLTFLoader().load(MODEL === 'batter' ? 'src/batter.glb' : 'src/base.glb', r))]).then(([mc, bb, g]) => {
+Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r => fl.load('src/ballbat.fbx', r)), new Promise(r => new GLTFLoader().load(MODEL === 'batter' ? 'src/batter.glb' : MODEL === 'nopads' ? 'src/nopads.glb' : 'src/base.glb', r)), new Promise(r => MODEL === 'nopads' ? new GLTFLoader().load('src/batter.glb', r) : r(null))]).then(([mc, bb, g, padSrc]) => {
   mocap = mc; mixer = new THREE.AnimationMixer(mc); mixer.clipAction(mc.animations[0]).play(); mc.traverse(c => { if (c.isBone) mb[c.name.replace('DannyGear_','')] = c; });
   S.add(mc); mc.visible = false;
   BB = bb; S.add(bb); bbMix = new THREE.AnimationMixer(bb); bbMix.clipAction(bb.animations[0]).play();
@@ -102,6 +107,9 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
     const p = toW(...m); pos.setXYZ(i, p.x, p.y, p.z); }
   geo.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4)); geo.computeVertexNormals();
   let mat = src.material.clone(); mat.roughness = .85; mat.metalness = 0;
+  if (/bonedbg/.test(location.search)) { const pal = {}; const cols = new Float32Array(n * 3); const hue = nm => { let h = 0; for (const ch of nm) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+    for (let i = 0; i < n; i++) { const b = NAMES[si[i*4]]; const c = new THREE.Color().setHSL(hue(b) / 360, .8, .5); cols.set([c.r, c.g, c.b], i * 3); }
+    geo.setAttribute('color', new THREE.BufferAttribute(cols, 3)); mat = new THREE.MeshBasicMaterial({ vertexColors: true }); }
   if (/mask/.test(location.search)) {
     const img = src.material.map.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
     const px = cx.getImageData(0, 0, cv.width, cv.height).data, uv = geo.attributes.uv, col = new Float32Array(n * 3), flipY = src.material.map.flipY;
@@ -113,13 +121,72 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
       col.set(c, i * 3); }
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); mat = new THREE.MeshBasicMaterial({ vertexColors: true });
   }
-  smesh = new THREE.SkinnedMesh(geo, mat); smesh.add(bones.Hips); smesh.updateMatrixWorld(true); smesh.bind(skel); S.add(smesh); smesh.frustumCulled = false;
+  // Nov 2 (Joe: "the pads should be their own layer attached to the lower leg, not joined to the trousers"):
+  // the fused Tripo surface is split — pad faces become their own mesh, 100% on the shin; trouser legs are added underneath
+  const isPad = new Uint8Array(n);
+  if (MODEL === 'batter') for (let i = 0; i < n; i++) { const x = MV[i*3], y = MV[i*3+1], az = Math.abs(MV[i*3+2]), r = VC[i*3], g = VC[i*3+1], b = VC[i*3+2], mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+    if (y > -.415 && y < -.125 && az > .005 && az < .2 && (x > -.045 || (mn > 95 && mx - mn < 40))) isPad[i] = 1; }
+  const IX = geo.index ? geo.index.array : Array.from({ length: n }, (_, i) => i), bodyI = [], padI = [];
+  for (let f = 0; f < IX.length; f += 3) { const a = IX[f], b = IX[f+1], c = IX[f+2], k = isPad[a] + isPad[b] + isPad[c];
+    if (k === 3) padI.push(a, b, c); else if (k === 0) bodyI.push(a, b, c); }   // the seam strip (half pad, half trouser) is dropped: the trouser legs underneath fill it
+  const parts = [];
+  for (const I of [bodyI, padI]) { if (!I.length) continue; const g2 = geo.clone(); g2.setIndex(I); const sm = new THREE.SkinnedMesh(g2, mat); parts.push(sm); }
+  smesh = parts[0]; smesh.add(bones.Hips); smesh.updateMatrixWorld(true); smesh.bind(skel); S.add(smesh); smesh.frustumCulled = false;
+  for (const sm of parts.slice(1)) { sm.bind(skel, smesh.bindMatrix); sm.frustumCulled = false; S.add(sm); }
+  window.PADFACES = padI.length / 3;
+  if (MODEL === 'nopads' && padSrc) {
+    let ps; padSrc.scene.updateMatrixWorld(true); padSrc.scene.traverse(c => { if (c.isMesh) ps = c; });
+    const pg = ps.geometry.clone(); pg.applyMatrix4(ps.matrixWorld); const P = pg.attributes.position, N = P.count;
+    const img = ps.material.map.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
+    const px = cx.getImageData(0, 0, cv.width, cv.height).data, uvA = pg.attributes.uv, fy = ps.material.map.flipY, side = new Int8Array(N);
+    const OLD = s => ({ knee: [-.035, -.27, .095 * s] });
+    for (let i = 0; i < N; i++) { const x = P.getX(i), y = P.getY(i), z = P.getZ(i), az = Math.abs(z);
+      const X = Math.min(cv.width - 1, Math.max(0, Math.round(uvA.getX(i) * (cv.width - 1)))), Y = Math.min(cv.height - 1, Math.max(0, Math.round((fy ? 1 - uvA.getY(i) : uvA.getY(i)) * (cv.height - 1)))), o = (Y * cv.width + X) * 4;
+      const mx = Math.max(px[o], px[o+1], px[o+2]), mn = Math.min(px[o], px[o+1], px[o+2]);
+      if (y > -.415 && y < -.125 && az > .005 && az < .2 && mn > 92 && mx - mn < 42) side[i] = z > 0 ? 1 : -1; }
+    const PI = pg.index.array;
+    for (const sd of [1, -1]) { const k = sd > 0 ? 'Right' : 'Left', I = [];
+      for (let f = 0; f < PI.length; f += 3) if (side[PI[f]] === sd && side[PI[f+1]] === sd && side[PI[f+2]] === sd) I.push(PI[f], PI[f+1], PI[f+2]);
+      const g2 = pg.clone(); g2.setIndex(I); const gp = g2.attributes.position, ok = OLD(sd).knee, nk = J[k + 'Leg'];
+      for (let i = 0; i < gp.count; i++) { const w = toW(gp.getX(i) - ok[0] + nk[0], gp.getY(i) - ok[1] + nk[1], gp.getZ(i) - ok[2] + nk[2]).sub(JW[k + 'Leg']); gp.setXYZ(i, w.x, w.y, w.z); }
+      g2.computeVertexNormals(); g2.deleteAttribute('skinIndex'); g2.deleteAttribute('skinWeight');
+      let pm;
+      if (/mask/.test(location.search)) { const cols = new Float32Array(gp.count * 3); for (let i = 0; i < gp.count; i++) cols.set([0, 0, 2/3], i * 3); g2.setAttribute('color', new THREE.BufferAttribute(cols, 3)); pm = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }); }
+      else { pm = ps.material.clone(); pm.side = THREE.DoubleSide; pm.roughness = .85; pm.metalness = 0; }
+      const pad = new THREE.Mesh(g2, pm); pad.name = 'pad' + k; bones[k + 'Leg'].add(pad);
+      if (!/mask/.test(location.search) && OUTW > 0) { const og = g2.clone(), op = og.attributes.position, on = og.attributes.normal, acc = new Map(), kk = i => Math.round(op.getX(i) * 4) + ',' + Math.round(op.getY(i) * 4) + ',' + Math.round(op.getZ(i) * 4);
+        for (let i = 0; i < op.count; i++) { const q = kk(i); const a = acc.get(q) || [0, 0, 0]; a[0] += on.getX(i); a[1] += on.getY(i); a[2] += on.getZ(i); acc.set(q, a); }
+        for (let i = 0; i < op.count; i++) { const a = acc.get(kk(i)), l = Math.hypot(...a) || 1; on.setXYZ(i, a[0] / l, a[1] / l, a[2] / l); }
+        const om = new THREE.MeshBasicMaterial({ color: 0x0b1322, side: THREE.BackSide, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
+        om.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += normalize(objectNormal) * ' + OUTW.toFixed(2) + ';'); };
+        bones[k + 'Leg'].add(new THREE.Mesh(og, om)); }
+    }
+  }
+  // trouser legs under the pads (thigh on UpLeg, shin on Leg, blended over the knee), in the model's trouser grey
+  if (MODEL === 'batter') {
+    let tr = [0, 0, 0], tn = 0; for (let i = 0; i < n; i++) if (MV[i*3+1] < -.13 && MV[i*3+1] > -.4 && MV[i*3] < -.06 && Math.max(VC[i*3], VC[i*3+1], VC[i*3+2]) < 90) { tr[0] += VC[i*3]; tr[1] += VC[i*3+1]; tr[2] += VC[i*3+2]; tn++; }
+    const tcol = tn ? new THREE.Color(tr[0] / tn / 255, tr[1] / tn / 255, tr[2] / tn / 255).convertSRGBToLinear() : new THREE.Color('#3c3e42');
+    const legMat = /mask/.test(location.search) ? new THREE.MeshBasicMaterial({ color: '#000' }) : new THREE.MeshStandardMaterial({ color: tcol, roughness: .9 });
+    for (const sd of ['Left', 'Right']) {
+      const pieces = [], tube = (a, b, r0, r1, bone) => { const L = a.distanceTo(b), g3 = new THREE.CylinderGeometry(r1, r0, L, 16, 6, true); g3.translate(0, L / 2, 0);
+        g3.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize())); g3.translate(a.x, a.y, a.z); return [g3.toNonIndexed(), bone]; };
+      const hip = JW[sd + 'UpLeg'].clone().add(new THREE.Vector3(0, 0, -4)), knee = JW[sd + 'Leg'], ank = JW[sd + 'Foot'].clone().add(new THREE.Vector3(0, 0, 6));
+      pieces.push(tube(hip, knee, 8.6, 7.4, sd + 'UpLeg'), tube(knee, ank, 7.0, 5.6, sd + 'Leg'));
+      const ks = new THREE.SphereGeometry(7.3, 16, 12); ks.translate(knee.x, knee.y, knee.z); pieces.push([ks.toNonIndexed(), 'knee']);
+      for (const [g3, bone] of pieces) { const c = g3.attributes.position.count, s4 = new Uint16Array(c * 4), w4 = new Float32Array(c * 4);
+        for (let i = 0; i < c; i++) { const z = g3.attributes.position.getZ(i); let wl = bone === sd + 'Leg' ? 1 : bone === 'knee' ? THREE.MathUtils.clamp((knee.z + 4 - z) / 8, 0, 1) : THREE.MathUtils.clamp((knee.z + 5 - z) / 10, 0, 1) * .5;
+          s4[i*4] = idx[sd + 'Leg']; w4[i*4] = wl; s4[i*4+1] = idx[sd + 'UpLeg']; w4[i*4+1] = 1 - wl; }
+        g3.setAttribute('skinIndex', new THREE.BufferAttribute(s4, 4)); g3.setAttribute('skinWeight', new THREE.BufferAttribute(w4, 4));
+        const lm = new THREE.SkinnedMesh(g3, legMat); lm.bind(skel, smesh.bindMatrix); lm.frustumCulled = false; S.add(lm); }
+    }
+  }
   if (!/mask/.test(location.search) && OUTW > 0) {
     // outline normals: averaged over every copy of a point, so the hull doesn't split at the model's UV seams
-    const og = geo.clone(), op = og.attributes.position, on = og.attributes.normal, acc = new Map(), keyOf = i => Math.round(op.getX(i) * 4) + ',' + Math.round(op.getY(i) * 4) + ',' + Math.round(op.getZ(i) * 4);
+    for (const part of parts) {
+    const og = part.geometry.clone(), op = og.attributes.position, on = og.attributes.normal, acc = new Map(), keyOf = i => Math.round(op.getX(i) * 4) + ',' + Math.round(op.getY(i) * 4) + ',' + Math.round(op.getZ(i) * 4);
     for (let i = 0; i < op.count; i++) { const k = keyOf(i); const a = acc.get(k) || [0, 0, 0]; a[0] += on.getX(i); a[1] += on.getY(i); a[2] += on.getZ(i); acc.set(k, a); }
     for (let i = 0; i < op.count; i++) { const a = acc.get(keyOf(i)), l = Math.hypot(...a) || 1; on.setXYZ(i, a[0] / l, a[1] / l, a[2] / l); }
-    const ol = new THREE.SkinnedMesh(og, outlineMat()); ol.bind(skel, smesh.bindMatrix); ol.frustumCulled = false; S.add(ol); }
+    const ol = new THREE.SkinnedMesh(og, outlineMat()); ol.bind(skel, smesh.bindMatrix); ol.frustumCulled = false; S.add(ol); } }
 
   // ---------- batting gear (rigid pieces on the bones) ----------
   if (!window.NOGEAR && !/nogear/.test(location.search)) {

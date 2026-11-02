@@ -7,7 +7,7 @@ MASK='mask' in sys.argv
 async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch(args=['--use-gl=swiftshader','--enable-unsafe-swiftshader']); pg=await b.new_page(viewport={'width':720,'height':960})
-        await pg.goto('http://localhost:8765/rig.html?m=batter&nogear'+('&mask' if MASK else '')); await pg.wait_for_function('window.READY',timeout=180000)
+        await pg.goto('http://localhost:8765/rig.html?m=nopads&nogear'+('&mask' if MASK else '')); await pg.wait_for_function('window.READY',timeout=180000)
         az,el,r=120,22,950; x=r*math.cos(math.radians(az))*math.cos(math.radians(el))-10; y=r*math.sin(math.radians(az))*math.cos(math.radians(el))+30; z=85+r*math.sin(math.radians(el))
         C=f'[{x},{y},{z}],[-10,30,85],13.5'
         await pg.evaluate('pose(0)'); feet=await pg.evaluate('footPt()')
