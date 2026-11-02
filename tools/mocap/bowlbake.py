@@ -5,7 +5,8 @@ from outline2d import add_outline
 M=json.load(open('bowl_meta.json')); SEQ=M['seq']; meta=M['meta']
 SHIRT=(236,234,226); TROU=(118,30,46)
 T={}   # cloth colours are painted into the texture in bowl.html now
-cols=[np.asarray(Image.open(f'bw_{n}.png').convert('RGBA')).astype(np.float32) for n,_ in SEQ]
+from ink import ink
+cols=[np.asarray(ink(Image.open(f'bw_{n}.png'),Image.open(f'bn_{n}.png'),Image.open(f'bd_{n}.png'),Image.open(f'bm_{n}.png'))).astype(np.float32) for n,_ in SEQ]
 msks=[np.asarray(Image.open(f'bm_{n}.png').convert('RGBA')) for n,_ in SEQ]
 def cls(m): c=np.clip(np.round((m[...,0].astype(np.float32)-8)/16),0,13).astype(int); c[m[...,3]<128]=0; return c
 L=lambda a: a[...,0]*.3+a[...,1]*.59+a[...,2]*.11
@@ -34,7 +35,7 @@ import base64,io
 for (n,_),im in zip(SEQ,outs):
     s=im.crop((x0,y0,x1,y1)).resize((W,H),Image.LANCZOS)
     s=ImageEnhance.Color(s).enhance(1.12); s=ImageEnhance.Contrast(s).enhance(1.05)
-    s=add_outline(s,2)
+    s=add_outline(s,3)
     s.save(f'bf_{n}.png'); bio=io.BytesIO(); s.save(bio,'WEBP',quality=86,method=6)
     mk=Image.open(f'bm_{n}.png').convert('RGBA').crop((x0,y0,x1,y1)).resize((W,H),Image.NEAREST); mb=io.BytesIO(); mk.save(mb,'WEBP',lossless=True)
     hand=meta[n][1]
