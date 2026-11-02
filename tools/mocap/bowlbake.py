@@ -4,7 +4,7 @@ import numpy as np
 from outline2d import add_outline
 M=json.load(open('bowl_meta.json')); SEQ=M['seq']; meta=M['meta']
 SHIRT=(236,234,226); TROU=(118,30,46)
-T={1:SHIRT,10:TROU}
+T={}   # cloth colours are painted into the texture in bowl.html now
 cols=[np.asarray(Image.open(f'bw_{n}.png').convert('RGBA')).astype(np.float32) for n,_ in SEQ]
 msks=[np.asarray(Image.open(f'bm_{n}.png').convert('RGBA')) for n,_ in SEQ]
 def cls(m): c=np.clip(np.round((m[...,0].astype(np.float32)-8)/16),0,13).astype(int); c[m[...,3]<128]=0; return c
