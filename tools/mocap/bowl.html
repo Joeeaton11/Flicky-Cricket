@@ -275,13 +275,15 @@ Promise.all([new Promise(r => fl.load('src/' + CLIP, r)), new Promise(r => new G
   // ink-line passes (Nov 2, Joe: "more detail"): view normals and depth, edge-detected in the bake into painted inner lines
   if (PASS) S.traverse(o => { if (!o.isMesh || !o.material) return; if (o.material.side === THREE.BackSide) { o.visible = false; return; }
     o.material = PASS === 'normal' ? new THREE.MeshNormalMaterial({ side: o.material.side }) : new THREE.MeshDepthMaterial({ side: o.material.side }); });
+  if (!QS.has('raw') && !QS.has('nolock')) window.prepLock();
   window.READY = 1;
 });
 function setMocap(t) { mixer.setTime(t); mocap.updateMatrixWorld(true); }
 const _v = new THREE.Vector3();
 window.pose = (t) => { window._lastT = t; setMocap(t);
-  const W = {};
-  for (const nm of NAMES) { if (HELPER(nm)) continue; const Mt = mb[nm].getWorldQuaternion(new THREE.Quaternion()); W[nm] = Mt.multiply(REF[nm].M0.clone().invert()).multiply(REF[nm].Q); }
+  // Nov 2 animation clean-up: a light time filter (takes the mocap shake out), then the fixes below
+  const W = QS.has('raw') ? rawW(t) : filtW(t); setMocap(t);
+  if (!QS.has('raw')) { fixStoop(W, t); fixHead(W, t); }
   for (const sd of ['Left', 'Right']) { const loc = W.Spine2.clone().invert().multiply(W[sd + 'Shoulder']); W[sd + 'Shoulder'] = W.Spine2.clone().multiply(new THREE.Quaternion().slerp(loc, .5)); W[sd + 'ArmHalf'] = W[sd + 'Shoulder'].clone().slerp(W[sd + 'Arm'], .5); }   // half the collarbone lift: no hunched "hood"
   for (const nm of NAMES) { const b = bones[nm], P = PAR[nm]; b.quaternion.copy(P ? W[P].clone().invert().multiply(W[nm]) : W[nm]); }
   window._W = W;
@@ -290,7 +292,10 @@ window.pose = (t) => { window._lastT = t; setMocap(t);
   const meshLow = Math.min(fz('LeftToeBase'), fz('RightToeBase'), fz('LeftFoot') - 7, fz('RightFoot') - 7);
   const mcLow = Math.min(mb.LeftToeBase.getWorldPosition(_v).z, mb.RightToeBase.getWorldPosition(new THREE.Vector3()).z, mb.LeftFoot.getWorldPosition(new THREE.Vector3()).z - 7, mb.RightFoot.getWorldPosition(new THREE.Vector3()).z - 7);
   bones.Hips.position.z += (mcLow - meshLow) - 1; smesh.updateMatrixWorld(true);
+  if (!QS.has('raw')) { carry(window._W, t); leadArm(window._W, t); }
   headClear(window._W); bodyClear(window._W);
+  if (!QS.has('raw') && !QS.has('nolock')) footLock(t);
+  smesh.updateMatrixWorld(true);
   ballM.visible = t < window.TREL; S.updateMatrixWorld(true);
   return bones.Hips.getWorldPosition(new THREE.Vector3()).toArray(); };
 // the cartoon head is bigger than Joe's: if a hand would pass through it, the arm is bent out so the hand rides over it
@@ -336,6 +341,74 @@ function bodyClear(W) {
     if (worst) { const R2 = new THREE.Quaternion().setFromUnitVectors(worst.P.clone().sub(E0).normalize(), worst.T.clone().sub(E0).normalize());
       for (const nm of ['ForeArm', 'Hand']) W[sd + nm] = R2.clone().multiply(W[sd + nm]); setL(sd); } }
 }
+function rawW(t) { setMocap(t); const W = {};
+  for (const nm of NAMES) { if (HELPER(nm)) continue; const Mt = mb[nm].getWorldQuaternion(new THREE.Quaternion()); W[nm] = Mt.multiply(REF[nm].M0.clone().invert()).multiply(REF[nm].Q); }
+  return W; }
+const FK = [[-3, .03], [-2, .1], [-1, .22], [0, .3], [1, .22], [2, .1], [3, .03]];   // gaussian over ±3 frames at 60 fps
+const FAST = /^Right(Arm|ForeArm|Hand)$/;   // the bowling arm whips round too fast to filter wide: it'd bend the elbow at release
+function filtW(t) { const fs = +(QS.get('fs') || 1), S2 = FK.map(([k, w]) => [rawW(t + k / 60 * fs), w]), S3 = FK.map(([k, w]) => [rawW(t + k / 60 * fs * .3), w]), W = {};
+  for (const nm in S2[3][0]) { const SS = FAST.test(nm) ? S3 : S2, acc = SS[3][0][nm].clone(); let tot = SS[3][1];
+    for (let i = 0; i < SS.length; i++) { if (i === 3) continue; tot += SS[i][1]; acc.slerp(SS[i][0][nm], SS[i][1] / tot); } W[nm] = acc; }
+  return W; }
+const DESC = r => NAMES.filter(n => { let p = n; while (p) { if (p === r) return true; p = PAR[p]; } return false; });
+const rotSub = (W, root, C) => { for (const n of DESC(root)) if (W[n]) W[n] = C.clone().multiply(W[n]); };
+// the follow-through stoop: Joe folds 60° at the waist, which on the big-headed cartoon buries the face in the chest.
+// Anything past 32° is eased back (60° → ~42°), spread over the three spine bones so the back stays a smooth curve
+function fixStoop(W, t) { const sw = smooth01(3.24, 3.38, t); if (sw <= 0) return;   // the release itself stays as bowled (arm straight up)
+  const up = new THREE.Vector3(0, 0, 1).applyQuaternion(W.Spine2), f = Math.acos(THREE.MathUtils.clamp(up.z, -1, 1)), L = THREE.MathUtils.degToRad(+(QS.get('stoop') || 32));
+  if (f <= L) return; const tgt = L + (f - L) * .38, ax = new THREE.Vector3().crossVectors(up, new THREE.Vector3(0, 0, 1)).normalize(), C = new THREE.Quaternion().setFromAxisAngle(ax, (f - tgt) * sw);
+  const I = new THREE.Quaternion(); W.Spine = I.clone().slerp(C, 1 / 3).multiply(W.Spine); W.Spine1 = I.clone().slerp(C, 2 / 3).multiply(W.Spine1); rotSub(W, 'Spine2', C); }
+// head: never staring at his feet — the eyes are lifted towards the batter (less neck bend, so no neck creases)
+function fixHead(W, t) { const hw = smooth01(3.3, 3.45, t); if (hw <= 0) return;   // not through the release: the lifted head would meet the bowling arm
+  const fw = new THREE.Vector3(0, 1, -.12).normalize().applyQuaternion(W.Head), L = -.3;
+  if (fw.z >= L) return; const fh = new THREE.Vector3(fw.x, fw.y, 0).normalize(), tz = fw.z + (L + (fw.z - L) * .3 - fw.z) * hw, tgt = fh.multiplyScalar(Math.sqrt(1 - tz * tz)).setZ(tz);
+  const C = new THREE.Quaternion().setFromUnitVectors(fw, tgt), I = new THREE.Quaternion(); W.Neck = I.clone().slerp(C, .45).multiply(W.Neck); W.Head = C.multiply(W.Head); }
+const smooth01 = (a, b, x) => THREE.MathUtils.smoothstep(x, a, b);
+function setArm(W, sd) { W[sd + 'ArmHalf'] = W[sd + 'Shoulder'].clone().slerp(W[sd + 'Arm'], .5);
+  for (const nm of [sd + 'Arm', sd + 'ForeArm', sd + 'Hand', sd + 'ArmHalf']) bones[nm].quaternion.copy(W[PAR[nm]].clone().invert().multiply(W[nm])); smesh.updateMatrixWorld(true); }
+function ik2(W, sd, T) { const gw = n => bones[n].getWorldPosition(new THREE.Vector3());
+  const S0 = gw(sd + 'Arm'), E0 = gw(sd + 'ForeArm'), H0 = gw(sd + 'Hand'), la = S0.distanceTo(E0), lb = E0.distanceTo(H0), d = THREE.MathUtils.clamp(S0.distanceTo(T), Math.abs(la - lb) + 1, la + lb - .3);
+  const st = T.clone().sub(S0).normalize(), Tc = S0.clone().add(st.clone().multiplyScalar(d));
+  const pole = E0.clone().sub(S0); pole.sub(st.clone().multiplyScalar(pole.dot(st))); if (pole.lengthSq() < 1e-6) pole.set(0, 0, -1); pole.normalize();
+  const ca = THREE.MathUtils.clamp((la * la + d * d - lb * lb) / (2 * la * d), -1, 1), E1 = S0.clone().add(st.clone().multiplyScalar(la * ca)).add(pole.multiplyScalar(la * Math.sqrt(1 - ca * ca)));
+  const R1 = new THREE.Quaternion().setFromUnitVectors(E0.clone().sub(S0).normalize(), E1.clone().sub(S0).normalize());
+  const H1 = E1.clone().add(H0.clone().sub(E0).applyQuaternion(R1)), R2 = new THREE.Quaternion().setFromUnitVectors(H1.clone().sub(E1).normalize(), Tc.clone().sub(E1).normalize());
+  W[sd + 'Arm'] = R1.clone().multiply(W[sd + 'Arm']); W[sd + 'ForeArm'] = R2.clone().multiply(R1).multiply(W[sd + 'ForeArm']); W[sd + 'Hand'] = R2.clone().multiply(R1).multiply(W[sd + 'Hand']); setArm(W, sd); }
+// run-up: Joe carries the ball up by his ear; a bowler carries it at the chest, then lifts it into the gather
+function carry(W, t) { const w = 1 - smooth01(+(QS.get('c0') || 2.5), +(QS.get('c1') || 2.82), t); if (w <= 0) return; smesh.updateMatrixWorld(true);
+  const q2 = bones.Spine2.getWorldQuaternion(new THREE.Quaternion()), rt = JW.RightArm.clone().sub(JW.LeftArm).normalize();
+  const T = bones.Spine2.getWorldPosition(new THREE.Vector3()).add(rt.multiplyScalar(9).add(new THREE.Vector3(0, 17, -10)).applyQuaternion(q2));
+  ik2(W, 'Right', bones.RightHand.getWorldPosition(new THREE.Vector3()).lerp(T, w)); }
+// follow-through: the front arm flies up behind him in the take; it's pulled down to sweep past the hip
+function leadArm(W, t) { const w = smooth01(3.12, 3.3, t); if (w <= 0) return; smesh.updateMatrixWorld(true);
+  const S0 = bones.LeftArm.getWorldPosition(new THREE.Vector3()), H0 = bones.LeftHand.getWorldPosition(new THREE.Vector3()), d = H0.clone().sub(S0), L = d.length(), lim = -+(QS.get('lead') || .55) * L;
+  if (d.z <= lim) return; const tz = lim + (d.z - lim) * .3, dz = d.z + (tz - d.z) * w, h = new THREE.Vector3(d.x, d.y, 0).normalize().multiplyScalar(Math.sqrt(Math.max(0, L * L - dz * dz))).setZ(dz);
+  const R = new THREE.Quaternion().setFromUnitVectors(d.normalize(), h.normalize()); for (const nm of ['Arm', 'ForeArm', 'Hand']) W['Left' + nm] = R.clone().multiply(W['Left' + nm]); setArm(W, 'Left'); }
+// the cartoon's legs are shorter than Joe's, so with his hip travel every planted foot skated ~20 cm (the front foot too,
+// right through the delivery). Each contact is found once, the foot is pinned at its average spot, and the leg is IK'd to it
+let LOCKS = null;
+window.prepLock = () => { const was = QS.has('nolock'); LOCKS = { Left: [], Right: [] }; const tr = { Left: [], Right: [] }; window._noLock = 1;
+  for (let t = 1.9; t <= 4.62; t += 1 / 60) { pose(t); for (const sd of ['Left', 'Right']) tr[sd].push([t, bones[sd + 'ToeBase'].getWorldPosition(new THREE.Vector3())]); }
+  window._noLock = 0;
+  for (const sd of ['Left', 'Right']) { let cur = null;
+    for (const [t, p] of tr[sd]) { if (p.z < 6.5) { (cur = cur || []).push([t, p]); } else if (cur) { if (cur.length >= 4) LOCKS[sd].push(cur); cur = null; } }
+    if (cur && cur.length >= 4) LOCKS[sd].push(cur);
+    LOCKS[sd] = LOCKS[sd].map(c => { const m = new THREE.Vector3(); c.forEach(x => m.add(x[1])); m.divideScalar(c.length); return { t0: c[0][0], t1: c[c.length - 1][0], p: m }; }); }
+  return JSON.stringify(LOCKS); };
+function legIK(W, sd, T) { const gw = n => bones[n].getWorldPosition(new THREE.Vector3()), U = sd + 'UpLeg', K = sd + 'Leg', F = sd + 'Foot';
+  const S0 = gw(U), E0 = gw(K), H0 = gw(F), la = S0.distanceTo(E0), lb = E0.distanceTo(H0), d = THREE.MathUtils.clamp(S0.distanceTo(T), Math.abs(la - lb) + 1, la + lb - .2);
+  const st = T.clone().sub(S0).normalize(), Tc = S0.clone().add(st.clone().multiplyScalar(d));
+  const pole = E0.clone().sub(S0); pole.sub(st.clone().multiplyScalar(pole.dot(st))); if (pole.lengthSq() < 1e-6) pole.set(0, 1, 0); pole.normalize();
+  const ca = THREE.MathUtils.clamp((la * la + d * d - lb * lb) / (2 * la * d), -1, 1), E1 = S0.clone().add(st.clone().multiplyScalar(la * ca)).add(pole.multiplyScalar(la * Math.sqrt(1 - ca * ca)));
+  const R1 = new THREE.Quaternion().setFromUnitVectors(E0.clone().sub(S0).normalize(), E1.clone().sub(S0).normalize());
+  const H1 = E1.clone().add(H0.clone().sub(E0).applyQuaternion(R1)), R2 = new THREE.Quaternion().setFromUnitVectors(H1.clone().sub(E1).normalize(), Tc.clone().sub(E1).normalize());
+  W[U] = R1.clone().multiply(W[U]); W[K] = R2.clone().multiply(R1).multiply(W[K]);   // the foot keeps its own world angle
+  for (const nm of [U, K, F]) bones[nm].quaternion.copy(W[PAR[nm]].clone().invert().multiply(W[nm])); smesh.updateMatrixWorld(true); }
+function footLock(t) { if (!LOCKS || window._noLock) return; const W = window._W, B = .09;
+  for (const sd of ['Left', 'Right']) for (const L of LOCKS[sd]) { if (t < L.t0 - B || t > L.t1 + B) continue;
+    const w = t < L.t0 ? smooth01(L.t0 - B, L.t0, t) : t > L.t1 ? 1 - smooth01(L.t1, L.t1 + B, t) : 1;
+    const toe = bones[sd + 'ToeBase'].getWorldPosition(new THREE.Vector3()), dl = L.p.clone().sub(toe).setZ(0).multiplyScalar(w);
+    legIK(W, sd, bones[sd + 'Foot'].getWorldPosition(new THREE.Vector3()).add(dl)); } }
 window.texShot = () => window._TEXCV.toDataURL('image/png');
 window.mcHand = t => { setMocap(t); return [mb.RightHand.getWorldPosition(new THREE.Vector3()).toArray(), mb.Hips.getWorldPosition(new THREE.Vector3()).toArray()]; };
 window.bpos = n => bones[n].getWorldPosition(new THREE.Vector3()).toArray();

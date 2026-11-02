@@ -776,3 +776,13 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
   - New helper bones `LeftArmHalf` / `RightArmHalf` (child of the collarbone, rotation = halfway between collarbone and upper arm each frame): the shoulder cap, the top of the sleeve and the armpit ride on it, so the shoulder neither collapses overhead nor balloons when the arm goes back. The cap no longer hangs on the collarbone (that was the lump). Extra local weight smoothing round each shoulder (`?shp=` passes, `?shr=` radius). `?wdbg=<bone regex>` paints a bone's weights for checking.
   - Polo collar weighted to chest + neck only (never the head); lower neck stays with it.
   - `bodyClear()`: the cartoon's chest is deeper than Joe's, so an arm swinging across it in the follow-through is rotated out to ride on the shirt (`?brad=` cm) instead of sinking into it (that was the "hole" in his side).
+
+### Nov 2 — Gully 3D bowler: animation clean-up of the seam mocap (tools/mocap/bowl.html)
+No new take available, so the seam take is cleaned in the rig (all switchable off with `?raw`):
+- **Time filter**: every bone is a gaussian average over ±3 frames at 60 fps (bowling arm only ±1 frame so the arm stays straight and fast at release) — takes the capture shake out.
+- **Run-up carry** (`carry`): ball held at the chest instead of up by his ear, lifting into the gather from 2.5–2.82 s (`?c0`,`?c1`).
+- **Follow-through stoop** (`fixStoop`): trunk bend past 32° is eased back (60° → ~42°), spread over Spine/Spine1/Spine2, phased in after the release (3.24–3.38 s) so the release pose is untouched.
+- **Head** (`fixHead`): eyes lifted towards the batter after release instead of staring at his feet (also stops the neck creasing).
+- **Front arm** (`leadArm`): no longer flies up behind him in the follow-through; kept below shoulder height (`?lead`).
+- **Foot lock** (`prepLock`/`footLock`/`legIK`): the cartoon's shorter legs made every planted foot skate ~20 cm (front foot too, right through delivery). Contacts are found once at load, each foot is pinned at its average spot and the leg IK'd to it, blended in/out over 90 ms. `?nolock` turns it off.
+Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game code unchanged.
