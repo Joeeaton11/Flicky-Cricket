@@ -5,16 +5,16 @@
 import numpy as np, cv2
 from measure import measure
 W,H=1170,2532; cx,cy,rx,ry=.5*W,.6*H,.46*W,.335*H
-img=cv2.imread('raw/plate_412-191.png').astype(np.float32); ex,ey,ew,eh=np.load('ell.npy')
+img=cv2.imread('raw/plate_413-191.png').astype(np.float32); ex,ey,ew,eh=np.load('ell.npy')
 def make(sx,sy,dx=0,dy=0):
   up=cv2.resize(img,(round(img.shape[1]*sx),round(img.shape[0]*sy)),interpolation=cv2.INTER_CUBIC)
   ox=int(round(ex*sx-cx+dx)); oy=int(round(ey*sy-cy+dy))
   if oy<0:
-    n=-oy; sky=cv2.imread('../lords/raw/sky_402-191.png').astype(np.float32)
-    k=up.shape[1]/sky.shape[1]; sky=cv2.resize(sky,(up.shape[1],round(sky.shape[0]*k))); F2=90; need=n+F2
-    if sky.shape[0]<need: sky=np.concatenate([np.repeat(sky[:1],need-sky.shape[0],0),sky],0)
-    sky=sky[-need:]; gain=up[:12].reshape(-1,3).mean(0)/np.maximum(sky[-F2:-F2+12].reshape(-1,3).mean(0),1)
-    sky=sky*(1+(gain-1)*(np.linspace(0,1,need)[:,None,None]**1.5)); w2=np.linspace(0,1,F2)[:,None,None]
+    n=-oy; F2=90; need=n+F2   # own sky: the plate's top rows, blurred sideways, fading up into a deeper evening tone
+    edge=cv2.GaussianBlur(up[:16].mean(0,keepdims=True),(0,0),80)[0]
+    t=np.linspace(1,0,need)[:,None,None]**1.3; deep=np.array([150,120,95.])   # BGR: dusky lilac-blue
+    sky=edge[None]*(1-t*0.55)+deep*(t*0.55)
+    w2=np.linspace(0,1,F2)[:,None,None]
     up[:F2]=sky[-F2:]*(1-w2)+up[:F2]*w2; up=np.concatenate([sky[:-F2],up],0); oy=0
   c=up[oy:oy+H,max(ox,0):max(ox,0)+W]
   if c.shape[0]<H: c=np.concatenate([c,np.repeat(c[-1:],H-c.shape[0],0)],0)
