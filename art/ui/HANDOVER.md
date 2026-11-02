@@ -703,3 +703,4 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - Pitch came out dark brown and crisp → tone_pitch.py pulls it to the field's sand (Lab), a shade darker, softer, dusty ends.
 - Capture: serve the repo over http (file:// blocks the word images by CORS) and set flickyWelcomeChest=1 so the welcome bag doesn't open over the match.
 
+- 3.a scoreboard legibility (Joe, Nov 2: text not legible): the game writes white/pale text, so every text panel must be DARK. prep_board.py turns all panels navy (own shading kept) and swaps the pink deckchair stripes for a navy plank panel with a thin striped valance on top. Driftwood stump slimmed to Coliseum's width (26 of 52 px) — fat stumps made the HUD wicket icon a solid block. **Rule: paint scoreboard panels dark; say so in the HUD prompt.**

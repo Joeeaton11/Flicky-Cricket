@@ -35,7 +35,7 @@ ct,cb=crease(110,220),crease(740,860); print('pitch top',top,'creases',ct,cb,'si
 (l1,r1),(l2,r2)=edges(ct),edges(cb); quad=np.float32([[l1,ct],[r1,ct],[r2,cb],[l2,cb]]); Wr,Hr=200,523
 Mx=cv2.getPerspectiveTransform(quad,np.float32([[0,0],[Wr,0],[Wr,Hr],[0,Hr]]))
 Image.fromarray(cv2.warpPerspective(np.ascontiguousarray(src),Mx,(Wr,Hr),flags=cv2.INTER_CUBIC)).save(D+'pitch_rect.webp',quality=92)
-st=biggest_in(P,(510,90,620,460),'stump'); st.resize((52,360),Image.LANCZOS).save(D+'stump.webp',quality=92)
+st=biggest_in(P,(510,90,620,460),'stump'); c=Image.new('RGBA',(52,360)); c.alpha_composite(st.resize((26,360),Image.LANCZOS),(13,0)); c.save(D+'stump.webp',quality=92)   # slim, like Coliseum (26 of 52 px)
 bl=biggest_in(P,(700,230,915,345),'bail',save=False); bl.resize((212,round(bl.height*212/bl.width)),Image.LANCZOS).save(D+'bail.webp',quality=92)
 biggest_in(P,(975,160,1185,370),'ball',208); biggest_in(P,(1245,150,1500,400),'ring',120)
 biggest_in(P,(430,520,700,850),'x_gull_up',180); biggest_in(P,(690,670,950,905),'x_gull_dn',180)

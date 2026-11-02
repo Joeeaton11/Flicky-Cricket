@@ -28,3 +28,36 @@ O[y1:,x1:x2]=O[y1:,x1+330:x2+330]
 P=Image.fromarray(pc.astype(np.uint8)); P=P.crop(P.getbbox()); P=P.resize((round(P.width*.72),round(P.height*.72)),Image.LANCZOS)
 Ob=Image.fromarray(O.clip(0,255).astype(np.uint8)); Ob.save('../../ui/hud_lock/orig/beach_orig.webp',lossless=True)  # shells left off: after the lock fit the energy bar covers them
 print(o.size, s.size, P.size)
+
+# ---- legibility (Joe, Nov 2: "the scoreboard makes the text not legible"): the game writes white/pale text, so every text panel
+# goes deep navy (own shading kept). Chase panel: the pink deckchair stripes become a navy plank panel with a thin striped valance on top.
+import numpy as np
+O=np.array(Image.open('../../ui/hud_lock/orig/beach_orig.webp').convert('RGBA')).astype(np.float32)
+lab=cv2.cvtColor(O[...,:3].clip(0,255).astype(np.uint8),cv2.COLOR_RGB2LAB).astype(np.float32)
+NAVY=cv2.cvtColor(np.uint8([[[16,44,86]]]),cv2.COLOR_RGB2LAB)[0,0].astype(np.float32)
+def navy(mask):
+  L=lab[...,0]; m=mask
+  out=lab.copy(); mu=L[m].mean() if m.any() else 0
+  out[...,0]=np.where(m,NAVY[0]+(L-mu)*0.45,L); out[...,1]=np.where(m,NAVY[1],lab[...,1]); out[...,2]=np.where(m,NAVY[2],lab[...,2])
+  return out
+H0=O.shape[0]; yy,xx=np.mgrid[:H0,:760]
+cream=(lab[...,0]>150)&(lab[...,2]>136)
+M=np.zeros((H0,760),bool)
+def rect(x1,y1,x2,y2,inset): M[y1+inset:y2-inset,x1+inset:x2-inset]|=cream[y1+inset:y2-inset,x1+inset:x2-inset]
+rect(49,147,304,218,7);  rect(50,44,140,124,10); rect(112,235,692,282,4)
+for (x1_,y1_,x2_,y2_) in [(531,44,616,126),(620,44,705,126)]:   # wicket slots: whole recess inside the bolted frame
+  sub=(lab[y1_+13:y2_-13,x1_+13:x2_-13,0]>110); M[y1_+13:y2_-13,x1_+13:x2_-13]|=sub
+for sx in (346,425,503,582,662): M|=cream&(np.hypot(xx-sx,yy-182)<27)
+M|=cream&(np.hypot(xx-84,yy-257)<20)   # energy icon: the snail shell stays, its cream backing goes navy
+M=cv2.morphologyEx(M.astype(np.uint8),cv2.MORPH_CLOSE,np.ones((3,3),np.uint8)).astype(bool)
+lab=navy(M)
+# chase panel: navy planks from the board's own blue plank texture, valance of the original stripes along the top
+x1,y1,x2,y2=142,44,528,126; v=11
+pl=O[300:318,350:530,:3]; pl=np.concatenate([pl,pl[::-1]]*6,0); pl=np.concatenate([pl,pl[:,::-1]]*3,1)[:y2-y1-v,:x2-x1]
+pll=cv2.cvtColor(pl.clip(0,255).astype(np.uint8),cv2.COLOR_RGB2LAB).astype(np.float32); mu=pll[...,0].mean()
+pll[...,0]=NAVY[0]+(pll[...,0]-mu)*0.5; pll[...,1]=NAVY[1]; pll[...,2]=NAVY[2]
+lab[y1+v:y2,x1:x2]=pll
+for yy_ in range(y1+v-2,y1+v+3): lab[yy_,x1:x2,0]*=0.8   # small shadow line under the valance
+O[...,:3]=cv2.cvtColor(lab.clip(0,255).astype(np.uint8),cv2.COLOR_LAB2RGB)
+Image.fromarray(O.clip(0,255).astype(np.uint8)).save('../../ui/hud_lock/orig/beach_orig.webp',lossless=True)
+print('navy panels done', M.sum())
