@@ -63,3 +63,9 @@
 - THEME: packed-earth ground between curving tracks; yellow-and-maroon local train with commuters cheering from the doors; rusty goods wagon with kids on the roof; footbridge of watchers; platform with chai stall, porter and trolley; signal post; sodium lamps; stacked sleepers, oil drums, a dog, crows on the wires; lit skyline.
 - HUD: glossy sunflower-yellow enamel station sign, black border, rivets. Words: yellow painted-steel letters, black extrusion, rivets; white digits.
 - Props: pitch of old oil-stained railway sleepers with gravel between; red-and-white signal-post stumps + bails; orange rubber ball; rusty rail boundary; rusty hex-nut ring markers. Extras: crows, steam, green signal flag.
+
+## Floodlit Series — 2.a `te_evening` (English county ground, early evening)
+- CAMERA: 4. LIGHT: sunset from picture-left, floodlights just switched on.
+- THEME: red-brick Victorian pavilion with balconies and members, packed tiered stands with flags, church spire and terraced houses, pink-lavender sunset, four floodlight towers, scoreboard tower, ice-cream van, refreshment tent, TV gantry.
+- HUD: glossy white-painted wooden pavilion board, racing-green frame, brass corners, row of glowing bulbs. Words: cream letters, green extrusion, thin gold outline, floodlight glow.
+- Props: closely mown county pitch with worn dusty middle; polished ash stumps with green band; turned bails; white ball with green stitching; white rope; white discs. Extras: moths, green-and-white club flag.

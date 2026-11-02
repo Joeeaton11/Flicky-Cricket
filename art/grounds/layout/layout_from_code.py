@@ -240,6 +240,8 @@ Replace [THEME] and the [e.g. …] parts per ground. Every result is checked wit
 
 ## Shared block (top of every prompt)
 ```
+BESPOKE (Joe): every ground is totally unique — its own architecture, materials, colour palette, landmarks, crowd look, scoreboard design, pause button, pitch, stumps, ball, rope, extras and lettering. Never reuse a look, layout idea or prop from another ground (e.g. not every night ground gets corner floodlight towers and gold rails).
+STYLE LOCK (Joe, Nov 2 — art drifted realistic on gpt-image): a stylised 3D CARTOON mobile game exactly like Clash of Clans / Clash Royale / Boom Beach promo art: toy-like chunky shapes, smooth glossy plastic-like materials, chunky cute people with big round heads (no realistic faces), absolutely NOT realistic, NOT painterly, NOT a photo, no gritty fine detail. Put this FIRST in every prompt, especially for gpt-image-2.5-sunburst.
 ART STYLE: glossy, ultra-vibrant 3D-rendered cartoon mobile-game key art, like Clash of Clans / Boom Beach promo art: hyper-saturated colours that pop (vivid turquoise water, lush emerald foliage, rich golds and reds), warm glowing lanterns and lights with soft bloom, strong rim lighting, deep ambient-occlusion shadows, crisp chunky detail, high contrast, everything polished and shiny. Chunky cute proportions (big heads, short bodies). Fantasy themes go big: fun, cool, over the top. Camera: high 3/4 top-down view looking straight up a cricket ground in portrait. CAMERA DISTANCE: [CAMERA — paste ONE of the 5 camera lines below, the one chosen for this ground].
 THEME: [THEME].
 LIGHT: soft sunlight from [LIGHT — chosen per ground, whatever looks best, e.g. top-left]. Use this same light direction on every asset for this ground.
@@ -266,8 +268,8 @@ References in the game: 1 close-up = Rooftop (`tr_rooftop`) · 2 medium-close �
 Portrait background. It MUST match the game layout below exactly. The layout is described in words on purpose: never write any measurement, number, label or guide line in the image.
 FIELD: one TALL oval playing surface — themed, not always grass [e.g. raked beach sand, ice, ship's deck, turf] — plain and calm so a small ball shows clearly. It is about 1.6 times as tall as it is wide. Its left and right edges sit one eighth of the picture's width in from each side. Its top edge is just over a quarter of the way down the picture; its bottom edge is very near the bottom, leaving only a thin band (about a fifteenth of the height) below it. Its centre is three fifths of the way down. The thin strips beyond its left and right edges get cropped, so keep only scenery there.
 It is a true smooth ellipse, not a racetrack with straight sides.
-TIGHT STADIUM (very important): the field's edge IS the foot of the stands. The stadium starts right at the field edge. Only a thin ring of boards (or the theme's equivalent) separates the field from the crowd and scenery: no wide band of bare outfield, track, sand or empty ground. The front row of the crowd sits immediately behind the boards: no grass, concourse or walkway between the boards and the seats. The grass stops at the boards: no grass anywhere outside the boards, all the way round, including at the top and bottom.
-The field edge is a clean crisp line. NO rope, NO markers, NO inner ring, NO lines on the field: the game draws the themed rope, boundary markers and 30-yard ring markers from the props sheet, exactly on the coded oval.
+TIGHT STADIUM, NO GAP (very important, Joe): the field's edge IS the foot of the stands. Only a thin ring of boards (or the theme's equivalent) separates the field from the crowd, and those boards sit EXACTLY on the field edge all the way round, especially on the four diagonals: not a single strip of grass, track, sand or walkway outside the boards. The front row of the crowd sits immediately behind the boards. No painted rope on the grass: the boards themselves are the boundary.
+The field edge is a clean crisp line. NO rope, NO markers, NO inner ring, NO lines on the field: the game draws the themed rope and 30-yard ring markers from the props sheet, exactly on the coded oval.
 EMPTY: no pitch, stumps, players, umpire, ball or text on the field.
 SURROUNDINGS: busy, fun and cool — packed with life, characters and detail, edge to edge and top to bottom, OUTSIDE the oval only. Real-world themes (e.g. an IPL ground) should look like the real thing, in the home team's colours. No empty bands at the top or bottom.
 SCREEN ZONES (the game's interface sits on top of these; paint scenery there, just keep it simple):
@@ -286,6 +288,8 @@ On the flat key background, each piece separate, nothing touching. All blank: no
   · top band (about 55%): a small square badge slot on the left (league crest), then a wide blank panel for the chase line, with TWO empty wicket slots at its right end.
   · middle band (about 35%): a blank area on the left for score and target, then 6 empty round sockets in a row on the right (this over).
   · bottom band (about 10%): a thin empty energy track across the full width, with a small icon slot at its left end for a themed energy symbol.
+  · Extra props on the board are fine, but vary them per ground — never the same props in the same spot (e.g. not always something on both top corners) (Joe). The crest is drawn over the top-left corner by the game.
+  · Describe this layout in WORDS only in the prompt — numbers/percentages get printed onto the art.
 - PAUSE BUTTON, {px(ps['right']-ps['left'],'x')} px round: themed badge with a pause symbol.
 ```
 A themed display font is chosen per ground; the game draws the chase line ("14 TO WIN · OFF 9 BALLS"), score, target, ball results, stumps (greyed when lost) and energy fill in it.
@@ -303,7 +307,6 @@ The stumps and bails are also made for the scene [e.g. taped sticks, bamboo, wea
 - ONE themed bail.
 - ONE themed ball [e.g. dark red leather, gold seam], seen from above.
 - ROPE SEGMENT: a straight horizontal length of the themed boundary rope, evenly thick, both ends cut square so it tiles.
-- BOUNDARY MARKER (optional): a small themed marker [e.g. skull flag on a post].
 - RING MARKER: one small themed marker seen from above [e.g. a seashell, a white disc] — repeated by the game round the 30-yard circle.
 - MOVING EXTRAS (3–5 small separate pieces the game animates): [e.g. a skull flag, a waving pirate fan, a parrot with wings up and wings down, a lantern flame].
 ```
