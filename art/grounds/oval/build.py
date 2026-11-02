@@ -4,7 +4,7 @@
 import numpy as np, cv2, sys
 from measure import measure
 W,H=1170,2532; cx,cy,rx,ry=.5*W,.6*H,.46*W,.335*H
-img=cv2.imread('raw/plate_405-191.png').astype(np.float32); ex,ey,ew,eh=np.load('ell.npy')
+img=cv2.imread('raw/plate_406-193.png').astype(np.float32); ex,ey,ew,eh=np.load('ell.npy')
 def cut(L):
   if L<0:   # field painted too SHORT: repeat -L rows at the equator (sides ~vertical there), seam where the side crowds match
     L=-L; F=30; w=np.linspace(0,1,F)[:,None,None]; best=None
@@ -35,9 +35,11 @@ def make(L,s):
   c=up[oy:oy+H,max(ox,0):max(ox,0)+W]
   if c.shape[0]<H: c=np.concatenate([c,np.repeat(c[-1:],H-c.shape[0],0)],0)
   return np.clip(c,0,255).astype(np.uint8), oy
-# width-exact scale (so the painted field never runs past the screen sides, where there is no crowd to pull in); cut chosen so the
-# height matches too; ring.py fixes the remaining small differences at the ends, where the stands are deep
-sw=2*rx/ew; Lh=int(round(eh-2*ry/sw))-30
-best=(np.abs(measure(make(Lh,sw)[0],9)[:,1]).max(),Lh,sw)
+# CLEAN FIT (Joe: no distortion): ONE even scale, no rows cut or repeated. Scale searched between width-fit and height-fit for the
+# smallest max ring error; ring.py then makes only small corrections split between the sides and the ends.
+best=None
+for s_ in np.arange(2*rx/ew*0.97, 2*ry/eh*1.01, 0.01):
+  e=np.abs(measure(make(0,s_)[0],9)[:,1]).max()
+  if best is None or e<best[0]: best=(e,0,s_)
 print('best',best)
 o,oy=make(best[1],best[2]); cv2.imwrite('plate_v3fix.png',o); print('oy',oy)

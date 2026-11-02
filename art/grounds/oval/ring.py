@@ -41,14 +41,13 @@ for x in range(W):
     elif y>bot: sy=max(bot-8-((y*7+x*13)%23), top)
     else: sy=gy[np.argmin(np.abs(gy-y))]
     out[y,x]=o[sy,srcx]
-# b) field/old-board pixels just outside the new boards -> the stand front copied in RIGIDLY per angle (one offset per angle,
-#    smoothed round the ring, so no streaks): gap width e(angle) = how far grass/old boards reach beyond the new boards
-oldb=((hsv[...,0]>=34)&(hsv[...,0]<=85)&(hsv[...,1]>80)&(hsv[...,2]<170)) | ((hsv[...,0]<=22)&(hsv[...,1]>110)&(hsv[...,2]<190)&(hsv[...,2]>40))   # painted boards: dark green (Lord's) or chocolate brown (Oval)
-fieldish=(grass|oldb)
+# b) NO pulling (Joe: distortion). Leftover painted grass / old boards just outside the new ring are covered by making the boards
+#    locally thicker (their own dark back-edge colour), so no stand is moved or bent.
+fieldish=grass   # grass only (brown boards look like the brown crowd); painted boards just outside read as the boards' own depth
 N=1440; e=np.zeros(N)
 for i in range(N):
   t=2*np.pi*i/N-np.pi; R=np.hypot(np.cos(t)*rx,np.sin(t)*ry); d=T; last=T
-  while d<T+90:
+  while d<T+40:
     X=int(cx+np.cos(t)*rx*(1+d/R)); Y=int(cy+np.sin(t)*ry*(1+d/R))
     if not(0<=X<W and 0<=Y<H): break
     if fieldish[Y,X]: last=d+1
@@ -56,20 +55,12 @@ for i in range(N):
   e[i]=last-T
 k=np.exp(-0.5*(np.arange(-24,25)/8.0)**2); k/=k.sum()
 e=np.convolve(np.concatenate([e[-24:],e,e[:24]]),k,'same')[24:-24]
-bi=((th+np.pi)/(2*np.pi)*N).astype(int)%N; sh_=e[bi]+2
-m=(dist>=T)&(dist<T+sh_)
-dd=dist+sh_   # sample further out by the gap width
-rs=1+dd/Rr; mx=(cx+np.cos(th)*rx*rs).astype(np.float32); my=(cy+np.sin(th)*ry*rs).astype(np.float32)
-pulled=cv2.remap(o,mx,my,cv2.INTER_LINEAR,borderMode=cv2.BORDER_REFLECT_101)
-out[m]=pulled[m]
-print('gap max',round(float(e.max()),1))
-# b2) the painting's left edge is cropped (the painted field sat right of centre), so the thin strip left of the boards has no
-#     crowd to pull in: fill it with the right-hand stand strip mirrored (the coded oval is symmetric, so the strips match)
-for y in range(H):
-  dyy=(y-cy)/ry
-  if abs(dyy)>=1: continue
-  xo=int(np.floor(cx-rx*np.sqrt(1-dyy*dyy)*(1+T/rx)))   # outer edge of the left boards on this row
-  if 0<xo<=60: out[y,:xo]=out[y,W-xo:][::-1]   # only where the strip is thin (the cropped mid-left)
+bi=((th+np.pi)/(2*np.pi)*N).astype(int)%N; ext=e[bi]+3
+back=prof[-3:].mean(0)
+m=(dist>=T-1)&(dist<T+ext)
+mm=cv2.GaussianBlur(m.astype(np.float32),(0,0),1.0)[...,None]
+out=out*(1-mm)+back*mm
+print('max board thickening px',round(float(e.max()),1))
 # c) boards
 ring=(dist>=0)&(dist<T)
 idx=np.clip(dist,0,T-1); i0=np.floor(idx).astype(int); fr=(idx-i0)[...,None]; i1=np.clip(i0+1,0,T-1)
