@@ -695,3 +695,11 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - PROPS (Joe, Nov 2): be mindful of oversized props (e.g. 2.e's giant inflatable bat/ball) — fun sometimes, but not always necessary. Keep scenery props at a believable size by default.
 - 2.f Big Ground (branch floodlit-2f, te_bigground): Camera 2, sunburst 384:191 fitted with evening/cam2/build.py (ratio 1.552, 16 rows, within 4 phone px). Night sky above = median of dark sky pixels (fireworks excluded).
 - 2.g Coliseum (branch floodlit-2g, te_coliseum): Camera 2, sunburst 384:196 (ratio 1.458, 85 rows, within ~9 phone px). Floodlit Series now all seven bespoke: te_evening, te_twilight, te_afterglow, te_fognight, te_dusk, te_bigground, te_coliseum. FLOOD_INFO.stands must stay a crowd band (a tall box put camera flashes on the field).
+
+## Coastal Cup (league 3) — 5 bespoke grounds, Camera 2 (Joe, Nov 2): 3.a Beach, 3.b Rock Pool, 3.c Harbour (replaces 'pier' — 2.b Twilight already has the pier + Ferris wheel), 3.d Beach Night (bonfire party), 3.e Beach Storm
+- 3.a Beach (branch coastal-3a, `tc_beach`, replaces 'beach' in the league's scenes on the branch): 4 sunburst generations (385:191 plate, 386:191 HUD, 386:192 props, 386:193 words), all right first time.
+- Plate fit = art/grounds/beach/build.py: sand edge found by rays from the centre to the windbreak foot (robust fitEllipse → ell.npy), ratio 1.379 → 152 rows repeated as 4 SPREAD bands (±110/±330 px from the equator, each cut where its rows match best, side strips weighted). One central band put 4 identical spectators in a row on the right — spread bands fix that. ONE scale 1.395, plain sky gradient above. Within ~8 phone px of the oval. noRope (windbreaks are the boundary).
+- Board: the model drew a beach-hut gable roof + life ring; prep_board.py takes them off, builds a flat top beam from the board's own side post, keeps the seagull as a top sprite (`beach` entry in build_locked_boards.py, orig in art/ui/hud_lock/orig/). Shells along the bottom dropped (the lock fit put them under the energy bar).
+- Pitch came out dark brown and crisp → tone_pitch.py pulls it to the field's sand (Lab), a shade darker, softer, dusty ends.
+- Capture: serve the repo over http (file:// blocks the word images by CORS) and set flickyWelcomeChest=1 so the welcome bag doesn't open over the match.
+
