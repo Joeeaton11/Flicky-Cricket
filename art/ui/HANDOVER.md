@@ -786,3 +786,5 @@ No new take available, so the seam take is cleaned in the rig (all switchable of
 - **Front arm** (`leadArm`): no longer flies up behind him in the follow-through; kept below shoulder height (`?lead`).
 - **Foot lock** (`prepLock`/`footLock`/`legIK`): the cartoon's shorter legs made every planted foot skate ~20 cm (front foot too, right through delivery). Contacts are found once at load, each foot is pinned at its average spot and the leg IK'd to it, blended in/out over 90 ms. `?nolock` turns it off.
 Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game code unchanged.
+
+- Camera changed (Joe: "too side on"): bowler frames now shot front-on and higher, AZ 88 / EL 40 (was AZ 62 / EL 22), looking down on him like the game camera.
