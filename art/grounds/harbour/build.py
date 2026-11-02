@@ -1,10 +1,10 @@
-# 3.c Harbour (Figma 388:191, sunburst, Camera 2). Sand oval found by flood-fill from the centre, ellipse fitted to its edge
+# 3.c Harbour (Figma 393:191, v2; v1 388:191, sunburst, Camera 2). Sand oval found by flood-fill from the centre, ellipse fitted to its edge
 # (= foot of the windbreaks). Repeat rows at the widest band (crossfaded) to match the game ratio, then ONE even scale by width.
 # Usage: python3 build.py  (run in art/grounds/beach)
 import numpy as np, cv2
 W,H=1170,2532; cx,cy,rx,ry=.5*W,.6*H,.46*W,.335*H
-img=cv2.imread('raw/plate_ext.png'); h0,w0=img.shape[:2]   # extended upward by extend_top.py (Joe: fix the top)
-ex,ey,ew,eh=np.load('ell.npy'); ey+=int(np.load('ext_rows.npy')[0])  # from find_ell (rays from the centre to the windbreak foot, robust fitEllipse)
+img=cv2.imread('raw/plate_393-191.png'); h0,w0=img.shape[:2]   # v2 (Joe: don't like the top cut off): field painted lower, whole village + chapel above it
+ex,ey,ew,eh=np.load('ell.npy')  # from find_ell (rays from the centre to the windbreak foot, robust fitEllipse)
 print('sand ellipse',ex,ey,ew,eh,'ratio',round(eh/ew,3))
 s=2*rx/ew; L=max(0,int(round(2*ry/s-eh))); print('scale',round(s,4),'rows',L)
 img=img.astype(np.float32); F=24; w=np.linspace(0,1,F)[:,None,None]
