@@ -26,7 +26,17 @@ else:
   src=np.concatenate([img[:a0+Lb]]+[b]*k+[rest],0); fb2=fb+Lb*k
 up=cv2.resize(src,(round(img.shape[1]*s),round(src.shape[0]*s)),interpolation=cv2.INTER_CUBIC)
 ox=int((fl+fr)/2*s-cx); oy=int((ft+fb2)/2*s-cy); print('ox',ox,'oy',oy,up.shape)
-if oy<0: up=np.concatenate([np.repeat(up[:1],-oy,0),up],0); oy=0
+if oy<0:   # painted sky too short: extend upward with a plain night-sky gradient taken from the painted top edge (no smeared rows, no mirrored buildings)
+  n=-oy; edge=cv2.GaussianBlur(up[:30].mean(0,keepdims=True),(0,0),25)[0]   # colour along the top edge
+  t=np.linspace(1,0,n)[:,None,None]   # 1 = very top
+  night=np.array([40,22,18.])   # BGR deep blue-black
+  top=edge[None]*(1-t*0.75)+night*(t*0.75)
+  rng=np.random.default_rng(3); top=top+rng.normal(0,1.5,top.shape)
+  for _ in range(60):   # a few faint stars
+    y=rng.integers(0,int(n*0.7)); x=rng.integers(0,top.shape[1]); cv2.circle(top,(int(x),int(y)),int(rng.integers(1,3)),(235,235,255),-1)
+  top=cv2.GaussianBlur(top,(0,0),0.8)
+  F=60; w2=np.linspace(0,1,F)[:,None,None]; top[-F:]=top[-F:]*(1-w2)+up[:F]*w2
+  up=np.concatenate([top,up],0); oy=0
 c=np.clip(up[oy:oy+H,max(0,ox):max(0,ox)+W],0,255).astype(np.uint8)
 if c.shape[0]<H: c=np.concatenate([c,np.repeat(c[-1:],H-c.shape[0],0)],0)
 o=cv2.addWeighted(c,1.3,cv2.GaussianBlur(c,(0,0),2),-0.3,0); cv2.imwrite('plate.png',o)
