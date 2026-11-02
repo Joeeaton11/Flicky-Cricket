@@ -5,7 +5,7 @@
 import numpy as np, cv2
 from measure import measure
 W,H=1170,2532; cx,cy,rx,ry=.5*W,.6*H,.46*W,.335*H
-img=cv2.imread('raw/plate_413-191.png').astype(np.float32); ex,ey,ew,eh=np.load('ell.npy')
+img=cv2.imread('raw/plate_416-191.png').astype(np.float32); ex,ey,ew,eh=np.load('ell.npy')
 def make(sx,sy,dx=0,dy=0):
   up=cv2.resize(img,(round(img.shape[1]*sx),round(img.shape[0]*sy)),interpolation=cv2.INTER_CUBIC)
   ox=int(round(ex*sx-cx+dx)); oy=int(round(ey*sy-cy+dy))
@@ -28,4 +28,4 @@ for a in np.arange(0.95,1.04,0.01):
         if best is None or e<best[0]: best=(e,a,b,dx,dy)
 print('best',best,'stretch y/x',round(sy0*best[2]/(sx0*best[1]),3))
 o=make(sx0*best[1],sy0*best[2],best[3],best[4])
-o=cv2.addWeighted(o,1.12,cv2.GaussianBlur(o,(0,0),2),-0.12,0); cv2.imwrite('plate.png',o)
+cv2.imwrite("plate_raw_fit.png",o); o=cv2.addWeighted(o,1.12,cv2.GaussianBlur(o,(0,0),2),-0.12,0); cv2.imwrite('plate.png',o)
