@@ -13,7 +13,7 @@ const fill = new THREE.DirectionalLight(0xdfe8ff, .5); fill.position.set(300, -2
 const rim = new THREE.DirectionalLight(0xfff6e0, 1.6); rim.position.set(260, -520, 380); S.add(rim);
 
 // Nov 2 (Joe): cel-shaded to sit in the painted grounds — flat ambient + banded key/rim light (MeshToonMaterial)
-const QS = new URLSearchParams(location.search), TOON = !QS.has('notoon');
+const QS = new URLSearchParams(location.search), TOON = QS.has('toon');
 const TB = (QS.get('tb') || '138,206,206,206,255').split(',').map(Number);
 const TGRAD = (() => { const d = new Uint8Array(TB.length * 4); TB.forEach((v, i) => d.set([v, v, v, 255], i * 4)); const t = new THREE.DataTexture(d, TB.length, 1); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.needsUpdate = true; return t; })();
 function toonify(m) { if (!TOON || !m || m.isMeshBasicMaterial || m.isShaderMaterial || m.isMeshToonMaterial) return m;
@@ -34,7 +34,7 @@ function smoothNormals(g, it) {   // cel bands need calm normals: weld UV-seam c
   for (let v = 0; v < W; v++) nz(v);
   for (let k = 0; k < it; k++) { const B = A.slice(); for (let v = 0; v < W; v++) { for (const u of nb[v]) { B[v*3] += A[u*3] * .5; B[v*3+1] += A[u*3+1] * .5; B[v*3+2] += A[u*3+2] * .5; } } A.set(B); for (let v = 0; v < W; v++) nz(v); }
   for (let i = 0; i < n; i++) N.setXYZ(i, A[wid[i]*3], A[wid[i]*3+1], A[wid[i]*3+2]); N.needsUpdate = true; }
-window.toonAll = () => S.traverse(o => { if (o.isMesh && o.material && o.material.side !== THREE.BackSide) { if (TOON && !o.userData.sn && o.geometry.attributes.normal && o.geometry.attributes.position.count > 200) { smoothNormals(o.geometry, +(QS.get('sn') || 14)); o.userData.sn = 1; } o.material = toonify(o.material); } });
+window.toonAll = () => S.traverse(o => { if (o.isMesh && o.material && o.material.side !== THREE.BackSide) { if (!o.userData.sn && o.geometry.attributes.normal && o.geometry.attributes.position.count > 200) { smoothNormals(o.geometry, +(QS.get('sn') || 10)); o.userData.sn = 1; } o.material = toonify(o.material); } });
 if (TOON) { S.children.filter(l => l.isLight).forEach(l => S.remove(l));
   S.add(new THREE.AmbientLight(0xe4e6ff, +(QS.get('amb') || 1.15)));   // cool shadows
   const k2 = new THREE.DirectionalLight(0xfff1dc, +(QS.get('key') || 2.6)); k2.position.set(...(QS.get('kp') || '450,220,400').split(',').map(Number)); S.add(k2);
@@ -139,7 +139,7 @@ Promise.all([new Promise(r => fl.load('src/' + CLIP, r)), new Promise(r => new G
     const free = new Uint8Array(NW); for (let v = 0; v < NW; v++) { const y = P3[v*3+1], az = Math.abs(P3[v*3+2]); free[v] = (y < .262 && y > -.405 && !(az > .235 && y < .08)) ? 1 : 0; }
     const step = lam => { const nx = P3.slice(); for (let v = 0; v < NW; v++) { if (!free[v] || !nb[v].size) continue; let sx = 0, sy = 0, sz = 0, c = 0;
         for (const u of nb[v]) { sx += P3[u*3]; sy += P3[u*3+1]; sz += P3[u*3+2]; c++; } nx[v*3] += lam * (sx / c - P3[v*3]); nx[v*3+1] += lam * (sy / c - P3[v*3+1]); nx[v*3+2] += lam * (sz / c - P3[v*3+2]); } P3.set(nx); };
-    const IT = +(new URLSearchParams(location.search).get('smooth') || 8); for (let it = 0; it < IT; it++) { step(.5); step(-.53); }
+    const IT = +(new URLSearchParams(location.search).get('smooth') || 22); for (let it = 0; it < IT; it++) { step(.5); step(-.53); }
     for (let i = 0; i < n; i++) pos.setXYZ(i, P3[wid[i]*3], P3[wid[i]*3+1], P3[wid[i]*3+2]); }
   window._MV = MV; window._VC = VC;
   const WS = [];
@@ -197,7 +197,7 @@ Promise.all([new Promise(r => fl.load('src/' + CLIP, r)), new Promise(r => new G
     const isCloth = (o, k) => k === 3 ? !skin(o) && !hair(o) : k === 4 ? Math.min(q[o], q[o+1], q[o+2]) < 140 : true;
     for (let i = 0; i < tw * th; i++) { const k = cls[i], o = i * 4; if (k && isCloth(o, k)) { const kk = k === 3 ? 1 : k === 4 ? 2 : k; sL[kk] += lum(o); nL[kk]++; } }
     for (let i = 0; i < tw * th; i++) { const k = cls[i], o = i * 4; if (!k || !isCloth(o, k)) continue; const kk = k === 3 ? 1 : k === 4 ? 2 : k, T = kk === 1 ? SHIRT : TROU; MK[i] = kk === 1 ? 1 : 10;
-      const FOLD = +(QS.get('fold') || .3); let r = lum(o) / (sL[kk] / nL[kk]); r = 1 + (Math.min(1.35, Math.max(.6, r)) - 1) * FOLD;   // a little of the painted fold shading
+      const FOLD = +(QS.get('fold') || 0); let r = lum(o) / (sL[kk] / nL[kk]); r = 1 + (Math.min(1.35, Math.max(.6, r)) - 1) * FOLD;   // a little of the painted fold shading
       q[o] = Math.min(255, T[0] * r); q[o+1] = Math.min(255, T[1] * r); q[o+2] = Math.min(255, T[2] * r); }
     cx.putImageData(out, 0, 0);
     // pad every UV island outwards with its own edge colour, so filtering never pulls the old navy/grey gutter into an edge

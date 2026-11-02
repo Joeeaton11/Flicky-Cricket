@@ -1,7 +1,7 @@
 # Nov 2 (Joe: "more detail"): painted inner ink lines from normal / depth / part-boundary edges
 import numpy as np, cv2
 from PIL import Image
-def ink(col, nrm, dep, msk, thick=3, ncrease=.42, dstep=.012, strength=.8, colr=(40,26,28), minlen=40):
+def ink(col, nrm, dep, msk, thick=3, ncrease=9.0, dstep=.012, strength=.8, colr=(40,26,28), minlen=40):
     c=np.asarray(col.convert('RGBA')).astype(np.float32)
     nr=np.asarray(nrm.convert('RGBA')); a=nr[...,3]>127
     af=a.astype(np.float32); W1=cv2.GaussianBlur(af,(0,0),1.6)+1e-6; W2=cv2.GaussianBlur(af,(0,0),1.0)+1e-6   # blur inside the figure only (no background bleed)
