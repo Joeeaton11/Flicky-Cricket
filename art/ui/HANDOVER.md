@@ -662,3 +662,4 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - 2.a signed off by Joe (Nov 1) along with all locked boards.
 - 2.b Twilight plate v2 (Nov 2, Joe: no gap between rope and stands; no boundary markers): Gemini always paints a round field → straight-sided fits leave grass on the diagonals. gpt-image-2.5-sunburst painted a true tall oval (Figma 365:191). Fit = build2.py (one scale 1.5 + 180 equator rows, chosen by fitsearch.py to keep the edge within ~12 px), then close_gap.py pulls the boards ring onto the coded oval where a few px of grass remain (gaps ≤ 20 px → no visible warp). TRY SUNBURST FIRST for future plates.
 - Boundary markers removed from the props prompt (layout_from_code.py) and from 2.b (flags: 0). Prompt now has a NO GAP line.
+- 2.b: coded rope off (`noRope: true` in THEME_ART) — the painted navy/orange boards ring is the only boundary (Joe, Nov 2). rope.webp kept but unused.
