@@ -52,7 +52,11 @@ function weightsFor(m, col) {
   const [x, y, z] = m, p = toW(x, y, z), side = z > 0 ? 'Right' : 'Left', az = Math.abs(z);
   const S_ = side;
   const isArm = y > -.14 && ((y < .12 && az > .14) || (y >= .12 && y < .23 && az > .15));
-  if (isArm) return smoothW(p, [S_+'Arm', S_+'ForeArm', S_+'Hand', S_+'Shoulder', 'Spine2'], 7);
+  if (isArm) { const w = smoothW(p, [S_+'Arm', S_+'ForeArm', S_+'Hand', S_+'Shoulder', 'Spine2'], 7);
+    // top of the shoulder / sleeve cap: shared with the collarbone and chest so raising the arm doesn't pull up a hood
+    const k = THREE.MathUtils.clamp((y - .11) / .08, 0, 1) * THREE.MathUtils.clamp((.22 - az) / .06, 0, 1) * .6;
+    if (k > 0) { for (const b in w) w[b] *= 1 - k; w[S_+'Shoulder'] = (w[S_+'Shoulder'] || 0) + k * .55; w.Spine2 = (w.Spine2 || 0) + k * .45; }
+    return w; }
   if (y < -.105 && az > .005) {
     if (MODEL === 'batter') {      // Nov 2 (Joe): the pad, knee roll included, is one rigid shell on the shin — it never bends with the thigh
       const [r, g, b] = col || [0, 0, 0], mx = Math.max(r, g, b), mn = Math.min(r, g, b), padCol = mn > 95 && mx - mn < 40;   // white pad / grey straps (trousers are dark grey)
@@ -63,8 +67,8 @@ function weightsFor(m, col) {
     }
     return smoothW(p, [S_+'UpLeg', S_+'Leg', S_+'Foot', S_+'ToeBase'], 7);   // below the crotch the thigh owns the trouser, inside and out
   }
-  if (y > .305) return { Head: 1 };                                    // head + helmet: one rigid piece
-  if (y > .265) { const k = (y - .265) / .04; return { Head: k, Neck: 1 - k }; }   // a short soft band at the neck
+  if (y > .295) return { Head: 1 };                                    // head + helmet: one rigid piece
+  if (y > .255) { const k = (y - .255) / .04; return { Head: k, Neck: 1 - k }; }   // a short soft band at the neck
   if (y < .02) { const w = smoothW(p, ['Hips', 'Spine', 'Spine1'], 5), k = THREE.MathUtils.clamp((.0 - y) / .1, 0, 1) * (az < .03 ? .55 : .7);   // seat: blend into own thigh towards the crotch
     for (const b in w) w[b] *= 1 - k; w[S_+'UpLeg'] = (w[S_+'UpLeg'] || 0) + k; return w; }
   return smoothW(p, ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'LeftShoulder', 'RightShoulder', 'LeftArm', 'RightArm'], 5);
@@ -231,7 +235,7 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
     for (let i = 0; i < P.count; i++) { const x = P.getX(i), y = P.getY(i), z = P.getZ(i); let c;
       if (y > 113.5) { const band = Math.floor((y - 113.5) / 2.6) % 2; c = band ? [.13, .2, .5] : [.17, .26, .62]; if (y > 138.5) c = [.1, .1, .12]; }   // grip, rubber bands, cap
       else { const edge = Math.min(Math.abs(x - bb.min.x), Math.abs(x - bb.max.x)), toe = y - bb.min.y, back = (z < 10.4) ? 1 : 0;
-        const k = Math.min(1, edge / 1.6) * Math.min(1, toe / 2.2); c = [.93 - .16 * (1 - k) - .05 * back, .80 - .17 * (1 - k) - .06 * back, .56 - .16 * (1 - k) - .06 * back];
+        const k = Math.min(1, edge / 1.6) * Math.min(1, toe / 2.2); c = [.95 - .18 * (1 - k) - .06 * back, .78 - .18 * (1 - k) - .07 * back, .50 - .16 * (1 - k) - .07 * back];
         if (y > 101 && y < 108 && z > 11 && !back) c = [.12, .18, .42]; }   // a navy maker's band on the face
       col.set(c, i * 3); }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();

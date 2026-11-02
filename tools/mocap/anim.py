@@ -7,7 +7,7 @@ def campos(az,el,r,look):
 async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch(args=['--use-gl=swiftshader','--enable-unsafe-swiftshader']); pg=await b.new_page(viewport={'width':540,'height':720})
-        await pg.goto('http://localhost:8765/rig.html?m=nopads&nogear&w=540&h=720'); await pg.wait_for_function('window.READY',timeout=180000)
+        await pg.goto('http://localhost:8765/rig.html?m=nopads&nogear&ol=0&w=540&h=720'); await pg.wait_for_function('window.READY',timeout=180000)
         look=[-10,30,85]; A=campos(120,20,420,look); B=campos(-90,8,470,[0,20,85])
         ts=[0.85+i/30 for i in range(34)]
         for i,t in enumerate(ts):
