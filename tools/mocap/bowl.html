@@ -285,6 +285,7 @@ window.pose = (t) => { window._lastT = t; setMocap(t);
   const W = QS.has('raw') ? rawW(t) : filtW(t); setMocap(t);
   if (!QS.has('raw')) { fixStoop(W, t); fixHead(W, t); }
   for (const sd of ['Left', 'Right']) { const loc = W.Spine2.clone().invert().multiply(W[sd + 'Shoulder']); W[sd + 'Shoulder'] = W.Spine2.clone().multiply(new THREE.Quaternion().slerp(loc, .5)); W[sd + 'ArmHalf'] = W[sd + 'Shoulder'].clone().slerp(W[sd + 'Arm'], .5); }   // half the collarbone lift: no hunched "hood"
+  if (!QS.has('raw')) { liftClav(W); wristLim(W); }
   for (const nm of NAMES) { const b = bones[nm], P = PAR[nm]; b.quaternion.copy(P ? W[P].clone().invert().multiply(W[nm]) : W[nm]); }
   window._W = W;
   const hp = mb.Hips.getWorldPosition(new THREE.Vector3()); bones.Hips.position.copy(hp); smesh.updateMatrixWorld(true);
@@ -325,12 +326,13 @@ window.maskShot = () => window._MKCV.toDataURL('image/png');
 // the cartoon's chest is deeper than Joe's: an arm swinging across it (follow-through) would sink into the shirt, so it's
 // rotated out until it rides on the surface (upper arm about the shoulder, then the forearm about the elbow)
 function bodyClear(W) {
-  const gw = n => bones[n].getWorldPosition(new THREE.Vector3()), RAD = +(QS.get('brad') || 21);
+  const gw = n => bones[n].getWorldPosition(new THREE.Vector3()), RAD0 = +(QS.get('brad') || 21);   // Nov 2: the bowling arm rides further off the chest as it comes down across him (it was sinking in at the shoulder)
+  let RAD = RAD0;
   const push = (P, A, B) => { const ab = B.clone().sub(A), t = THREE.MathUtils.clamp(P.clone().sub(A).dot(ab) / ab.lengthSq(), 0, 1), C = A.clone().add(ab.multiplyScalar(t)), v = P.clone().sub(C), d = v.length();
     if (d >= RAD) return null; if (d < 1e-3) v.set(1, 0, 0).applyQuaternion(bones.Spine2.getWorldQuaternion(new THREE.Quaternion())); return C.add(v.normalize().multiplyScalar(RAD)); };
   const setL = sd => { W[sd + 'ArmHalf'] = W[sd + 'Shoulder'].clone().slerp(W[sd + 'Arm'], .5);
     for (const nm of [sd + 'Arm', sd + 'ForeArm', sd + 'Hand', sd + 'ArmHalf']) bones[nm].quaternion.copy(W[PAR[nm]].clone().invert().multiply(W[nm])); smesh.updateMatrixWorld(true); };
-  for (const sd of ['Left', 'Right']) { smesh.updateMatrixWorld(true);
+  for (const sd of ['Left', 'Right']) { smesh.updateMatrixWorld(true); RAD = sd === 'Right' ? RAD0 + (+(QS.get('bradR') || 6)) * smooth01(3.24, 3.3, window._lastT || 0) : RAD0;
     const A = gw('Spine1'), B = gw('Neck');
     let S0 = gw(sd + 'Arm'), E0 = gw(sd + 'ForeArm');
     const Et = push(E0, A, B);
@@ -364,6 +366,22 @@ function fixHead(W, t) { const hw = smooth01(3.3, 3.45, t); if (hw <= 0) return;
   if (fw.z >= L) return; const fh = new THREE.Vector3(fw.x, fw.y, 0).normalize(), tz = fw.z + (L + (fw.z - L) * .3 - fw.z) * hw, tgt = fh.multiplyScalar(Math.sqrt(1 - tz * tz)).setZ(tz);
   const C = new THREE.Quaternion().setFromUnitVectors(fw, tgt), I = new THREE.Quaternion(); W.Neck = I.clone().slerp(C, .45).multiply(W.Neck); W.Head = C.multiply(W.Head); }
 const smooth01 = (a, b, x) => THREE.MathUtils.smoothstep(x, a, b);
+// Nov 2 (Joe: "shoulder joint cleaner, less distorted"): with the bowling arm overhead the whole ~170° was taken at the
+// shoulder joint, which pinched the skin there. A real collarbone lifts as the arm goes past horizontal, so part of it
+// moves into the collarbone (the arm keeps its world angle, so the hand path is unchanged)
+// the mocap wrist snaps back ~90° at release; on this mesh that wrings the wrist thin ("candy wrap"), so it's capped
+function wristLim(W) { const M = THREE.MathUtils.degToRad(+(QS.get('wrist') || 40)); if (!M) return;
+  for (const sd of ['Left', 'Right']) { const loc = W[sd + 'ForeArm'].clone().invert().multiply(W[sd + 'Hand']), a = 2 * Math.acos(Math.min(1, Math.abs(loc.w)));
+    if (a > M) W[sd + 'Hand'] = W[sd + 'ForeArm'].clone().multiply(new THREE.Quaternion().slerp(loc, M / a)); } }
+function liftClav(W) { const k = +(QS.get('clav') || 1); if (!k) return;
+  const sd = 'Right', up = new THREE.Vector3(0, 0, 1).applyQuaternion(W.Spine2);
+  const d = JW[sd + 'ForeArm'].clone().sub(JW[sd + 'Arm']).normalize().applyQuaternion(W[sd + 'Arm']);
+  const a = THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(-d.dot(up), -1, 1)));   // 0 arm hanging, 180 straight up
+  const ang = THREE.MathUtils.degToRad(Math.min(+(QS.get('clavmax') || 28), Math.max(0, a - 75) * .3) * k); if (ang <= 0) return;
+  const c = JW[sd + 'Arm'].clone().sub(JW[sd + 'Shoulder']).normalize().applyQuaternion(W[sd + 'Shoulder']), ax = new THREE.Vector3().crossVectors(c, up);
+  if (ax.lengthSq() < 1e-6) return;
+  W[sd + 'Shoulder'] = new THREE.Quaternion().setFromAxisAngle(ax.normalize(), ang).multiply(W[sd + 'Shoulder']);
+  W[sd + 'ArmHalf'] = W[sd + 'Shoulder'].clone().slerp(W[sd + 'Arm'], .5); }
 function setArm(W, sd) { W[sd + 'ArmHalf'] = W[sd + 'Shoulder'].clone().slerp(W[sd + 'Arm'], .5);
   for (const nm of [sd + 'Arm', sd + 'ForeArm', sd + 'Hand', sd + 'ArmHalf']) bones[nm].quaternion.copy(W[PAR[nm]].clone().invert().multiply(W[nm])); smesh.updateMatrixWorld(true); }
 function ik2(W, sd, T) { const gw = n => bones[n].getWorldPosition(new THREE.Vector3());

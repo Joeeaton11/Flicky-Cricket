@@ -788,3 +788,8 @@ No new take available, so the seam take is cleaned in the rig (all switchable of
 Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game code unchanged.
 
 - Camera changed (Joe: "too side on"): bowler frames now shot front-on and higher, AZ 88 / EL 40 (was AZ 62 / EL 22), looking down on him like the game camera.
+
+### Gully 3D bowler: straight run-up, cleaner bowling shoulder (Nov 2)
+- Run-up is one straight line: `b3HipX()` (W/2+14, just past the umpire's left shoulder) for the whole 'ready' run; the release point is that line + the hand offset from `b3_rel`. Follow-through drift unchanged.
+- Sprite camera AZ 80 (was 88): square to his run-in line in the mocap, so he runs straight at the camera.
+- `bowl.html`: `liftClav` moves part of the overhead bowling-arm angle into the collarbone (less pinching at the shoulder, `?clav=0` off); `wristLim` caps wrist bend at 40° (no wrung wrist at release, `?wrist=0` off); the right arm clears the chest by +6 in the follow-through (`?bradR=0` off).
