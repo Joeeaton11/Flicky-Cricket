@@ -1,12 +1,12 @@
-# 5.a Lord's (Figma 399:191, sunburst, Camera 2). Sand oval found by flood-fill from the centre, ellipse fitted to its edge
+# 5.a Lord's (Figma 400:192, v3 clean pass — true ellipse, full London scene to the top; v1 399:191 too round + sky fill, v2 399:195 straight sides, sunburst, Camera 2). Sand oval found by flood-fill from the centre, ellipse fitted to its edge
 # (= foot of the windbreaks). Repeat rows at the widest band (crossfaded) to match the game ratio, then ONE even scale by width.
 # Usage: python3 build.py  (run in art/grounds/beach)
 import numpy as np, cv2
 W,H=1170,2532; cx,cy,rx,ry=.5*W,.6*H,.46*W,.335*H
-img=cv2.imread('raw/plate_399-191.png'); h0,w0=img.shape[:2]
+img=cv2.imread('raw/plate_400-192.png'); h0,w0=img.shape[:2]
 ex,ey,ew,eh=np.load('ell.npy')  # from find_ell (rays from the centre to the windbreak foot, robust fitEllipse)
 print('sand ellipse',ex,ey,ew,eh,'ratio',round(eh/ew,3))
-s=2*rx/ew*1.02; L=max(0,int(round((2*ry/s-eh)*0.85)))   # fitsearch.py: painted field is a near-round 1.28:1; this keeps the edge within ~12 phone px. v2 399:195 rejected: straight sides + Media Centre over the field
+s=2*rx/ew*1.02; L=max(0,int(round(2*ry/s-eh)))   # v3 plate 400:192 (clean pass): fitsearch.py best — edge within ~7 phone px
 img=img.astype(np.float32); F=24; w=np.linspace(0,1,F)[:,None,None]
 if L>0:
   # repeat L rows as 4 short bands spread down the tall middle (not side by side, so no run of clones),
