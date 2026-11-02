@@ -36,8 +36,9 @@ for (n,_),im in zip(SEQ,outs):
     s=ImageEnhance.Color(s).enhance(1.12); s=ImageEnhance.Contrast(s).enhance(1.05)
     s=add_outline(s,2)
     s.save(f'bf_{n}.png'); bio=io.BytesIO(); s.save(bio,'WEBP',quality=86,method=6)
+    mk=Image.open(f'bm_{n}.png').convert('RGBA').crop((x0,y0,x1,y1)).resize((W,H),Image.NEAREST); mb=io.BytesIO(); mk.save(mb,'WEBP',lossless=True)
     hand=meta[n][1]
-    res['b3_'+n]={'src':'data:image/webp;base64,'+base64.b64encode(bio.getvalue()).decode(),'ax':round((gx-x0)*k,1),'ay':round((gy-y0)*k,1),'k':1,'hx':round((hand[0]-x0)*k,1),'hy':round((hand[1]-y0)*k,1)}
+    res['b3_'+n]={'src':'data:image/webp;base64,'+base64.b64encode(bio.getvalue()).decode(),'ax':round((gx-x0)*k,1),'ay':round((gy-y0)*k,1),'k':1,'mask':'data:image/webp;base64,'+base64.b64encode(mb.getvalue()).decode(),'hx':round((hand[0]-x0)*k,1),'hy':round((hand[1]-y0)*k,1)}
 json.dump(res,open('b3_sprites.json','w'))
 print(W,H,sum(len(v['src']) for v in res.values())//1024,'KB', res['b3_rel']['hx'],res['b3_rel']['hy'],res['b3_rel']['ax'],res['b3_rel']['ay'])
 # contact sheet

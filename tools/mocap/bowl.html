@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 const WD = +(new URLSearchParams(location.search).get('w') || 720), HT = +(new URLSearchParams(location.search).get('h') || 960);
 const MASKM = /mask/.test(location.search);
 const R = new THREE.WebGLRenderer({ antialias: !MASKM, alpha:true, preserveDrawingBuffer:true }); R.setPixelRatio(2); R.setSize(WD,HT); R.setClearColor(0,0); R.outputColorSpace = MASKM ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace; document.body.appendChild(R.domElement);
@@ -101,6 +102,18 @@ Promise.all([new Promise(r => fl.load('src/' + CLIP, r)), new Promise(r => new G
   const img = src.material.map.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
   const px = cx.getImageData(0, 0, cv.width, cv.height).data, uv = geo.attributes.uv, flipY = src.material.map.flipY;
   for (let i = 0; i < n; i++) { const X = Math.min(cv.width - 1, Math.max(0, Math.round(uv.getX(i) * (cv.width - 1)))), Y = Math.min(cv.height - 1, Math.max(0, Math.round((flipY ? 1 - uv.getY(i) : uv.getY(i)) * (cv.height - 1)))); const o = (Y * cv.width + X) * 4; VC[i*3] = px[o]; VC[i*3+1] = px[o+1]; VC[i*3+2] = px[o+2]; }
+  { // Taubin λ|μ smoothing on the welded body (not head, hands or shoes): removes the generator's lumps and stair-stepped seams, keeps volume
+    const key = i => Math.round(pos.getX(i) * 2000) + ',' + Math.round(pos.getY(i) * 2000) + ',' + Math.round(pos.getZ(i) * 2000), wid = new Int32Array(n), km = new Map();
+    for (let i = 0; i < n; i++) { const k = key(i); if (!km.has(k)) km.set(k, km.size); wid[i] = km.get(k); }
+    const NW = km.size, P3 = new Float64Array(NW * 3), nb = Array.from({ length: NW }, () => new Set()), IXa = geo.index.array;
+    for (let i = 0; i < n; i++) { P3[wid[i]*3] = pos.getX(i); P3[wid[i]*3+1] = pos.getY(i); P3[wid[i]*3+2] = pos.getZ(i); }
+    for (let f = 0; f < IXa.length; f += 3) { const a = wid[IXa[f]], b = wid[IXa[f+1]], c = wid[IXa[f+2]]; nb[a].add(b).add(c); nb[b].add(a).add(c); nb[c].add(a).add(b); }
+    const free = new Uint8Array(NW); for (let v = 0; v < NW; v++) { const y = P3[v*3+1], az = Math.abs(P3[v*3+2]); free[v] = (y < .262 && y > -.405 && !(az > .235 && y < .08)) ? 1 : 0; }
+    const step = lam => { const nx = P3.slice(); for (let v = 0; v < NW; v++) { if (!free[v] || !nb[v].size) continue; let sx = 0, sy = 0, sz = 0, c = 0;
+        for (const u of nb[v]) { sx += P3[u*3]; sy += P3[u*3+1]; sz += P3[u*3+2]; c++; } nx[v*3] += lam * (sx / c - P3[v*3]); nx[v*3+1] += lam * (sy / c - P3[v*3+1]); nx[v*3+2] += lam * (sz / c - P3[v*3+2]); } P3.set(nx); };
+    const IT = +(new URLSearchParams(location.search).get('smooth') || 8); for (let it = 0; it < IT; it++) { step(.5); step(-.53); }
+    for (let i = 0; i < n; i++) pos.setXYZ(i, P3[wid[i]*3], P3[wid[i]*3+1], P3[wid[i]*3+2]); }
+  window._MV = MV; window._VC = VC;
   const WS = [];
   for (let i = 0; i < n; i++) { const m = [pos.getX(i), pos.getY(i), pos.getZ(i)]; MV.set(m, i * 3); WS.push(weightsFor(m, [VC[i*3], VC[i*3+1], VC[i*3+2]])); }
   { // weld copies of a point (UV seams), then average each point's weights with its neighbours a few times: no torn seams, softer folds
@@ -126,36 +139,55 @@ Promise.all([new Promise(r => fl.load('src/' + CLIP, r)), new Promise(r => new G
   geo.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4)); geo.computeVertexNormals();
   let mat = src.material.clone(); mat.roughness = .85; mat.metalness = 0;
   { const SHIRT = (new URLSearchParams(location.search).get('shirt') || 'ecebe4').match(/../g).map(h => parseInt(h, 16)), TROU = (new URLSearchParams(location.search).get('trou') || '7a1e30').match(/../g).map(h => parseInt(h, 16));
-    const tw = cv.width, th = cv.height, cls = new Uint8Array(tw * th), IXa = geo.index.array;
-    // classify each triangle by where it sits on the body, then fill its texels (skin + hair stay as painted)
-    for (let f = 0; f < IXa.length; f += 3) { const a = IXa[f], b = IXa[f+1], c = IXa[f+2], my = (MV[a*3+1] + MV[b*3+1] + MV[c*3+1]) / 3, mz = Math.abs(MV[a*3+2] + MV[b*3+2] + MV[c*3+2]) / 3;
-      let k = 0; if (my < -.418) k = 0; else if (my < .005 && !(mz > .2 && my > -.17)) k = 2; else if (my < .275 && !(mz > .25)) k = 1; else if (my < .32) k = 3;
-      if (!k) continue;
+    const tw = cv.width, th = cv.height, cls = new Uint8Array(tw * th), cov = new Uint8Array(tw * th), IXa = geo.index.array;
+    // Nov 2 (Joe: "clean him up"): every texel is classed by where it sits on the body (its 3D point), not by the
+    // generator's paint — so the hems are clean lines: waist at y 0, sleeves 32% down the upper arm, trousers to the shoe
+    const A0 = { Right: [-.035, .17, .15], Left: [-.035, .17, -.15] }, F0 = { Right: [-.025, .05, .215], Left: [-.025, .05, -.215] };
+    const classAt = (x, y, z) => { const az = Math.abs(z);
+      if (y < -.455) return 0;                                                  // shoes: as painted
+      if (y < -.43) return 4;                                                   // trouser hem over the shoe: trousers unless painted white (the shoe)
+      const arm = y > -.14 && ((y < .12 && az > .14) || (y >= .12 && y < .23 && az > .15));
+      if (arm) { const sd = z > 0 ? 'Right' : 'Left', A = A0[sd], F = F0[sd], d = [F[0]-A[0], F[1]-A[1], F[2]-A[2]], L = d[0]*d[0] + d[1]*d[1] + d[2]*d[2];
+        const t = ((x-A[0])*d[0] + (y-A[1])*d[1] + (z-A[2])*d[2]) / L; return t < .32 ? 1 : 0; }   // sleeve, then bare arm
+      if (y < 0) return 2;                                                      // trousers
+      if (y < .2) return 1;                                                     // shirt
+      if (y < .3) return 3;                                                     // collar / neck: shirt where it was painted shirt
+      return 0; };
+    for (let f = 0; f < IXa.length; f += 3) { const a = IXa[f], b = IXa[f+1], c = IXa[f+2];
       const U = [a, b, c].map(i => [uv.getX(i) * tw, (flipY ? 1 - uv.getY(i) : uv.getY(i)) * th]);
       const x0 = Math.max(0, Math.floor(Math.min(U[0][0], U[1][0], U[2][0])) - 1), x1 = Math.min(tw - 1, Math.ceil(Math.max(U[0][0], U[1][0], U[2][0])) + 1), y0 = Math.max(0, Math.floor(Math.min(U[0][1], U[1][1], U[2][1])) - 1), y1 = Math.min(th - 1, Math.ceil(Math.max(U[0][1], U[1][1], U[2][1])) + 1);
       const d = (U[1][1] - U[2][1]) * (U[0][0] - U[2][0]) + (U[2][0] - U[1][0]) * (U[0][1] - U[2][1]); if (Math.abs(d) < 1e-9) continue;
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const px_ = x + .5, py_ = y + .5;
-        const l1 = ((U[1][1] - U[2][1]) * (px_ - U[2][0]) + (U[2][0] - U[1][0]) * (py_ - U[2][1])) / d, l2 = ((U[2][1] - U[0][1]) * (px_ - U[2][0]) + (U[0][0] - U[2][0]) * (py_ - U[2][1])) / d, l3 = 1 - l1 - l2;
-        if (l1 >= -.08 && l2 >= -.08 && l3 >= -.08) cls[y * tw + x] = k; } }
-    const out = cx.getImageData(0, 0, tw, th), q = out.data;
-    { const skin0 = o => q[o] > q[o+2] + 38 && q[o] > q[o+1] + 8 && q[o] > 120;   // bleed the cloth classes over UV-island borders (no seam cracks)
-      for (let it = 0; it < 4; it++) { const c2 = cls.slice(); for (let y = 1; y < th - 1; y++) for (let x = 1; x < tw - 1; x++) { const i = y * tw + x; if (cls[i] || skin0(i * 4)) continue;
-        const v = cls[i - 1] || cls[i + 1] || cls[i - tw] || cls[i + tw]; if (v === 1 || v === 2) c2[i] = v; } cls.set(c2); } }
+        let l1 = ((U[1][1] - U[2][1]) * (px_ - U[2][0]) + (U[2][0] - U[1][0]) * (py_ - U[2][1])) / d, l2 = ((U[2][1] - U[0][1]) * (px_ - U[2][0]) + (U[0][0] - U[2][0]) * (py_ - U[2][1])) / d, l3 = 1 - l1 - l2;
+        if (l1 < -.03 || l2 < -.03 || l3 < -.03) continue; const i = y * tw + x; if (cov[i] && (l1 < 0 || l2 < 0 || l3 < 0)) continue;
+        cov[i] = 1; l1 = Math.max(0, l1); l2 = Math.max(0, l2); l3 = Math.max(0, l3); const sm = l1 + l2 + l3; l1 /= sm; l2 /= sm; l3 /= sm;
+        cls[i] = classAt(MV[a*3]*l1 + MV[b*3]*l2 + MV[c*3]*l3, MV[a*3+1]*l1 + MV[b*3+1]*l2 + MV[c*3+1]*l3, MV[a*3+2]*l1 + MV[b*3+2]*l2 + MV[c*3+2]*l3); } }
+    const out = cx.getImageData(0, 0, tw, th), q = out.data, MK = new Uint8Array(tw * th);   // MK: recolour class per texel (1 shirt, 10 trousers)
     let sL = [0, 0, 0, 0], nL = [0, 0, 0, 0];
     const skin = o => q[o] > q[o+2] + 38 && q[o] > q[o+1] + 8 && q[o] > 120, hair = o => q[o] > q[o+2] + 8 && Math.max(q[o], q[o+1], q[o+2]) < 120 && q[o] - q[o+2] < 60;
     const lum = o => q[o] * .3 + q[o+1] * .59 + q[o+2] * .11;
-    const isCloth = (o, k) => k === 3 ? (q[o+2] > q[o] + 10) : !skin(o) && !(k === 1 && hair(o) && false);
-    for (let i = 0; i < tw * th; i++) { const k = cls[i], o = i * 4; if (k && isCloth(o, k)) { const kk = k === 3 ? 1 : k; sL[kk] += lum(o); nL[kk]++; } }
-    for (let i = 0; i < tw * th; i++) { const k = cls[i], o = i * 4; if (!k || !isCloth(o, k)) continue; const kk = k === 3 ? 1 : k, T = kk === 1 ? SHIRT : TROU;
-      let r = lum(o) / (sL[kk] / nL[kk]); r = Math.min(1.25, Math.max(.55, r)); r = kk === 1 ? .8 + .2 * r : .62 + .38 * r;
+    const isCloth = (o, k) => k === 3 ? !skin(o) && !hair(o) : k === 4 ? Math.min(q[o], q[o+1], q[o+2]) < 140 : true;
+    for (let i = 0; i < tw * th; i++) { const k = cls[i], o = i * 4; if (k && isCloth(o, k)) { const kk = k === 3 ? 1 : k === 4 ? 2 : k; sL[kk] += lum(o); nL[kk]++; } }
+    for (let i = 0; i < tw * th; i++) { const k = cls[i], o = i * 4; if (!k || !isCloth(o, k)) continue; const kk = k === 3 ? 1 : k === 4 ? 2 : k, T = kk === 1 ? SHIRT : TROU; MK[i] = kk === 1 ? 1 : 10;
+      const r = 1;   // flat cloth colour: the 3D folds and the lighting do the shading (no painted creases, no seam lines)
       q[o] = Math.min(255, T[0] * r); q[o+1] = Math.min(255, T[1] * r); q[o+2] = Math.min(255, T[2] * r); }
     cx.putImageData(out, 0, 0);
-    // soften the cloth a touch so no texel noise survives (cloth only)
-    const blur = document.createElement('canvas'); blur.width = tw; blur.height = th; const bx = blur.getContext('2d'); bx.filter = 'blur(1.5px)'; bx.drawImage(cv, 0, 0);
-    const bd = bx.getImageData(0, 0, tw, th).data; for (let i = 0; i < tw * th; i++) { const o = i * 4; if (cls[i] && cls[i] !== 3 && !skin(o)) { q[o] = bd[o]; q[o+1] = bd[o+1]; q[o+2] = bd[o+2]; } }
+    // pad every UV island outwards with its own edge colour, so filtering never pulls the old navy/grey gutter into an edge
+    for (let it = 0; it < 10; it++) { const add = [];
+      for (let y = 1; y < th - 1; y++) for (let x = 1; x < tw - 1; x++) { const i = y * tw + x; if (cov[i]) continue; let r = 0, g3 = 0, b3 = 0, c3 = 0;
+        for (const j of [i - 1, i + 1, i - tw, i + tw]) if (cov[j]) { r += q[j*4]; g3 += q[j*4+1]; b3 += q[j*4+2]; c3++; }
+        if (c3) add.push(i, r / c3, g3 / c3, b3 / c3); }
+      for (let m = 0; m < add.length; m += 4) { const i = add[m], o = i * 4; q[o] = add[m+1]; q[o+1] = add[m+2]; q[o+2] = add[m+3]; cov[i] = 1; } }
     cx.putImageData(out, 0, 0);
-    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.flipY = flipY; tex.anisotropy = 8; mat.map = tex; mat.needsUpdate = true; window._TEXCV = cv; }
-  if (MASKM) { const col = new Float32Array(n * 3);
+    const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.flipY = flipY; tex.anisotropy = 8; mat.map = tex; mat.needsUpdate = true; window._TEXCV = cv;
+    // the matching colour guide (same texels, so it lines up exactly): red = class id, as m3Recolor reads it
+    const mc = document.createElement('canvas'); mc.width = tw; mc.height = th; const mx2 = mc.getContext('2d'), md2 = mx2.createImageData(tw, th);
+    for (let i = 0; i < tw * th; i++) { md2.data[i*4] = MK[i] * 16 + 8; md2.data[i*4+3] = 255; }
+    for (let it = 0; it < 6; it++) for (let i = tw; i < tw * th - tw; i++) if (!MK[i] && !cov[i]) { const v = MK[i-1] || MK[i+1] || MK[i-tw] || MK[i+tw]; if (v) { MK[i] = v; md2.data[i*4] = v * 16 + 8; } }
+    mx2.putImageData(md2, 0, 0); window._MKCV = mc;
+    if (MASKM) { const mt = new THREE.CanvasTexture(mc); mt.flipY = flipY; mt.magFilter = mt.minFilter = THREE.NearestFilter; mt.generateMipmaps = false; mt.colorSpace = THREE.NoColorSpace; window._MASKMAT = new THREE.MeshBasicMaterial({ map: mt }); } }
+  if (MASKM && window._MASKMAT) mat = window._MASKMAT;
+  else if (MASKM) { const col = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { const r = VC[i*3], g2 = VC[i*3+1], b = VC[i*3+2], mx = Math.max(r,g2,b), mn = Math.min(r,g2,b), my = MV[i*3+1], mz = Math.abs(MV[i*3+2]); let id = 0;
       const navy = b > r + 14 && b >= g2 && mx < 190 && mx - mn > 14, white = mn > 150 && mx - mn < 45;
       if (my > .27 || (mz > .2 && my < .06)) id = 0;
@@ -223,6 +255,10 @@ function headClear(W) {
     for (const nm of [sd + 'Arm', sd + 'ForeArm', sd + 'Hand']) bones[nm].quaternion.copy(W[PAR[nm]].clone().invert().multiply(W[nm])); }
   smesh.updateMatrixWorld(true);
 }
+window.exportGLB = () => new Promise(res => { for (const nm of NAMES) bones[nm].quaternion.identity(); bones.Hips.position.copy(JW.Hips); ballM.removeFromParent(); smesh.updateMatrixWorld(true);
+  const root = new THREE.Group(); root.name = 'KumuPlayer'; root.add(smesh); root.rotation.x = -Math.PI / 2; root.scale.setScalar(.01);   // glTF: Y-up, metres
+  new GLTFExporter().parse(root, b => { const u8 = new Uint8Array(b); let s2 = ''; for (let i = 0; i < u8.length; i += 32768) s2 += String.fromCharCode.apply(null, u8.subarray(i, i + 32768)); res(btoa(s2)); }, e => res('ERR' + e), { binary: true, maxTextureSize: 2048 }); });
+window.maskShot = () => window._MKCV.toDataURL('image/png');
 window.texShot = () => window._TEXCV.toDataURL('image/png');
 window.mcHand = t => { setMocap(t); return [mb.RightHand.getWorldPosition(new THREE.Vector3()).toArray(), mb.Hips.getWorldPosition(new THREE.Vector3()).toArray()]; };
 window.bpos = n => bones[n].getWorldPosition(new THREE.Vector3()).toArray();
