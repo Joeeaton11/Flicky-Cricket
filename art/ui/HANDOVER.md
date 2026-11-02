@@ -772,3 +772,4 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - Result: Figma 401:192, ratio 1.621 → scale 1.845, max ring error 8 px, p90 7 px, no seams. Side stands crop a little and the Media Centre is mostly below the screen.
 - TODO: re-check the earlier Coastal/Fairground plates with measure.py (they used the old Lab check and repeated rows).
 
+- 5.a Lord's FINAL approach (Joe preferred v3 400:192 but 'overlapping sides, middle narrower'): ONE equator band (build_v3fix.py, 220 rows) + **ring.py**: fill everything inside the coded oval with grass rebuilt per column from the painted stripes, then draw a NEW board ring exactly on the coded oval using the painted boards' own cross-section (sampled at the right equator), cover leftover grass outside it with the stand walkway colour. Crowd/stands never warped. Ring error max 2 phone px. **Use ring.py whenever a painted stadium field won't match the oval.**
