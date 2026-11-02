@@ -796,4 +796,4 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 
 ### Gully 3D bowler: front foot on the crease, no sliding (Nov 2)
 - He's placed by the world now, not on a drawn path: each `b3_*` sprite carries `fx,fy` (where his front-foot landing spot sits in that frame, baked by `bowlframes.py`/`bowlbake.py`). `b3Place()` pins that spot at `b3Foot()` (popping crease, W/2+6), so run-up, landing and follow-through travel exactly as far as his legs do. `b3HipX` is gone.
-- Run-in line is now on the stumps, so with the 3D bowler the umpire stands 13 px to the side (`umpX`).
+- Run-in line is now on the stumps, so with the 3D bowler the umpire stands 22 px to the side (`umpX`) so the run-up clears him.
