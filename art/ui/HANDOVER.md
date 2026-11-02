@@ -812,7 +812,3 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Winner on the result screen steps in from the side and then just breathes (`r2WinIn`, `r2Idle`) instead of bouncing.
 - Stat line plurals: 1 FOUR / 1 SIX / 1 BALL.
 - Every other ball now gets a small summary too: NEED X / OFF Y BALLS (`showMoment('summary')`, `.mmSum`), the number green / amber / red by the rate needed; holds the next ball 0.7 s.
-
-### Gully 3D batter: cover drive (Nov 2)
-- Joe: "replace the shot with a cover drive". There's only the off-drive capture, so `rig.html ?cover=38` turns the mocap + bat (one group, `MG`) 38° about his back foot through the stride (t 0.95→1.3), opening the off-drive out to the covers. Stance unchanged.
-- Re-shot with `tools/mocap/frames_cov.py` (render 1000 wide so the turned shot fits; colour, then mask / normal / depth), packed with `tools/mocap/m3enc.py` (ink pass, ×0.289, colour 1.12, contrast 1.05, 3 px outline, WebP 86; anchor = back foot, ay at the old ground line 1892). Old off-drive frames kept in scratch `m3_offdrive_backup/`.

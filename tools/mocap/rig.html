@@ -118,10 +118,8 @@ function fixPiv() { BB.traverse(c => { const p = PIV[c.name]; if (!p) return; c.
 const fl = new FBXLoader();
 Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r => fl.load('src/ballbat.fbx', r)), new Promise(r => new GLTFLoader().load(MODEL === 'batter' ? 'src/batter.glb' : MODEL === 'nopads' ? 'src/nopads.glb' : 'src/base.glb', r)), new Promise(r => MODEL === 'nopads' ? new GLTFLoader().load('src/batter.glb', r) : r(null))]).then(([mc, bb, g, padSrc]) => {
   mocap = mc; mixer = new THREE.AnimationMixer(mc); mixer.clipAction(mc.animations[0]).play(); mc.traverse(c => { if (c.isBone) mb[c.name.replace('DannyGear_','')] = c; });
-  // Nov 2 (Joe: "replace the shot with a cover drive"): the mocap and its bat ride in one group that turns about his back
-  // foot as he strides, so the off-drive opens out into a cover drive (?cover=deg, 0 = the original off-drive)
-  window.MG = new THREE.Group(); S.add(window.MG); window.MG.add(mc); mc.visible = false;
-  BB = bb; window.MG.add(bb); bbMix = new THREE.AnimationMixer(bb); bbMix.clipAction(bb.animations[0]).play();
+  S.add(mc); mc.visible = false;
+  BB = bb; S.add(bb); bbMix = new THREE.AnimationMixer(bb); bbMix.clipAction(bb.animations[0]).play();
   bb.traverse(c => { if (c.name == 'polySurface177') rb = c; if (c.isMesh) c.visible = false; });
   // skeleton (bind = identity rotations at mesh joint positions)
   for (const n of NAMES) { const b = new THREE.Bone(); b.name = n; bones[n] = b; }
@@ -398,11 +396,7 @@ window.sceneBall = t => { if (!BALL) return; let bm; BB.traverse(c => { if (c.na
   BALL.position.copy(c.add(window._batOff ? window._batOff.clone().multiplyScalar(k) : new THREE.Vector3())); BALL.rotation.set(t * 40, t * 13, 0); BALL.visible = t > .02; };
 function setMocap(t) { mixer.setTime(t); mocap.updateMatrixWorld(true); }
 const _v = new THREE.Vector3();
-const COVER = THREE.MathUtils.degToRad(+(new URLSearchParams(location.search).get('cover') || 0)), CPIV = new THREE.Vector3(-31, 91, 0);
-function coverTurn(t) { const th = COVER * THREE.MathUtils.smoothstep(t, .95, 1.3), q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), th);
-  window.MG.quaternion.copy(q); window.MG.position.copy(CPIV.clone().sub(CPIV.clone().applyQuaternion(q))); window.MG.updateMatrixWorld(true); }
 window.pose = (t, opts = {}) => { window._lastT = t;
-  if (COVER) coverTurn(t);
   setMocap(t); bbMix.setTime(t); fixPiv(); BB.updateMatrixWorld(true);
   const W = {};
   for (const nm of NAMES) { const Mt = mb[nm].getWorldQuaternion(new THREE.Quaternion()); W[nm] = Mt.multiply(REF[nm].M0.clone().invert()).multiply(REF[nm].Q); }
