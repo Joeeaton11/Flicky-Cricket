@@ -784,3 +784,4 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - 5.b The Oval: accepted for now (Joe: 'may come back to this'). Possible later: field narrower than 92% of screen width so side stands show more (game-layout change, affects all grounds).
 
 - 5.c Headingley built (th_headingley) on branch ecl-5c, same recipe as The Oval. Next: 5.d Edgbaston.
+- 5.d Edgbaston built (th_edgbaston) on branch ecl-5d. Next: 5.e Old Trafford.
