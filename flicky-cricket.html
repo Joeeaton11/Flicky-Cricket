@@ -34450,7 +34450,7 @@ function gullyBowlerPos() {
 // where the ball leaves the hand: high on the bowling-arm side of the release pose
 function gullyReleasePoint() {
   const u = W / 390;   // bowl_release art: the hand is straight above the feet, 43 px up at 390 wide
-  if (b3On()) { const m = GP_SRC.b3_rel, sc = GP_SCALE.bowl3 * u, F = b3Foot(); return { x: F.x + (m.hx - m.fx) * sc, y: F.y + (m.hy - m.fy) * sc }; }
+  if (b3On()) { const m = GP_SRC.b3_rel, sc = GP_SCALE.bowl3 * u, F = b3Foot(), o = b3Off((m.hx - m.fx) * sc, (m.hy - m.fy) * sc); return { x: F.x + o.x, y: F.y + o.y }; }
   return { x: W / 2 + 9, y: gullyCreaseY() - 40 * u };
 }
 // Nov 2: 3D bowler from Joe's seam-bowling mocap. 'ready' (1 s, see bowlRunMs) plays the last strides, gather and bound at real speed (mocap
@@ -34459,9 +34459,13 @@ function gullyReleasePoint() {
 // Nov 2 (Joe: "front foot on the crease, too far to the side, slides too much"): he's placed by the world, not on a drawn path.
 // Every frame knows where his front-foot landing spot is (fx, fy, from the bake); that spot is pinned on the popping crease
 // beside the stumps, so the whole run-up, landing and follow-through travel exactly as far as his legs carry him: no sliding
-function b3Foot() { return { x: W / 2 + 6 * (W / 390), y: gullyCreaseY() + 1 }; }
-function b3Place(fr) { const m = GP_SRC[fr === 'b3_stand' ? 'b3_fol20' : fr] || GP_SRC.b3_rel, sc = GP_SCALE.bowl3 * (W / 390), F = b3Foot();
-  return { x: F.x - (m.fx - m.ax) * sc, y: F.y - (m.fy - m.ay) * sc }; }
+// Front foot: toe on the painted popping crease, inside the off-side return crease. The run is turned 14° about that spot so
+// he comes in on a straight line from wide, past the umpire's left shoulder (umpire behind the stumps) — a rigid turn, so still no sliding
+function b3Foot() { const u = W / 390; return { x: W / 2 + 7 * u, y: PITCH_TOP() + 12 * u }; }
+const B3_ROT = 14 * Math.PI / 180;
+function b3Off(dx, dy) { const c = Math.cos(B3_ROT), s = Math.sin(B3_ROT); return { x: dx * c - dy * s, y: dx * s + dy * c }; }
+function b3Place(fr) { const m = GP_SRC[fr === 'b3_stand' ? 'b3_fol20' : fr] || GP_SRC.b3_rel, sc = GP_SCALE.bowl3 * (W / 390), F = b3Foot(), o = b3Off((m.ax - m.fx) * sc, (m.ay - m.fy) * sc);
+  return { x: F.x + o.x, y: F.y + o.y }; }
 function b3On() { return window.MOCAP_BOWL !== false && GP.b3_stand && GP.b3_stand.naturalWidth > 0; }
 function b3Frame() {
   const now = performance.now();
@@ -35053,7 +35057,7 @@ function drawField() {
   // pitch), just a little further back, with only a small lateral nudge -
   // not a full pitch-width to the side
   // bowler drawn in depth order with the umpire (behind him during the run-up, in front at the crease)
-  const umpX = W/2 - (gullyPaintedPeople() && b3On() ? 22 * W / 390 : 0);   // Nov 2: the 3D bowler runs in on the stumps line, so the umpire stands a step to the side
+  const umpX = W/2 - (gullyPaintedPeople() && b3On() ? 3 * W / 390 : 0);   // Nov 2: behind the stumps, a touch to the leg side of the bowler's run
   if (gullyPaintedPeople() && gullyBowlerPos().y < PITCH_TOP() - 18) { drawGullyBowler(); drawUmpire(umpX, PITCH_TOP()-10); }   // behind the umpire on the run-up
   else { drawUmpire(umpX, PITCH_TOP()-10); if (gullyPaintedPeople()) drawGullyBowler(); }
 
