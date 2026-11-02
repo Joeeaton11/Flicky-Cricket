@@ -805,3 +805,9 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 ### Gully 3D bowler: no crabbing, curled hands (Nov 2)
 - Sprites shot at AZ 90 so his body faces the way he travels on screen (~11° in from wide); `B3_ROT` is 0 now (the 14° turn made him look crabwise).
 - `curlHands()` in `bowl.html` bends the fingers into the bind mesh (no finger joints in the model): bowling hand 80° round the ball (ball moved into the fingers), front hand 105° loose fist. `?flat` = old open hands; `?curlR`/`?curlL` set the angles.
+
+### Result stars, run-chase urgency, winner pose (Nov 2)
+- Result stars are art now: `starArt(on)` draws a faceted gold star (or a navy socket) as SVG; the middle one is bigger and raised, and each slams in with a flash (`stSlam`, `stFlash`).
+- Pacing: after a scoring ball the next ball waits 1000 ms (was 650). Closing call-outs hold the next ball back until they've been read (`window._momentHold`, used by `nextOrEnd`): LAST BALL 1.9 s, X TO WIN 1.6 s, LAST OVER (12-ball chases) 1.6 s, and NEED X OFF Y on every one of the last 3 balls 1.4 s (red when the ask is more than 2 a ball). They pulse like a heartbeat (`.mmUrg`, `mmBeat`), and the run-in to a close ball gets two low thumps (`chaseHeartbeat`). Wicket card 1.7 s (was 1.25).
+- Winner on the result screen steps in from the side and then just breathes (`r2WinIn`, `r2Idle`) instead of bouncing.
+- Stat line plurals: 1 FOUR / 1 SIX / 1 BALL.

@@ -2511,7 +2511,10 @@
   #plCanvas.hop { animation:plHop .45s cubic-bezier(.3,.8,.4,1) 1, plIdle 2.6s ease-in-out .45s infinite; }
   #homePlayer canvas { animation:plIdleH 2.8s ease-in-out infinite; transform-origin:50% 100%; }
   #r2Player { position:absolute; right:6px; bottom:-44px; height:140px; width:auto; z-index:1; transform-origin:50% 100%; filter:drop-shadow(0 6px 8px rgba(0,0,0,.45)); }
-  #r2Player.win { animation:r2Win .6s cubic-bezier(.3,.8,.4,1) .5s 2 both; }
+  /* Nov 2 (Joe: the bouncing winner "looks weird"): he steps in from the side and settles, then just breathes */
+  #r2Player.win { animation:r2WinIn .55s cubic-bezier(.2,.9,.3,1) .3s both, r2Idle 3.4s ease-in-out .9s infinite; }
+  @keyframes r2WinIn { from { transform:translateX(-46px) scale(.94); opacity:0; } 70% { opacity:1; } to { transform:none; opacity:1; } }
+  @keyframes r2Idle { 0%,100% { transform:scale(1,1); } 50% { transform:scale(1.006,1.014); } }
   #r2Player.lose { filter:grayscale(.45) brightness(.8) drop-shadow(0 6px 8px rgba(0,0,0,.45)); transform:translateY(8px) rotate(-3deg); }
   @keyframes r2Win { 0%,100% { transform:translateY(0); } 40% { transform:translateY(-26px) rotate(2deg); } }
   #r2Wrap { z-index:2; }
@@ -2713,9 +2716,18 @@
   #resultScreen.r3 #r2Ribbon.win { color:#7CF29A !important; } #resultScreen.r3 #r2Ribbon.close { color:#FFD23A !important; } #resultScreen.r3 #r2Ribbon.lose { color:#ff6a5a !important; }
   #resultScreen.r3 #r2HeroR #r2Badge { background:none !important; border:0 !important; box-shadow:none !important; padding:0 !important; font-size:14px !important; white-space:nowrap; max-width:none !important; color:#fff !important; -webkit-text-stroke:5px #050A14; paint-order:stroke fill; text-shadow:0 2px 0 #050A14; }
   #resultScreen.r3 #r2HeroR { gap:3px !important; width:62% !important; }
-  #r2Stars { display:flex; align-items:center; justify-content:flex-end; gap:2px; margin:-2px 0 2px; }
-  #r2Stars i { font-style:normal; font-size:28px; line-height:1; color:#1d2a46; -webkit-text-stroke:5px #050A14; paint-order:stroke fill; }
-  #r2Stars i.on { color:#FFC93A; text-shadow:0 0 14px rgba(255,201,58,.7); animation:fxSlamIn .4s cubic-bezier(.25,1.7,.45,1) both; --tilt:0deg; }
+  #r2Stars { display:flex; align-items:flex-end; justify-content:flex-end; gap:0; margin:-2px 0 2px; }
+  /* Nov 2 (Joe: "no artwork for the stars"): faceted gold stars in sockets, the middle one bigger and raised, each slams in with a flash */
+  #r2Stars i { position:relative; display:block; width:38px; height:38px; margin:0 -1px; font-style:normal; transform:rotate(var(--rot,0deg)); }
+  #r2Stars i:nth-child(1) { --rot:-12deg; } #r2Stars i:nth-child(3) { --rot:12deg; }
+  #r2Stars i:nth-child(2) { width:48px; height:48px; margin-bottom:9px; }
+  #r2Stars i svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+  #r2Stars i svg.st-on { opacity:0; }
+  #r2Stars i.on svg.st-on { animation:stSlam .45s cubic-bezier(.25,1.7,.45,1) both; animation-delay:inherit; }
+  #r2Stars i.on::after { content:''; position:absolute; inset:-55%; border-radius:50%; background:radial-gradient(circle, rgba(255,240,170,.95) 0, rgba(255,201,58,.55) 28%, rgba(255,201,58,0) 62%); opacity:0; pointer-events:none; animation:stFlash .6s ease-out both; animation-delay:inherit; }
+  #r2Stars i.on { filter:drop-shadow(0 0 8px rgba(255,201,58,.55)); }
+  @keyframes stSlam { 0% { opacity:0; transform:scale(2.6) rotate(-30deg); } 60% { opacity:1; transform:scale(.88) rotate(4deg); } 100% { opacity:1; transform:scale(1) rotate(0); } }
+  @keyframes stFlash { 0% { opacity:0; transform:scale(.3); } 35% { opacity:1; } 100% { opacity:0; transform:scale(1.25); } }
   #r2Stars small { margin-left:6px; font-size:13px; color:#FFC93A; -webkit-text-stroke:4px #050A14; paint-order:stroke fill; }
   /* one rewards panel instead of three boxes */
   #resultScreen.r3 #r2Rewards { gap:0 !important; border-radius:18px; border:3px solid #050A14; background:linear-gradient(#24447f,#13284f); box-shadow:0 5px 0 rgba(0,0,0,.5); overflow:hidden; }
@@ -32037,6 +32049,7 @@ let ballTimer = null;
 function startBallSequence() {
   state = 'ready';
   hideMessage();
+  chaseHeartbeat();
   ball = { x:0.5, y:0, z:0, vx:0, vy:0, active:true, radius:8 };
 
   // ── Base ramp (innings progress + season) ──
@@ -32384,7 +32397,7 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
         // Show celebration pause — player taps to continue after milestone
         setTimeout(() => showMilestonePause(hitMilestone, nextOrEnd), 900);
       } else {
-        setTimeout(nextOrEnd, 650);
+        setTimeout(nextOrEnd, 1000);   // Nov 2: was 650 — no time to take in the shot before the next ball
       }
     }
   }, targetDist);
@@ -32753,8 +32766,13 @@ function caughtOut() {
 function nextOrEnd() {
   hideMessage();
   if (chaseAfterBall()) return;
-  startBallSequence();
+  const hold = window._momentHold || 0; window._momentHold = 0;
+  if (hold) setTimeout(() => { if (state !== 'menu' && state !== 'ready') startBallSequence(); }, hold); else startBallSequence();
 }
+// close finish: two low thumps as the bowler turns to run in
+function chaseHeartbeat() { const c = window.chase; if (!c || c.mode === 'nets' || c.mode === 'endless' || c.mode === 'tourney' || !c.target) return;
+  const left = chaseBallsLeft(), need = chaseNeed(); if (need <= 0 || !(left <= 3 || (left <= 6 && need >= left * 2))) return;
+  try { [0, 170].forEach((d, i) => setTimeout(() => { playTone({ freq: i ? 52 : 62, duration: .14, volume: .32, type: 'sine' }); haptic(i ? 18 : 28); }, d)); } catch (e) {} }
 
 // stores the data needed to render a shareable result card after each match
 let lastResult = null;
@@ -33156,10 +33174,10 @@ function showResultScreen(d) {
   $('r2Fours').textContent = d.fours; $('r2Sixes').textContent = d.sixes; $('r2Balls').textContent = d.balls;
   $('r2SR').textContent = d.balls ? Math.round(d.runs / d.balls * 100) : 0;
   { let sl = $('r2StatLine'); if (!sl) { sl = document.createElement('div'); sl.id = 'r2StatLine'; sl.className = 'r2-step'; $('r2Badge').insertAdjacentElement('afterend', sl); }
-    sl.innerHTML = `<b>${d.fours}</b> FOURS · <b>${d.sixes}</b> SIXES · <b>${d.balls}</b> BALLS`; sl.style.setProperty('--d', '.55s'); }
+    sl.innerHTML = `<b>${d.fours}</b> FOUR${d.fours === 1 ? '' : 'S'} · <b>${d.sixes}</b> SIX${d.sixes === 1 ? '' : 'ES'} · <b>${d.balls}</b> BALL${d.balls === 1 ? '' : 'S'}`; sl.style.setProperty('--d', '.55s'); }
   { let st = $('r2Stars'); if (!st) { st = document.createElement('div'); st.id = 'r2Stars'; $('r2ScoreTop').insertAdjacentElement('afterend', st); }
     const n = d.stars ? d.stars.n : 0;
-    st.innerHTML = d.stars ? [1, 2, 3].map(k => `<i class="${k <= n ? 'on' : ''}" style="animation-delay:${1.5 + k * .18}s">★</i>`).join('') + (d.stars.gained ? `<small>+${d.stars.gained} NEW</small>` : '') : '';
+    st.innerHTML = d.stars ? [1, 2, 3].map(k => `<i class="${k <= n ? 'on' : ''}" style="animation-delay:${1.5 + k * .22}s">${starArt(false)}${starArt(true)}</i>`).join('') + (d.stars.gained ? `<small>+${d.stars.gained} NEW</small>` : '') : '';
     st.style.display = d.stars ? '' : 'none'; }
   $('resultScreen').classList.toggle('r3', (window.RESULT_STYLE || 'r3') === 'r3');
   const countUp = (el, to, delay, dur, fmt) => {
@@ -61755,8 +61773,12 @@ function chaseAfterBall() {
   if (c.used >= c.balls) { state = 'result'; setTimeout(() => { if (!extraOverOffer()) endGame(); }, 700); return true; }
   const left = chaseBallsLeft(), need = chaseNeed();
   if (c.mode === 'tourney') return false;
-  if (left === 1) showMoment('lastball', { need });
-  else if (need <= 6 && !c.mp) { c.mp = true; showMoment('matchpoint', { need, left }); }
+  // Nov 2 (Joe: "too fast, no feeling of urgency"): the closing balls build up. Each call-out now holds the next ball back
+  // until it's been read (_momentHold), and the run-in to a close ball gets a heartbeat (startBallSequence)
+  if (left === 1) { showMoment('lastball', { need }); window._momentHold = 1900; }
+  else if (need <= 6 && !c.mp) { c.mp = true; showMoment('matchpoint', { need, left }); window._momentHold = 1600; }
+  else if (left === 6 && c.balls > 6 && !c.lo) { c.lo = true; showMoment('lastover', { need }); window._momentHold = 1600; }
+  else if (left <= 3) { showMoment('pressure', { need, left }); window._momentHold = 1400; }
   return false;
 }
 function chaseWon() {
@@ -61803,6 +61825,11 @@ function chaseNewBatter() {
   #matchMoment .mmCard.gold{border-color:#FFC93A}
   #matchMoment .mmBig{line-height:1;-webkit-text-stroke:10px #050A14;paint-order:stroke fill;text-shadow:0 6px 0 #050A14,0 0 34px rgba(255,201,58,.5);transform:rotate(-3deg);animation:msSlam .4s cubic-bezier(.25,1.7,.45,1) both}
   #matchMoment > span:not(.mmBig){-webkit-text-stroke:6px #050A14;paint-order:stroke fill}
+  #matchMoment .mmUrg{display:flex;flex-direction:column;align-items:center;gap:6px;animation:mmBeat .9s ease-in-out .45s infinite}
+  #matchMoment .mmUrg > span:not(.mmBig){-webkit-text-stroke:6px #050A14;paint-order:stroke fill}
+  #matchMoment .mmUrg.hot .mmBig{text-shadow:0 6px 0 #050A14,0 0 30px rgba(255,70,40,.75)}
+  #matchMoment .mmUrg.hot{animation-duration:.62s}
+  @keyframes mmBeat{0%,100%{transform:scale(1)}12%{transform:scale(1.08)}24%{transform:scale(.98)}36%{transform:scale(1.05)}55%{transform:scale(1)}}
   #matchMoment .mmCard:not(.gold){background:none;border:0;box-shadow:none;padding:0}
   #matchMoment .mmCard:not(.gold) span{-webkit-text-stroke:6px #050A14;paint-order:stroke fill;text-shadow:0 3px 0 #050A14}
   #matchMoment .mmSub{color:#FFC93A}
@@ -61947,17 +61974,25 @@ function showMoment(kind, d) {
     ms = ms === 2150 || ms === 1300 ? ms : 1900;
   } else if (kind === 'wicket') {
     html = d.nets ? '' : `<div class="mmCard" style="margin-top:20px"><span style="font-size:30px">${d.left} WICKET${d.left === 1 ? '' : 'S'} LEFT</span><span class="mmSub" style="font-size:24px">NEED ${d.need} OFF ${d.balls}</span></div>`;
-    ms = 1250;
+    ms = 1700;
   } else if (kind === 'won') {
     html = `<span class="mmBig" style="font-size:68px;color:#FFC93A">WON!</span><div class="mmCard"><span style="font-size:17px">${d.spare > 0 ? `WITH ${d.spare} BALL${d.spare === 1 ? '' : 'S'} TO SPARE` : 'OFF THE LAST BALL!'}</span></div>`;
     ms = 2100;
   } else if (kind === 'netsbest') {
     html = `<span class="mmBig" style="font-size:54px;color:#7CF29A">NEW BEST!</span><span style="font-size:20px">KEEP GOING</span>`; ms = 1500;
   } else if (kind === 'lastball') {
-    html = `<span class="mmBig" style="font-size:52px;color:#FFC93A">LAST BALL!</span><span style="font-size:24px;text-shadow:0 3px 0 #050A14">${d.need} TO WIN</span>`;
-    haptic([40, 30, 40]);
+    html = `<div class="mmUrg hot"><span class="mmBig" style="font-size:58px;color:#FFC93A">LAST BALL!</span><span style="font-size:26px;text-shadow:0 3px 0 #050A14">${d.need} TO WIN</span></div>`;
+    haptic([40, 30, 40]); ms = 2100;
   } else if (kind === 'matchpoint') {
-    html = `<span class="mmBig" style="font-size:46px;color:#FFC93A">${d.need} TO WIN!</span><span style="font-size:18px;text-shadow:0 3px 0 #050A14">${d.left} BALL${d.left === 1 ? '' : 'S'} LEFT</span>`;
+    html = `<div class="mmUrg"><span class="mmBig" style="font-size:50px;color:#FFC93A">${d.need} TO WIN!</span><span style="font-size:20px;text-shadow:0 3px 0 #050A14">${d.left} BALL${d.left === 1 ? '' : 'S'} LEFT</span></div>`;
+    haptic(30); ms = 1800;
+  } else if (kind === 'lastover') {
+    html = `<div class="mmUrg"><span class="mmBig" style="font-size:48px;color:#FFC93A">LAST OVER</span><span style="font-size:22px;text-shadow:0 3px 0 #050A14">NEED ${d.need} OFF 6</span></div>`;
+    ms = 1800;
+  } else if (kind === 'pressure') {   // the last few balls, every ball: the ask, red when it's more than a two a ball
+    const hot = d.need > d.left * 2;
+    html = `<div class="mmUrg${hot ? ' hot' : ''}"><span class="mmBig" style="font-size:52px;color:${hot ? '#FF5A3C' : '#FFC93A'}">NEED ${d.need}</span><span style="font-size:22px;text-shadow:0 3px 0 #050A14">OFF ${d.left} BALL${d.left === 1 ? '' : 'S'}</span></div>`;
+    if (hot) haptic(25); ms = 1600;
   }
   if (!html) return;
   el.innerHTML = html; el.className = ''; void el.offsetWidth; el.className = 'show';
@@ -62515,6 +62550,24 @@ function claimAllBag(kind) {
 }
 
 // ---------- ground stars: 1 = win, 2 = win with 3+ balls spare, 3 = with 6+ spare (12-ball chases; scaled for longer) ----------
+// Nov 2: result-screen star art. A rounded five-point star with ten bevel facets (lit from the top-left), a gloss sweep and a
+// dark game outline; the empty one is the same star as a recessed navy socket
+function starArt(on) {
+  const cx = 50, cy = 53, R = 44, r = 21, P = [];
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r : R; P.push([cx + rr * Math.cos(a), cy + rr * Math.sin(a)]); }
+  const pts = P.map(p => p.map(v => v.toFixed(1)).join(',')).join(' '), id = 'st' + (on ? 'g' : 'e');
+  let fac = '';
+  for (let i = 0; i < 10; i++) { const a = P[i], b2 = P[(i + 1) % 10], mid = -Math.PI / 2 + (i + .5) * Math.PI / 5, lit = Math.cos(mid - (-Math.PI * .75));   // light from top-left
+    const col = lit > 0 ? `rgba(255,255,255,${(lit * (on ? .34 : .08)).toFixed(2)})` : `rgba(${on ? '120,40,0' : '0,0,0'},${(-lit * (on ? .32 : .3)).toFixed(2)})`;
+    fac += `<polygon points="${cx},${cy} ${a[0].toFixed(1)},${a[1].toFixed(1)} ${b2[0].toFixed(1)},${b2[1].toFixed(1)}" fill="${col}"/>`; }
+  const grad = on ? `<linearGradient id="${id}f" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#FFF08A"/><stop offset=".45" stop-color="#FFC21C"/><stop offset="1" stop-color="#E8770A"/></linearGradient>`
+                  : `<linearGradient id="${id}f" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#1a2848"/><stop offset="1" stop-color="#34497c"/></linearGradient>`;
+  return `<svg class="st-${on ? 'on' : 'off'}" viewBox="0 0 100 100"><defs>${grad}<clipPath id="${id}c"><polygon points="${pts}"/></clipPath></defs>
+    <polygon points="${pts}" fill="#050A14" stroke="#050A14" stroke-width="13" stroke-linejoin="round" transform="translate(0,4)"/>
+    <polygon points="${pts}" fill="url(#${id}f)" stroke="#050A14" stroke-width="9" stroke-linejoin="round"/>
+    <g clip-path="url(#${id}c)">${fac}${on ? `<ellipse cx="34" cy="30" rx="26" ry="13" transform="rotate(-28 34 30)" fill="rgba(255,255,255,.55)"/><polygon points="${pts}" fill="none" stroke="rgba(255,250,210,.9)" stroke-width="3" stroke-linejoin="round" transform="translate(50 53) scale(.86) translate(-50 -53)"/>`
+      : `<polygon points="${pts}" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="7" stroke-linejoin="round" transform="translate(1.5,2.5)"/>`}</g></svg>`;
+}
 function starsFor(spare, balls) { const sc = (balls || 12) / 12, st = GAME_CONFIG.daily.stars; return spare >= Math.round(st.ballsSpareFor3 * sc) ? 3 : spare >= Math.round(st.ballsSpareFor2 * sc) ? 2 : 1; }
 function starsState() { return SAVE.section('stars'); }
 function totalStars() { return Object.values(starsState()).filter(v => typeof v === 'number').reduce((a, b) => a + b, 0); }
