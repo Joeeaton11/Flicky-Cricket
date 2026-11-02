@@ -20,26 +20,26 @@ def biggest_in(rgba,box,name,maxd=None,dil=2,save=True):
   return im
 M=[255,0,255]; G=[0,255,0]
 P=keyed('props_raw.png',G)
-pc=biggest_in(P,(50,50,470,975),'pitch',save=False); pc.save(D+'pitch.webp',quality=90)
-ys=np.where(P[50:975,50:470,3].max(1)>128)[0]; top=50+ys.min(); print('pitch top',top,'ct',191-top,'cb',809-top,'size',pc.size)
+pc=biggest_in(P,(30,40,470,985),'pitch',save=False); pc.save(D+'pitch.webp',quality=90)
+ys=np.where(P[40:985,30:470,3].max(1)>128)[0]; top=40+ys.min(); print('pitch top',top,'ct',179-top,'cb',802-top,'size',pc.size)
 src=np.array(Image.open('props_raw.png').convert('RGB'))
-quad=np.float32([[118,191],[389,191],[433,809],[73,809]]); Wr,Hr=200,523
+quad=np.float32([[106,179],[385,179],[436,802],[53,802]]); Wr,Hr=200,523
 Mx=cv2.getPerspectiveTransform(quad,np.float32([[0,0],[Wr,0],[Wr,Hr],[0,Hr]]))
 Image.fromarray(cv2.warpPerspective(src,Mx,(Wr,Hr),flags=cv2.INTER_CUBIC)).save(D+'pitch_rect.webp',quality=92)
-st=biggest_in(P,(500,50,550,285),'stump'); st.resize((round(st.width*360/st.height),360),Image.LANCZOS).save(D+'stump.webp',quality=92)
-bl=biggest_in(P,(620,110,750,210),'bail',save=False).rotate(-28,expand=True,resample=Image.BICUBIC); bl=bl.crop(bl.getbbox()); bl.resize((212,round(bl.height*212/bl.width)),Image.LANCZOS).save(D+'bail.webp',quality=92)
-biggest_in(P,(795,75,960,245),'ball',208); biggest_in(P,(500,315,980,370),'rope'); biggest_in(P,(680,405,815,510),'ring',120)
-biggest_in(P,(555,540,710,750),'x_falcon_up',160); biggest_in(P,(755,585,965,750),'x_falcon_dn',160); biggest_in(P,(555,795,730,975),'x_flag',160); biggest_in(P,(835,790,935,970),'x_lantern',160)
+st=biggest_in(P,(495,40,580,310),'stump'); st.resize((48,360),Image.LANCZOS).save(D+'stump.webp',quality=92)
+bl=biggest_in(P,(640,90,720,270),'bail',save=False).rotate(90,expand=True); bl.resize((212,round(bl.height*212/bl.width)),Image.LANCZOS).save(D+'bail.webp',quality=92)
+biggest_in(P,(780,90,965,275),'ball',208); biggest_in(P,(475,320,980,375),'rope'); biggest_in(P,(665,410,810,540),'ring',120)
+biggest_in(P,(480,535,710,755),'x_hoopoe_up',160); biggest_in(P,(495,785,755,965),'x_hoopoe_dn',160); biggest_in(P,(795,510,950,755),'x_flame',160); biggest_in(P,(800,800,975,975),'x_flag',160)
 Wd=keyed('words_raw.png',G)
-for name,box in [('w_four',(50,35,495,175)),('w_six',(515,35,980,260)),('w_caught',(35,210,505,315)),('w_bowled',(505,275,980,385)),('w_out',(570,385,920,510))]:
+for name,box in [('w_four',(30,35,490,195)),('w_six',(505,30,995,270)),('w_caught',(30,215,495,325)),('w_bowled',(505,320,1000,430)),('w_out',(30,470,420,635))]:
   biggest_in(Wd,box,name,700,dil=3)
-band=Wd[875:995,20:1004,3]>128; cols=band.sum(0); segs=[]; inn=False
+band=Wd[860:1000,20:1004,3]>128; cols=band.sum(0); segs=[]; inn=False
 for x,c in enumerate(cols):
   if c>0 and not inn: s0=x; inn=True
   if c==0 and inn: segs.append((s0,x)); inn=False
 if inn: segs.append((s0,len(cols)))
 segs=[q for q in segs if q[1]-q[0]>20]; print('digit segs',len(segs))
 for d,(a,b) in enumerate(segs[:10]):
-  im=biggest_in(Wd,(20+a,875,20+b,995),'d%d'%d,dil=1,save=False); im.resize((round(im.width*130/im.height),130),Image.LANCZOS).save(D+'d%d.webp'%d,quality=90)
-Pz=keyed('pause_raw.png',[240,37,245]); biggest_in(Pz,(0,0,640,640),'pause2',160)
+  im=biggest_in(Wd,(20+a,860,20+b,1000),'d%d'%d,dil=1,save=False); im.resize((round(im.width*130/im.height),130),Image.LANCZOS).save(D+'d%d.webp'%d,quality=90)
+Pz=keyed('pause_raw.png',[255,0,255]); biggest_in(Pz,(0,0,640,640),'pause2',160)
 print('ok')

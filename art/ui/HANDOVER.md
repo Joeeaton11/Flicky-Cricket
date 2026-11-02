@@ -668,6 +668,7 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 
 ### Rules added Nov 2 (Joe)
 - BESPOKE: every ground totally unique in every way (architecture, palette, landmarks, board, pause, pitch, stumps, ball, rope, extras, lettering). Don't repeat looks between grounds.
-- ONE boundary: the game's rope only. Plate prompt no longer asks for a ring of boards — the stand's own wall meets the grass; no painted rope / LED ring / boards line. No boundary markers.
+- ONE boundary rope: the game's rope only (no painted rope, no boundary markers). The ring of boards round the field STAYS (Joe corrected) — it must sit exactly on the field edge.
 - NO GAP between rope and stadium: after build.py, run close_gap.py (boards pulled in rigidly, stand eased back over ~380 px) when the painted edge leaves grass outside the rope. Used on 2.c (gaps ≤ 38 px → no visible stretch). Check zooms before showing.
-- Scoreboards: no props on the top corners unless essential (2.c lanterns removed; Railway lamps kept — Joe asked for them).
+- Scoreboards: extra props are fine but vary them per ground — not the same props in the same place every time (corner props keep repeating).
+- 2.c Afterglow v2 (Nov 2, Joe: another pass, bespoke): ancient desert fort (369:192, gpt-image-2.5-sunburst painted a true tall oval — fitted with ONE scale, no rows). Rope gap fixed with close_gap.py `pull` mode (boards ring moves in ≤30 px, stand eased back over 600 px; grass detector now ignores teal boards). New THEMED_EXTRAS `flames` (flicker in size/brightness). Corrections from Joe: the ring of boards round the field STAYS (only the extra painted rope goes); scoreboard props are fine if they vary per ground — here an elephant on the top edge + an awning below.
