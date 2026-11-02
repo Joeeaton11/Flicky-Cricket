@@ -167,7 +167,16 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
       const fw = new THREE.Vector3().crossVectors(up, rt);     // forward = up × right
       const Mc = new THREE.Matrix4().makeBasis(fw, rt.clone().negate(), up);     // columns: X fwd, Y = -right, Z up
       Q = new THREE.Quaternion().setFromRotationMatrix(Mc); }
-    else if (nm === 'Head') Q = REF.Neck.Q.clone();
+    else if (nm === 'Head') {   // at the stance the batter looks at the bowler (−Y, a touch down), head upright
+      const fw = new THREE.Vector3(0, -1, -.12).normalize(), up0 = new THREE.Vector3(0, 0, 1); up0.sub(fw.clone().multiplyScalar(up0.dot(fw))).normalize();
+      const Mc = new THREE.Matrix4().makeBasis(fw, new THREE.Vector3().crossVectors(up0, fw), up0);   // columns: X fwd, Y left, Z up (bind frame of the model)
+      Q = new THREE.Quaternion().setFromRotationMatrix(Mc); }
+    else if (/Hand$/.test(nm)) {  // full orientation: along the hand and across the knuckles (index → pinky), not just the direction
+      const sd = nm.replace('Hand', ''), dm = JW[sd + 'HandEnd'].clone().sub(JW[nm]).normalize(), am = new THREE.Vector3(1, 0, 0);   // model: knuckles across = forward (thumb/index side)
+      am.sub(dm.clone().multiplyScalar(am.dot(dm))).normalize();
+      const dc = P(sd + 'HandMiddle1').sub(P(nm)).normalize(), ac = P(sd + 'HandIndex1').sub(P(sd + 'HandPinky1')); ac.sub(dc.clone().multiplyScalar(ac.dot(dc))).normalize();
+      const Bm = new THREE.Matrix4().makeBasis(dm, am, new THREE.Vector3().crossVectors(dm, am)), Bc = new THREE.Matrix4().makeBasis(dc, ac, new THREE.Vector3().crossVectors(dc, ac));
+      Q = new THREE.Quaternion().setFromRotationMatrix(Bc.multiply(Bm.invert())); }
     else { const cn = CH[nm]; const mcChild = cn.endsWith('End') ? (nm.endsWith('Hand') ? nm.replace('Hand','HandMiddle1') : nm.endsWith('ToeBase') ? nm.replace('ToeBase','ToeBase1') : null) : cn;
       const dm = JW[cn].clone().sub(JW[nm]).normalize(); const dc = (mcChild && mb[mcChild] ? P(mcChild) : P(nm).add(dm)).sub(P(nm)).normalize();
       Q = new THREE.Quaternion().setFromUnitVectors(dm, dc); }
