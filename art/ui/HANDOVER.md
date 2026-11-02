@@ -664,3 +664,4 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - Boundary markers removed from the props prompt (layout_from_code.py) and from 2.b (flags: 0). Prompt now has a NO GAP line.
 - 2.b: coded rope off (`noRope: true` in THEME_ART) — the painted navy/orange boards ring is the only boundary (Joe, Nov 2). rope.webp kept but unused.
 - 2.b REVERTED (Joe, Nov 2): v2 plate looked obviously stretched → back to v1 plate (364:191) with the coded rope, boundary markers off. Lesson: the sunburst tall-oval plate fit (build2 + close_gap) reads as stretched; don't use close_gap.
+- 2.c Afterglow (branch floodlit-2c, key te_afterglow): Camera 4, Figma 366:192 (366:191 came out a small round field — rejected). Rules applied: locked board + crest, no boundary markers (flags 0), coded rope only, plate fitted with build.py (no close_gap). Board prompt with % numbers printed labels (367:191) — describe the layout in words only.
