@@ -266,8 +266,9 @@ References in the game: 1 close-up = Rooftop (`tr_rooftop`) · 2 medium-close �
 Portrait background. It MUST match the game layout below exactly. The layout is described in words on purpose: never write any measurement, number, label or guide line in the image.
 FIELD: one TALL oval playing surface — themed, not always grass [e.g. raked beach sand, ice, ship's deck, turf] — plain and calm so a small ball shows clearly. It is about 1.6 times as tall as it is wide. Its left and right edges sit one eighth of the picture's width in from each side. Its top edge is just over a quarter of the way down the picture; its bottom edge is very near the bottom, leaving only a thin band (about a fifteenth of the height) below it. Its centre is three fifths of the way down. The thin strips beyond its left and right edges get cropped, so keep only scenery there.
 It is a true smooth ellipse, not a racetrack with straight sides.
+NO GAP (Joe): the boards sit exactly on the field edge all the way round, so the game's rope lies right against the stands. Not a single strip of grass outside the boards, especially on the four diagonals.
 TIGHT STADIUM (very important): the field's edge IS the foot of the stands. The stadium starts right at the field edge. Only a thin ring of boards (or the theme's equivalent) separates the field from the crowd and scenery: no wide band of bare outfield, track, sand or empty ground. The front row of the crowd sits immediately behind the boards: no grass, concourse or walkway between the boards and the seats. The grass stops at the boards: no grass anywhere outside the boards, all the way round, including at the top and bottom.
-The field edge is a clean crisp line. NO rope, NO markers, NO inner ring, NO lines on the field: the game draws the themed rope, boundary markers and 30-yard ring markers from the props sheet, exactly on the coded oval.
+The field edge is a clean crisp line. NO rope, NO markers, NO inner ring, NO lines on the field: the game draws the themed rope and 30-yard ring markers from the props sheet, exactly on the coded oval.
 EMPTY: no pitch, stumps, players, umpire, ball or text on the field.
 SURROUNDINGS: busy, fun and cool — packed with life, characters and detail, edge to edge and top to bottom, OUTSIDE the oval only. Real-world themes (e.g. an IPL ground) should look like the real thing, in the home team's colours. No empty bands at the top or bottom.
 SCREEN ZONES (the game's interface sits on top of these; paint scenery there, just keep it simple):
@@ -303,7 +304,6 @@ The stumps and bails are also made for the scene [e.g. taped sticks, bamboo, wea
 - ONE themed bail.
 - ONE themed ball [e.g. dark red leather, gold seam], seen from above.
 - ROPE SEGMENT: a straight horizontal length of the themed boundary rope, evenly thick, both ends cut square so it tiles.
-- BOUNDARY MARKER (optional): a small themed marker [e.g. skull flag on a post].
 - RING MARKER: one small themed marker seen from above [e.g. a seashell, a white disc] — repeated by the game round the 30-yard circle.
 - MOVING EXTRAS (3–5 small separate pieces the game animates): [e.g. a skull flag, a waving pirate fan, a parrot with wings up and wings down, a lantern flame].
 ```
