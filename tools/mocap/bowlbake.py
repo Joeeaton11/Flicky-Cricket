@@ -35,7 +35,7 @@ import base64,io
 for (n,_),im in zip(SEQ,outs):
     s=im.crop((x0,y0,x1,y1)).resize((W,H),Image.LANCZOS)
     s=ImageEnhance.Color(s).enhance(1.12); s=ImageEnhance.Contrast(s).enhance(1.05)
-    s=add_outline(s,3)
+    s=add_outline(s,2)
     s.save(f'bf_{n}.png'); bio=io.BytesIO(); s.save(bio,'WEBP',quality=86,method=6)
     mk=Image.open(f'bm_{n}.png').convert('RGBA').crop((x0,y0,x1,y1)).resize((W,H),Image.NEAREST); mb=io.BytesIO(); mk.save(mb,'WEBP',lossless=True)
     hand=meta[n][1]

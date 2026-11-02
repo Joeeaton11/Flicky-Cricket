@@ -5,7 +5,7 @@ RUN=[round(2.25+i*(1.0/24),4) for i in range(24)]          # 2.25 .. 3.21, real 
 REL=[3.25]
 FOL=[round(3.25+0.05*(i+1),4) for i in range(21)]         # 3.30 .. 4.30, real speed
 SEQ=[('run%d'%i,t) for i,t in enumerate(RUN)]+[('rel',3.25)]+[('fol%d'%i,t) for i,t in enumerate(FOL)]+[('stand',0.0)]
-AZ,EL,R,FOV=90,22,950,18
+AZ,EL,R,FOV=62,22,950,18   # Nov 2: three-quarter view from his bowling-arm side, so the action reads (front-on hid it)
 async def render(mode):
     mask = mode == 'mask'
     async with async_playwright() as p:
