@@ -3,16 +3,20 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-const WD = 360, HT = 480;
+const WD = +(new URLSearchParams(location.search).get('w') || 720), HT = +(new URLSearchParams(location.search).get('h') || 960);
 const R = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:true }); R.setPixelRatio(2); R.setSize(WD,HT); R.setClearColor(0,0); R.outputColorSpace = THREE.SRGBColorSpace; document.body.appendChild(R.domElement);
 const S = new THREE.Scene();
-S.add(new THREE.AmbientLight(0xffffff, 1.7)); const key = new THREE.DirectionalLight(0xfff3e0, 1.5); key.position.set(-200, 300, 400); S.add(key);
+S.add(new THREE.HemisphereLight(0xffffff, 0x7a8a66, 2.25)); const key = new THREE.DirectionalLight(0xfff1dc, 1.9); key.position.set(-200, 300, 400); S.add(key);
 const fill = new THREE.DirectionalLight(0xdfe8ff, .6); fill.position.set(300, -200, 200); S.add(fill);
 const SC = 175;                                          // mesh is 1 unit tall → 175 cm
 // mesh coords: x forward, y up, z = his right.  bind world: X forward, Z up, -Y = his right
 const toW = (x, y, z) => new THREE.Vector3(x * SC, -z * SC, (y + .5) * SC);
-const J = { Hips:[-.02,-.08,0], Spine:[-.02,0,0], Spine1:[-.015,.08,0], Spine2:[-.02,.16,0], Neck:[-.01,.29,0], Head:[0,.34,0], HeadEnd:[0,.5,0] };
-for (const [s, k] of [[1,'Right'],[-1,'Left']]) Object.assign(J, {
+const MODEL = new URLSearchParams(location.search).get('m') || 'base';
+const J = MODEL === 'batter' ? { Hips:[-.03,-.08,0], Spine:[-.03,0,0], Spine1:[-.03,.08,0], Spine2:[-.03,.16,0], Neck:[-.01,.29,0], Head:[0,.34,0], HeadEnd:[0,.49,0] }
+  : { Hips:[-.02,-.08,0], Spine:[-.02,0,0], Spine1:[-.015,.08,0], Spine2:[-.02,.16,0], Neck:[-.01,.29,0], Head:[0,.34,0], HeadEnd:[0,.5,0] };
+for (const [s, k] of [[1,'Right'],[-1,'Left']]) Object.assign(J, MODEL === 'batter' ? {
+  [k+'Shoulder']:[-.03,.24,.04*s], [k+'Arm']:[-.035,.17,.15*s], [k+'ForeArm']:[-.03,.07,.21*s], [k+'Hand']:[-.02,0,.275*s], [k+'HandEnd']:[-.01,-.11,.315*s],
+  [k+'UpLeg']:[-.03,-.11,.065*s], [k+'Leg']:[-.035,-.27,.095*s], [k+'Foot']:[-.045,-.43,.12*s], [k+'ToeBase']:[.03,-.47,.125*s], [k+'ToeEnd']:[.09,-.48,.125*s] } : {
   [k+'Shoulder']:[-.03,.24,.04*s], [k+'Arm']:[-.035,.17,.15*s], [k+'ForeArm']:[-.025,.05,.215*s], [k+'Hand']:[-.015,-.035,.27*s], [k+'HandEnd']:[-.005,-.085,.30*s],
   [k+'UpLeg']:[-.02,-.11,.065*s], [k+'Leg']:[-.04,-.28,.093*s], [k+'Foot']:[-.045,-.43,.12*s], [k+'ToeBase']:[.04,-.48,.125*s], [k+'ToeEnd']:[.1,-.49,.125*s] });
 const PAR = { Spine:'Hips', Spine1:'Spine', Spine2:'Spine1', Neck:'Spine2', Head:'Neck' };
@@ -33,19 +37,21 @@ function chainWeights(p, chain) {            // chain = [bone names]; segments j
   else if (best.t > 1 - blend && best.i < chain.length - 1) { const k = .5 + .5 * (1 - best.t) / blend; w[b] = k; w[chain[best.i + 1]] = 1 - k; }
   return w;
 }
-function weightsFor(m) {                     // m = mesh-space vertex
+const SEGS = {}; function seg(n) { return SEGS[n] || (SEGS[n] = [JW[n], JW[CH[n]]]); }
+function smoothW(p, allowed, sharp = 6) {
+  const d = allowed.map(n => { const [a, b] = seg(n); return Math.max(.5, segT(p, a, b)[1]); });
+  const dmin = Math.min(...d); const w = {}; let tot = 0;
+  allowed.forEach((n, i) => { const v = Math.pow(dmin / d[i], sharp); if (v > .01) { w[n] = v; tot += v; } });
+  for (const n in w) w[n] /= tot; return w;
+}
+function weightsFor(m) {
   const [x, y, z] = m, p = toW(x, y, z), side = z > 0 ? 'Right' : 'Left', az = Math.abs(z);
-  const torso = ['Hips','Spine','Spine1','Spine2','Neck','Head'];
-  const armReg = y > -.14 && ((y < .12 && az > .14) || (y >= .12 && y < .23 && az > .15));
-  if (armReg) { const w = chainWeights(p, [side+'Arm', side+'ForeArm', side+'Hand']);
-    if (w[side+'Arm'] && y > .13) { const k = THREE.MathUtils.clamp((az - .12) / .05, 0, 1); for (const b in w) w[b] *= (.35 + .65 * k); w.Spine2 = (w.Spine2 || 0) + (1 - (.35 + .65 * k)); }
-    return w; }
-  if (y < -.105 && az > .005) { const w = chainWeights(p, [side+'UpLeg', side+'Leg', side+'Foot', side+'ToeBase']);
-    if (w[side+'UpLeg'] && y > -.17) { const k = THREE.MathUtils.clamp((-.105 - y) / .065, 0, 1); for (const b in w) w[b] *= (.4 + .6 * k); w.Hips = (w.Hips || 0) + (1 - (.4 + .6 * k)); }
-    return w; }
-  const w = chainWeights(p, torso);
-  if (y > .2 && y < .3 && az > .06) { const k = THREE.MathUtils.clamp((az - .06) / .08, 0, 1) * .5; for (const b in w) w[b] *= 1 - k; w[side+'Shoulder'] = (w[side+'Shoulder'] || 0) + k; }
-  return w;
+  const S_ = side;
+  const isArm = y > -.14 && ((y < .12 && az > .14) || (y >= .12 && y < .23 && az > .15));
+  if (isArm) return smoothW(p, [S_+'Arm', S_+'ForeArm', S_+'Hand', S_+'Shoulder', 'Spine2'], 7);
+  if (y < -.105 && az > .005) return smoothW(p, [S_+'UpLeg', S_+'Leg', S_+'Foot', S_+'ToeBase', 'Hips'], 7);
+  if (y > .27) return smoothW(p, ['Neck', 'Head', 'Spine2'], 8);
+  return smoothW(p, ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'LeftShoulder', 'RightShoulder', 'LeftArm', 'RightArm', 'LeftUpLeg', 'RightUpLeg'], 5);
 }
 // ---------- load ----------
 let mocap, mixer, mb = {}, BB, bbMix, rb, skel, bones = {}, smesh, bat;
@@ -57,7 +63,7 @@ function fixPiv() { BB.traverse(c => { const p = PIV[c.name]; if (!p) return; c.
   const Sp = new THREE.Matrix4().makeTranslation(...p.sp), Sc = new THREE.Matrix4().makeScale(...c.scale.toArray());
   c.matrix.copy(T).multiply(Ro).multiply(Rp).multiply(Rr).multiply(Rp.clone().invert()).multiply(Sp).multiply(Sc).multiply(Sp.clone().invert()); }); }
 const fl = new FBXLoader();
-Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r => fl.load('src/ballbat.fbx', r)), new Promise(r => new GLTFLoader().load('src/base.glb', r))]).then(([mc, bb, g]) => {
+Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r => fl.load('src/ballbat.fbx', r)), new Promise(r => new GLTFLoader().load(MODEL === 'batter' ? 'src/batter.glb' : 'src/base.glb', r))]).then(([mc, bb, g]) => {
   mocap = mc; mixer = new THREE.AnimationMixer(mc); mixer.clipAction(mc.animations[0]).play(); mc.traverse(c => { if (c.isBone) mb[c.name.replace('DannyGear_','')] = c; });
   S.add(mc); mc.visible = false;
   BB = bb; S.add(bb); bbMix = new THREE.AnimationMixer(bb); bbMix.clipAction(bb.animations[0]).play();
@@ -71,16 +77,28 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
   const geo = src.geometry.clone(); geo.applyMatrix4(src.matrixWorld);
   const pos = geo.attributes.position, n = pos.count, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
   const idx = Object.fromEntries(NAMES.map((nm, i) => [nm, i]));
-  for (let i = 0; i < n; i++) { const m = [pos.getX(i), pos.getY(i), pos.getZ(i)]; const w = weightsFor(m);
+  const MV = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { const m = [pos.getX(i), pos.getY(i), pos.getZ(i)]; MV.set(m, i * 3); const w = weightsFor(m);
     const ent = Object.entries(w).sort((a, b) => b[1] - a[1]).slice(0, 4); const tot = ent.reduce((t, e) => t + e[1], 0);
     ent.forEach(([b, v], k) => { si[i*4+k] = idx[b]; sw[i*4+k] = v / tot; });
     const p = toW(...m); pos.setXYZ(i, p.x, p.y, p.z); }
   geo.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4)); geo.computeVertexNormals();
-  const mat = src.material.clone(); mat.roughness = .85; mat.metalness = 0;
+  let mat = src.material.clone(); mat.roughness = .85; mat.metalness = 0;
+  if (/mask/.test(location.search)) {
+    const img = src.material.map.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
+    const px = cx.getImageData(0, 0, cv.width, cv.height).data, uv = geo.attributes.uv, col = new Float32Array(n * 3), flipY = src.material.map.flipY;
+    for (let i = 0; i < n; i++) { const u = uv.getX(i), v = uv.getY(i); const X = Math.min(cv.width - 1, Math.max(0, Math.round(u * (cv.width - 1)))), Y = Math.min(cv.height - 1, Math.max(0, Math.round((flipY ? 1 - v : v) * (cv.height - 1))));
+      const o = (Y * cv.width + X) * 4, r = px[o], g = px[o+1], b = px[o+2], mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+      const my = MV[i*3+1], mz = Math.abs(MV[i*3+2]); let c = [0,0,0];
+      if (b > r + 14 && b >= g && mx < 190 && mx - mn > 14) c = my > .315 ? [0,1,0] : [1,0,0];                  // navy: helmet above the neck, else shirt
+      else if (mn > 150 && mx - mn < 45) c = my < -.42 ? [0,0,1] : (mz > .2 && my > -.16) ? [0,0,1/3] : my < -.1 ? [0,0,2/3] : [0,0,0];   // white kit: shoes / gloves / pads
+      col.set(c, i * 3); }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); mat = new THREE.MeshBasicMaterial({ vertexColors: true });
+  }
   smesh = new THREE.SkinnedMesh(geo, mat); smesh.add(bones.Hips); smesh.updateMatrixWorld(true); smesh.bind(skel); S.add(smesh); smesh.frustumCulled = false;
 
   // ---------- batting gear (rigid pieces on the bones) ----------
-  if (!window.NOGEAR) {
+  if (!window.NOGEAR && !/nogear/.test(location.search)) {
     const Mt = (c, r = .6) => new THREE.MeshStandardMaterial({ color:c, roughness:r, metalness:0 });
     const navy = Mt('#1d2b5e', .45), gold = Mt('#c9a24a', .4), steel = Mt('#9aa3ad', .35), padW = Mt('#f2f0ea', .7), padG = Mt('#b9bcc2', .7), glove = Mt('#f5f5f2', .7);
     const at = (bone, obj, wpos) => { obj.position.copy(wpos).sub(JW[bone]); bones[bone].add(obj); return obj; };
@@ -117,7 +135,7 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
   }
   // bat
   bat = new THREE.Group(); S.add(bat);
-  { const M = c => new THREE.MeshStandardMaterial({ color:c, roughness:.7 });
+  { const M = c => /mask/.test(location.search) ? new THREE.MeshBasicMaterial({ color:'#000' }) : new THREE.MeshStandardMaterial({ color:c, roughness:.7 });
     const hnd = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 26, 12), M('#2a3d8f')); hnd.position.y = 3; bat.add(hnd);
     const bl = new THREE.BoxGeometry(10.5, 56, 3.8, 2, 8, 2); const bp = bl.attributes.position; for (let i = 0; i < bp.count; i++) { const y = bp.getY(i), z = bp.getZ(i); if (z > 0) bp.setZ(i, z + 1.8 * Math.cos((y / 56) * Math.PI)); } bl.computeVertexNormals();
     const blade = new THREE.Mesh(bl, M('#e9cd96')); blade.position.y = 44; bat.add(blade); }
@@ -164,6 +182,11 @@ window.pose = (t, opts = {}) => {
 };
 window.dbg = t => { pose(t); const o = {}; for (const n of ['Hips','RightUpLeg','RightLeg','RightFoot','RightToeBase','LeftUpLeg','LeftLeg','LeftFoot','RightArm','RightForeArm','RightHand']) { const a = bones[n].getWorldPosition(new THREE.Vector3()), c = mb[n].getWorldPosition(new THREE.Vector3()); o[n] = [a.toArray().map(Math.round), c.toArray().map(Math.round)]; } return o; };
 window.wstat = () => { const si = smesh.geometry.attributes.skinIndex, sw = smesh.geometry.attributes.skinWeight, c = {}; for (let i = 0; i < si.count; i++) { const b = NAMES[si.getX(i)]; c[b] = (c[b] || 0) + 1; } return { c, inv: skel.boneInverses.slice(0,4).map(m => m.elements.map(v => Math.round(v))) , names: NAMES }; };
+window.proj = (pos, look, fov, pts) => { const c = new THREE.PerspectiveCamera(fov || 30, WD/HT, 1, 5000); c.up.set(0,0,1); c.position.set(...pos); c.lookAt(new THREE.Vector3(...look)); c.updateMatrixWorld(); c.updateProjectionMatrix();
+  return pts.map(p => { const v = (Array.isArray(p) ? new THREE.Vector3(...p) : p).clone().project(c); return [(v.x + 1) / 2 * WD * 2, (1 - v.y) / 2 * HT * 2]; }); };
+window.headPts = () => { const h = bones.Head.getWorldPosition(new THREE.Vector3()), q = bones.Head.getWorldQuaternion(new THREE.Quaternion()); const c = new THREE.Vector3(0, 0, 12).applyQuaternion(q).add(h); const out = [];
+  for (const dx of [-17, 17]) for (const dy of [-17, 17]) for (const dz of [-14, 17]) out.push(c.clone().add(new THREE.Vector3(dx, dy, dz))); return out; };
+window.footPt = () => { const f = n => bones[n].getWorldPosition(new THREE.Vector3()); return [f('LeftFoot'), f('RightFoot'), f('LeftToeBase'), f('RightToeBase')].map(v => v.toArray()); };
 window.cam = (pos, look, fov) => { const c = new THREE.PerspectiveCamera(fov || 30, WD/HT, 1, 5000); c.up.set(0,0,1); c.position.set(...pos); c.lookAt(new THREE.Vector3(...look)); R.render(S, c); return R.domElement.toDataURL('image/png'); };
 window.bindView = (pos, look) => { for (const nm of NAMES) bones[nm].quaternion.identity(); bones.Hips.position.copy(JW.Hips); smesh.updateMatrixWorld(true); bat.visible = false; return cam(pos, look, 30); };
 </script></body></html>
