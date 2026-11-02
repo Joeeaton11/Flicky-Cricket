@@ -247,12 +247,14 @@ Promise.all([new Promise(r => fl.load('src/' + CLIP, r)), new Promise(r => new G
   if (QS.get('wdbg')) { const re = new RegExp(QS.get('wdbg')), cc = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { let w = 0; for (let k = 0; k < 4; k++) if (re.test(NAMES[si[i*4+k]])) w += sw[i*4+k]; const c = new THREE.Color().setHSL(.66 - .66 * w, .9, .5); cc.set([c.r, c.g, c.b], i * 3); }
     geo.setAttribute('color', new THREE.BufferAttribute(cc, 3)); mat = new THREE.MeshBasicMaterial({ vertexColors: true }); }
+  window._GEO = geo; window._SI = si; window._SW = sw; window._NM = NAMES; window._JW = JW;
+  if (!QS.has('flat')) curlHands(geo, si, sw);
   smesh = new THREE.SkinnedMesh(geo, mat); smesh.add(bones.Hips); smesh.updateMatrixWorld(true); smesh.bind(skel); S.add(smesh); smesh.frustumCulled = false;
   // the ball in his bowling hand, until it's let go
   // the game's ball: a yellow-green tennis ball with a red tape cross (Gully)
   ballM = new THREE.Mesh(new THREE.SphereGeometry(4, 20, 14), MASKM ? new THREE.MeshBasicMaterial({ color: new THREE.Color(...CLS(0)) }) : new THREE.MeshStandardMaterial({ color: '#cddc3c', roughness: .7 }));
   if (!MASKM) for (const rx of [0, Math.PI / 2]) { const tp = new THREE.Mesh(new THREE.TorusGeometry(4.02, .75, 6, 28), new THREE.MeshStandardMaterial({ color: '#d4202a', roughness: .5 })); tp.rotation.set(rx, rx ? 0 : Math.PI / 2, 0); ballM.add(tp); }
-  ballM.position.copy(JW.RightHand.clone().lerp(JW.RightHandEnd, .62).add(new THREE.Vector3(4.5, 0, 0)).sub(JW.RightHand)); bones.RightHand.add(ballM);
+  { const F = handFrame('Right'); ballM.position.copy(QS.has('flat') ? JW.RightHand.clone().lerp(JW.RightHandEnd, .62).add(new THREE.Vector3(4.5, 0, 0)).sub(JW.RightHand) : F.a.clone().multiplyScalar(+(QS.get('ballA') || 8.6)).add(F.p.clone().multiplyScalar(+(QS.get('ballP') || 4.4)))); } bones.RightHand.add(ballM);   // held in the curled fingers
   setMocap(0); window.REF = {};
   const q = n => mb[n].getWorldQuaternion(new THREE.Quaternion()), P = n => mb[n].getWorldPosition(new THREE.Vector3());
   for (const nm of NAMES) { if (HELPER(nm)) continue;
@@ -366,6 +368,23 @@ function fixHead(W, t) { const hw = smooth01(3.3, 3.45, t); if (hw <= 0) return;
   if (fw.z >= L) return; const fh = new THREE.Vector3(fw.x, fw.y, 0).normalize(), tz = fw.z + (L + (fw.z - L) * .3 - fw.z) * hw, tgt = fh.multiplyScalar(Math.sqrt(1 - tz * tz)).setZ(tz);
   const C = new THREE.Quaternion().setFromUnitVectors(fw, tgt), I = new THREE.Quaternion(); W.Neck = I.clone().slerp(C, .45).multiply(W.Neck); W.Head = C.multiply(W.Head); }
 const smooth01 = (a, b, x) => THREE.MathUtils.smoothstep(x, a, b);
+// Nov 2 (Joe: polish the hands): the model has no finger joints, so its hands were flat paddles. The fingers are bent into the
+// bind mesh itself, like a beam curling about the knuckle line towards the palm (thumb left out): a loose fist on the front
+// hand, a grip round the ball on the bowling hand
+function handFrame(sd) { const H = JW[sd + 'Hand'], a = JW[sd + 'HandEnd'].clone().sub(H).normalize(), b = new THREE.Vector3(1, 0, 0); b.sub(a.clone().multiplyScalar(b.dot(a))).normalize();
+  const c = new THREE.Vector3().crossVectors(a, b), inw = new THREE.Vector3(0, -Math.sign(H.y), 0); if (c.dot(inw) < 0) c.negate(); return { H, a, b, p: c }; }   // p: palm side
+function curlHands(geo, si, sw) { const pos = geo.attributes.position, nor = geo.attributes.normal;
+  for (const sd of ['Left', 'Right']) { const F = handFrame(sd), PHI = THREE.MathUtils.degToRad(+(QS.get(sd === 'Right' ? 'curlR' : 'curlL') || (sd === 'Right' ? 80 : 105))), LEN = 8.6, k = PHI / LEN, rho = 1 / k;
+    const hi = NAMES.indexOf(sd + 'Hand'), v = new THREE.Vector3(), n = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) { let w = 0; for (let j = 0; j < 4; j++) if (si[i * 4 + j] === hi) w += sw[i * 4 + j]; if (w < .3) continue;
+      v.fromBufferAttribute(pos, i).sub(F.H); const A = v.dot(F.a), B = v.dot(F.b), P = v.dot(F.p), R = v.clone().sub(F.a.clone().multiplyScalar(A)).sub(F.p.clone().multiplyScalar(P));
+      if (B > 4.6 && A < 9) continue;                                  // thumb
+      const A0 = 7.5 - 1.2 * smooth01(-4.5, -6, B), sArc = A - A0; if (sArc <= 0) continue;
+      const ph = k * sArc, nA = A0 + (rho - P) * Math.sin(ph), nP = rho - (rho - P) * Math.cos(ph);
+      v.copy(F.H).add(R).add(F.a.clone().multiplyScalar(nA)).add(F.p.clone().multiplyScalar(nP)); pos.setXYZ(i, v.x, v.y, v.z);
+      if (nor) { n.fromBufferAttribute(nor, i); const nA2 = n.dot(F.a), nP2 = n.dot(F.p), nR = n.clone().sub(F.a.clone().multiplyScalar(nA2)).sub(F.p.clone().multiplyScalar(nP2));
+        const ca = Math.cos(ph), sa = Math.sin(ph); n.copy(nR).add(F.a.clone().multiplyScalar(nA2 * ca - nP2 * sa)).add(F.p.clone().multiplyScalar(nA2 * sa + nP2 * ca)); nor.setXYZ(i, n.x, n.y, n.z); } } }
+  pos.needsUpdate = true; if (nor) nor.needsUpdate = true; geo.computeBoundingSphere(); }
 // Nov 2 (Joe: "shoulder joint cleaner, less distorted"): with the bowling arm overhead the whole ~170° was taken at the
 // shoulder joint, which pinched the skin there. A real collarbone lifts as the arm goes past horizontal, so part of it
 // moves into the collarbone (the arm keeps its world angle, so the hand path is unchanged)

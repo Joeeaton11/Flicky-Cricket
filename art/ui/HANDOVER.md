@@ -801,3 +801,7 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 ### Gully 3D bowler: umpire back behind the stumps (Nov 2)
 - Front foot: toe on the painted popping crease (PITCH_TOP+12), inside the off-side return crease (W/2+7) — `b3Foot()`.
 - The world placement is turned 14° about that spot (`B3_ROT`, `b3Off`), so he runs in on a straight line from slightly wide, past the umpire's left shoulder. A rigid turn, so the feet still don't slide. Umpire back behind the stumps (W/2-3).
+
+### Gully 3D bowler: no crabbing, curled hands (Nov 2)
+- Sprites shot at AZ 90 so his body faces the way he travels on screen (~11° in from wide); `B3_ROT` is 0 now (the 14° turn made him look crabwise).
+- `curlHands()` in `bowl.html` bends the fingers into the bind mesh (no finger joints in the model): bowling hand 80° round the ball (ball moved into the fingers), front hand 105° loose fist. `?flat` = old open hands; `?curlR`/`?curlL` set the angles.
