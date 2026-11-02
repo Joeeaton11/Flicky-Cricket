@@ -5,7 +5,7 @@
 import numpy as np, cv2
 from measure import measure
 W,H=1170,2532; cx,cy,rx,ry=.5*W,.6*H,.46*W,.335*H
-img=cv2.imread('raw/plate_408-191.png').astype(np.float32); ex,ey,ew,eh=np.load('ell.npy')
+img=cv2.imread('raw/plate_410-191.png').astype(np.float32); ex,ey,ew,eh=np.load('ell.npy')
 def make(sx,sy,dx=0,dy=0):
   up=cv2.resize(img,(round(img.shape[1]*sx),round(img.shape[0]*sy)),interpolation=cv2.INTER_CUBIC)
   ox=int(round(ex*sx-cx+dx)); oy=int(round(ey*sy-cy+dy))
@@ -22,7 +22,7 @@ def make(sx,sy,dx=0,dy=0):
 sx0=2*rx/ew; sy0=2*ry/eh; best=None
 for a in np.arange(0.95,1.04,0.01):
   for b in np.arange(0.97,1.03,0.01):
-    for dx in (-12,-6,0,6,12):
+    for dx in (-6,0,6):
       for dy in (-20,-10,0,10,20):
         r=measure(make(sx0*a,sy0*b,dx,dy),12); e=np.abs(r[:,1]).max()
         if best is None or e<best[0]: best=(e,a,b,dx,dy)
