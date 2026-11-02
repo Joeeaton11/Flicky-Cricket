@@ -11,6 +11,7 @@ usage: python3 build_locked_boards.py <orig_dir> <out_dir>
 """
 import sys, json
 import numpy as np
+import cv2
 from PIL import Image
 
 CW, CH, BODY = 760, 316, 300
@@ -49,6 +50,9 @@ def frac_hud():
 
 # ---- per-board source measurements (original px, 760 wide). slots = the board's own HUD fractions ----
 B = {
+ 'dusk': dict(k=.921, spriteFile=True, Ri=(22, 22, 740, 352), mat=(40, 46, 300, 500), stripes=[((90, 211, 199), 173), ((255, 112, 92), 119), ((252, 222, 70), 37)], slope=0.9, badgeRing=(105, 95, 45), topSprites=[((0, 0, 81, 222), (722, 140), 200)], deco=[('rails', [(151, 164, 300, 520), (244, 257, 300, 520)], (36, 724))],
+   chase=[0.2342, 0.0882, 0.925, 0.1711], wk=[0.7855, 0.1013, 0.8382, 0.1553], score=[0.0842, 0.2303, 0.3921, 0.3105],
+   sock=[0.4566, 0.2697, 0.0355], badge=[0.0789, 0.0658, 0.1974, 0.1842], eIcon=[0.1263, 0.3895, 0.0355], eBar=[0.1868, 0.3724, 0.9171, 0.4092]),
  'fognight': dict(k=.921, Ri=(26, 22, 735, 300), mat=(199, 207, 300, 480), amp=.9, badgeRing=(118, 66, 38), deco=[('rails', [(108, 118, 300, 520), (210, 220, 300, 520)], (40, 720))],
    chase=[0.3132, 0.05, 0.9171, 0.1342], wk=[0.7947, 0.0632, 0.8421, 0.1132], score=[0.0789, 0.175, 0.2921, 0.2632],
    sock=[0.3711, 0.2171, 0.0408], badge=[0.1053, 0.0368, 0.2053, 0.1368], eIcon=[0.1224, 0.3408, 0.0237], eBar=[0.1632, 0.3132, 0.9171, 0.3605]),
@@ -195,6 +199,12 @@ def build(name, src, P):
     sx, sy, sr = P['sock']; sr *= 760
     mask[int(sy * 760 - sr - 6):int(sy * 760 + sr + 6), int(sx * 760 - sr - 6):760 - 40] = True
     mat = tile_material(a, P['mat'], 760, H0, P.get('amp', 1.0))
+    if 'stripes' in P:   # diagonal painted stripes (carnival board): rebuilt procedurally so they stay continuous
+        yy, xx = np.mgrid[:H0, :760]; per = sum(w for _, w in P['stripes']); u = (xx + yy * P.get('slope', 1.0)) % per
+        mat = np.zeros((H0, 760, 3), np.float32); acc = 0
+        for col, w in P['stripes']:
+            m = (u >= acc) & (u < acc + w); mat[m] = col; acc += w
+        mat = cv2.GaussianBlur(mat, (0, 0), 0.7)
     f[mask, :3] = mat[mask]; f[mask, 3] = 255
     if 'clock' in P:   # take the clock + pennant off the top: copy the bulb rail from the left over it
         cx1, cy1, cx2, cy2 = P['clock']; wdt = cx2 - cx1
