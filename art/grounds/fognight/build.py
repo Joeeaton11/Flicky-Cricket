@@ -4,8 +4,8 @@ W,H=1170,2532; cx,cy,rx,ry=.5*W,.6*H,.46*W,.335*H
 img=cv2.imread('plate_raw.png')
 hs=cv2.cvtColor(img,cv2.COLOR_BGR2HSV).astype(int)
 green=((hs[...,0]>=28)&(hs[...,0]<=60)&(hs[...,1]>90)).astype(np.uint8)
-n,l,st,_=cv2.connectedComponentsWithStats(cv2.morphologyEx(green,cv2.MORPH_CLOSE,np.ones((11,11),np.uint8))); f=(l==l[850,432]).astype(np.uint8)
-ys=np.where(f[:,432])[0]; xs=np.where(f[850])[0]; fl,fr,ft,fb=xs.min(),xs.max(),ys.min(),ys.max(); print('field',fl,fr,ft,fb)
+n,l,st,_=cv2.connectedComponentsWithStats(cv2.morphologyEx(green,cv2.MORPH_CLOSE,np.ones((11,11),np.uint8))); f=(l==l[1000,384]).astype(np.uint8)
+ys=np.where(f[:,384])[0]; xs=np.where(f[1000])[0]; fl,fr,ft,fb=xs.min(),xs.max(),ys.min(),ys.max(); print('field',fl,fr,ft,fb)
 # remove the painted white boundary line: pale low-saturation pixels in a ring just inside/at the field edge
 gd=cv2.blur(green.astype(np.float32),(15,15))
 v=hs[...,2].astype(np.uint8); th=cv2.morphologyEx(v,cv2.MORPH_TOPHAT,np.ones((9,9),np.uint8)).astype(int)
