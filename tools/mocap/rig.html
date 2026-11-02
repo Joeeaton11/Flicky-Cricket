@@ -7,7 +7,8 @@ const WD = +(new URLSearchParams(location.search).get('w') || 720), HT = +(new U
 const R = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:true }); R.setPixelRatio(2); R.setSize(WD,HT); R.setClearColor(0,0); R.outputColorSpace = THREE.SRGBColorSpace; document.body.appendChild(R.domElement);
 const S = new THREE.Scene();
 S.add(new THREE.HemisphereLight(0xffffff, 0x7a8a66, 2.25)); const key = new THREE.DirectionalLight(0xfff1dc, 1.9); key.position.set(-200, 300, 400); S.add(key);
-const fill = new THREE.DirectionalLight(0xdfe8ff, .6); fill.position.set(300, -200, 200); S.add(fill);
+const fill = new THREE.DirectionalLight(0xdfe8ff, .5); fill.position.set(300, -200, 200); S.add(fill);
+const rim = new THREE.DirectionalLight(0xfff6e0, 1.6); rim.position.set(260, -520, 380); S.add(rim);
 const SC = 175;                                          // mesh is 1 unit tall → 175 cm
 // mesh coords: x forward, y up, z = his right.  bind world: X forward, Z up, -Y = his right
 const toW = (x, y, z) => new THREE.Vector3(x * SC, -z * SC, (y + .5) * SC);
@@ -54,6 +55,9 @@ function weightsFor(m) {
   return smoothW(p, ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'LeftShoulder', 'RightShoulder', 'LeftArm', 'RightArm', 'LeftUpLeg', 'RightUpLeg'], 5);
 }
 // ---------- load ----------
+const OUTW = +(new URLSearchParams(location.search).get('ol') || 1.1);
+function outlineMat() { const m = new THREE.MeshBasicMaterial({ color: 0x0b1322, side: THREE.BackSide });
+  m.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <skinning_vertex>', '#include <skinning_vertex>\n  transformed += normalize(objectNormal) * ' + OUTW.toFixed(2) + ';'); }; return m; }
 let mocap, mixer, mb = {}, BB, bbMix, rb, skel, bones = {}, smesh, bat;
 const PIV = { polySurface177: { off:[-14.029458050023521,-40.10203095733637,28.029906357128823], rp:[125.53572368503063,130.6779735002109,11.738496044371978], sp:[125.53572368503063,97.67797350021088,10.738496044371976] },
   BallAnimations: { off:[0,-144.31561279296886,108.32642364501953], rp:[144.19986724853516,126.32101821899414,17.99459457397461], sp:[144.19986724853516,126.32101821899414,17.99459457397461] },
@@ -96,6 +100,12 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); mat = new THREE.MeshBasicMaterial({ vertexColors: true });
   }
   smesh = new THREE.SkinnedMesh(geo, mat); smesh.add(bones.Hips); smesh.updateMatrixWorld(true); smesh.bind(skel); S.add(smesh); smesh.frustumCulled = false;
+  if (!/mask/.test(location.search) && OUTW > 0) {
+    // outline normals: averaged over every copy of a point, so the hull doesn't split at the model's UV seams
+    const og = geo.clone(), op = og.attributes.position, on = og.attributes.normal, acc = new Map(), keyOf = i => Math.round(op.getX(i) * 4) + ',' + Math.round(op.getY(i) * 4) + ',' + Math.round(op.getZ(i) * 4);
+    for (let i = 0; i < op.count; i++) { const k = keyOf(i); const a = acc.get(k) || [0, 0, 0]; a[0] += on.getX(i); a[1] += on.getY(i); a[2] += on.getZ(i); acc.set(k, a); }
+    for (let i = 0; i < op.count; i++) { const a = acc.get(keyOf(i)), l = Math.hypot(...a) || 1; on.setXYZ(i, a[0] / l, a[1] / l, a[2] / l); }
+    const ol = new THREE.SkinnedMesh(og, outlineMat()); ol.bind(skel, smesh.bindMatrix); ol.frustumCulled = false; S.add(ol); }
 
   // ---------- batting gear (rigid pieces on the bones) ----------
   if (!window.NOGEAR && !/nogear/.test(location.search)) {
@@ -133,12 +143,20 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
       at(k+'Hand', gl, hw.clone().lerp(he, .45));
     }
   }
-  // bat
+  // bat: Joe's own bat mesh (ballbat.fbx), coloured here (the export carried no texture)
   bat = new THREE.Group(); S.add(bat);
-  { const M = c => /mask/.test(location.search) ? new THREE.MeshBasicMaterial({ color:'#000' }) : new THREE.MeshStandardMaterial({ color:c, roughness:.7 });
-    const hnd = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 26, 12), M('#2a3d8f')); hnd.position.y = 3; bat.add(hnd);
-    const bl = new THREE.BoxGeometry(10.5, 56, 3.8, 2, 8, 2); const bp = bl.attributes.position; for (let i = 0; i < bp.count; i++) { const y = bp.getY(i), z = bp.getZ(i); if (z > 0) bp.setZ(i, z + 1.8 * Math.cos((y / 56) * Math.PI)); } bl.computeVertexNormals();
-    const blade = new THREE.Mesh(bl, M('#e9cd96')); blade.position.y = 44; bat.add(blade); }
+  { const g = rb.geometry.clone(), P = g.attributes.position, col = new Float32Array(P.count * 3);
+    g.computeBoundingBox(); const bb = g.boundingBox;
+    for (let i = 0; i < P.count; i++) { const x = P.getX(i), y = P.getY(i), z = P.getZ(i); let c;
+      if (y > 113.5) { const band = Math.floor((y - 113.5) / 2.6) % 2; c = band ? [.13, .2, .5] : [.17, .26, .62]; if (y > 138.5) c = [.1, .1, .12]; }   // grip, rubber bands, cap
+      else { const edge = Math.min(Math.abs(x - bb.min.x), Math.abs(x - bb.max.x)), toe = y - bb.min.y, back = (z < 10.4) ? 1 : 0;
+        const k = Math.min(1, edge / 1.6) * Math.min(1, toe / 2.2); c = [.93 - .16 * (1 - k) - .05 * back, .80 - .17 * (1 - k) - .06 * back, .56 - .16 * (1 - k) - .06 * back];
+        if (y > 101 && y < 108 && z > 11 && !back) c = [.12, .18, .42]; }   // a navy maker's band on the face
+      col.set(c, i * 3); }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
+    const bm = /mask/.test(location.search) ? new THREE.MeshBasicMaterial({ color: '#000' }) : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .55 });
+    const real = new THREE.Mesh(g, bm); bat.add(real);
+    if (!/mask/.test(location.search) && OUTW > 0) { const om = new THREE.MeshBasicMaterial({ color: 0x0b1322, side: THREE.BackSide }); om.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed += normalize(objectNormal) * ' + (OUTW * .8).toFixed(2) + ';'); }; bat.add(new THREE.Mesh(g, om)); } }
   // reference pose for retargeting
   setMocap(0); window.REF = {};
   const q = n => mb[n].getWorldQuaternion(new THREE.Quaternion()), P = n => mb[n].getWorldPosition(new THREE.Vector3());
@@ -173,11 +191,11 @@ window.pose = (t, opts = {}) => {
   bones.Hips.position.z += (mcLow - meshLow) - 2; smesh.updateMatrixWorld(true);
   // bat: the mocap bat, moved by how far the model's hands sit from the mocap hands
   bat.matrixAutoUpdate = false;
-  const bm = rb.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(125.5, 132, 11)).multiply(new THREE.Matrix4().makeRotationX(Math.PI));
-  { const p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3(); bm.decompose(p, q, s);
+  { const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); rb.matrixWorld.decompose(p, q, sc);
     const mid = n => mb[n].getWorldPosition(new THREE.Vector3()), me = n => bones[n].getWorldPosition(new THREE.Vector3());
     const off = me('LeftHand').add(me('RightHand')).multiplyScalar(.5).sub(mid('LeftHand').add(mid('RightHand')).multiplyScalar(.5));
-    p.add(off); bat.matrix.compose(p, q, new THREE.Vector3(1,1,1)); }
+    // rotate about the grip, so moving the bat keeps its handle in the hands
+    bat.matrix.compose(p.add(off), q, new THREE.Vector3(1, 1, 1)); }
   bat.visible = opts.bat !== false; S.updateMatrixWorld(true);
 };
 window.dbg = t => { pose(t); const o = {}; for (const n of ['Hips','RightUpLeg','RightLeg','RightFoot','RightToeBase','LeftUpLeg','LeftLeg','LeftFoot','RightArm','RightForeArm','RightHand']) { const a = bones[n].getWorldPosition(new THREE.Vector3()), c = mb[n].getWorldPosition(new THREE.Vector3()); o[n] = [a.toArray().map(Math.round), c.toArray().map(Math.round)]; } return o; };
