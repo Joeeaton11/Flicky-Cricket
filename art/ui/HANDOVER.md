@@ -762,3 +762,7 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - Fairground Cup (league 4) all four grounds built: fair-4a … fair-4d (each carries the earlier ones). Draw: tf_funfair, tf_circus, tf_themepark, tf_fright.
 
 - Pause buttons (Joe, Nov 2: Fright pause cut off): the cut box clipped the pumpkin's sides AND the game draws pause2 into a square, squashing tall pauses (Storm's wheel + lantern). Fixed: wider cut box for 4.d, and art/grounds/pad_pause.py pads every new pause onto a centred transparent square (run it after any cut.py). Rule: check pause2 is square and whole before showing.
+- Nov 2 (Joe: 1 + 4): **cel shading + real-speed run-up**.
+  - `rig.html` and `bowl.html` render cel-shaded by default (`?notoon` = old look): MeshToonMaterial, 2-band ramp (`?tb=108,255`), flat ambient 1.1 + side key 2.6 (`?kp=`; batter −450,220,400 / bowler 450,220,400 → lit from screen left like the painted art) + rim 0.7; normals welded and relaxed 14× (`?sn=`) so the bands are clean.
+  - Batter `m3_*` frames re-rendered (same crop/anchors, masks unchanged); bowler `b3_*` now 24 run + rel + 21 follow frames at real speed.
+  - Game: `bowlRunMs()` — 'ready' lasts 1000 ms when the 3D bowler is on (Gully painted people), else 420; run path, run frames (24 over 1 s) and follow (21 × 50 ms) follow it.

@@ -42,7 +42,7 @@ for (n,_),im in zip(SEQ,outs):
 json.dump(res,open('b3_sprites.json','w'))
 print(W,H,sum(len(v['src']) for v in res.values())//1024,'KB', res['b3_rel']['hx'],res['b3_rel']['hy'],res['b3_rel']['ax'],res['b3_rel']['ay'])
 # contact sheet
-sh=Image.new('RGBA',(W*14,H*2),(222,170,110,255))
-for i,(n,_) in enumerate(SEQ[:28]):
-    im=Image.open(f'bf_{n}.png'); sh.alpha_composite(im,((i%14)*W,(i//14)*H))
+sh=Image.new('RGBA',(W*16,H*3),(222,170,110,255))
+for i,(n,_) in enumerate(SEQ[:48]):
+    im=Image.open(f'bf_{n}.png'); sh.alpha_composite(im,((i%16)*W,(i//16)*H))
 sh.convert('RGB').save('bowl_sheet.jpg')

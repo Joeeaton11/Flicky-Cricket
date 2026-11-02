@@ -10,6 +10,29 @@ const S = new THREE.Scene();
 S.add(new THREE.HemisphereLight(0xffffff, 0x7a8a66, 2.25)); const key = new THREE.DirectionalLight(0xfff1dc, 1.9); key.position.set(-200, 300, 400); S.add(key);
 const fill = new THREE.DirectionalLight(0xdfe8ff, .5); fill.position.set(300, -200, 200); S.add(fill);
 const rim = new THREE.DirectionalLight(0xfff6e0, 1.6); rim.position.set(260, -520, 380); S.add(rim);
+
+// Nov 2 (Joe): cel-shaded to sit in the painted grounds — flat ambient + banded key/rim light (MeshToonMaterial)
+const QS = new URLSearchParams(location.search), TOON = !QS.has('notoon');
+const TB = (QS.get('tb') || '108,255').split(',').map(Number);
+const TGRAD = (() => { const d = new Uint8Array(TB.length * 4); TB.forEach((v, i) => d.set([v, v, v, 255], i * 4)); const t = new THREE.DataTexture(d, TB.length, 1); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.needsUpdate = true; return t; })();
+function toonify(m) { if (!TOON || !m || m.isMeshBasicMaterial || m.isShaderMaterial || m.isMeshToonMaterial) return m;
+  return new THREE.MeshToonMaterial({ map: m.map || null, color: m.color ? m.color.clone() : 0xffffff, vertexColors: !!m.vertexColors, side: m.side, gradientMap: TGRAD }); }
+function smoothNormals(g, it) {   // cel bands need calm normals: weld UV-seam copies, then relax the normals over the surface
+  const P = g.attributes.position, N = g.attributes.normal; if (!P || !N) return; const n = P.count, km = new Map(), wid = new Int32Array(n);
+  for (let i = 0; i < n; i++) { const k = Math.round(P.getX(i) * 20) + ',' + Math.round(P.getY(i) * 20) + ',' + Math.round(P.getZ(i) * 20); if (!km.has(k)) km.set(k, km.size); wid[i] = km.get(k); }
+  const W = km.size, A = new Float32Array(W * 3); for (let i = 0; i < n; i++) { A[wid[i]*3] += N.getX(i); A[wid[i]*3+1] += N.getY(i); A[wid[i]*3+2] += N.getZ(i); }
+  const IX = g.index ? g.index.array : null, nb = Array.from({ length: W }, () => []);
+  if (IX) for (let f = 0; f < IX.length; f += 3) { const a = wid[IX[f]], b = wid[IX[f+1]], c = wid[IX[f+2]]; nb[a].push(b, c); nb[b].push(a, c); nb[c].push(a, b); }
+  else for (let f = 0; f < n; f += 3) { const a = wid[f], b = wid[f+1], c = wid[f+2]; nb[a].push(b, c); nb[b].push(a, c); nb[c].push(a, b); }
+  const nz = v => { const l = Math.hypot(A[v*3], A[v*3+1], A[v*3+2]) || 1; A[v*3] /= l; A[v*3+1] /= l; A[v*3+2] /= l; };
+  for (let v = 0; v < W; v++) nz(v);
+  for (let k = 0; k < it; k++) { const B = A.slice(); for (let v = 0; v < W; v++) { for (const u of nb[v]) { B[v*3] += A[u*3] * .5; B[v*3+1] += A[u*3+1] * .5; B[v*3+2] += A[u*3+2] * .5; } } A.set(B); for (let v = 0; v < W; v++) nz(v); }
+  for (let i = 0; i < n; i++) N.setXYZ(i, A[wid[i]*3], A[wid[i]*3+1], A[wid[i]*3+2]); N.needsUpdate = true; }
+window.toonAll = () => S.traverse(o => { if (o.isMesh && o.material && o.material.side !== THREE.BackSide) { if (TOON && !o.userData.sn && o.geometry.attributes.normal && o.geometry.attributes.position.count > 200) { smoothNormals(o.geometry, +(QS.get('sn') || 14)); o.userData.sn = 1; } o.material = toonify(o.material); } });
+if (TOON) { S.children.filter(l => l.isLight).forEach(l => S.remove(l));
+  S.add(new THREE.AmbientLight(0xfff8ef, +(QS.get('amb') || 1.1)));
+  const k2 = new THREE.DirectionalLight(0xfff1dc, +(QS.get('key') || 2.6)); k2.position.set(...(QS.get('kp') || '-450,220,400').split(',').map(Number)); S.add(k2);
+  const r2 = new THREE.DirectionalLight(0xfff6e0, +(QS.get('rim') || .7)); r2.position.set(260, -520, 380); S.add(r2); }
 const SC = 175;                                          // mesh is 1 unit tall → 175 cm
 // mesh coords: x forward, y up, z = his right.  bind world: X forward, Z up, -Y = his right
 const toW = (x, y, z) => new THREE.Vector3(x * SC, -z * SC, (y + .5) * SC);
@@ -293,6 +316,7 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
     REF[nm] = { Q, M0: q(nm) };
   }
   if (/scene/.test(location.search)) buildScene();
+  toonAll();
   window.READY = 1;
 });
 // ---------- a simple cricket ground around the batter (Nov 2, Joe: "build me a scene with the animation playing") ----------

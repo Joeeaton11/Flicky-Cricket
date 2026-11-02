@@ -1,9 +1,9 @@
 import asyncio,base64,io,math,json,sys
 from playwright.async_api import async_playwright
 from PIL import Image
-RUN=[round(2.25+i*(1.0/12),4) for i in range(12)]          # 2.25 .. 3.17
+RUN=[round(2.25+i*(1.0/24),4) for i in range(24)]          # 2.25 .. 3.21, real speed over 1 s
 REL=[3.25]
-FOL=[round(3.25+0.075*(i+1),4) for i in range(14)]        # 3.325 .. 4.30
+FOL=[round(3.25+0.05*(i+1),4) for i in range(21)]         # 3.30 .. 4.30, real speed
 SEQ=[('run%d'%i,t) for i,t in enumerate(RUN)]+[('rel',3.25)]+[('fol%d'%i,t) for i,t in enumerate(FOL)]+[('stand',0.0)]
 AZ,EL,R,FOV=90,22,950,18
 async def render(mask):
