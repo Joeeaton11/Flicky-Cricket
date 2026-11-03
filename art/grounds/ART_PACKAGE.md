@@ -139,3 +139,5 @@ Plate 450:192 (same field wording as Kandy → ratio 1.562; 450:191 1.63 rejecte
 ## ICL (league 9): 10 grounds, close camera + NO-STRETCH recipe. Scene keys ti_*. Branch icl-9a (from sl-8a; Sri Lanka not live yet — waiting on Joe).
 ### 9.a Mumbai / Wankhede (Nov 3)
 Plate 451:192 (ratio 1.561; 451:191 1.62). fit_uniform scale 1.513, sides +3 px, ends −4 px, 5/4 px side slivers, 52 top rows sky_match. Board 451:193 compose_mumbai.py. Props 451:194, words 451:196 marquee bulbs (451:195 blue/gold too like Dambulla). Pitch ct 65 cb 750 wb 296.
+### 9.b Chennai / Chepauk (Nov 3)
+Plate 452:192 (ratio 1.594; 452:191 1.66). fit_uniform scale 1.568, sides −3 px, ends +4 px. Board 452:193 compose_chennai.py (rainbow gopuram trim repeated at even scale along the top + gopuram sprite). Props 452:194, words 452:195. Pitch ct 72 cb 788 wb 299.
