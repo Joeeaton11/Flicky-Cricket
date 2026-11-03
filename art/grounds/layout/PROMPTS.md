@@ -141,3 +141,10 @@ Ground 1 · HUD 1 · props 1 · fielder 4 · bowler 1 · keeper + umpire 1 · wo
 ## Where things stand in the game (for checking)
 - HUD (MATCH_HUD in the code): scoreboard 3.1%–62.1% W, 7.3%–19.0% H; pause 85.1%–96.4% W, 7.6%–12.8% H.
 - Far stumps 50.0% H, batter's stumps 66.5% H, umpire 48.8% H, all at 50% W.
+
+## BIG CROWD camera (Joe, Nov 3: "the crowd have gone small again")
+Use this CAMERA block on every ground from 12.c Sylhet on:
+```
+CAMERA: CLOSE — the camera is pulled in tight. BIG CROWD: every spectator is BIG and chunky with a big round head and waving arms. In the side strips each fan's head is about one twelfth of the picture's width, so only two or three rows of fans fit across each side strip. The SAME big size all the way round: down both sides, at the far end and at the bottom. NO rows of tiny people, NO small distant crowd, NO high tiers. Only the front rows of big fans, then the far-end stand close behind the boards. No wide view, no panorama.
+```
+With it, pair the FIELD wording "one twelfth strip, like a fat egg, one and a half times as tall as it is wide, top a quarter of the way down" (screens ~1.49–1.51).
