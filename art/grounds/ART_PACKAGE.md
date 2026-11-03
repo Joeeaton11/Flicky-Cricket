@@ -155,3 +155,5 @@ Plate 457:192 ('TWICE as tall / one eighth / top a fifth' → 1.582; 457:191 war
 Plate 458:198 ('nearly TWICE as tall / one eighth / top a fifth' → 1.617). 458:191 1.64 (measure p90 23, rejected), 458:192/196/197/199 1.30–1.46. fit_uniform scale 1.588, sides −7 px, ends +11 px, p90 4.6. Board 458:193 compose_hyderabad.py (pearl socket centres darkened so ball results read). Props 458:194, words 458:195. Pitch ct 76 cb 719 wb 325.
 ### 9.h Ahmedabad / Narendra Modi Stadium (Nov 3)
 Plate 459:201 (ratio 1.524; 8 tries 1.39–1.79 — the 'biggest in the world' wording makes ratios swing). fit_uniform scale 1.682, sides +11 px, ends −17 px. Board 459:193 compose_ahmedabad.py. Props 459:194, words 459:195. Pitch ct 70 cb 749 wb 276.
+### 9.i Mohali / Punjab (Nov 3)
+Plate 460:199 ('1.8 / one ninth / top a fifth' → 1.506; six tries 1.35–1.82). fit_uniform scale 1.523, sides +13 px, ends −20 px, 163 top rows sky_top. Board 460:193 compose_mohali.py (phulkari band repeated along the top). Props 460:194, words 460:195. Pitch ct 76 cb 723 wb 321.
