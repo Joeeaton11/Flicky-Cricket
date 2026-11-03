@@ -34418,7 +34418,17 @@ const GP = {};
 Object.keys(GP_SRC).forEach(k => { GP[k] = new Image(); });
 gullyLoadArt(); // preload 3D sprites at page init so they're decoded before the first match
 setTimeout(() => Object.keys(GP_SRC).forEach(k => { if (!GP[k].src) GP[k].src = GP_SRC[k].src; }), 0);   // the 3D players load in every scene
-function gpReady() { return Object.keys(GP).every(k => GP[k].complete && GP[k].naturalWidth > 0); }
+// Nov 3: don't hold the 3D players back for every last frame (842 images): once the core frames and nearly all the rest
+// are in, switch on (a phone that drops one image used to fall back to the old players for the whole match). Cached once true.
+function gpReady() {
+  if (window._gpOK) return true;
+  const ks = Object.keys(GP); let ok = 0;
+  for (const k of ks) if (GP[k].complete && GP[k].naturalWidth > 0) ok++;
+  const core = ['m3_stance', 'm3_hit1', 'b3_stand', 'b3_rel', 'f3_ready_d0_0', 'f3_run_d2_0'];
+  const coreOk = core.every(k => !GP[k] || (GP[k].complete && GP[k].naturalWidth > 0));
+  if (coreOk && ok >= ks.length * 0.97) { window._gpOK = true; return true; }
+  return false;
+}
 // css px per original-sheet px, per group (keeps every pose of a character the same size)
 const GP_SCALE = { fld3: 0.26, kid: 0.102, kidT: 0.159, keeper: 0.13, ump: 0.155, ump2: 0.0666, bat: 0.117, shot: 0.1485, bowl: 0.068, bowl3: 0.2, prop: 0.06, catch: 0.072, react: 0.126 };   // umpire + batter down 10% (Joe, 26 Oct)
 //   // fielders: down 12%, then back up 5% (Joe, 26 Oct)   // v2: older street cricketers
