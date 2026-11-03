@@ -111,3 +111,6 @@ Board 437:193 (compose_oasis.py), props 437:194 + words 437:195 (cut.py). Pitch 
 
 ### 7.b Sharjah + 7.c Desert redone with the CLOSE (wizard) camera (Nov 3, Joe: "Redo them")
 Same prompt recipe as Oasis. Sharjah 438:191 (squash .82, 186 top rows → sky_top.py, snap_ring max 68, measure p90 1.7); Desert 438:192 (squash .92, 110 top rows → sky_top.py, snap_ring max 43, measure max 2.9 p90 1.2). Previous plates kept as plate_v1.png. Boards, props and words unchanged.
+
+### Sharjah + Desert v3 (Nov 3, Joe: "boundary is very distorted")
+Cause: the close-camera plates came out racetrack-shaped and snap_ring bent the boards/crowd onto the ellipse. Fix: prompt opens with a FIELD SHAPE block (perfect ellipse like an egg / rugby ball on end, NO straight sections, NOT a running track or pill) → Figma 439:191 Sharjah (fit dev 0.8 px), 439:192 Desert (1.3 px). Then affine.py: ONE affine scale from the fitted ellipse onto the coded oval (no build_clean warp, no snap_ring) + sky_top.py for the empty top rows. measure p90 1.9 / 2.9. v2 kept as plate_v2.png. Use this route whenever fit_grass dev is under ~3 px.
