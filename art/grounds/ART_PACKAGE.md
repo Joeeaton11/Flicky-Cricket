@@ -97,3 +97,7 @@ Plate Figma 433:191: heritage scoreboard + clock/cupola far end, Moreton Bay fig
 ## Desert League (league 7): 7.a Dubai, 7.b Sharjah, 7.c Desert, 7.d Oasis. Same recipe as ACL. Scene keys td_*.
 ### 7.a Dubai (Nov 3) — built
 Plate Figma 434:191 (first try): blue-hour, sand bowl lit by the ring-of-fire roof lights, colourful crowd with phone lights, palms, dunes, Dubai skyline (Burj Khalifa, sail hotel), crescent moon. build_clean (stretch .99) → snap_ring (max 31) → measure max 1.2 p90 0.6. Board 434:192 (green) gold mashrabiya lattice + midnight blue, crescent (compose_dubai.py; lattice band used top + bottom) + pause. Props 434:193 (magenta) / words 434:194 (green). Pitch ct 53 cb 735 wb 403. Extras: falcons, blue flag, lantern (camel cut for later). Scene td_dubai.
+
+### 7.b Sharjah (td_sharjah) — Camera 2 MEDIUM-CLOSE
+- Plate Figma 435:191; painted field very tall (ratio 2.1) so build_clean squashed y/x .786; 21 padded bottom rows mirror-filled; measure max 4.2 / p90 0.8.
+- Board 435:192 (green key) via art/ui/hud_lock/compose_sharjah.py; props 435:193, words 435:194 (magenta) via art/grounds/sharjah/cut.py. Pitch ct 86 cb 769 wb 410.

@@ -849,3 +849,5 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Off spin: hand-keyed attempt was robotic; Joe is sourcing an off-spin capture — drop it in as a new CLIP like seam.
 - ACL complete on branch acl-6a: 6.a MCG, 6.b SCG, 6.c Gabba, 6.d Perth, 6.e Adelaide (ta_*). To go live: merge main, rebuild www, push main.
 - ACL live on main (Nov 3). Desert League started on branch dl-7a: 7.a Dubai (td_dubai). Next: 7.b Sharjah.
+
+- 7.b Sharjah wired as td_sharjah (replaces uae_sharjah in Desert League scenes). Camera 2 from here on for this league. Extras: doves, green flag, dallah fan.
