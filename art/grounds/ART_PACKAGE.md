@@ -163,3 +163,6 @@ Plate 461:192 ('nearly TWICE / one eighth / top a fifth' → 1.566, first pair).
 ## Redo: SL four + Mumbai/Chennai/Kolkata in the close big-stand style
 Plates regenerated with the close big-stand recipe (stands off the edges, big chunky crowd, pavilion + landmark tight behind the far boards), no-stretch fit via `tools/redo.sh` (keeps old plate as plate_vN.png). Boards, props, words and wiring unchanged.
 Nodes: Galle 462:191, Colombo 462:194, Kandy 462:195, Dambulla 463:191, Mumbai 463:194, Chennai 463:196, Kolkata 463:198.
+
+## CCL (league 10): Caribbean grounds, close big-stand + NO-STRETCH recipe. Scene keys tcc_*. Branch ccl-10a.
+- 10.a Kensington Oval: plate 464:196 (ratio 1.576, field "one tenth strip, one and a half times as tall"), board 464:193 (compose_kensington.py), props 464:194, words 464:195. Pitch {ct 92, cb 772, wb 326}. Extras: pelicans, maroon flag, steel pan.
