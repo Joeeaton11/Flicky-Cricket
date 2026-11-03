@@ -182,10 +182,44 @@ for s in 'LR':
     ws /= np.maximum(ws.sum(1, keepdims=True), 1e-6)
     SOLE[s] = (vs, ws, bns)
 
+HEADSPH = None; HEADOVR = {}; FWDB = float(os.environ.get('FWDB', 0.0))
+if FIELD:   # the cartoon's head surface (points + outward normals, in the Head bone's space): hands must stay outside it
+    from mathutils.kdtree import KDTree
+    _hg = body.vertex_groups['Head'].index; _hb = rig.data.bones['Head'].matrix_local; _hbi = _hb.inverted(); _pts = []
+    for v in body.data.vertices:
+        for g in v.groups:
+            if g.group == _hg and g.weight > 0.5: _pts.append((_hbi @ v.co, (_hbi.to_3x3() @ v.normal).normalized()))
+    _kd = KDTree(len(_pts))
+    for i, (co, _) in enumerate(_pts): _kd.insert(co, i)
+    _kd.balance(); HEADSPH = (_kd, _pts); print('head surface points', len(_pts))
+def head_push(p, Mh, margin=0.035):
+    kd, pts = HEADSPH; pl = Mh.inverted() @ p; co, i, dist = kd.find(pl); v, nrm = pts[i]
+    out = (pl - v).dot(nrm)
+    if out >= margin or dist > 0.25: return Vector()
+    return (Mh.to_3x3() @ nrm).normalized() * (margin - out)
+def soft_reach(hip, tgt, L, start=0.93, top=0.985):   # Joe: no knee snapping straight — never ask the leg for more than it has
+    d = tgt - hip; r = d.length; a = start * L; b = top * L
+    if r <= a or r < 1e-6: return tgt
+    x = (r - a) / (b - a + 1e-9); rr = a + (b - a) * (1 - math.exp(-x))   # eases towards (never past) 98.5% of the leg
+    return hip + d * (rr / r)
+def heel_lift(hip, tgt, L, start=0.93, top=0.985):   # planted foot over-stretched: rise onto the toes (heel up), don't slide
+    soft = soft_reach(hip, tgt, L, start, top); R = (soft - hip).length
+    h = Vector((tgt.x - hip.x, tgt.y - hip.y, 0)).length
+    if h >= R: return soft
+    z = hip.z - math.sqrt(max(0.0, R * R - h * h)); out = tgt.copy(); out.z = max(tgt.z, z); return out
 POLEPREV = {}
 def pose_frame(k):
     t = times[k]; ctrl.reset(rig)
     hp = X(mp('Hips', t)); q = {n: RZ @ mq(n, t) @ A[n] for n in MAP}
+    if HIPDROP is not None: hp.z -= float(HIPDROP[k])
+    if FIELD:   # Joe: feet less splayed — halve each foot's turn-out from the hips' facing
+        hf = q['Hips'] @ rig.data.bones['Hips'].matrix_local.to_quaternion().inverted() @ Vector((1, 0, 0)); hf.z = 0
+        for s_ in 'LR':
+            ff = q[f'Foot.{s_}'] @ Vector((0, 1, 0)); ff.z = 0   # heel-to-toe line
+            if ff.length > 1e-3 and hf.length > 1e-3:
+                ang = math.atan2(hf.cross(ff).z, hf.dot(ff))
+                if abs(ang) < math.radians(100):
+                    R_ = Quaternion((0, 0, 1), -0.5 * ang); q[f'Foot.{s_}'] = R_ @ q[f'Foot.{s_}']; q[f'Toe.{s_}'] = R_ @ q[f'Toe.{s_}']
     ctrl.set_world(rig, 'Hips', hp, q['Hips'] @ rig.data.bones['Hips'].matrix_local.to_quaternion().inverted())
     for n in ('Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'Shoulder.L', 'Shoulder.R'):
         ctrl.set_world_rot(rig, n, q[n] @ rig.data.bones[n].matrix_local.to_quaternion().inverted())
@@ -200,7 +234,30 @@ def pose_frame(k):
                     wm = math.radians(70) if FIELD else WRIST_MAX
                     if ang > wm: qq = neutral.slerp(qq, wm / ang)
                 ctrl.set_world_rot(rig, nm, qq @ rig.data.bones[nm].matrix_local.to_quaternion().inverted())
-    else:
+    if FIELD and HEADSPH and not os.environ.get('NOARMPUSH'):   # Joe: hands never through his head — push them just clear, arm re-solved by IK
+        if k in HEADOVR:   # the final (ball-watching) head, so the face it's checked against is the one we'll see
+            rig.pose.bones['Neck'].matrix = HEADOVR[k][0]; bpy.context.view_layer.update(); rig.pose.bones['Head'].matrix = HEADOVR[k][1]
+        bpy.context.view_layer.update(); Mh = rig.pose.bones['Head'].matrix
+        hfwd = (Mh.to_quaternion() @ rig.data.bones['Head'].matrix_local.to_quaternion().inverted()) @ Vector((1, 0, 0))
+        for s in 'LR':   # swing the whole arm from the shoulder (captured elbow + wrist shape kept) until it's clear of the head
+            for c in (f'ForeArm.{s}',): rig.pose.bones[c].constraints['IK'].influence = 0.0
+            rig.pose.bones[f'Hand.{s}'].constraints['Copy Rotation'].influence = 0.0
+            for it in range(5):
+                bpy.context.view_layer.update()
+                hnd = rig.pose.bones[f'Hand.{s}']; tip = rig.pose.bones[f'Fingers.{s}'].tail; el = rig.pose.bones[f'ForeArm.{s}'].head
+                sh = rig.pose.bones[f'UpperArm.{s}'].head.copy(); push = Vector(); at = None
+                for pt in (hnd.head.copy(), hnd.head.lerp(tip, 0.5), tip.copy(), el.lerp(hnd.head, 0.7), el.lerp(hnd.head, 0.4)):
+                    d = head_push(pt, Mh)
+                    if d.length > push.length: push = d; at = pt
+                if push.length < 2e-3: break
+                v0 = at - sh; v1 = at + push * 1.1 - sh
+                if v0.length < 1e-3: break
+                R_ = v0.rotation_difference(v1)
+                for n in ('UpperArm', 'ForeArm', 'Hand', 'Fingers'):
+                    pb = rig.pose.bones[f'{n}.{s}']; wq = pb.matrix.to_quaternion()
+                    ctrl.set_world_rot(rig, f'{n}.{s}', R_ @ wq @ rig.data.bones[f'{n}.{s}'].matrix_local.to_quaternion().inverted())
+                    bpy.context.view_layer.update()
+    if not (BOWL or FIELD):
         # bat: captured orientation, grip moved in towards the chest by the arm-length ratio
         frs, ws = sample(t, 0.004); Mb = smp[min(frs, key=lambda f: abs(f - tfr(t)))]['bat']
         Rb = Mb.to_quaternion(); gm_w = Mb @ bat_info['grip_local']
@@ -224,6 +281,31 @@ def pose_frame(k):
         if BOWL and LEGPLAN:   # faithful legs: captured joint angles from OUR hip, feet pinned while planted
             an, kn = LEGPLAN[s][k]
             if PUSH: an = an + PUSH[s][k] * (1.0 - PINW[s][k]); kn = kn + PUSH[s][k] * 1.15   # cartoon clearance: swing leg passes wide
+        if BOWL and KNEEFIX:   # Joe: feet pointing the right way and not collapsing onto their edges
+            qf = q[f'Foot.{s}']; fwd = qf @ Vector((0, 1, 0)); pit = math.asin(max(-1, min(1, fwd.z))); yaw0 = math.atan2(fwd.y, fwd.x)
+            kr_ = int(round((CFG['rel'] - CFG['t0']) * FPS)); u = min(1.0, max(0.0, (k - (kr_ - 30)) / 12.0)); u = u * u * (3 - 2 * u)
+            pw = PINW[s][k] if PINW else 0.0
+            ty = math.radians(7 if s == 'L' else -7)                       # run-up: down the running line, slight toe-out
+            dy = (ty - yaw0 + math.pi) % (2 * math.pi) - math.pi
+            st = min(1.0, max(0.0, (math.radians(75) - abs(pit)) / math.radians(30))); st = st * st * (3 - 2 * st)   # 1 when flat-ish, 0 when steep
+            bk = min(1.0, max(0.0, (math.radians(150) - abs(dy)) / math.radians(50))); bk = bk * bk * (3 - 2 * bk)   # foot pointing back: leave it
+            wy = (1 - u) * (0.9 * pw + 0.5 * (1 - pw)) * st * bk
+            yaw = yaw0 + dy * wy
+            f2 = Vector((math.cos(pit) * math.cos(yaw), math.cos(pit) * math.sin(yaw), math.sin(pit)))
+            x2 = f2.cross(Vector((0, 0, 1))).normalized(); z2 = x2.cross(f2).normalized()
+            flat = Matrix((x2, f2, z2)).transposed().to_quaternion()       # sole level across the foot (no roll)
+            if flat.dot(qf) < 0: flat = -flat
+            rl = qf.rotation_difference(flat).angle; rl = min(rl, 2 * math.pi - rl)
+            rf = min(1.0, max(0.0, (math.radians(55) - rl) / math.radians(30))); rf = rf * rf * (3 - 2 * rf)   # never flip a foot that's turned right over
+            qn = qf.slerp(flat, (0.95 * pw + 0.35 * (1 - pw)) * st * (rf if pw < 0.99 else 1.0))
+            dq = qn @ qf.inverted(); q[f'Foot.{s}'] = qn; q[f'Toe.{s}'] = dq @ q[f'Toe.{s}']
+            if os.environ.get('FOOTDBG') and s == os.environ['FOOTDBG'][0] and abs(k - int(os.environ['FOOTDBG'][1:])) <= 3:
+                print('FOOTDBG k', k, 'pit', round(math.degrees(pit)), 'yaw0', round(math.degrees(yaw0)), 'dy', round(math.degrees(dy)), 'st', round(st, 2), 'bk', round(bk, 2), 'pw', round(pw, 2), 'change', round(math.degrees(qf.rotation_difference(qn).angle)))
+        if BOWL and KNEEFIX:
+            Lleg = rig.data.bones[f'Thigh.{s}'].length + rig.data.bones[f'Shin.{s}'].length
+            pw_ = PINW[s][k] if PINW else 0.0
+            hip_ = rig.pose.bones[f'Thigh.{s}'].head.copy()
+            an = soft_reach(hip_, an, Lleg).lerp(heel_lift(hip_, an, Lleg), pw_)   # planted feet are never dragged, they rise onto the toes
         ctrl.set_world(rig, f'IK_Foot.{s}', an, q[f'Foot.{s}'] @ rig.data.bones[f'Foot.{s}'].matrix_local.to_quaternion().inverted())
         bend = kn - (hi + an) / 2
         if BOWL:
@@ -246,21 +328,36 @@ def pose_frame(k):
                 Z += ws[:, j] * (vs @ M[2, :3] + M[2, 3])
             return float(Z.min())
         low = sole_low()
-        if low < 0:
-            ik = rig.pose.bones[f'IK_Foot.{s}']; m = ik.matrix.copy(); m.translation.z -= low; ik.matrix = m
+        if BOWL and KNEEFIX and PINW and PINW[s][k] > 0.05 and low > 0.002:   # planted feet sit ON the ground, not floating
+            low = low * PINW[s][k]
+        if low < 0 or (BOWL and KNEEFIX and PINW and PINW[s][k] > 0.05 and low > 0.002):
+            ik = rig.pose.bones[f'IK_Foot.{s}']; m = ik.matrix.copy(); m.translation.z -= low
+            if BOWL and KNEEFIX and low > 0:   # lowering a planted foot must not over-stretch the leg either
+                Lleg = rig.data.bones[f'Thigh.{s}'].length + rig.data.bones[f'Shin.{s}'].length
+                m.translation = soft_reach(rig.pose.bones[f'Thigh.{s}'].head.copy(), m.translation, Lleg).lerp(m.translation, PINW[s][k] if PINW else 0.0)
+            ik.matrix = m
             bpy.context.view_layer.update()
             ctrl.set_world_rot(rig, f'Toe.{s}', q[f'Toe.{s}'] @ rig.data.bones[f'Toe.{s}'].matrix_local.to_quaternion().inverted())
             bpy.context.view_layer.update()
 
 # ---------------------------------------------------------------- bowler legs: FK shape + planted-foot pinning
-LEGPLAN = {}; PINW = {}; PUSH = {}
+LEGPLAN = {}; PINW = {}; PUSH = {}; THD = {}; HIPDROP = None
+RUNAXIS = bool(os.environ.get('RUNAXIS', '1' if CLIP == 'legspin' else ''))
+KNEEFIX = bool(os.environ.get('KNEEFIX')); KMIN = float(os.environ.get('KMIN', 0.085))
+RUN_LO = float(os.environ.get('RUN_LO', 0.025)); RUN_HI = float(os.environ.get('RUN_HI', 0.075)); KNEEOUT = float(os.environ.get('KNEEOUT', 0.065)); KFLICK = float(os.environ.get('KFLICK', 0.03))
+DROPS = {}
 def _plan_legs():
-    fk = {'L': [], 'R': []}; capz = {'L': [], 'R': []}; caph = {'L': [], 'R': []}
+    fk = {'L': [], 'R': []}; capz = {'L': [], 'R': []}; caph = {'L': [], 'R': []}; MIDL = []
     for k in range(len(times)):
         t = times[k]; ctrl.reset(rig); hp = X(mp('Hips', t)); qh = RZ @ mq('Hips', t) @ A['Hips']
         ctrl.set_world(rig, 'Hips', hp, qh @ rig.data.bones['Hips'].matrix_local.to_quaternion().inverted()); bpy.context.view_layer.update()
+        _tl, _tr = rig.pose.bones['Thigh.L'].head.copy(), rig.pose.bones['Thigh.R'].head.copy(); _sd = _tl - _tr; _sd.z = 0; _sd.normalize()
+        if RUNAXIS:   # leg spin runs in with his hips 42° open: measure 'own side' from the running line in the run-up
+            _kr = int(round((CFG['rel'] - CFG['t0']) * FPS)); _u = min(1.0, max(0.0, (k - (_kr - 30)) / 12.0)); _u = _u * _u * (3 - 2 * _u)
+            _sd = Vector((0, 1, 0)).lerp(_sd, _u).normalized()
+        MIDL.append(((_tl + _tr) / 2, _sd))
         for s, S_ in (('L', 'Left'), ('R', 'Right')):
-            th = rig.pose.bones[f'Thigh.{s}'].head.copy()
+            th = rig.pose.bones[f'Thigh.{s}'].head.copy(); THD.setdefault(s, []).append(th.copy())
             kn = th + (RZ @ mq(f'Thigh.{s}', t) @ A[f'Thigh.{s}']) @ Vector((0, rig.data.bones[f'Thigh.{s}'].length, 0))
             an = kn + (RZ @ mq(f'Shin.{s}', t) @ A[f'Shin.{s}']) @ Vector((0, rig.data.bones[f'Shin.{s}'].length, 0))
             ca = X(mp(f'{S_}Foot', t)); fk[s].append((an, kn)); capz[s].append(ca.z); caph[s].append(ca)
@@ -285,19 +382,80 @@ def _plan_legs():
             for i in range(max(0, a - 3), min(n, b + 4)):
                 wi = 1.0 if a <= i <= b else max(0.0, 1 - (a - i) / 4 if i < a else 1 - (i - b) / 4)
                 if wi > w[i]: w[i] = wi; pin[i] = P0
-        res = []
+        g = 1 if s == 'L' else -1
+        kr_ = int(round((CFG['rel'] - CFG['t0']) * FPS))
+        def lims(k):   # Joe: run-up feet closer under the body; the delivery keeps its wider base
+            u = min(1.0, max(0.0, (k - (kr_ - 30)) / 12.0)); u = u * u * (3 - 2 * u)
+            return RUN_LO + (KMIN - RUN_LO) * u, RUN_HI + (9.0 - RUN_HI) * u
+        def latfix(p, k):   # Joe: knees mustn't cross over — the capture runs on a tightrope line, so each foot goes on its own side
+            c, sd = MIDL[k]; lat = (p - c).dot(sd) * g; lo, hi = lims(k)
+            return sd * g * (lo - lat) if lat < lo else (sd * g * (hi - lat) if lat > hi else Vector())
+        if KNEEFIX:   # planted spots moved once (no sliding), swing path eased across
+            for (a, b) in runs:
+                P0 = pin[a]; fixv = latfix(P0, (a + b) // 2); fixv.z = 0
+                for i in range(n):
+                    if pin[i] is P0: pin[i] = P0 + fixv
+                for i in range(n):
+                    if pin[i] is not None and (pin[i] - (P0 + fixv)).length < 1e-9: pin[i] = P0 + fixv
+        res = []; swing = np.zeros(n); sdir = [Vector()] * n
+        for k in range(n):
+            an = fk[s][k][0]; tgt = an.copy() if pin[k] is None else an.lerp(Vector((pin[k].x, pin[k].y, an.z)), w[k])
+            if KNEEFIX: f = latfix(tgt, k); swing[k] = f.dot(MIDL[k][1] * g) * (1 - w[k]); sdir[k] = MIDL[k][1] * g
+        if KNEEFIX:
+            ker = np.exp(-0.5 * (np.arange(-4, 5) / 1.6) ** 2); ker /= ker.sum()
+            sm = np.convolve(np.pad(swing, 4, mode='edge'), ker, mode='valid')
+            swing = np.where(swing > 0, np.maximum(swing, sm), np.minimum(swing, sm) if False else sm) * (1 - np.array(w))
         for k in range(n):
             an, kn = fk[s][k]
             tgt = an.copy() if pin[k] is None else an.lerp(Vector((pin[k].x, pin[k].y, an.z)), w[k])
             d = tgt - an; d.z = 0
-            res.append((tgt, kn + d * 0.5))
+            if KNEEFIX: tgt = tgt + sdir[k] * float(swing[k])
+            kk = kn + d * 0.5
+            if KNEEFIX:   # knee sits over its own foot: never further in than the ankle
+                c, sd = MIDL[k]; lk = (kk - c).dot(sd) * g; la = (tgt - c).dot(sd) * g
+                hip_ = fk[s][k][1] - (fk[s][k][1] - kn)   # (knee from FK; hip from the midline)
+                lh = 0.5 * (MIDL[k][0] - c).length + abs(((MIDL[k][0] + sd * g * 0.1) - c).dot(sd))   # our hip sits ~0.10 out
+                need_ = (lh + la) / 2 + KNEEOUT                                                   # knee on/outside the hip-ankle line
+                if lk < need_: kk = kk + sd * g * (need_ - lk)
+            res.append((tgt, kk))
+        if KNEEFIX:   # smooth the leg paths through landings / take-offs (planted frames stay put)
+            T_ = np.array([r[0][:] for r in res]); K_ = np.array([r[1][:] for r in res]); wa = np.array(w)
+            ker = np.exp(-0.5 * (np.arange(-4, 5) / 1.4) ** 2); ker /= ker.sum()
+            sm = lambda A: np.stack([np.convolve(np.pad(A[:, j], 4, mode='edge'), ker, mode='valid') for j in range(3)], 1)
+            Ts, Ks = sm(T_), sm(K_); keep = wa[:, None]
+            T_ = T_ * keep + Ts * (1 - keep); K_ = K_ * (0.5 * keep) + Ks * (1 - 0.5 * keep)
+            res = [(Vector(T_[i]), Vector(K_[i])) for i in range(n)]
+            # Joe (leg spin): no jelly legs — in the run-up the knee stays in a narrow band just outside the hip-foot line
+            lk2 = np.zeros(n); lk0 = np.zeros(n); ru = np.zeros(n)
+            for k in range(n):
+                c, sd = MIDL[k]; T0, K0 = res[k]; lk = (K0 - c).dot(sd) * g; la = (T0 - c).dot(sd) * g
+                base = (0.10 + la) / 2 + KNEEOUT
+                u = min(1.0, max(0.0, (k - (kr_ - 30)) / 12.0)); u = u * u * (3 - 2 * u); ru[k] = 1 - u
+                lk0[k] = lk; lk2[k] = min(max(lk, base), base + KFLICK)
+            ker2 = np.exp(-0.5 * (np.arange(-6, 7) / 2.5) ** 2); ker2 /= ker2.sum()
+            lks = np.convolve(np.pad(lk2, 6, mode='edge'), ker2, mode='valid')
+            for k in range(n):
+                c, sd = MIDL[k]; want = lk0[k] + (lks[k] - lk0[k]) * ru[k]
+                res[k] = (res[k][0], res[k][1] + sd * g * (want - lk0[k]))
         out[s] = res; PINW[s] = w
+        if KNEEFIX:   # planted leg can't reach: how far must the hips sink?
+            L_ = rig.data.bones[f'Thigh.{s}'].length + rig.data.bones[f'Shin.{s}'].length; R_ = 0.945 * L_
+            dr = np.zeros(n)
+            for k in range(n):
+                v = res[k][0] - THD[s][k]; h = math.hypot(v.x, v.y)
+                if v.length > R_ and h < R_: dr[k] = max(0.0, -math.sqrt(R_ * R_ - h * h) - v.z) * w[k]
+            DROPS[s] = dr
         print('plants', s, runs)
     return out
 if BOWL: LEGPLAN = _plan_legs()
+if BOWL and KNEEFIX and DROPS:
+    _d = np.maximum(DROPS['L'], DROPS['R']); _r = 5; _kk = np.exp(-0.5 * (np.arange(-_r, _r + 1) / 2.0) ** 2); _kk /= _kk.sum()
+    _dil = np.array([_d[max(0, i - 2):i + 3].max() for i in range(len(_d))])
+    HIPDROP = np.convolve(np.pad(_dil, _r, mode='edge'), _kk, mode='valid'); HIPDROP = np.maximum(HIPDROP, _d)
+    print('hips sink (cm) max', round(float(HIPDROP.max()) * 100, 1), 'frames >1cm', int((HIPDROP > 0.01).sum()))
 
 # ---------------------------------------------------------------- cartoon leg clearance (his legs are thin, ours aren't)
-GAPMIN = float(os.environ.get('GAPMIN', 0.155))
+GAPMIN = float(os.environ.get('GAPMIN', 0.14 if os.environ.get('KNEEFIX') else 0.155))
 def _lowgap():
     pb = rig.pose.bones
     def pts(s):
