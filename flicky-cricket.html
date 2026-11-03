@@ -32600,7 +32600,12 @@ function chooseChaser(sx, sy) {
   return best;
 }
 function startFielding(angle, frac, nearFielder) {
-  const s = ballSpot(angle, frac), f = chooseChaser(s.x, s.y); if (!f) return;
+  const s = ballSpot(angle, frac); let f = chooseChaser(s.x, s.y); if (!f) return;
+  // Nov 3 (Joe): the keeper takes the ones that stop near him (dabs, dead bats, little edges) and tosses it to the bowler
+  const kp = fielders.find(x => x.name === 'keeper'), K = keeperXY(), kd = Math.hypot(s.x - K.x, s.y - K.y);
+  if (kp && kd < 95 && s.y > PITCH_BOTTOM() - 40 && kd * 0.8 < Math.hypot(f.x - s.x, f.y - s.y)) {
+    f = kp; f.x = K.x; f.y = K.y; f.baseX = K.x; f.baseY = K.y; f.stridePhase = 0;
+  }
   const diff = angleDiff(f.angle, angle);
   let pick = (frac > 0.7 && diff < 15) ? 'lb' : diff > 28 ? 'pick1' : 'pick';   // long barrier straight at him, one hand wide of him
   if (!GP_SRC['f3_' + pick + '_d0_0']) pick = 'pick';
@@ -32619,7 +32624,7 @@ function fieldTick(now) {
   const [g, r] = FIELD_TAKES[G.pick] || FIELD_TAKES.pick, i = (now - G.pickAt) / FIELD_FRAME_MS;
   if (i >= g && !G.inHand && !G.thrown) G.inHand = true;
   if (i >= r && !G.thrown) {
-    const h = G.hand || { x: f.x, y: f.y - 12 }, k = keeperGloves(), d = Math.hypot(k.x - h.x, k.y - h.y);
+    const h = G.hand || { x: f.x, y: f.y - 12 }, k = f.name === 'keeper' ? { x: W / 2 + 4, y: PITCH_TOP() + 10 } : keeperGloves(), d = Math.hypot(k.x - h.x, k.y - h.y);   // keeper: back to the bowler
     G.thrown = true; G.inHand = false; G.stage = 'throw';
     window._gThrow = { x: h.x, y: h.y, tx: k.x, ty: k.y, at: now, dur: 260 + d * 1.9, arc: Math.min(34, 6 + d * 0.12) };
   }
@@ -34793,6 +34798,8 @@ function gullyBallImg(x, y, r, spin) {
 }
 
 function drawGullyKeeperSprite(x, y) {
+  { const G = window._gField, kf = G && G.f.name === 'keeper' ? G.f : null;   // collecting the ball: he moves like a fielder
+    if (kf && f3On()) return drawF3Fielder(kf.x, kf.y, kf.chasing, false, kf.stridePhase || 0, kf); }
   gpShadow(x, y, 10);
   if (f3On()) { const up = b3Pre() !== 'b3_', key = up ? 'f3_keepu_d4_0' : 'f3_keepb_d4_0';   // standing up to the spinners
     if (f3Draw(key, x, y - (up ? 6 : 0), false, 0)) return; }
