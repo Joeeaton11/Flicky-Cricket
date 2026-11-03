@@ -70,7 +70,7 @@ def crease(a, b):
     l, r = edges(y); v = g[y, l + 20:r - 20].mean() if r - l > 50 else 0
     if best is None or v > best[0]: best = (v, y)
   return best[1]
-ct, cb = crease(top + 0.04 * H, top + 0.22 * H), crease(bot - 0.22 * H, bot - 0.04 * H)
+ct, cb = crease(top + 0.02 * H, top + 0.22 * H), crease(bot - 0.22 * H, bot - 0.04 * H)
 (l1, r1), (l2, r2) = edges(ct), edges(cb); quad = np.float32([[l1, ct], [r1, ct], [r2, cb], [l2, cb]]); Wr, Hr = 200, 523
 Mx = cv2.getPerspectiveTransform(quad, np.float32([[0, 0], [Wr, 0], [Wr, Hr], [0, Hr]]))
 Image.fromarray(cv2.warpPerspective(np.ascontiguousarray(P[..., :3]), Mx, (Wr, Hr), flags=cv2.INTER_CUBIC)).save(D + 'pitch_rect.webp', quality=92)

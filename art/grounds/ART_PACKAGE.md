@@ -208,3 +208,9 @@ Themed fields, "fat egg" field wording, crowd heads ~1/20 width. Plates 484:200 
 484:198 (ballroom planks), 484:199 (moss). Boards/props/words 484:201–215 (magenta key). Pitches: festival {49,777,232}, graveyard {54,794,242},
 crypt {54,793,245}, mansion {105,821,246}, forest {55,774,240}. Compose scripts art/ui/hud_lock/compose_{festival,graveyard,crypt,mansion,forest}.py.
 Festival painted ratio 1.47 (field ~19 px wide at the sides); mansion plank seams make the fitter noisy (dev 9) but the overlay sits on the ring.
+
+## 17. Frontier Cup — tfr_town / tfr_canyon / tfr_ghosttown / tfr_rodeo
+Plates 485:191 (dirt; first try came out 1.77, regenerated with "WIDE … only one and a half times … fat round egg"), 485:192 (sandstone 1.577),
+485:193 (pale clay 1.619), 485:194 (sawdust 1.545). Boards/props/words 485:195–206 (canyon props re-made as hawks).
+Pitches: town {80,771,391}, canyon {74,750,328}, ghosttown {35,812,446}, rodeo {54,721,349}. auto_cut crease search now starts 2% down (ghost town crease sat at 4%).
+Ghost town board has no corner sprite (the cow skull overlaps the frame on the sheet).
