@@ -195,3 +195,9 @@ Nodes: Galle 462:191, Colombo 462:194, Kandy 462:195, Dambulla 463:191, Mumbai 4
 - 14.b Karachi National (plate 480:192, 1.499; board 480:200, props 481:201, words 481:202) pitch {60,771,237}. Extras: black kites, yellow flag, truck-art horn.
 - 14.c Rawalpindi (plate 480:193, 1.635; board 481:203, props 481:204, words 481:205) pitch {47,761,285}. Extras: falcons, white-green flag, pakol.
 - 14.d Multan (plate 480:194, 1.486; board 481:206, props 481:207, words 481:208) pitch {71,770,308}. Extras: hoopoes, blue flag, Multani pot.
+
+## Buccaneer Cup (league 15): pirate grounds, close camera + pirate crowd + NO-STRETCH. Scene keys tpi_*. Branch pir-15a.
+- 15.a Cove (plate 482:191; board 482:198, props 482:199, words 482:200) pitch {80,785,272}. Extras: parrots, black flag, treasure chest.
+- 15.b Galleon (plate 482:195, ratio 1.633; a cutlass overlaps the bottom-left board; board 482:203, props 482:204 cannonball ball, words 482:205) pitch {81,760,306}. Extras: seagulls, red pennant, cannon.
+- 15.c Treasure Island (plate 482:196; board 482:206, props 482:207 red X on pitch, words 482:208) pitch {94,807,315}. Extras: monkeys, green flag, shovel.
+- 15.d Fortress (plate 482:201, ratio 1.632; board 482:209, props 482:210, words 482:211) pitch {93,800,255}. Extras: bats, black flag, lantern.
