@@ -6750,7 +6750,8 @@ const FILLER_KITS = {
 };
 function drawFillerFielder(x, y, chasing, diving, stridePhase, f) {
   const k = currentTimeOfDay && currentTimeOfDay.key, kits = FILLER_KITS[k]; if (!kits) return false;
-  const idx = f ? (f._ft ?? (f._ft = (fielders.indexOf(f) + 4) % 4)) : 0, K = kits[idx];
+  const idx = f ? (f._ft ?? (f._ft = (fielders.indexOf(f) + 4) % 4)) : 0, FK = fieldKit();
+  const K = Object.assign({}, kits[idx], { shirt: FK.shirt, sleeves: kits[idx].sleeves === 'skin' ? 'skin' : FK.shirt, legs: FK.trousers });   // Nov 3: one kit for the side
   const A = themeArt(), fh = H * (A ? A.fielderH : 0.044) * 0.9, u = fh / 30, OL = '#1b1222', lw = Math.max(1.2, u * 1.1);
   // facing: towards the batter (or the run direction while chasing)
   let tx = W / 2 - x, ty = PITCH_BOTTOM() - y;
@@ -7237,13 +7238,14 @@ function layoutFielders(walkToNewPos) {
 
 function updateFielders() {
   const now = performance.now();
+  fieldTick(now);
   fielders.forEach(f => {
     if (f.chasing && f.target) {
       const dx = f.target.x - f.x;
       const dy = f.target.y - f.y;
       const dist = Math.hypot(dx,dy);
       if (dist > 2) {
-        const sp = f.speed * 60 * 1.4;
+        const sp = f.speed * 60 * (window._gField && window._gField.f === f ? 1.8 : 1.4);   // Nov 3: chasers sprint
         f.x += (dx/dist) * Math.min(sp, dist);
         f.y += (dy/dist) * Math.min(sp, dist);
         // stride phase drives leg animation in drawFielder
@@ -7389,13 +7391,14 @@ function startGame() {
   energy = MAX_ENERGY;
   // clear the last match's wicket: stumps back up, ball back in play
   window._ballLog = []; window._gOutAt = 0; window._gCatch = null; window._gRaiseAt = 0; window._gBowledAt = 0;
-  window._gThrow = null; window._gHitSt = null; window._gHitAt = 0; flyingStumps = [];
+  window._gThrow = null; window._gField = null; window._gHitSt = null; window._gHitAt = 0; flyingStumps = [];
   try { _gl.marks = []; _gl.petals = []; } catch (e) {}
   { const mn = document.getElementById('matchName'), L = curLook();
     // Name tag no longer shown during play (Joe, Oct 29): it sat in the home-bar strip and covered the ground.
     // Name shows on the intro card and result screen instead.
     if (mn) { mn.innerHTML = `${L.flag} ${L.name}${L.team ? ` <small>${L.team}</small>` : ''}`; mn.classList.add('hidden'); } }
   rollStadiumConditions();
+  pickFieldKit();   // Nov 3 (Joe): this match's fielding side — fielders, bowler and keeper all in it
   if (!window.chase) setupChase('league', window._activeLeagueIdx != null ? window._activeLeagueIdx : selectedLeagueIdx());
   window._hudNeedShown = null; hideMoment();
   updateHud();
@@ -32222,6 +32225,7 @@ function startBallSequence() {
   fielders.forEach(f => {
     f.chasing = false; f.reached = false; f.diving = false;
   });
+  window._gField = null; window._gThrow = null;
   adaptFieldPositions();
   umpireSignal = null;
   umpireSignalTimer = 0;
@@ -32470,11 +32474,8 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
     f.chasing = true;
     f.target = {x: tx, y: ty};
     f.diving = true;
-  } else if (fieldedSave && nearFielder) {
-    nearFielder.f.chasing = true;
-    nearFielder.f.target = nearFielder.f.interceptPoint;
   } else if (outcome !== 'FOUR!' && outcome !== 'SIX!') {
-    sendFielderToBall(finalAngle, targetDist, nearFielder);
+    startFielding(hitAngle, targetDist, nearFielder);   // Nov 3: to where the ball actually stops (its own line), soonest fielder
   }
 
   animateHit(hitAngle, distance, () => {
@@ -32483,7 +32484,7 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
       caughtOut();
     } else {
       const prevRuns = runs;
-      if (runsScored > 0 && runsScored < 4 && gullyPainted() && ball.screenX !== undefined) window._gThrow = { x: ball.screenX, y: ball.screenY, at: performance.now() + 380 };
+      fieldBallStopped();   // the fielder can pick it up now
       runs += runsScored;
       ballsBowled++;
       chaseBall(runsScored);
@@ -32507,7 +32508,7 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
         // Show celebration pause — player taps to continue after milestone
         setTimeout(() => showMilestonePause(hitMilestone, nextOrEnd), 900);
       } else {
-        setTimeout(nextOrEnd, 1000);   // Nov 2: was 650 — no time to take in the shot before the next ball
+        setTimeout(() => afterFielding(nextOrEnd), 1000);   // Nov 3: and the throw is back with the keeper. Nov 2: was 650 — no time to take in the shot before the next ball
       }
     }
   }, targetDist);
@@ -32585,36 +32586,50 @@ function findNearestFielder(shotAngle) {
   return { f: best, diff: bestDiff, canSave };
 }
 
-// send the nearest fielder to where the ball ends up.
-// If no fielder is within 50° of the shot (genuine gap), pick whoever is
-// physically closest to the landing spot so the animation looks natural.
-function sendFielderToBall(shotAngle, targetFrac, nearFielder) {
-  if (!nearFielder) return;
-  const rad = shotAngle * Math.PI/180;
-  const sx = W/2 + Math.sin(rad) * W * FIELD_RX * targetFrac * shotReach(rad);
-  const sy = PITCH_BOTTOM() - Math.cos(rad) * H * FIELD_RY * targetFrac * shotReach(rad);
-
-  let f;
-  if (nearFielder.diff <= 50) {
-    // fielder is reasonably close to the shot line — send them
-    f = nearFielder.f;
-  } else {
-    // genuine gap: pick the fielder physically nearest the landing spot
-    let best = null, bestDist = Infinity;
-    fielders.forEach(fd => {
-      const d = Math.hypot(fd.baseX - sx, fd.baseY - sy);
-      if (d < bestDist) { bestDist = d; best = fd; }
-    });
-    f = best || nearFielder.f;
-  }
-  f.chasing = true;
-  f.target = {x: sx, y: sy};
-  f.diving = targetFrac < 0.15;
-  // Nov 3 (Joe): which fielding action he plays when he gets there — long barrier for a hard hit straight at him,
-  // one hand when it's wide of him, two hands otherwise
-  const _wide = f !== nearFielder.f || nearFielder.diff > 28;
-  f._f3Pick = (targetFrac > 0.7 && !_wide && nearFielder.diff < 15) ? 'lb' : _wide ? 'pick1' : 'pick';
+// Nov 3 (Joe): fielding. The fielder who can get to where the ball stops SOONEST goes (by distance and his speed,
+// never the keeper), runs to it so his hand meets the ball, waits if he's there first, picks it up (ball in his hand),
+// then throws it in to the keeper's gloves. The next ball waits until it's back with the keeper.
+const FIELD_FRAME_MS = 70, FIELD_TAKES = { pick: [3, 8], pick1: [3, 11], lb: [3, 11] };   // [grab frame, release frame]
+function ballSpot(angle, frac) {   // where the hit ball comes to rest (same sums as drawBall)
+  const rad = angle * Math.PI / 180, r = shotReach(rad);
+  return { x: W / 2 + Math.sin(rad) * W * FIELD_RX * frac * r, y: PITCH_BOTTOM() - Math.cos(rad) * H * FIELD_RY * frac * r };
 }
+function chooseChaser(sx, sy) {
+  let best = null, bt = Infinity;
+  fielders.forEach(f => { if (f.name === 'keeper') return; const t = Math.hypot(f.x - sx, f.y - sy) / (f.speed || 0.02); if (t < bt) { bt = t; best = f; } });
+  return best;
+}
+function startFielding(angle, frac, nearFielder) {
+  const s = ballSpot(angle, frac), f = chooseChaser(s.x, s.y); if (!f) return;
+  const diff = angleDiff(f.angle, angle);
+  let pick = (frac > 0.7 && diff < 15) ? 'lb' : diff > 28 ? 'pick1' : 'pick';   // long barrier straight at him, one hand wide of him
+  if (!GP_SRC['f3_' + pick + '_d0_0']) pick = 'pick';
+  // stand where his hand meets the ball on the pick-up frame
+  let tx = s.x, ty = s.y;
+  if (gullyPaintedPeople() && f3On()) { const [fd, ff] = f3Face(W / 2 - s.x, PITCH_BOTTOM() - s.y), h = f3Hand('f3_' + pick + '_d' + fd + '_' + FIELD_TAKES[pick][0], 0, 0, ff); tx -= h.x; ty -= h.y; }
+  f.chasing = true; f.reached = false; f.diving = false; f.target = { x: tx, y: ty }; f._f3Pick = pick;
+  window._gField = { f, pick, sx: s.x, sy: s.y, rest: false, pickAt: 0, inHand: false, thrown: false, stage: 'run', t0: performance.now() };
+}
+function fieldBallStopped() { if (window._gField) window._gField.rest = true; }
+function fieldTick(now) {
+  const G = window._gField; if (!G || G.stage === 'done') return;
+  const f = G.f;
+  if (!G.pickAt && G.rest && f.reached) { G.pickAt = now; G.stage = 'pick'; }
+  if (!G.pickAt) { if (now - G.t0 > 6000) G.stage = 'done'; return; }   // never got there: give up quietly
+  const [g, r] = FIELD_TAKES[G.pick] || FIELD_TAKES.pick, i = (now - G.pickAt) / FIELD_FRAME_MS;
+  if (i >= g && !G.inHand && !G.thrown) G.inHand = true;
+  if (i >= r && !G.thrown) {
+    const h = G.hand || { x: f.x, y: f.y - 12 }, k = keeperGloves(), d = Math.hypot(k.x - h.x, k.y - h.y);
+    G.thrown = true; G.inHand = false; G.stage = 'throw';
+    window._gThrow = { x: h.x, y: h.y, tx: k.x, ty: k.y, at: now, dur: 260 + d * 1.9, arc: Math.min(34, 6 + d * 0.12) };
+  }
+  if (i >= 14) f.chasing = false;   // throw done: back to his spot
+}
+function afterFielding(cb) {   // hold the next ball until the throw has reached the keeper
+  const t0 = performance.now();
+  (function w() { const G = window._gField; if (G && G.stage !== 'done' && performance.now() - t0 < 4000 && state !== 'menu') return setTimeout(w, 80); cb(); })();
+}
+
 
 function animateHit(angle, distance, callback, targetDist) {
   // ball flies outward from the batsman along `angle` (polar, matches fielder
@@ -33794,7 +33809,6 @@ function gullyStreetAmbience(now) {
 
 function gullyLiveFront() {
   const now = performance.now();
-  gullyThrowDraw();
   gullyStreetAmbience(now);
   if (popTextType === 'boundary' && popTextIsSix && popTextStartTime !== _gl.lastBoundaryAt && now - popTextStartTime < 500) {
     _gl.lastBoundaryAt = popTextStartTime;
@@ -34511,8 +34525,26 @@ function gullyPaintedPeople() { return gpReady() && !window.GULLY_CODE_PEOPLE &&
 // Nov 3 (Joe): the fielders are the 3D player now, playing the mocap fielding actions: ready stance facing the batter,
 // run, two-handed pick-up and throw, dive, catch (ball in his hands). Each lad keeps his own shirt colours.
 const F3_LOOK = [['#d8342c', '#2f2f38'], ['#f0c02c', '#2c3e66'], ['#ee7a22', '#4a3a2a'], ['#2f6fd6', '#2b2b30']];
+// Nov 3 (Joe): the whole fielding side wears ONE kit — every fielder, the bowler and the keeper match. A new side's
+// colours are picked each match (never too close to the batter's shirt). window.FIELD_KIT = { shirt, trousers } forces one.
+const FIELD_KITS = [
+  { id:'sky',    shirt:'#4aa3e0', trousers:'#1d2b55' }, { id:'maroon', shirt:'#8e1b22', trousers:'#2a1a1e' },
+  { id:'yellow', shirt:'#f2c21a', trousers:'#1f3a7a' }, { id:'orange', shirt:'#ee7a22', trousers:'#22304f' },
+  { id:'purple', shirt:'#5b2a86', trousers:'#24163a' }, { id:'red',    shirt:'#d0312d', trousers:'#26262c' },
+  { id:'navy',   shirt:'#1c3a78', trousers:'#16223f' }, { id:'teal',   shirt:'#14808a', trousers:'#183238' },
+  { id:'whites', shirt:'#efece2', trousers:'#e6e2d4' }
+];
+function pickFieldKit() {
+  let bs = '#1C3A78'; try { const L = curLook(), s = PLAYER_SHIRTS.find(p => p.id === L.shirt); if (s) bs = s.c; } catch (e) {}
+  const B = _hexRgb(bs), ok = FIELD_KITS.filter(k => { const c = _hexRgb(k.shirt); return Math.hypot(c[0] - B[0], c[1] - B[1], c[2] - B[2]) > 120; });
+  const pool = ok.length ? ok : FIELD_KITS; window._fieldKit = pool[Math.floor(Math.random() * pool.length)];
+}
+function fieldKit() { return window.FIELD_KIT || window._fieldKit || (pickFieldKit(), window._fieldKit); }
 function f3On() { return GP.f3_ready_d0_0 && GP.f3_ready_d0_0.naturalWidth > 0 && window.MOCAP_FIELD !== false; }
-function f3Img(key, id) { const L = F3_LOOK[id % 4]; return m3Recolor(key, L[0], null, { trousers: L[1], shoes: '#f4f4ef', shoesA: '#58585c' }); }
+function f3Img(key, id) { const K = fieldKit(); return m3Recolor(key, K.shirt, null, { trousers: K.trousers, shoes: '#f4f4ef', shoesA: '#58585c' }); }
+// where a 3D fielder's hand is in a frame (each frame carries hx/hy), in screen px
+function f3Hand(key, x, y, flip) { const m = GP_SRC[key]; if (!m || m.hx == null) return { x, y: y - 10 }; const sc = GP_SCALE.fld3 / m.k * (W / 390);
+  return { x: x + (flip ? -1 : 1) * (m.hx - m.ax) * sc, y: y + (m.hy - m.ay) * sc }; }
 function f3Face(dx, dy) {   // facing frame for a direction on screen (dx right, dy down): d0 front … d4 back, mirrored on the left
   const ang = Math.atan2(Math.abs(dx), dy) * 180 / Math.PI, toRight = dx >= 0;
   if (ang < 22.5) return [0, false]; if (ang < 67.5) return [1, !toRight]; if (ang < 112.5) return [2, !toRight];
@@ -34532,10 +34564,15 @@ function drawF3Fielder(x, y, chasing, diving, stridePhase, f) {
   }
   if (diving) { const left = f && f.target && f.target.x < f.x; gpShadow(x, y + 2, 13); ctx.save(); ctx.translate(x, y + 3); ctx.rotate((left ? 1 : -1) * 0.45); ctx.translate(-x, -(y + 3));
     f3Draw('f3_dive_d2_0', x, y + 3, left, id); ctx.restore(); return; }
-  if (f && f.reached && f.chasing) {                     // got to it: two-handed pick-up, then the throw back in
-    if (!f._f3At) f._f3At = now;
-    const pk = f._f3Pick && GP_SRC['f3_' + f._f3Pick + '_d0_0'] ? f._f3Pick : 'pick';
-    const i = Math.min(13, Math.floor((now - f._f3At) / 70)); gpShadow(x, y, 9); f3Draw('f3_' + pk + '_d' + fd + '_' + i, x, y, ff, id); return;
+  if (f && f.reached && f.chasing) {
+    const G = window._gField;
+    if (G && G.f === f && G.pickAt) {                    // Nov 3 (Joe): picks the ball up, it's in his hand, then he throws it in
+      const i = Math.min(13, Math.floor((now - G.pickAt) / FIELD_FRAME_MS)), key = 'f3_' + G.pick + '_d' + fd + '_' + i;
+      gpShadow(x, y, 9); f3Draw(key, x, y, ff, id);
+      G.hand = f3Hand(key, x, y, ff); if (G.inHand) drawLooseBall(G.hand.x, G.hand.y, 2.6);
+      return;
+    }
+    gpShadow(x, y, 9); f3Draw('f3_ready_d' + fd + '_0', x, y, ff, id); return;   // there first: waits for the ball
   }
   if (f) f._f3At = 0;
   if (stridePhase > 0) {                                           // running: direction of travel
@@ -34680,7 +34717,7 @@ function drawGullyBowler() {
     const bx = p.x;   // world-placed (b3Place): his feet stay where they land
     b3Shadow(fr, bx, p.y, sc); gpShadow(bx, p.y, 4.5);
     // the same player is reused across scenes: window.BOWL_KIT = { shirt, trousers } puts him in that side's colours
-    const K = window.BOWL_KIT, img = K ? m3Recolor(fr, K.shirt, null, { trousers: K.trousers }) : undefined;
+    const K = window.BOWL_KIT || fieldKit(), img = m3Recolor(fr, K.shirt, null, { trousers: K.trousers, shoes: '#f4f4ef', shoesA: '#58585c' });   // same kit as the fielders
     gpDraw(fr, bx, p.y, 'bowl3', false, img); return;   // bowling hand over the painted release point
   }
   gpDraw(p.pose, p.x, p.y - p.bob, 'bowl', false);
@@ -34704,13 +34741,39 @@ function gullyShotPose() {
   return d < 0.7 ? 'shot_latecut' : 'shot_revsweep';                              // third man
 }
 
-// a fielder's throw back to the keeper after a single/two
+// a fielder's throw back to the keeper's gloves (Nov 3: starts from his hand on the release frame)
 function gullyThrowDraw() {
   const t = window._gThrow; if (!t) return;
-  const u = (performance.now() - t.at) / 450; if (u < 0) return; if (u > 1) { window._gThrow = null; return; }
-  const kx = W / 2, ky = PITCH_BOTTOM() + 26, x = t.x + (kx - t.x) * u, y = t.y + (ky - t.y) * u - Math.sin(u * Math.PI) * 26;
-  ctx.fillStyle = 'rgba(40,20,10,0.25)'; ctx.beginPath(); ctx.ellipse(t.x + (kx - t.x) * u, t.y + (ky - t.y) * u, 3, 1.3, 0, 0, 7); ctx.fill();
-  gullyBallImg(x, y, 3.6, u * 12);
+  const u = (performance.now() - t.at) / (t.dur || 450); if (u < 0) return;
+  const k = keeperGloves(), kx = t.tx != null ? t.tx : k.x, ky = t.ty != null ? t.ty : k.y;
+  if (u > 1) { window._gThrow = null; if (window._gField) window._gField.stage = 'done';
+    try { playTone({ freq: 210, duration: 0.05, volume: 0.1, type: 'triangle' }); } catch (e) {} return; }   // into the gloves
+  const lift = t.arc != null ? t.arc : 26, x = t.x + (kx - t.x) * u, y = t.y + (ky - t.y) * u - Math.sin(u * Math.PI) * lift;
+  ctx.fillStyle = 'rgba(40,20,10,0.25)'; ctx.beginPath(); ctx.ellipse(x, t.y + (ky - t.y) * u + 3, 3, 1.3, 0, 0, 7); ctx.fill();
+  drawLooseBall(x, y, 3.2, u * 12);
+}
+// the match ball out of play (in a fielder's hand, being thrown in): this scene's own ball
+function drawLooseBall(x, y, r, spin) {
+  if (gullyPainted()) return gullyBallImg(x, y, r, spin || 0);
+  if (themeArt() && tImg('ball')) return drawThemedBall(x, y, r * 1.3);
+  ctx.fillStyle = '#c0281e'; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.arc(x, y, r * 0.75, -0.6, 0.6); ctx.stroke();
+}
+// ball in the hand of a fielder drawn without the 3D takes (fallback art)
+function drawFieldBallFallback() {
+  const G = window._gField; if (!G || !G.inHand || (gullyPaintedPeople() && f3On())) return;
+  G.hand = { x: G.f.x + 4, y: G.f.y - 12 }; drawLooseBall(G.hand.x, G.hand.y, 2.6);
+}
+// where the keeper stands (same sums as drawWicketKeeper) and where his gloves are
+function keeperXY() {
+  const _bg = _SCENE_IMAGES[currentTimeOfDay && currentTimeOfDay.key], hasBg = _bg && _bg.complete && _bg.naturalWidth > 0;
+  const upY = hasBg ? H * 0.656 : PITCH_BOTTOM() + 12, downY = hasBg ? H * 0.700 : PITCH_BOTTOM() + 50;
+  return { x: W / 2, y: upY + (1 - wk.pos) * (downY - upY) };
+}
+function keeperGloves() {
+  const k = keeperXY();
+  if (gullyPaintedPeople() && f3On()) { const up = b3Pre() !== 'b3_', key = up ? 'f3_keepu_d4_0' : 'f3_keepb_d4_0'; return f3Hand(key, k.x, k.y - (up ? 6 : 0), false); }
+  return { x: k.x, y: k.y - 12 };
 }
 // ball spin: rolls along the ground by the distance it travels (angle = distance / radius, turning the way it
 // moves), spins steadily in the air, and stops when the ball stops. Frame-rate independent.
@@ -59936,6 +59999,7 @@ function drawBatsman() {
 
 function drawBall() {
   if (!ball.active) return;
+  { const G = window._gField; if (G && ball.hitAnim && (G.inHand || G.thrown)) return; }   // picked up: in his hand / being thrown in
   let px, py, size;
   if (ball.hitAnim) {
     // polar position from batsman, same convention as fielders
@@ -60989,6 +61053,7 @@ function gameLoop() {
     if (gullyPaintedPeople()) { if (!(window._gBowledAt && state === 'result')) drawStumps(W/2, PITCH_BOTTOM() + 9, 26); window._gLateLayer = true; drawWicketKeeper(); window._gLateLayer = false; }
     drawTrail();
     drawBall();
+    gullyThrowDraw(); drawFieldBallFallback();
     drawParticles();
     drawFlyingStumps();
     drawBoundaryShockwave();
@@ -62035,7 +62100,7 @@ function chaseWicket(kind) {
 function chaseNewBatter() {
   if (!window.chase || state === 'menu') return;
   window._gOutAt = 0; window._gCatch = null; window._gRaiseAt = 0; window._gBowledAt = 0;
-  window._gThrow = null; window._gHitSt = null; window._gHitAt = 0; flyingStumps = [];
+  window._gThrow = null; window._gField = null; window._gHitSt = null; window._gHitAt = 0; flyingStumps = [];
   popText = null; umpireSignal = null;
   energy = MAX_ENERGY;                                   // the new batter walks in fresh
   hideMoment();
