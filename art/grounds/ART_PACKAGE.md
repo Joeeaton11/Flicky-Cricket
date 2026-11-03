@@ -168,3 +168,6 @@ Nodes: Galle 462:191, Colombo 462:194, Kandy 462:195, Dambulla 463:191, Mumbai 4
 - 10.a Kensington Oval: plate 464:196 (ratio 1.576, field "one tenth strip, one and a half times as tall"), board 464:193 (compose_kensington.py), props 464:194, words 464:195. Pitch {ct 92, cb 772, wb 326}. Extras: pelicans, maroon flag, steel pan.
 - 10.b Queen's Park Oval: plate 465:198 (ratio 1.580, field "one tenth strip, one and three-quarters times as tall"), board 465:193 (compose_queens.py), props 465:194, words 465:195. Pitch {ct 71, cb 821, wb 288}. Extras: scarlet ibis, red flag, tassa drum.
 - 10.c Sabina Park: plate 466:192 (ratio 1.556, field "one tenth strip, one and three-quarters times as tall"), board 466:193 (compose_sabina.py), props 466:194, words 466:195. Pitch {ct 67, cb 801, wb 300}. Extras: doctor-bird hummingbirds, gold flag, speaker box. CCL complete (3 grounds).
+
+## SAL (league 11): South African grounds, close big-stand + NO-STRETCH recipe. Scene keys tsa_*. Branch sal-11a.
+- 11.a Newlands: plate 467:192 (ratio 1.562, "one tenth strip, one and three-quarters times as tall"), board 467:193 on MAGENTA key (compose_newlands.py keys magenta), props 467:196 (re-made: first sheet had stumps painted on the pitch), words 467:195. Pitch {ct 100, cb 732, wb 289}. Extras: hadeda ibis, green flag, protea.
