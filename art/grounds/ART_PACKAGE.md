@@ -101,3 +101,6 @@ Plate Figma 434:191 (first try): blue-hour, sand bowl lit by the ring-of-fire ro
 ### 7.b Sharjah (td_sharjah) — Camera 2 MEDIUM-CLOSE
 - Plate Figma 435:191; painted field very tall (ratio 2.1) so build_clean squashed y/x .786; 21 padded bottom rows mirror-filled; measure max 4.2 / p90 0.8.
 - Board 435:192 (green key) via art/ui/hud_lock/compose_sharjah.py; props 435:193, words 435:194 (magenta) via art/grounds/sharjah/cut.py. Pitch ct 86 cb 769 wb 410.
+
+### 7.c Desert (td_desert) — wizard-scene camera (Camera 3 + one curved bowl)
+Joe (Nov 3): "the wizard scene is the close camera" — Sharjah's Camera 2 line came out further away; Desert goes back to the Trent Bridge / Lord's v8 / ACL recipe. Plate 436:191 (fit ratio 1.47 → build_clean stretch 1.13, pad 74 px, snap_ring max 45, measure max 2.1 p90 0.4). Board 436:192 via compose_desert.py; props 436:193 + words 436:194 via art/grounds/desert/cut.py. Pitch ct 102 cb 696 wb 383.
