@@ -141,3 +141,5 @@ Plate 450:192 (same field wording as Kandy → ratio 1.562; 450:191 1.63 rejecte
 Plate 451:192 (ratio 1.561; 451:191 1.62). fit_uniform scale 1.513, sides +3 px, ends −4 px, 5/4 px side slivers, 52 top rows sky_match. Board 451:193 compose_mumbai.py. Props 451:194, words 451:196 marquee bulbs (451:195 blue/gold too like Dambulla). Pitch ct 65 cb 750 wb 296.
 ### 9.b Chennai / Chepauk (Nov 3)
 Plate 452:192 (ratio 1.594; 452:191 1.66). fit_uniform scale 1.568, sides −3 px, ends +4 px. Board 452:193 compose_chennai.py (rainbow gopuram trim repeated at even scale along the top + gopuram sprite). Props 452:194, words 452:195. Pitch ct 72 cb 788 wb 299.
+### 9.c Kolkata / Eden Gardens (Nov 3)
+Plate 453:192 (ratio 1.529; 453:191 1.43). fit_uniform scale 1.560, sides +8 px, ends −13 px, 37 top rows sky_match. Howrah Bridge mostly behind the scoreboard in play. Board 453:193 compose_kolkata.py (truss crest repeated at even scale). Props 453:194 (flag skipped: emblem looked like a real team badge), words 453:195. Pitch ct 48 cb 730 wb 281.
