@@ -183,3 +183,4 @@ Nodes: Galle 462:191, Colombo 462:194, Kandy 462:195, Dambulla 463:191, Mumbai 4
 
 ## NZCL (league 13): New Zealand grounds, close + Sylhet-v2 crowd size + NO-STRETCH. Scene keys tnz_*. Branch nz-13a (from bd-12a; SAL and BCL not live yet).
 - 13.a Basin Reserve: plate 476:191 (ratio 1.554; white heritage Museum Stand, grass banks, Wellington hills, Norfolk pines, pohutukawa), board 476:193 magenta (compose_basin.py), props 476:194, words 476:195. Pitch {ct 82, cb 811, wb 318}. Extras: seagulls, black flag, kiwi.
+- 13.b Hagley Oval: plate 477:192 (ratio 1.591 full-res; thumbnails of grass-bank grounds can mis-screen — check full res), board 477:193 (compose_hagley.py), props 477:194, words 477:195. Pitch {ct 77, cb 718, wb 272}. Extras: kereru, red flag, picnic hamper.
