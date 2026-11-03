@@ -848,3 +848,4 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Game: sprites re-shot in Blender with the old cameras/classes/anchors (`sprites.py` → `m3bake.py` / `b3wrap.py`). Each shot type now plays its own capture: `M3_SHOT` maps gullyShotPose() → `m3_<code>_hit0–16` (hit1 = contact); off drive stays `m3_hit*`; stance + backlift shared (`m3_stance`, `m3_lift0–3`). Paddle sweep has no capture (painted). Bowler `b3_*` re-shot from the new seam bake, same 47 frames/anchors, recoloured white/maroon in the bake.
 - Off spin: hand-keyed attempt was robotic; Joe is sourcing an off-spin capture — drop it in as a new CLIP like seam.
 - ACL complete on branch acl-6a: 6.a MCG, 6.b SCG, 6.c Gabba, 6.d Perth, 6.e Adelaide (ta_*). To go live: merge main, rebuild www, push main.
+- ACL live on main (Nov 3). Desert League started on branch dl-7a: 7.a Dubai (td_dubai). Next: 7.b Sharjah.
