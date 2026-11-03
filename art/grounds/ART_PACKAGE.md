@@ -171,3 +171,4 @@ Nodes: Galle 462:191, Colombo 462:194, Kandy 462:195, Dambulla 463:191, Mumbai 4
 
 ## SAL (league 11): South African grounds, close big-stand + NO-STRETCH recipe. Scene keys tsa_*. Branch sal-11a.
 - 11.a Newlands: plate 467:192 (ratio 1.562, "one tenth strip, one and three-quarters times as tall"), board 467:193 on MAGENTA key (compose_newlands.py keys magenta), props 467:196 (re-made: first sheet had stumps painted on the pitch), words 467:195. Pitch {ct 100, cb 732, wb 289}. Extras: hadeda ibis, green flag, protea.
+- 11.b Wanderers: plate 468:197 (ratio 1.639, "one eighth strip, nearly twice"), board 468:194 magenta (compose_wanderers.py), props 468:195, words 468:196 (clean rounded lettering — Joe disliked ornamented letters). Pitch {ct 75, cb 753, wb 321}. Extras: pied crows, orange flag, vuvuzela.
