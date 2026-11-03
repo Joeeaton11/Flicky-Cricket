@@ -1,12 +1,17 @@
 """Encode fs/ fielder renders into GP_SRC entries: f3_<action>_d<dir>_<i> {src, mask, ax, ay, hx, hy, k}."""
-import json, os, io, base64
-from PIL import Image
-W = os.path.dirname(os.path.abspath(__file__)); D = f'{W}/fs'; M = json.load(open(f'{D}/meta.json'))
+import json, os, io, base64, sys
+from PIL import Image, ImageEnhance
+W = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, W); D = f'{W}/fs'
+from ink import ink
+from outline2d import add_outline; M = json.load(open(f'{D}/meta.json'))
 def b64(im, **kw):
     buf = io.BytesIO(); im.save(buf, 'WEBP', **kw); return 'data:image/webp;base64,' + base64.b64encode(buf.getvalue()).decode()
 out = {}; tot = 0
 for key, mt in sorted(M.items()):
-    w = Image.open(f'{D}/{key}_w.png').convert('RGBA'); m = Image.open(f'{D}/{key}_m.png').convert('RGBA')
+    m = Image.open(f'{D}/{key}_m.png').convert('RGBA')
+    # Joe: the batter's cartoon finish — ink lines from normals/depth, colour + contrast pop, dark outline
+    w = ink(Image.open(f'{D}/{key}_w.png'), Image.open(f'{D}/{key}_n.png'), Image.open(f'{D}/{key}_d.png'), m, thick=2, strength=0.6).convert('RGBA')
+    w = ImageEnhance.Color(w).enhance(1.15); w = ImageEnhance.Contrast(w).enhance(1.14); w = ImageEnhance.Brightness(w).enhance(0.96); w = add_outline(w, 2)
     a = w.getchannel('A'); bb = a.point(lambda v: 255 if v > 8 else 0).getbbox()
     if not bb: continue
     x0, y0 = max(0, bb[0] - 2), max(0, bb[1] - 2); x1, y1 = min(w.width, bb[2] + 2), min(w.height, bb[3] + 2)

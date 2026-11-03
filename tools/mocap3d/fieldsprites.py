@@ -54,6 +54,21 @@ def setup(blend):
     sc.render.resolution_x, sc.render.resolution_y = RES; sc.render.resolution_percentage = 100
     world = sc.world or bpy.data.worlds.new('W'); sc.world = world; world.use_nodes = True
     bg = world.node_tree.nodes['Background']; bg.inputs['Color'].default_value = (0.86, 0.88, 1.0, 1); bg.inputs['Strength'].default_value = 0.9
+    global vl, OVR
+    vl = sc.view_layers[0]; OVR = {}
+    for kind in ('normal', 'depth'):
+        m = bpy.data.materials.new('ovr_' + kind); m.use_nodes = True; nt = m.node_tree; N = nt.nodes; L = nt.links
+        for n in list(N): N.remove(n)
+        out = N.new('ShaderNodeOutputMaterial'); em = N.new('ShaderNodeEmission'); L.new(em.outputs[0], out.inputs[0])
+        if kind == 'normal':
+            g = N.new('ShaderNodeNewGeometry'); vt = N.new('ShaderNodeVectorTransform'); vt.vector_type = 'NORMAL'; vt.convert_from = 'WORLD'; vt.convert_to = 'CAMERA'
+            mul = N.new('ShaderNodeVectorMath'); mul.operation = 'MULTIPLY_ADD'; mul.inputs[1].default_value = (0.5, 0.5, -0.5); mul.inputs[2].default_value = (0.5, 0.5, 0.5)
+            L.new(g.outputs['Normal'], vt.inputs[0]); L.new(vt.outputs[0], mul.inputs[0]); L.new(mul.outputs[0], em.inputs['Color'])
+        else:   # ortho camera 20 m away: near = white over 20 +- 2.6 m
+            cd = N.new('ShaderNodeCameraData'); mr = N.new('ShaderNodeMapRange'); mr.inputs['From Min'].default_value = 20 - 2.6; mr.inputs['From Max'].default_value = 20 + 2.6
+            mr.inputs['To Min'].default_value = 1; mr.inputs['To Max'].default_value = 0; mr.clamp = True
+            L.new(cd.outputs['View Z Depth'], mr.inputs['Value']); L.new(mr.outputs[0], em.inputs['Color'])
+        OVR[kind] = m
     return sc, rig, body, cam
 
 def suns(sc, az):
@@ -88,10 +103,18 @@ for blend, act, frs, dirs, per_frame in JOBS:
             cam.location = tgt + Vector((math.cos(a) * math.cos(e), math.sin(a) * math.cos(e), math.sin(e))) * 20
             cam.rotation_euler = (tgt - cam.location).to_track_quat('-Z', 'Y').to_euler(); bpy.context.view_layer.update()
             key = f'{act}_d{d}_{i}'
-            png(sc); sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'; sc.cycles.samples = int(os.environ.get('SPP', 10)); sc.cycles.use_denoising = True
-            sc.render.filter_size = 1.5; sc.render.filepath = f'{OUT}/{key}_w.png'; bpy.ops.render.render(write_still=True)
-            sc.render.engine = 'BLENDER_WORKBENCH'; ds = sc.display.shading; ds.light = 'FLAT'; ds.color_type = 'VERTEX'
-            sc.display.render_aa = 'OFF'; sc.render.filter_size = 0.0; sc.render.filepath = f'{OUT}/{key}_m.png'; bpy.ops.render.render(write_still=True)
+            if not os.environ.get('INKONLY'):
+                vl.material_override = None
+                png(sc); sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'; sc.cycles.samples = int(os.environ.get('SPP', 10)); sc.cycles.use_denoising = True
+                sc.render.filter_size = 1.5; sc.render.filepath = f'{OUT}/{key}_w.png'; bpy.ops.render.render(write_still=True)
+                sc.render.engine = 'BLENDER_WORKBENCH'; ds = sc.display.shading; ds.light = 'FLAT'; ds.color_type = 'VERTEX'
+                sc.display.render_aa = 'OFF'; sc.render.filter_size = 0.0; sc.render.filepath = f'{OUT}/{key}_m.png'; bpy.ops.render.render(write_still=True)
+            # ink passes (Joe: same cartoon look as the batter): view normal + depth, as sprites.py
+            for kind, pre in (('normal', 'n'), ('depth', 'd')):
+                vl.material_override = OVR[kind]; png(sc); sc.view_settings.view_transform = 'Raw'
+                sc.render.engine = 'CYCLES'; sc.cycles.samples = 4; sc.cycles.use_denoising = False; sc.render.filter_size = 0.01
+                sc.render.filepath = f'{OUT}/{key}_{pre}.png'; bpy.ops.render.render(write_still=True)
+            vl.material_override = None
             def P(p): v = world_to_camera_view(sc, cam, Vector(p)); return [v.x * RES[0], (1 - v.y) * RES[1]]
             palm = (rig.matrix_world @ rig.pose.bones['Hand.L'].head + rig.matrix_world @ rig.pose.bones['Hand.R'].head) / 2
             meta[key] = {'anchor': P(anc), 'palm': P(palm)}

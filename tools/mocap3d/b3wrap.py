@@ -8,6 +8,10 @@ for n, _ in M['seq']:
     for src, dst in (('w', 'bw'), ('m', 'bm'), ('n', 'bn'), ('d', 'bd')): shutil.copy(f'{S}/{src}_{n}.png', f'{B}/{dst}_{n}.png')
 json.dump({'seq': M['seq'], 'meta': M['meta']}, open(f'{B}/bowl_meta.json', 'w'))
 code = open(f'{W}/bowlbake.py').read().replace("T={}   # cloth colours are painted into the texture in bowl.html now", "T={1:SHIRT,10:TROU}   # Blender renders keep the model's own cloth: recolour shirt/trousers here")
+# Joe (Nov 3): same cartoon finish as the batter (m3bake: colour 1.15, contrast 1.14, brightness 0.96)
+code = code.replace("s=ImageEnhance.Color(s).enhance(1.12); s=ImageEnhance.Contrast(s).enhance(1.05)",
+                    "s=ImageEnhance.Color(s).enhance(1.15); s=ImageEnhance.Contrast(s).enhance(1.14); s=ImageEnhance.Brightness(s).enhance(0.96)")
+assert 'enhance(1.14)' in code
 open(f'{B}/bake.py', 'w').write(code)
 subprocess.run(['python3', 'bake.py'], cwd=B, env=dict(os.environ, PYTHONPATH=W), check=True)
 
