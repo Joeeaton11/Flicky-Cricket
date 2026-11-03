@@ -47,10 +47,10 @@ bl=biggest_in(P,(705,95,875,160),'bail',save=False); bl.resize((212,round(bl.hei
 biggest_in(P,(705,225,870,385),'ball',208); biggest_in(P,(705,425,865,585),'ring',120)
 biggest_in(P,(585,615,880,945),'x_flag',160); biggest_in(P,(1020,630,1385,985),'x_protea',140,dil=4)
 biggest_in(P,(1010,10,1500,362),'x_gull_up',160,dil=4); biggest_in(P,(995,370,1495,648),'x_gull_dn',160,dil=4)
-Wd=keyed('raw/words_467-195.png')
-for name,box in [('w_four',(30,155,420,365)),('w_six',(445,50,1005,415)),('w_caught',(1005,155,1515,365)),('w_bowled',(180,430,890,695)),('w_out',(945,430,1365,695))]:
+Wd=keyed('raw/words_468-191.png')
+for name,box in [('w_four',(50,115,535,295)),('w_six',(560,25,1235,330)),('w_caught',(50,345,740,530)),('w_bowled',(805,345,1500,530)),('w_out',(535,545,1000,740))]:
   biggest_in(Wd,box,name,700,dil=3)
-y0,y1=735,960; band=Wd[y0:y1,10:1526,3]>128; cols=band.sum(0); segs=[]; inn=False
+y0,y1=770,960; band=Wd[y0:y1,10:1526,3]>128; cols=band.sum(0); segs=[]; inn=False
 for x,c in enumerate(cols):
   if c>0 and not inn: s0=x; inn=True
   if c==0 and inn: segs.append((s0,x)); inn=False
