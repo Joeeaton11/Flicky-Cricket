@@ -214,3 +214,10 @@ Plates 485:191 (dirt; first try came out 1.77, regenerated with "WIDE … only o
 485:193 (pale clay 1.619), 485:194 (sawdust 1.545). Boards/props/words 485:195–206 (canyon props re-made as hawks).
 Pitches: town {80,771,391}, canyon {74,750,328}, ghosttown {35,812,446}, rodeo {54,721,349}. auto_cut crease search now starts 2% down (ghost town crease sat at 4%).
 Ghost town board has no corner sprite (the cow skull overlaps the frame on the sheet).
+
+## 18. Frozen Ashes — tfz_arctic / tfz_glacier / tfz_tundra / tfz_icepalace
+Plates 486:191 (snow 1.544), 486:192 (glacier ice 1.536 — "WIDE…fat round egg…top a quarter" gave 1.22, "clearly TALLER…upright egg" gave 1.83; the
+PROMPTS.md "fat egg" block as written gave 1.54), 486:193 (frost 1.525), 486:194 (frozen lake 1.567 after adding "curving continuously…sides bulge").
+Boards/props/words 486:195–206. Pitches: arctic {59,785,429}, glacier {73,681,393}, tundra {63,756,366} (CT=63 override), icepalace {50,703,447}.
+auto_cut creases now = the row that differs most from the pitch's own colour (red/blue/violet crease lines); CT=/CB= env overrides.
+LESSON: use the PROMPTS.md FIELD block word for word; tweaks swing the ratio badly.

@@ -64,13 +64,16 @@ pc = crop(P, lab, pitch); pc.save(D + 'pitch.webp', quality=90)
 x0, y0, x1, y1 = pitch[:4]; g = cv2.cvtColor(P[..., :3], cv2.COLOR_RGB2GRAY).astype(float); al = P[..., 3] > 128
 rows = [y for y in range(y0, y1) if al[y, x0:x1].any()]; top, bot = rows[0], rows[-1]; H = bot - top
 def edges(y): xs = np.where(al[y, x0:x1])[0]; return x0 + xs.min() + 6, x0 + xs.max() - 6
-def crease(a, b):
+rgbP = P[..., :3].astype(float); medc = np.median(rgbP[y0:y1, x0:x1][al[y0:y1, x0:x1]], 0)
+def crease(a, b):   # crease = the row that differs most from the pitch's own colour (works for white, red, blue, glowing lines)
   best = None
   for y in range(int(a), int(b)):
-    l, r = edges(y); v = g[y, l + 20:r - 20].mean() if r - l > 50 else 0
+    l, r = edges(y); v = np.sqrt(((rgbP[y, l + 20:r - 20] - medc) ** 2).sum(1)).mean() if r - l > 50 else 0
     if best is None or v > best[0]: best = (v, y)
   return best[1]
 ct, cb = crease(top + 0.02 * H, top + 0.22 * H), crease(bot - 0.22 * H, bot - 0.04 * H)
+if os.environ.get('CT'): ct = top + int(os.environ['CT'])   # manual override (rows below the strip top) when the end line out-scores the popping crease
+if os.environ.get('CB'): cb = top + int(os.environ['CB'])
 (l1, r1), (l2, r2) = edges(ct), edges(cb); quad = np.float32([[l1, ct], [r1, ct], [r2, cb], [l2, cb]]); Wr, Hr = 200, 523
 Mx = cv2.getPerspectiveTransform(quad, np.float32([[0, 0], [Wr, 0], [Wr, Hr], [0, Hr]]))
 Image.fromarray(cv2.warpPerspective(np.ascontiguousarray(P[..., :3]), Mx, (Wr, Hr), flags=cv2.INTER_CUBIC)).save(D + 'pitch_rect.webp', quality=92)
