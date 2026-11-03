@@ -120,3 +120,4 @@ Calibrated FIELD block (see layout/PROMPTS.md "NO STRETCH") + thumbnail screenin
 
 ### 7.a Dubai v2 — close camera, NO STRETCH (Nov 3, Joe: "Remake")
 Same FIELD block; Dubai skyline compositions came out fat (ratios 1.36–1.50 on 441:191–193, 195). Used 441:194 (ratio 1.536, prompt "1.7 times as tall", strip "one tenth"): fit_uniform scale 1.534, side +7 px, ends −11 px, no warp. 31 uncovered top rows filled with the blue-hour sky colour. v1 kept as plate_v1.png. Board/props/words unchanged.
+Nov 3: close-camera NO-STRETCH Lord's preview — Figma 442:191 (ratio 1.569, err ≤2 px), plate_close.png, compare lords_close_compare.jpg. NOT wired; live plate unchanged until Joe picks.
