@@ -50,3 +50,20 @@ defend ← forward_defence · drive ← straight_drive · offdrive ← off drive
 ondrive ← on_drive · cut/latecut ← cut · pull/slog ← pull · flick ← leg_glance · revsweep ← reverse_sweep ·
 scoop ← scoop · sweep ← sweep · backfoot_drive rendered (m3_backfoot_*) but not routed yet.
 6. `python3 integrate.py` swaps both sprite blocks into flicky-cricket.html; then `npm run build`.
+
+## Nov 3 — bowlers' legs, spinners in the game, fielding
+- Bowlers: `KNEEFIX=1 OUTTAG=_knees CLIP=seam|offspin|legspin python3 bake2.py` (Joe's "knees fixed" versions). Legs keep the
+  capture's joint angles; each foot lands on its own side of the line (the capture runs on a tightrope), knees stay outside
+  the hip–foot line, feet flat and pointing down the run in the run-up, planted feet pinned (and set on the ground), hips
+  sink a little when a planted leg can't reach, swing leg passes wide of the standing one, hand/finger pops smoothed.
+  Leg spin measures "own side" from the running line in the run-up (`RUNAXIS`: his hips are 42° open).
+  For sprites copy `<clip>_knees.blend` to `<clip>.blend`, then `CLIP=<clip> python3 sprites.py`.
+- Spinners: `CLIP=offspin PREFIX=b3o_ python3 b3wrap.py`, `CLIP=legspin PREFIX=b3l_ python3 b3wrap.py`.
+  Game: every second over is a spinner (off or leg, picked per match) in the Gully scenes — slower, a touch fuller,
+  turning off the pitch (off spin into the right-hander, leg spin away); the keeper stands up to him.
+- Fielding (src/fielding, Joe's KUMU files): `CLIP=field_<name> python3 bake2.py` (field_1hand, field_2hand, field_high_fd,
+  field_high_fu, field_long_barrier, field_short_fd, field_short_fu, field_keep_back, field_keep_up). Head: the capture's own
+  (it's genuine), pulled towards the ball through the approach and take, then eased back; hands kept clear of the big head.
+  Game sprites: `python3 fieldsprites.py` (EL 50 ortho, five facings) → `python3 fsbake.py` → f3_* (ready, run, pick, catch,
+  dive, keeper back / up). The Gully fielders are the 3D player in each lad's colours.
+- `python3 gamepatch.py 0.26` applies the game code (idempotent); `python3 integrate2.py` swaps in every sprite block.
