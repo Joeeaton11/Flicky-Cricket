@@ -227,3 +227,9 @@ Plates 488:191 (moon dust 1.562), 488:192 (Mars sand 1.481), 488:193 (mint floor
 redone so the far-end crowd is full size). Boards/props/words 488:196–210. Pitches: moon {63,798,438}, mars {79,775,455}, station {53,735,384},
 asteroid {51,751,403}, alien {56,770,410}. Asteroid bail (an upright crystal) rotated flat after cutting.
 FIELD wording: "fat egg" block as written swings 1.56–1.80; "WIDE…only…fat round egg" swings 1.39–1.51; "It is wide:" + fat-egg block ≈1.50–1.62.
+
+## 20. Inferno — tin_volcano / tin_lavalake / tin_tiki / tin_forge
+Plates 491:191 (ash 1.49), 491:192 (cooled rock 1.513), 491:193 (black sand 1.51), 492:204 (bronze floor 1.47 — four tries; others 1.38–1.77).
+Boards/props/words: volcano 491:195–197, lava lake 492:198–200, tiki 492:201–203, forge 492:205–207. Pitches: volcano {41,732,387},
+lavalake {44,738,417}, tiki {75,727,417}, forge {49,765,314}.
+Space Station (19.c) top: the blurred colour fill replaced with mirrored wall at the sides + clean stars across the window (Joe: "blurred at the top").
