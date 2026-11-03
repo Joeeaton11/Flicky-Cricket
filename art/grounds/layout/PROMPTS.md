@@ -149,3 +149,10 @@ CAMERA: CLOSE — the camera is pulled in tight. The crowd people are chunky wit
 ```
 Too small = tiers of tiny people (Chattogram, Mirpur). Too big = only 2–3 rows of huge heads (head 1/12 width, Sylhet v1).
 Pair with FIELD "one tenth strip, about one and a half times as tall as it is wide, top a fifth of the way down" (screened 1.577).
+
+## THEMED FIELD SURFACES (Joe, Nov 3: "would these all be played on grass?" -> no)
+From the Buccaneer Cup on, each fantasy ground's field is its own surface (sand, deck planks, jungle earth, crushed stone, ice, lava rock, moon dust...).
+Add to the prompt: "FIELD SURFACE: <surface>, very even and calm, low contrast so a small red ball shows clearly. No grass on the field." and make the boards ring "clearly darker/lighter than the <surface>".
+Avoid tiled/flagstone patterns (they break the edge finder and look busy) — use one continuous material.
+Tools: tools/fit_field.py (edge by ray-walk colour jump, any surface) replaces fit_grass.py; tools/measure_field.py replaces measure.py; tools/redo.sh and setup_ground.sh use them.
+The props-sheet pitch has grass edging; strip it on non-grass grounds (green -> transparent in pitch.webp, inpaint pitch_rect.webp).

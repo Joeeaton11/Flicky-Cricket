@@ -201,3 +201,4 @@ Nodes: Galle 462:191, Colombo 462:194, Kandy 462:195, Dambulla 463:191, Mumbai 4
 - 15.b Galleon (plate 482:195, ratio 1.633; a cutlass overlaps the bottom-left board; board 482:203, props 482:204 cannonball ball, words 482:205) pitch {81,760,306}. Extras: seagulls, red pennant, cannon.
 - 15.c Treasure Island (plate 482:196; board 482:206, props 482:207 red X on pitch, words 482:208) pitch {94,807,315}. Extras: monkeys, green flag, shovel.
 - 15.d Fortress (plate 482:201, ratio 1.632; board 482:209, props 482:210, words 482:211) pitch {93,800,255}. Extras: bats, black flag, lantern.
+- Buccaneer Cup re-surfaced (themed fields): cove sand 483:192, galleon deck planks 483:193, island jungle earth 483:199, fortress crushed stone 483:197. Pitch grass edging stripped.
