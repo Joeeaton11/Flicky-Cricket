@@ -10,8 +10,8 @@ out = {}; tot = 0
 for key, mt in sorted(M.items()):
     m = Image.open(f'{D}/{key}_m.png').convert('RGBA')
     # Joe: the batter's cartoon finish — ink lines from normals/depth, colour + contrast pop, dark outline
-    w = ink(Image.open(f'{D}/{key}_w.png'), Image.open(f'{D}/{key}_n.png'), Image.open(f'{D}/{key}_d.png'), m, thick=2, strength=0.6).convert('RGBA')
-    w = ImageEnhance.Color(w).enhance(1.15); w = ImageEnhance.Contrast(w).enhance(1.14); w = ImageEnhance.Brightness(w).enhance(0.96); w = add_outline(w, 2)
+    w = ink(Image.open(f'{D}/{key}_w.png'), Image.open(f'{D}/{key}_n.png'), Image.open(f'{D}/{key}_d.png'), m, thick=2, strength=0.45).convert('RGBA')
+    w = ImageEnhance.Color(w).enhance(1.15); w = ImageEnhance.Contrast(w).enhance(1.14); w = ImageEnhance.Brightness(w).enhance(0.96); w = add_outline(w, 1)   # Joe picked B: 1 px outline, softer inner ink
     a = w.getchannel('A'); bb = a.point(lambda v: 255 if v > 8 else 0).getbbox()
     if not bb: continue
     x0, y0 = max(0, bb[0] - 2), max(0, bb[1] - 2); x1, y1 = min(w.width, bb[2] + 2), min(w.height, bb[3] + 2)
