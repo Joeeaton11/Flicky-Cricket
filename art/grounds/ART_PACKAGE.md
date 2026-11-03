@@ -135,3 +135,7 @@ Colombo v3 (Nov 3, Joe: 'Premadasa doesn't look like that pavilion'): Figma 448:
 Plate 449:196 (prompt "1.6 times", strip "one twelfth", top "a quarter" → ratio 1.589; 449:191/192/197 rejected 1.49–1.75). fit_uniform scale 1.571, sides −2 px, ends +3 px, p90 4.7. White sail-roofed pavilion, tea hills, white Buddha, grass banks, festival elephant. Board 449:193 compose_kandy.py (teak, gold scrolls, maroon, temple bell). Props 449:194, words 449:195 (magenta). Pitch ct 97 cb 660 wb 326.
 ### 8.d Dambulla (Nov 3)
 Plate 450:192 (same field wording as Kandy → ratio 1.562; 450:191 1.63 rejected). fit_uniform scale 1.545, sides +2 px, ends −4 px, p90 2.5. Cream/terracotta pavilion, Dambulla rock + cave temples + golden Buddha (mostly behind the scoreboard), lotus reservoir, peacocks. Board 450:193 compose_dambulla.py (granite, terracotta, gold, peacock blue, Buddha sprite). Props 450:194, words 450:195 (magenta). Pitch ct 85 cb 727 wb 368.
+
+## ICL (league 9): 10 grounds, close camera + NO-STRETCH recipe. Scene keys ti_*. Branch icl-9a (from sl-8a; Sri Lanka not live yet — waiting on Joe).
+### 9.a Mumbai / Wankhede (Nov 3)
+Plate 451:192 (ratio 1.561; 451:191 1.62). fit_uniform scale 1.513, sides +3 px, ends −4 px, 5/4 px side slivers, 52 top rows sky_match. Board 451:193 compose_mumbai.py. Props 451:194, words 451:196 marquee bulbs (451:195 blue/gold too like Dambulla). Pitch ct 65 cb 750 wb 296.
