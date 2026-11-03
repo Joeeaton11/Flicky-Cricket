@@ -184,3 +184,8 @@ Nodes: Galle 462:191, Colombo 462:194, Kandy 462:195, Dambulla 463:191, Mumbai 4
 ## NZCL (league 13): New Zealand grounds, close + Sylhet-v2 crowd size + NO-STRETCH. Scene keys tnz_*. Branch nz-13a (from bd-12a; SAL and BCL not live yet).
 - 13.a Basin Reserve: plate 476:191 (ratio 1.554; white heritage Museum Stand, grass banks, Wellington hills, Norfolk pines, pohutukawa), board 476:193 magenta (compose_basin.py), props 476:194, words 476:195. Pitch {ct 82, cb 811, wb 318}. Extras: seagulls, black flag, kiwi.
 - 13.b Hagley Oval: plate 477:192 (ratio 1.591 full-res; thumbnails of grass-bank grounds can mis-screen — check full res), board 477:193 (compose_hagley.py), props 477:194, words 477:195. Pitch {ct 77, cb 718, wb 272}. Extras: kereru, red flag, picnic hamper.
+- 13.c Eden Park: plate 479:201 (ratio 1.533; South Stand, Mt Eden cone, Sky Tower, floodlit evening), board 478:195 (compose_eden.py), props 478:196 (white ball), words 478:197. Pitch {ct 101, cb 728, wb 254}. Extras: seagulls, navy flag, foam fern hand.
+- 13.d Bay Oval: plate 478:194 (ratio 1.567; Mauao, beach, Norfolk pines, grass banks), board 478:198 (compose_bayoval.py), props 479:199, words 479:200. Pitch {ct 112, cb 742, wb 237}. Extras: oystercatchers, turquoise flag, beach umbrella. NZCL complete.
+
+## Speed-up (Joe, Nov 3): one review sheet per league; tools/auto_cut.py replaces hand-measured cut.py
+`python3 tools/auto_cut.py <dir> <props.png> <words.png> stump,bail,ball,ring,x_flag,x_gull_up,x_gull_dn,x_<fan>` — finds pieces in reading order (pitch = tallest), creases, words (3-row layout) and digits automatically; prints pitch {ct,cb,wb}. Ask words prompts for "three rows with wide gaps". Every ground stays bespoke, same close camera + Sylhet-v2 crowd size.
