@@ -177,3 +177,4 @@ Nodes: Galle 462:191, Colombo 462:194, Kandy 462:195, Dambulla 463:191, Mumbai 4
 
 ## BCL (league 12): Bangladesh grounds, close big-stand + NO-STRETCH recipe. Scene keys tbd_*. Branch bd-12a (from sal-11a; SAL not live yet).
 - 12.a Mirpur: plate 472:191 (ratio 1.580, "one ninth strip, one and two-thirds"), board 472:193 magenta (compose_mirpur.py), props 472:194, words 472:195. Pitch {ct 67, cb 801, wb 325}. Extras: house crows, red flag, painted rickshaw.
+- 12.b Chattogram: plate 473:203 (ratio 1.587, same close recipe as Mirpur — Joe: 'remember the camera angle and sizes, don't stray'; a 'very close front rows' variant was tried and rejected for straying), board 473:199 magenta (compose_chattogram.py), props 473:200, words 473:201. Pitch {ct 72, cb 778, wb 287}. Extras: magpie-robins, green flag, river boat.
