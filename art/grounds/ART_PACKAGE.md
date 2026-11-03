@@ -159,3 +159,7 @@ Plate 459:201 (ratio 1.524; 8 tries 1.39–1.79 — the 'biggest in the world' w
 Plate 460:199 ('1.8 / one ninth / top a fifth' → 1.506; six tries 1.35–1.82). fit_uniform scale 1.523, sides +13 px, ends −20 px, 163 top rows sky_top. Board 460:193 compose_mohali.py (phulkari band repeated along the top). Props 460:194, words 460:195. Pitch ct 76 cb 723 wb 321.
 ### 9.j Lucknow / Ekana (Nov 3)
 Plate 461:192 ('nearly TWICE / one eighth / top a fifth' → 1.566, first pair). fit_uniform scale 1.719, err ≤3 px. Board 461:193 compose_lucknow.py. Props 461:194 (crease window 95–125), words 461:195. Pitch ct 60 cb 739 wb 331. ICL complete (10/10) on branch icl-9a — not live yet.
+
+## Redo: SL four + Mumbai/Chennai/Kolkata in the close big-stand style
+Plates regenerated with the close big-stand recipe (stands off the edges, big chunky crowd, pavilion + landmark tight behind the far boards), no-stretch fit via `tools/redo.sh` (keeps old plate as plate_vN.png). Boards, props, words and wiring unchanged.
+Nodes: Galle 462:191, Colombo 462:194, Kandy 462:195, Dambulla 463:191, Mumbai 463:194, Chennai 463:196, Kolkata 463:198.
