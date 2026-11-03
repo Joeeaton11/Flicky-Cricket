@@ -67,3 +67,6 @@ scoop ← scoop · sweep ← sweep · backfoot_drive rendered (m3_backfoot_*) bu
   Game sprites: `python3 fieldsprites.py` (EL 50 ortho, five facings) → `python3 fsbake.py` → f3_* (ready, run, pick, catch,
   dive, keeper back / up). The Gully fielders are the 3D player in each lad's colours.
 - `python3 gamepatch.py 0.26` applies the game code (idempotent); `python3 integrate2.py` swaps in every sprite block.
+- Nov 3: `python3 allscenes.py` puts the 3D players in every scene (Gully keeps its lungi umpire, painted stumps and tape ball).
+  Fielding actions chosen per ball: long barrier (hard, straight at him), one-handed (wide of him), two-handed otherwise;
+  catches: high (skied), low (short), chest. Fielder line: 1 px outline, softer ink (Joe picked B).

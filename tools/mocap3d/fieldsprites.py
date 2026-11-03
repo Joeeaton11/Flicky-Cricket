@@ -16,6 +16,10 @@ JOBS = [  # (blend, action, frames, dirs, anchor per frame?)
     ('field_2hand', 'pick', frames(56, 136, 14), [0, 1, 2, 3, 4], True),
     ('field_short_fu', 'catch', frames(8, 29, 11), [0, 1, 2, 3, 4], False),
     ('field_1hand', 'dive', None, [0, 2], False),
+    ('field_1hand', 'pick1', frames(68, 118, 14), [0, 1, 2, 3, 4], True),        # one-handed pick-up (ball wide of him)
+    ('field_long_barrier', 'lb', frames(78, 140, 14), [0, 1, 2, 3, 4], True),   # long barrier (hard, straight at him)
+    ('field_high_fu', 'catchh', frames(94, 118, 11), [0, 1, 2, 3, 4], False),   # high catch, fingers up (skied)
+    ('field_short_fd', 'catchl', frames(19, 40, 11), [0, 1, 2, 3, 4], False),   # low catch, fingers down
     ('field_keep_back', 'keepb', [0], [4], False),
     ('field_keep_up', 'keepu', [0], [4], False),
 ]

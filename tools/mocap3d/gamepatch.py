@@ -58,17 +58,19 @@ function drawF3Fielder(x, y, chasing, diving, stridePhase, f) {
   const h = _gHash(f && f.name), id = h % 4, now = performance.now();
   const [fd, ff] = f3Face(W / 2 - x, PITCH_BOTTOM() - y);           // facing the batter
   if (window._gCatch && f && f.name === window._gCatch.name) {      // caught: the short-catch take, ball in his hands
-    const e = now - window._gCatch.at, i = Math.min(10, Math.floor(e / 45)), key = 'f3_catch_d' + fd + '_' + i;
+    const d_ = window._shotDist || 0, kind = d_ > 0.55 && GP_SRC['f3_catchh_d0_0'] ? 'catchh' : d_ < 0.22 && GP_SRC['f3_catchl_d0_0'] ? 'catchl' : 'catch';   // skied / low / chest high
+    const e = now - window._gCatch.at, i = Math.min(10, Math.floor(e / 45)), key = 'f3_' + kind + '_d' + fd + '_' + i;
     gpShadow(x, y, 9); f3Draw(key, x, y, ff, id);
     const m = GP_SRC[key], sc = GP_SCALE.fld3 / m.k * (W / 390);
-    if (i >= 6) gullyBallImg(x + (ff ? -1 : 1) * (m.hx - m.ax) * sc, y + (m.hy - m.ay) * sc, 2.6, 0.6);
+    if (i >= 5) gullyBallImg(x + (ff ? -1 : 1) * (m.hx - m.ax) * sc, y + (m.hy - m.ay) * sc, 2.6, 0.6);
     return;
   }
   if (diving) { const left = f && f.target && f.target.x < f.x; gpShadow(x, y + 2, 13); ctx.save(); ctx.translate(x, y + 3); ctx.rotate((left ? 1 : -1) * 0.45); ctx.translate(-x, -(y + 3));
     f3Draw('f3_dive_d2_0', x, y + 3, left, id); ctx.restore(); return; }
   if (f && f.reached && f.chasing) {                     // got to it: two-handed pick-up, then the throw back in
     if (!f._f3At) f._f3At = now;
-    const i = Math.min(13, Math.floor((now - f._f3At) / 70)); gpShadow(x, y, 9); f3Draw('f3_pick_d' + fd + '_' + i, x, y, ff, id); return;
+    const pk = f._f3Pick && GP_SRC['f3_' + f._f3Pick + '_d0_0'] ? f._f3Pick : 'pick';
+    const i = Math.min(13, Math.floor((now - f._f3At) / 70)); gpShadow(x, y, 9); f3Draw('f3_' + pk + '_d' + fd + '_' + i, x, y, ff, id); return;
   }
   if (f) f._f3At = 0;
   if (stridePhase > 0) {                                           // running: direction of travel
@@ -88,4 +90,5 @@ rep("""function drawGullyKeeperSprite(x, y) {
   gpShadow(x, y, 10);
   if (f3On()) { const up = b3Pre() !== 'b3_', key = up ? 'f3_keepu_d4_0' : 'f3_keepb_d4_0';   // standing up to the spinners
     if (f3Draw(key, x, y - (up ? 6 : 0), false, 0)) return; }""")
+rep('  f.chasing = true;\n  f.target = {x: sx, y: sy};\n  f.diving = targetFrac < 0.15;\n}', "  f.chasing = true;\n  f.target = {x: sx, y: sy};\n  f.diving = targetFrac < 0.15;\n  // Nov 3 (Joe): which fielding action he plays when he gets there — long barrier for a hard hit straight at him,\n  // one hand when it's wide of him, two hands otherwise\n  const _wide = f !== nearFielder.f || nearFielder.diff > 28;\n  f._f3Pick = (targetFrac > 0.7 && !_wide && nearFielder.diff < 15) ? 'lb' : _wide ? 'pick1' : 'pick';\n}")
 open(G, 'w').write(s); print('patched', len(s) / 1e6, 'MB')
