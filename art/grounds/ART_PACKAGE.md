@@ -114,3 +114,6 @@ Same prompt recipe as Oasis. Sharjah 438:191 (squash .82, 186 top rows → sky_t
 
 ### Sharjah + Desert v3 (Nov 3, Joe: "boundary is very distorted")
 Cause: the close-camera plates came out racetrack-shaped and snap_ring bent the boards/crowd onto the ellipse. Fix: prompt opens with a FIELD SHAPE block (perfect ellipse like an egg / rugby ball on end, NO straight sections, NOT a running track or pill) → Figma 439:191 Sharjah (fit dev 0.8 px), 439:192 Desert (1.3 px). Then affine.py: ONE affine scale from the fitted ellipse onto the coded oval (no build_clean warp, no snap_ring) + sky_top.py for the empty top rows. measure p90 1.9 / 2.9. v2 kept as plate_v2.png. Use this route whenever fit_grass dev is under ~3 px.
+
+### Desert League v4 — NO STRETCH (Nov 3, Joe: "stop stretching the image. Create the image including the dimensions so they fit perfectly first time")
+Calibrated FIELD block (see layout/PROMPTS.md "NO STRETCH") + thumbnail screening + tools/fit_uniform.py (one uniform scale, no warp). Sharjah 440:204 (ratio 1.567, err ≤2.5 px), Desert 440:199 (1.583, ≤2 px, 19/8 px side sliver repeated), Oasis 440:206 (1.580, ≤1.2 px). Sky above the painted top via sky_top.py. Rejected: 440:191–198, 200–203, 205 (ratio 1.41–1.77 or too wide).

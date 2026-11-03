@@ -27,6 +27,14 @@ The field oval is fixed by the layout, so the field, pitch and players are the s
 ```
 References in the game: 1 close-up = Rooftop (`tr_rooftop`) · 2 medium-close ≈ Gully 1a (`tg_gully`) · 3 medium = Wizard (`tw_wizard`), Pirate (`tp_pirate`) · 4 far = Chennai (`chennai_night`), T20 (`t20_night`) · 5 far away (none yet).
 
+## NO STRETCH — make the plate fit first time (Joe, Nov 3: "stop stretching the image")
+The image model returns 768x1792 for a 1000x2048 request — narrower than the phone (1170x2532). The plate is that image scaled by ONE uniform factor (~1.52) and moved: nothing is stretched, squashed, warped or ring-snapped. So the FIELD must be painted at the size the game needs *inside the 768x1792 frame*: widest point ~92% of the width (strip ~4% each side), ratio 1.576, top ~28% down, bottom ~90% down.
+Use this FIELD block instead of the screen-frame wording in section 1 (calibrated Nov 3 — it gave ratio 1.567 / 1.580 / 1.583 on three grounds; "1.6 times + one eighth in" gives 1.65–1.77, "one and a half + one twenty-fifth in" gives ~1.42 and full width):
+```
+FIELD SIZE AND SHAPE (most important, it must fit a game layout exactly): the playing field is a perfect smooth ELLIPSE standing on end, with NO straight sections anywhere (NOT a running track, NOT a pill, NOT a rounded rectangle). At its widest point (its middle) it leaves a strip of stands about one twelfth of the picture's width between it and each side edge, so the side stands are clearly visible. It is one and a half times as tall as it is wide — a fat egg. Its top end is a little more than a quarter of the way down the picture. Its bottom end is nine tenths of the way down, leaving a band of about one tenth of the picture below it.
+```
+Check: screen the 256 px thumbnail first (upscale to 768x1792, run fit_grass.py) — only fetch full size when ratio is 1.54–1.61 and the width is 88–94%. Then `python3 ../tools/fit_uniform.py raw/plate_X.png` (one scale; repeats a sliver of stand if the sides come up a few px short) and `sky_top.py <rows>` for the sky above the painted top. No build_clean, no snap_ring.
+
 ## 1. Ground — surroundings, themed field, boundary rope
 ```
 Portrait background. It MUST match the game layout below exactly. The layout is described in words on purpose: never write any measurement, number, label or guide line in the image.
