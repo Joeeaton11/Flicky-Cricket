@@ -202,3 +202,9 @@ Nodes: Galle 462:191, Colombo 462:194, Kandy 462:195, Dambulla 463:191, Mumbai 4
 - 15.c Treasure Island (plate 482:196; board 482:206, props 482:207 red X on pitch, words 482:208) pitch {94,807,315}. Extras: monkeys, green flag, shovel.
 - 15.d Fortress (plate 482:201, ratio 1.632; board 482:209, props 482:210, words 482:211) pitch {93,800,255}. Extras: bats, black flag, lantern.
 - Buccaneer Cup re-surfaced (themed fields): cove sand 483:192, galleon deck planks 483:193, island jungle earth 483:199, fortress crushed stone 483:197. Pitch grass edging stripped.
+
+## 16. Witches' Ashes (Halloween) — thw_festival / thw_graveyard / thw_crypt / thw_mansion / thw_forest
+Themed fields, "fat egg" field wording, crowd heads ~1/20 width. Plates 484:200 (purple turf), 484:196 (grave soil), 484:197 (pale flagstone),
+484:198 (ballroom planks), 484:199 (moss). Boards/props/words 484:201–215 (magenta key). Pitches: festival {49,777,232}, graveyard {54,794,242},
+crypt {54,793,245}, mansion {105,821,246}, forest {55,774,240}. Compose scripts art/ui/hud_lock/compose_{festival,graveyard,crypt,mansion,forest}.py.
+Festival painted ratio 1.47 (field ~19 px wide at the sides); mansion plank seams make the fitter noisy (dev 9) but the overlay sits on the ring.
