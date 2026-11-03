@@ -4,12 +4,40 @@ import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const WD = +(new URLSearchParams(location.search).get('w') || 720), HT = +(new URLSearchParams(location.search).get('h') || 960);
-const MASKM = /mask/.test(location.search);
-const R = new THREE.WebGLRenderer({ antialias: !MASKM, alpha:true, preserveDrawingBuffer:true }); R.setPixelRatio(2); R.setSize(WD,HT); R.setClearColor(0,0); R.outputColorSpace = MASKM ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace; document.body.appendChild(R.domElement);
+const MASKM = /mask/.test(location.search), PASS = (location.search.match(/pass=(\w+)/) || [])[1];
+const R = new THREE.WebGLRenderer({ antialias: !MASKM && !PASS, alpha:true, preserveDrawingBuffer:true }); R.setPixelRatio(2); R.setSize(WD,HT); R.setClearColor(0,0); R.outputColorSpace = (MASKM || PASS) ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace; document.body.appendChild(R.domElement);
 const S = new THREE.Scene();
 S.add(new THREE.HemisphereLight(0xffffff, 0x7a8a66, 2.25)); const key = new THREE.DirectionalLight(0xfff1dc, 1.9); key.position.set(-200, 300, 400); S.add(key);
 const fill = new THREE.DirectionalLight(0xdfe8ff, .5); fill.position.set(300, -200, 200); S.add(fill);
 const rim = new THREE.DirectionalLight(0xfff6e0, 1.6); rim.position.set(260, -520, 380); S.add(rim);
+
+// Nov 2 (Joe): cel-shaded to sit in the painted grounds — flat ambient + banded key/rim light (MeshToonMaterial)
+const QS = new URLSearchParams(location.search), TOON = QS.has('toon');
+const TB = (QS.get('tb') || '138,206,206,206,255').split(',').map(Number);
+const TGRAD = (() => { const d = new Uint8Array(TB.length * 4); TB.forEach((v, i) => d.set([v, v, v, 255], i * 4)); const t = new THREE.DataTexture(d, TB.length, 1); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.needsUpdate = true; return t; })();
+function toonify(m) { if (!TOON || !m || m.isMeshBasicMaterial || m.isShaderMaterial || m.isMeshToonMaterial) return m;
+  const t = new THREE.MeshToonMaterial({ map: m.map || null, color: m.color ? m.color.clone() : 0xffffff, vertexColors: !!m.vertexColors, side: m.side, gradientMap: TGRAD });
+  const RIM = +(QS.get('rimk') || .32);
+  t.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>',
+    '{ float fr = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0); float up = clamp(normal.y * .6 + .55, 0.0, 1.0);\n' +
+    '  outgoingLight += vec3(1.0, .93, .82) * smoothstep(.62, .70, fr) * up * ' + RIM.toFixed(2) + ' * (0.35 + diffuseColor.rgb); }\n#include <opaque_fragment>'); };
+  return t; }
+function smoothNormals(g, it) {   // cel bands need calm normals: weld UV-seam copies, then relax the normals over the surface
+  const P = g.attributes.position, N = g.attributes.normal; if (!P || !N) return; const n = P.count, km = new Map(), wid = new Int32Array(n);
+  for (let i = 0; i < n; i++) { const k = Math.round(P.getX(i) * 20) + ',' + Math.round(P.getY(i) * 20) + ',' + Math.round(P.getZ(i) * 20); if (!km.has(k)) km.set(k, km.size); wid[i] = km.get(k); }
+  const W = km.size, A = new Float32Array(W * 3); for (let i = 0; i < n; i++) { A[wid[i]*3] += N.getX(i); A[wid[i]*3+1] += N.getY(i); A[wid[i]*3+2] += N.getZ(i); }
+  const IX = g.index ? g.index.array : null, nb = Array.from({ length: W }, () => []);
+  if (IX) for (let f = 0; f < IX.length; f += 3) { const a = wid[IX[f]], b = wid[IX[f+1]], c = wid[IX[f+2]]; nb[a].push(b, c); nb[b].push(a, c); nb[c].push(a, b); }
+  else for (let f = 0; f < n; f += 3) { const a = wid[f], b = wid[f+1], c = wid[f+2]; nb[a].push(b, c); nb[b].push(a, c); nb[c].push(a, b); }
+  const nz = v => { const l = Math.hypot(A[v*3], A[v*3+1], A[v*3+2]) || 1; A[v*3] /= l; A[v*3+1] /= l; A[v*3+2] /= l; };
+  for (let v = 0; v < W; v++) nz(v);
+  for (let k = 0; k < it; k++) { const B = A.slice(); for (let v = 0; v < W; v++) { for (const u of nb[v]) { B[v*3] += A[u*3] * .5; B[v*3+1] += A[u*3+1] * .5; B[v*3+2] += A[u*3+2] * .5; } } A.set(B); for (let v = 0; v < W; v++) nz(v); }
+  for (let i = 0; i < n; i++) N.setXYZ(i, A[wid[i]*3], A[wid[i]*3+1], A[wid[i]*3+2]); N.needsUpdate = true; }
+window.toonAll = () => S.traverse(o => { if (o.isMesh && o.material && o.material.side !== THREE.BackSide) { if (!o.userData.sn && o.geometry.attributes.normal && o.geometry.attributes.position.count > 200) { smoothNormals(o.geometry, +(QS.get('sn') || 10)); o.userData.sn = 1; } o.material = toonify(o.material); } });
+if (TOON) { S.children.filter(l => l.isLight).forEach(l => S.remove(l));
+  S.add(new THREE.AmbientLight(0xe4e6ff, +(QS.get('amb') || 1.15)));   // cool shadows
+  const k2 = new THREE.DirectionalLight(0xfff1dc, +(QS.get('key') || 2.6)); k2.position.set(...(QS.get('kp') || '-450,220,400').split(',').map(Number)); S.add(k2);
+  const r2 = new THREE.DirectionalLight(0xfff6e0, +(QS.get('rim') || .7)); r2.position.set(260, -520, 380); S.add(r2); }
 const SC = 175;                                          // mesh is 1 unit tall → 175 cm
 // mesh coords: x forward, y up, z = his right.  bind world: X forward, Z up, -Y = his right
 const toW = (x, y, z) => new THREE.Vector3(x * SC, -z * SC, (y + .5) * SC);
@@ -107,7 +135,36 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
     const px = cx.getImageData(0, 0, cv.width, cv.height).data, uv = geo.attributes.uv, flipY = src.material.map.flipY;
     for (let i = 0; i < n; i++) { const X = Math.min(cv.width - 1, Math.max(0, Math.round(uv.getX(i) * (cv.width - 1)))), Y = Math.min(cv.height - 1, Math.max(0, Math.round((flipY ? 1 - uv.getY(i) : uv.getY(i)) * (cv.height - 1)))); const o = (Y * cv.width + X) * 4; VC[i*3] = px[o]; VC[i*3+1] = px[o+1]; VC[i*3+2] = px[o+2]; } }
   window._VC = VC;
-  for (let i = 0; i < n; i++) { const m = [pos.getX(i), pos.getY(i), pos.getZ(i)]; MV.set(m, i * 3); const w = weightsFor(m, [VC[i*3], VC[i*3+1], VC[i*3+2]]);
+  { // Taubin λ|μ smoothing on the welded body (not head, hands or shoes): removes the generator's lumps and stair-stepped seams, keeps volume
+    const key = i => Math.round(pos.getX(i) * 2000) + ',' + Math.round(pos.getY(i) * 2000) + ',' + Math.round(pos.getZ(i) * 2000), wid = new Int32Array(n), km = new Map();
+    for (let i = 0; i < n; i++) { const k = key(i); if (!km.has(k)) km.set(k, km.size); wid[i] = km.get(k); }
+    const NW = km.size, P3 = new Float64Array(NW * 3), nb = Array.from({ length: NW }, () => new Set()), IXa = geo.index.array;
+    for (let i = 0; i < n; i++) { P3[wid[i]*3] = pos.getX(i); P3[wid[i]*3+1] = pos.getY(i); P3[wid[i]*3+2] = pos.getZ(i); }
+    for (let f = 0; f < IXa.length; f += 3) { const a = wid[IXa[f]], b = wid[IXa[f+1]], c = wid[IXa[f+2]]; nb[a].add(b).add(c); nb[b].add(a).add(c); nb[c].add(a).add(b); }
+    const free = new Uint8Array(NW); for (let v = 0; v < NW; v++) { const y = P3[v*3+1], az = Math.abs(P3[v*3+2]); free[v] = (y < .262 && y > -.405 && !(az > .235 && y < .08)) ? 1 : 0; }
+    const step = lam => { const nx = P3.slice(); for (let v = 0; v < NW; v++) { if (!free[v] || !nb[v].size) continue; let sx = 0, sy = 0, sz = 0, c = 0;
+        for (const u of nb[v]) { sx += P3[u*3]; sy += P3[u*3+1]; sz += P3[u*3+2]; c++; } nx[v*3] += lam * (sx / c - P3[v*3]); nx[v*3+1] += lam * (sy / c - P3[v*3+1]); nx[v*3+2] += lam * (sz / c - P3[v*3+2]); } P3.set(nx); };
+    const IT = +(new URLSearchParams(location.search).get('smooth') || 22); for (let it = 0; it < IT; it++) { step(.5); step(-.53); }
+    for (let i = 0; i < n; i++) pos.setXYZ(i, P3[wid[i]*3], P3[wid[i]*3+1], P3[wid[i]*3+2]); }
+  const WS = [];
+  for (let i = 0; i < n; i++) { const m = [pos.getX(i), pos.getY(i), pos.getZ(i)]; MV.set(m, i * 3); WS.push(weightsFor(m, [VC[i*3], VC[i*3+1], VC[i*3+2]])); }
+  { // weld copies of a point (UV seams), then average each point's weights with its neighbours a few times: no torn seams, softer folds
+    const key = i => Math.round(MV[i*3] * 2000) + ',' + Math.round(MV[i*3+1] * 2000) + ',' + Math.round(MV[i*3+2] * 2000), wid = new Int32Array(n), km = new Map();
+    for (let i = 0; i < n; i++) { const k = key(i); if (!km.has(k)) km.set(k, km.size); wid[i] = km.get(k); }
+    const NW = km.size, nb = Array.from({ length: NW }, () => new Set()), IXa = geo.index.array;
+    for (let f = 0; f < IXa.length; f += 3) { const a = wid[IXa[f]], b = wid[IXa[f+1]], c = wid[IXa[f+2]]; nb[a].add(b).add(c); nb[b].add(a).add(c); nb[c].add(a).add(b); }
+    let cur = new Array(NW), lock = new Uint8Array(NW), wy = new Float32Array(NW), wz = new Float32Array(NW);
+    for (let i = 0; i < n; i++) { cur[wid[i]] = WS[i]; wy[wid[i]] = MV[i*3+1]; wz[wid[i]] = MV[i*3+2]; }
+    for (let v = 0; v < NW; v++) lock[v] = wy[v] > .3 ? 1 : 0;
+    for (let it = 0; it < 4; it++) { const nx = new Array(NW);
+      for (let v = 0; v < NW; v++) { if (lock[v] || !nb[v].size) { nx[v] = cur[v]; continue; } const o = {}; let cntN = 0;
+        for (const u of nb[v]) { if (Math.sign(wz[u]) !== Math.sign(wz[v]) && Math.abs(wz[v]) > .02 && wy[v] < -.1) continue;   // never blend one leg into the other
+          for (const b in cur[u]) o[b] = (o[b] || 0) + cur[u][b]; cntN++; }
+        if (!cntN) { nx[v] = cur[v]; continue; }
+        for (const b in o) o[b] = o[b] / cntN * .5; for (const b in cur[v]) o[b] = (o[b] || 0) + cur[v][b] * .5; nx[v] = o; }
+      cur = nx; }
+    for (let i = 0; i < n; i++) WS[i] = cur[wid[i]]; }
+  for (let i = 0; i < n; i++) { const m = [MV[i*3], MV[i*3+1], MV[i*3+2]]; const w = WS[i];
     const ent = Object.entries(w).sort((a, b) => b[1] - a[1]).slice(0, 4); const tot = ent.reduce((t, e) => t + e[1], 0);
     ent.forEach(([b, v], k) => { si[i*4+k] = idx[b]; sw[i*4+k] = v / tot; });
     const p = toW(...m); pos.setXYZ(i, p.x, p.y, p.z); }
@@ -293,6 +350,10 @@ Promise.all([new Promise(r => fl.load('src/off_drive.fbx', r)), new Promise(r =>
     REF[nm] = { Q, M0: q(nm) };
   }
   if (/scene/.test(location.search)) buildScene();
+  toonAll();
+  // ink-line passes (Nov 2, Joe: "more detail"): view normals and depth, edge-detected in the bake into painted inner lines
+  if (PASS) S.traverse(o => { if (!o.isMesh || !o.material) return; if (o.material.side === THREE.BackSide) { o.visible = false; return; }
+    o.material = PASS === 'normal' ? new THREE.MeshNormalMaterial({ side: o.material.side }) : new THREE.MeshDepthMaterial({ side: o.material.side }); });
   window.READY = 1;
 });
 // ---------- a simple cricket ground around the batter (Nov 2, Joe: "build me a scene with the animation playing") ----------
@@ -397,6 +458,6 @@ window.proj = (pos, look, fov, pts) => { const c = new THREE.PerspectiveCamera(f
 window.headPts = () => { const h = bones.Head.getWorldPosition(new THREE.Vector3()), q = bones.Head.getWorldQuaternion(new THREE.Quaternion()); const c = new THREE.Vector3(0, 0, 12).applyQuaternion(q).add(h); const out = [];
   for (const dx of [-17, 17]) for (const dy of [-17, 17]) for (const dz of [-14, 17]) out.push(c.clone().add(new THREE.Vector3(dx, dy, dz))); return out; };
 window.footPt = () => { const f = n => bones[n].getWorldPosition(new THREE.Vector3()); return [f('LeftFoot'), f('RightFoot'), f('LeftToeBase'), f('RightToeBase')].map(v => v.toArray()); };
-window.cam = (pos, look, fov) => { if (BALL) sceneBall(window._lastT || 0); const c = new THREE.PerspectiveCamera(fov || 30, WD/HT, 1, 5000); c.up.set(0,0,1); c.position.set(...pos); c.lookAt(new THREE.Vector3(...look)); R.render(S, c); return R.domElement.toDataURL('image/png'); };
+window.cam = (pos, look, fov) => { if (window.CAMNF) { const c0 = new THREE.PerspectiveCamera(fov || 30, WD/HT, window.CAMNF[0], window.CAMNF[1]); c0.up.set(0,0,1); c0.position.set(...pos); c0.lookAt(new THREE.Vector3(...look)); if (typeof BALL !== 'undefined' && BALL) sceneBall(window._lastT || 0); R.render(S, c0); return R.domElement.toDataURL('image/png'); } if (BALL) sceneBall(window._lastT || 0); const c = new THREE.PerspectiveCamera(fov || 30, WD/HT, 1, 5000); c.up.set(0,0,1); c.position.set(...pos); c.lookAt(new THREE.Vector3(...look)); R.render(S, c); return R.domElement.toDataURL('image/png'); };
 window.bindView = (pos, look) => { for (const nm of NAMES) bones[nm].quaternion.identity(); bones.Hips.position.copy(JW.Hips); smesh.updateMatrixWorld(true); bat.visible = false; return cam(pos, look, 30); };
 </script></body></html>

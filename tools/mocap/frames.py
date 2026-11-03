@@ -4,10 +4,12 @@ from PIL import Image, ImageOps
 SEQ=[('stance',0.0)]+[(f'lift{i}',t) for i,t in enumerate([1.08,1.16,1.23,1.3])]+[(f'hit{i}',round(1.47+i*0.03,3)) for i in range(17)]
 import sys
 MASK='mask' in sys.argv
+PASS='normal' if 'normal' in sys.argv else 'depth' if 'depth' in sys.argv else None
 async def main():
     async with async_playwright() as p:
         b=await p.chromium.launch(args=['--use-gl=swiftshader','--enable-unsafe-swiftshader']); pg=await b.new_page(viewport={'width':720,'height':960})
-        await pg.goto('http://localhost:8765/rig.html?m=nopads&nogear&ol=0'+('&mask' if MASK else '')); await pg.wait_for_function('window.READY',timeout=180000)
+        await pg.goto('http://localhost:8765/rig.html?m=nopads&nogear&ol=0'+('&mask' if MASK else '')+('&pass='+PASS if PASS else '')); await pg.wait_for_function('window.READY',timeout=180000)
+        if PASS=='depth': await pg.evaluate('window.CAMNF=[700,1200]')
         az,el,r=120,22,950; x=r*math.cos(math.radians(az))*math.cos(math.radians(el))-10; y=r*math.sin(math.radians(az))*math.cos(math.radians(el))+30; z=85+r*math.sin(math.radians(el))
         C=f'[{x},{y},{z}],[-10,30,85],13.5'
         await pg.evaluate('pose(0)'); feet=await pg.evaluate('footPt()')
@@ -25,9 +27,9 @@ async def main():
     fpm=[(W-1-q[0],q[1]) for q in fp]
     bb=[f.getbbox() for _,f in fr]; x0=min(v[0] for v in bb)-6; y0=min(v[1] for v in bb)-6; x1=max(v[2] for v in bb)+6; y1=max(v[3] for v in bb)+6
     print('feet px',[tuple(round(c) for c in q) for q in fpm],'crop',x0,y0,x1,y1)
-    if MASK:
-        M0=json.load(open('frames_meta.json')); x0,y0,x1,y1=M0['crop']
-        for (n,f) in fr: f.crop((x0,y0,x1,y1)).save(f'mk_{n}.png')
+    if MASK or PASS:
+        M0=json.load(open('frames_meta.json')); x0,y0,x1,y1=M0['crop']; pre={'normal':'fn','depth':'fd'}.get(PASS,'mk')
+        for (n,f) in fr: f.crop((x0,y0,x1,y1)).save(f'{pre}_{n}.png')
         return
     json.dump({'crop':[x0,y0,x1,y1],'feet':fpm,'hb':hbs,'names':[n for n,_ in fr]},open('frames_meta.json','w'))
     for (n,f),hb in zip(fr,hbs): f.crop((x0,y0,x1,y1)).save(f'fr_{n}.png')

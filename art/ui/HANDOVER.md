@@ -789,3 +789,61 @@ After that: sprint 7 app-store build on Joe's Mac (RevenueCat with store-confirm
 - 5.e Old Trafford built (th_oldtrafford) on branch ecl-5e. Next: 5.f Trent Bridge (same: full template prompt, compose_<ground>.py board).
 - 3D ground experiments (Nov 3, parked as a later option): art/grounds/3d/old-trafford-3d.html (real Old Trafford layout, unstretched; to use for the game, stretch the field + bowl N–S to the 1.58 oval) and art/grounds/3d/wizard-ground-3d.html (fantasy, already on the game oval). Three.js, toy style, camera presets incl. Game/Batter/Bowler, Day/Twilight/Night. Idea: render the Game view as the plate (or Weave paint-over) so the boundary lines up with no warping.
 - 5.f Trent Bridge built (th_trentbridge) on branch ecl-5f. All six ECL grounds now built (5a Lord's parked, 5b–5f on branches ecl-5b…5f); to go live, merge 5c–5f, rebuild www, push main.
+- Nov 2 (Joe: 1 + 4): **cel shading + real-speed run-up**.
+  - `rig.html` and `bowl.html` render cel-shaded by default (`?notoon` = old look): MeshToonMaterial, 2-band ramp (`?tb=108,255`), flat ambient 1.1 + side key 2.6 (`?kp=`; batter −450,220,400 / bowler 450,220,400 → lit from screen left like the painted art) + rim 0.7; normals welded and relaxed 14× (`?sn=`) so the bands are clean.
+  - Batter `m3_*` frames re-rendered (same crop/anchors, masks unchanged); bowler `b3_*` now 24 run + rel + 21 follow frames at real speed.
+  - Game: `bowlRunMs()` — 'ready' lasts 1000 ms when the 3D bowler is on (Gully painted people), else 420; run path, run frames (24 over 1 s) and follow (21 × 50 ms) follow it.
+- Nov 2 (Joe: "more detail, like the game scene"): **painted detail pass** for both 3D players.
+  - Shading: 3-tone ramp (`?tb=138,206,206,206,255` — shadow / mid / small highlight), cool ambient (shadows lean blue like the painted art), warm banded rim light on the lit top edge (`?rimk=.32`), and 30% of the model's own fold shading back in the bowler's cloth (`?fold=`).
+  - Ink lines: `?pass=normal` / `?pass=depth` renders (+ the colour guide); `tools/mocap/ink.py` edge-detects creases, overlaps (arm over chest, leg over leg) and part boundaries (hems, collar, straps), drops specks, and paints 1–1.5 px dark inner lines. `frames.py normal|depth|mask` and `bowlframes.py` render the passes; outer outline now 3 px.
+- Nov 2 (Joe: "their bodies look like a bag of cats, all lumps — make them look like the 3D character"): back to the smooth 3D look by default (cel is now opt-in `?toon`), stronger body smoothing in both rigs (Taubin 22 passes, `?smooth=`; the batter's rig now gets it too, plus the welded weight smoothing), relaxed normals (`?sn=10`) in every look, no painted fold detail (`?fold=0`), and the ink pass keeps only overlap + part-boundary lines (no crease lines, `ncrease=9`). Batter colour frames *and* masks re-encoded (silhouette changed slightly).
+- Nov 2 (Joe: "the bowler needs a lot of work"): bowler re-shot three-quarter from his bowling-arm side (`bowlframes.py` AZ 62; front-on hid the coil, arm arc and release), the ball in his hand is the Gully tape ball (yellow-green, red cross), outline back to 2 px like the batter, his own silhouette shadow cast down-left (`b3Shadow`) plus a small contact shadow, and the run-up stays wide of the umpire (the hand-to-release-point shift only blends in over the last 45% of the run).
+- Nov 2 (Joe: "his right shoulder is weird — sort the skinning and rigging"): bowler shoulders rebuilt in `bowl.html`.
+  - Shoulder pivot moved to the middle of the deltoid (between armpit and shoulder top: J Arm −.035,.185,±.135), so raising/swinging the arm turns about the right spot.
+  - New helper bones `LeftArmHalf` / `RightArmHalf` (child of the collarbone, rotation = halfway between collarbone and upper arm each frame): the shoulder cap, the top of the sleeve and the armpit ride on it, so the shoulder neither collapses overhead nor balloons when the arm goes back. The cap no longer hangs on the collarbone (that was the lump). Extra local weight smoothing round each shoulder (`?shp=` passes, `?shr=` radius). `?wdbg=<bone regex>` paints a bone's weights for checking.
+  - Polo collar weighted to chest + neck only (never the head); lower neck stays with it.
+  - `bodyClear()`: the cartoon's chest is deeper than Joe's, so an arm swinging across it in the follow-through is rotated out to ride on the shirt (`?brad=` cm) instead of sinking into it (that was the "hole" in his side).
+
+### Nov 2 — Gully 3D bowler: animation clean-up of the seam mocap (tools/mocap/bowl.html)
+No new take available, so the seam take is cleaned in the rig (all switchable off with `?raw`):
+- **Time filter**: every bone is a gaussian average over ±3 frames at 60 fps (bowling arm only ±1 frame so the arm stays straight and fast at release) — takes the capture shake out.
+- **Run-up carry** (`carry`): ball held at the chest instead of up by his ear, lifting into the gather from 2.5–2.82 s (`?c0`,`?c1`).
+- **Follow-through stoop** (`fixStoop`): trunk bend past 32° is eased back (60° → ~42°), spread over Spine/Spine1/Spine2, phased in after the release (3.24–3.38 s) so the release pose is untouched.
+- **Head** (`fixHead`): eyes lifted towards the batter after release instead of staring at his feet (also stops the neck creasing).
+- **Front arm** (`leadArm`): no longer flies up behind him in the follow-through; kept below shoulder height (`?lead`).
+- **Foot lock** (`prepLock`/`footLock`/`legIK`): the cartoon's shorter legs made every planted foot skate ~20 cm (front foot too, right through delivery). Contacts are found once at load, each foot is pinned at its average spot and the leg IK'd to it, blended in/out over 90 ms. `?nolock` turns it off.
+Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game code unchanged.
+
+- Camera changed (Joe: "too side on"): bowler frames now shot front-on and higher, AZ 88 / EL 40 (was AZ 62 / EL 22), looking down on him like the game camera.
+
+### Gully 3D bowler: straight run-up, cleaner bowling shoulder (Nov 2)
+- Run-up is one straight line: `b3HipX()` (W/2+14, just past the umpire's left shoulder) for the whole 'ready' run; the release point is that line + the hand offset from `b3_rel`. Follow-through drift unchanged.
+- Sprite camera AZ 80 (was 88): square to his run-in line in the mocap, so he runs straight at the camera.
+- `bowl.html`: `liftClav` moves part of the overhead bowling-arm angle into the collarbone (less pinching at the shoulder, `?clav=0` off); `wristLim` caps wrist bend at 40° (no wrung wrist at release, `?wrist=0` off); the right arm clears the chest by +6 in the follow-through (`?bradR=0` off).
+
+### Gully 3D bowler: front foot on the crease, no sliding (Nov 2)
+- He's placed by the world now, not on a drawn path: each `b3_*` sprite carries `fx,fy` (where his front-foot landing spot sits in that frame, baked by `bowlframes.py`/`bowlbake.py`). `b3Place()` pins that spot at `b3Foot()` (popping crease, W/2+6), so run-up, landing and follow-through travel exactly as far as his legs do. `b3HipX` is gone.
+- Run-in line is now on the stumps, so with the 3D bowler the umpire stands 22 px to the side (`umpX`) so the run-up clears him.
+
+### Gully 3D bowler: umpire back behind the stumps (Nov 2)
+- Front foot: toe on the painted popping crease (PITCH_TOP+12), inside the off-side return crease (W/2+7) — `b3Foot()`.
+- The world placement is turned 14° about that spot (`B3_ROT`, `b3Off`), so he runs in on a straight line from slightly wide, past the umpire's left shoulder. A rigid turn, so the feet still don't slide. Umpire straight behind the stumps (W/2); front foot at W/2+9 so the run clears him.
+
+### Gully 3D bowler: no crabbing, curled hands (Nov 2)
+- Sprites shot at AZ 90 so his body faces the way he travels on screen (~11° in from wide); `B3_ROT` is 0 now (the 14° turn made him look crabwise).
+- `curlHands()` in `bowl.html` bends the fingers into the bind mesh (no finger joints in the model): bowling hand 80° round the ball (ball moved into the fingers), front hand 105° loose fist. `?flat` = old open hands; `?curlR`/`?curlL` set the angles.
+
+### Result stars, run-chase urgency, winner pose (Nov 2)
+- Result stars are art now: `starArt(on)` draws a faceted gold star (or a navy socket) as SVG; the middle one is bigger and raised, and each slams in with a flash (`stSlam`, `stFlash`).
+- Pacing: after a scoring ball the next ball waits 1000 ms (was 650). Closing call-outs hold the next ball back until they've been read (`window._momentHold`, used by `nextOrEnd`): LAST BALL 1.9 s, X TO WIN 1.6 s, LAST OVER (12-ball chases) 1.6 s, and NEED X OFF Y on every one of the last 3 balls 1.4 s (red when the ask is more than 2 a ball). They pulse like a heartbeat (`.mmUrg`, `mmBeat`), and the run-in to a close ball gets two low thumps (`chaseHeartbeat`). Wicket card 1.7 s (was 1.25).
+- Winner on the result screen steps in from the side and then just breathes (`r2WinIn`, `r2Idle`) instead of bouncing.
+- Stat line plurals: 1 FOUR / 1 SIX / 1 BALL.
+- Every other ball now gets a small summary too: NEED X / OFF Y BALLS (`showMoment('summary')`, `.mmSum`), the number green / amber / red by the rate needed; holds the next ball 0.7 s.
+
+## Nov 2 — 3D players v2: Blender rig + Joe's KUMU shot library (branch mocap3d-blender)
+- Joe: the hand-built three.js rigs pinched and tore ("an issue with the skeleton and rigging… start afresh"). New pipeline in `tools/mocap3d/` (README there): Blender (bpy 5.2) skeleton traced from limb centre-lines, automatic heat weights on a WELDED copy of the Tripo mesh (it's split along UV seams: 3,397 doubled verts on base.glb) copied back by position, so seams never open.
+- Pads (Joe: "use the original knee but the separate pad"): pad shells are their own layer, 100% shin; the leg under them keeps its original skinning (ironed smooth, trouser coloured, pulled in). Back-of-leg straps above the knee stay on the thigh. Rejected on the way: cutting the pad free (left a ragged hole in the trousers), blending a trouser band into the shin ("attached his knee to the pad").
+- Retarget: world-delta from the capture per bone, head aimed upright (capture has no head-end), scale by leg bone length (0.890 for every batting file), leg IK to captured ankles, soles kept on the pitch using the real shoe vertices, batter's head turned onto the ball every frame (Joe: "looking at the ball"), clean willow bat rebuilt to the captured bat's measurements, ball contact found automatically.
+- Joe's KUMU shots (tools/mocap3d/src/shots): back-foot drive, cover drive, cut, forward defence, leg glance, on drive, pull, reverse sweep, scoop, straight drive (+ off drive and seam from tools/mocap/src). Viewer artifact "Flicky Mocap Shots" shows all twelve.
+- Game: sprites re-shot in Blender with the old cameras/classes/anchors (`sprites.py` → `m3bake.py` / `b3wrap.py`). Each shot type now plays its own capture: `M3_SHOT` maps gullyShotPose() → `m3_<code>_hit0–16` (hit1 = contact); off drive stays `m3_hit*`; stance + backlift shared (`m3_stance`, `m3_lift0–3`). Paddle sweep has no capture (painted). Bowler `b3_*` re-shot from the new seam bake, same 47 frames/anchors, recoloured white/maroon in the bake.
+- Off spin: hand-keyed attempt was robotic; Joe is sourcing an off-spin capture — drop it in as a new CLIP like seam.
