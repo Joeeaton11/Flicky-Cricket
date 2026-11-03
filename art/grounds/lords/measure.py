@@ -4,7 +4,7 @@ import numpy as np, cv2, sys
 def measure(o, step=3):
   H,W=o.shape[:2]; cx,cy,rx,ry=.5*W,.6*H,.46*W,.335*H
   hsv=cv2.cvtColor(cv2.GaussianBlur(o,(0,0),2),cv2.COLOR_BGR2HSV).astype(int)
-  g=((hsv[...,0]>=34)&(hsv[...,0]<=46)&(hsv[...,1]>150)&(hsv[...,2]>95)).astype(np.uint8)   # grass hue 41-44 (boards ~50+, darker)
+  g=((hsv[...,0]>=34)&(hsv[...,0]<=52)&(hsv[...,1]>150)&(hsv[...,2]>95)).astype(np.uint8)   # grass hue 41-44 (boards ~50+, darker)
   g=cv2.morphologyEx(g,cv2.MORPH_CLOSE,np.ones((7,7),np.uint8)); n,l=cv2.connectedComponents(g); grass=l==l[int(cy),int(cx)]
   out=[]
   for a in range(0,360,step):
