@@ -6,7 +6,9 @@ Renders colour + class mask from the game's high camera (EL 50, ortho) in the fi
 Writes fs/<key>_{w,m}.png and fs/meta.json (anchor = ground under the hips at the action's first frame, palm point)."""
 import bpy, os, math, json, numpy as np
 from mathutils import Vector
-W = os.path.dirname(os.path.abspath(__file__)); OUT = f'{W}/fs'; os.makedirs(OUT, exist_ok=True)
+W = os.path.dirname(os.path.abspath(__file__)); OUT = f"{W}/{os.environ.get('FSOUT', 'fs')}"; os.makedirs(OUT, exist_ok=True)
+CAP = os.environ.get('CAP'); import sys; sys.path.insert(0, W)
+from cap import add_cap
 EL = 50.0; RES = (260, 260); OS = 2.6          # ortho: 2.6 m across -> 100 px per metre
 DIRS = {0: 0.0, 1: -45.0, 2: -90.0, 3: 135.0, 4: 180.0}
 def frames(a, b, n): return [int(round(a + (b - a) * i / (n - 1))) for i in range(n)]
@@ -92,6 +94,7 @@ def png(sc):
 from bpy_extras.object_utils import world_to_camera_view
 for blend, act, frs, dirs, per_frame in JOBS:
     sc, rig, body, cam = setup(blend)
+    if CAP: add_cap(rig, body, CAP)
     if frs is None:   # dive: the frame where a hand is lowest
         lows = []
         for f in range(sc.frame_start, sc.frame_end + 1):
