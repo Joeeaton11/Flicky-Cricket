@@ -127,3 +127,5 @@ Nov 3 (Joe: 'now it looks nothing like Lord's'): close v3 — landmark-led promp
 ## Sri Lanka league (league 8): 8.a Galle, 8.b Colombo, 8.c Kandy, 8.d Dambulla. Close camera + NO-STRETCH recipe (layout/PROMPTS.md). Scene keys tsl_*. Branch sl-8a.
 ### 8.a Galle (Nov 3)
 Plate 445:196 (prompt: "1.4 times as tall", strip "one sixteenth" → painted ratio 1.557; 445:191/192/197 rejected 1.64–1.72). fit_uniform scale 1.570, sides +3 px, ends −5 px, measure p90 4.2. Board 445:193 (green) compose_galle.py — fort stone, rope, brass, porthole sockets, wicket slots = badge-frame crops (painted slots had stumps), lighthouse sprite. Props 445:194, words 445:195 via galle/cut.py. Pitch ct 93 cb 758 wb 315.
+### 8.b Colombo (Nov 3)
+Plate 446:197 (prompt "between one and a half and one and two-thirds", strip "one twelfth", top "a quarter" → ratio 1.565; 446:191/192/196 rejected 1.48–1.62). fit_uniform scale 1.633, sides +2 px, ends −3 px, p90 3.4. Near-end crowd a little bigger at the very bottom edge. Board 446:193 compose_colombo.py (pink lacquer, gold, purple, lotus crest). Props 446:194 (magenta), words 446:195 (GREEN key). Pitch ct 66 cb 807 wb 362.
