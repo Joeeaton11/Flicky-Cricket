@@ -189,3 +189,9 @@ Nodes: Galle 462:191, Colombo 462:194, Kandy 462:195, Dambulla 463:191, Mumbai 4
 
 ## Speed-up (Joe, Nov 3): one review sheet per league; tools/auto_cut.py replaces hand-measured cut.py
 `python3 tools/auto_cut.py <dir> <props.png> <words.png> stump,bail,ball,ring,x_flag,x_gull_up,x_gull_dn,x_<fan>` — finds pieces in reading order (pitch = tallest), creases, words (3-row layout) and digits automatically; prints pitch {ct,cb,wb}. Ask words prompts for "three rows with wide gaps". Every ground stays bespoke, same close camera + Sylhet-v2 crowd size.
+
+## PCL (league 14): Pakistan grounds, built as one batch with auto_cut + tools/setup_ground.sh. Scene keys tpk_*. Branch pcl-14a.
+- 14.a Gaddafi Stadium (plate 480:195, 1.578; board 480:197, props 480:198, words 480:199) pitch {55,779,279}. Extras: parakeets, green flag, dhol.
+- 14.b Karachi National (plate 480:192, 1.499; board 480:200, props 481:201, words 481:202) pitch {60,771,237}. Extras: black kites, yellow flag, truck-art horn.
+- 14.c Rawalpindi (plate 480:193, 1.635; board 481:203, props 481:204, words 481:205) pitch {47,761,285}. Extras: falcons, white-green flag, pakol.
+- 14.d Multan (plate 480:194, 1.486; board 481:206, props 481:207, words 481:208) pitch {71,770,308}. Extras: hoopoes, blue flag, Multani pot.
