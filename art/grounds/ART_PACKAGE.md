@@ -149,3 +149,5 @@ Bangalore v2 (Nov 3, Joe: 'it's bigger than that'): Figma 455:191 — tall steep
 Bangalore v3 (Nov 3, Joe: 'keep the camera close'): Figma 456:191 — prompt: 'stadium is HUGE so the tall stands run OFF the picture edges; only lower tiers of big chunky fans; no wide/city view'. Ratio 1.579, fit_uniform scale 1.577, err ≤1 px. RULE: big grounds = stands running off the edges, never pull the camera back.
 ### 9.e Delhi / Arun Jaitley (Kotla) (Nov 3)
 Big-stand close prompt pushes the field fat: '1.6x / one twelfth' gave 1.24–1.45, '1.75x / one tenth' 1.39–1.40, 'TWICE as tall / one eighth / top a fifth' gave 1.603 (456:200, used) and 1.78. fit_uniform scale 1.722, sides −3 px, ends +5 px. Board 456:195 compose_delhi.py (scalloped-arch crest repeated). Props 456:196, words 456:197. Pitch ct 89 cb 753 wb 337.
+### 9.f Jaipur / Sawai Mansingh (Nov 3)
+Plate 457:192 ('TWICE as tall / one eighth / top a fifth' → 1.582; 457:191 warped). fit_uniform scale 1.735, err ≤2 px. Board 457:193 compose_jaipur.py (band rims from the score panel — the top panel's badge frame leaked into the nine-slice). Props 457:194, words 457:195 (green key). Pitch ct 77 cb 717 wb 294.
