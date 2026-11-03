@@ -108,3 +108,6 @@ Joe (Nov 3): "the wizard scene is the close camera" — Sharjah's Camera 2 line 
 ### 7.d Oasis (td_oasis) — CLOSE camera like the Wizard plate
 Joe (Nov 3): Sharjah and Desert were both still too far — "camera and stadium much closer like the wizard scene". What makes the Wizard plate close: SHALLOW stands (4–5 rows), BIG chunky crowd the same size all round, showpiece rising immediately behind the far stand, almost no sky/landscape. Prompt says exactly that (see THEME_ART.td_oasis comment). 437:191 rejected (field edge to edge, giant near crowd); 437:192 used — adding "straight top-down-ish, no perspective growth towards the bottom" + "a full band of stands one eighth wide each side" fixed both. Field came out racetrack-ish; build_clean squash .88 + snap_ring (max 52) → measure max 5.5 p90 1.3. 226 empty top rows → sky_top.py.
 Board 437:193 (compose_oasis.py), props 437:194 + words 437:195 (cut.py). Pitch ct 69 cb 783 wb 368.
+
+### 7.b Sharjah + 7.c Desert redone with the CLOSE (wizard) camera (Nov 3, Joe: "Redo them")
+Same prompt recipe as Oasis. Sharjah 438:191 (squash .82, 186 top rows → sky_top.py, snap_ring max 68, measure p90 1.7); Desert 438:192 (squash .92, 110 top rows → sky_top.py, snap_ring max 43, measure max 2.9 p90 1.2). Previous plates kept as plate_v1.png. Boards, props and words unchanged.
