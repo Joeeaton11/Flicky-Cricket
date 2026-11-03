@@ -221,3 +221,9 @@ PROMPTS.md "fat egg" block as written gave 1.54), 486:193 (frost 1.525), 486:194
 Boards/props/words 486:195–206. Pitches: arctic {59,785,429}, glacier {73,681,393}, tundra {63,756,366} (CT=63 override), icepalace {50,703,447}.
 auto_cut creases now = the row that differs most from the pitch's own colour (red/blue/violet crease lines); CT=/CB= env overrides.
 LESSON: use the PROMPTS.md FIELD block word for word; tweaks swing the ratio badly.
+
+## 19. Cosmos Cup — tco_moon / tco_mars / tco_station / tco_asteroid / tco_alien
+Plates 488:191 (moon dust 1.562), 488:192 (Mars sand 1.481), 488:193 (mint floor 1.619), 488:194 (lilac dust 1.576), 488:195 (alien sand 1.496,
+redone so the far-end crowd is full size). Boards/props/words 488:196–210. Pitches: moon {63,798,438}, mars {79,775,455}, station {53,735,384},
+asteroid {51,751,403}, alien {56,770,410}. Asteroid bail (an upright crystal) rotated flat after cutting.
+FIELD wording: "fat egg" block as written swings 1.56–1.80; "WIDE…only…fat round egg" swings 1.39–1.51; "It is wide:" + fat-egg block ≈1.50–1.62.
