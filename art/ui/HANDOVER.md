@@ -847,4 +847,4 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Joe's KUMU shots (tools/mocap3d/src/shots): back-foot drive, cover drive, cut, forward defence, leg glance, on drive, pull, reverse sweep, scoop, straight drive (+ off drive and seam from tools/mocap/src). Viewer artifact "Flicky Mocap Shots" shows all twelve.
 - Game: sprites re-shot in Blender with the old cameras/classes/anchors (`sprites.py` → `m3bake.py` / `b3wrap.py`). Each shot type now plays its own capture: `M3_SHOT` maps gullyShotPose() → `m3_<code>_hit0–16` (hit1 = contact); off drive stays `m3_hit*`; stance + backlift shared (`m3_stance`, `m3_lift0–3`). Paddle sweep has no capture (painted). Bowler `b3_*` re-shot from the new seam bake, same 47 frames/anchors, recoloured white/maroon in the bake.
 - Off spin: hand-keyed attempt was robotic; Joe is sourcing an off-spin capture — drop it in as a new CLIP like seam.
-- ACL started: 6.a MCG built (ta_mcg) on branch acl-6a. Next: 6.b SCG.
+- ACL: 6.a MCG (ta_mcg) and 6.b SCG (ta_scg) built on branch acl-6a. Next: 6.c Gabba.
