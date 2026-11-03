@@ -104,3 +104,7 @@ Plate Figma 434:191 (first try): blue-hour, sand bowl lit by the ring-of-fire ro
 
 ### 7.c Desert (td_desert) — wizard-scene camera (Camera 3 + one curved bowl)
 Joe (Nov 3): "the wizard scene is the close camera" — Sharjah's Camera 2 line came out further away; Desert goes back to the Trent Bridge / Lord's v8 / ACL recipe. Plate 436:191 (fit ratio 1.47 → build_clean stretch 1.13, pad 74 px, snap_ring max 45, measure max 2.1 p90 0.4). Board 436:192 via compose_desert.py; props 436:193 + words 436:194 via art/grounds/desert/cut.py. Pitch ct 102 cb 696 wb 383.
+
+### 7.d Oasis (td_oasis) — CLOSE camera like the Wizard plate
+Joe (Nov 3): Sharjah and Desert were both still too far — "camera and stadium much closer like the wizard scene". What makes the Wizard plate close: SHALLOW stands (4–5 rows), BIG chunky crowd the same size all round, showpiece rising immediately behind the far stand, almost no sky/landscape. Prompt says exactly that (see THEME_ART.td_oasis comment). 437:191 rejected (field edge to edge, giant near crowd); 437:192 used — adding "straight top-down-ish, no perspective growth towards the bottom" + "a full band of stands one eighth wide each side" fixed both. Field came out racetrack-ish; build_clean squash .88 + snap_ring (max 52) → measure max 5.5 p90 1.3. 226 empty top rows → sky_top.py.
+Board 437:193 (compose_oasis.py), props 437:194 + words 437:195 (cut.py). Pitch ct 69 cb 783 wb 368.

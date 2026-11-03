@@ -852,3 +852,4 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 
 - 7.b Sharjah wired as td_sharjah (replaces uae_sharjah in Desert League scenes). Camera 2 from here on for this league. Extras: doves, green flag, dallah fan.
 - 7.c Desert wired as td_desert (replaces 'desert' in Desert League scenes). Use the wizard-scene camera (Camera 3 line + one curved bowl) for the rest of the league — that is what Joe calls the close camera. Sharjah (Camera 2 line) to be redone.
+- 7.d Oasis wired as td_oasis with the CLOSE (wizard) camera recipe. Use this recipe for every new ground; Sharjah and Desert to be redone with it.
