@@ -267,3 +267,9 @@ sky 204–205 + words 213 (first words too close to the hall's swash serif), dra
 Pitches: hall {49,768,342}, forest {84,793,321}, sky {59,752,311}, dragon {62,810,331}, lake {72,827,337}.
 Lettering: hall gold spellbook swash serif, forest carved mossy wood, sky art-deco two-tone, dragon crimson-scale chiselled block, lake mother-of-pearl wave.
 auto_cut env: WDY=25 joins a detached "!" dot (forest), PDIL=14 joins a split-off tentacle (lake).
+
+## 26. Deep — tdp_reef / tdp_lagoon / tdp_wreck / tdp_atlantis
+Plates 500:213 reef (coral-pink sand 1.577, fourth try), 500:192 lagoon (golden sand 1.638), 500:196 wreck (sea-green deck 1.483), 500:194 atlantis (ivory marble 1.529).
+Boards/props/words: reef 500:200–202 (board + props redone: clownfish too close to a film character), lagoon 203–205, wreck 206–208, atlantis 209–211.
+Pitches: reef {101,784,327}, lagoon {64,775,328}, wreck {68,805,308}, atlantis {80,749,332}.
+Lettering: reef orange-and-white striped block, lagoon lashed bamboo canes, wreck glowing sea-glass, atlantis carved marble inscription with gold-leaf grooves.
