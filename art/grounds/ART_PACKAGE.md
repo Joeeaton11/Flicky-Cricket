@@ -238,3 +238,8 @@ Space Station (19.c) top: the blurred colour fill replaced with mirrored wall at
 Plates 493:191 (navy floor 1.591, third try), 493:192 (dark roof 1.618, second try), 493:193 (pale arena 1.577), 493:194 (teal concrete 1.604, redone: first version touched the picture edges so the side fill doubled the neon ring).
 Boards/props/words 493:195–206 (city + rooftop on green key; boards re-keyed to magenta before compose). Pitches: city {54,743,415},
 rooftop {46,790,406}, esports {60,795,384}, subway {83,715,360}. Uncovered plate tops now filled by mirroring the painted rows (no blur fill).
+
+## 22. Jungle — tju_temple / tju_canopy / tju_river / tju_dino
+Plates 495:191 (red earth 1.619, fourth try), 495:192 (honey wood 1.594), 495:193 (river sand 1.595), 495:194 (ochre earth 1.577).
+Boards/props/words 495:195–206. Pitches: temple {66,753,379}, canopy {84,759,339}, river {44,788,387}, dino {29,751,358}.
+Canopy bail made from the stump's top section (sheet drew a Y-fork). setup_ground.sh now mirror-fills uncovered tops (no blur).

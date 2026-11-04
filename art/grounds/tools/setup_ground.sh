@@ -4,7 +4,7 @@ cd /home/claude/flicky-cricket/art/grounds; g=$1; key=$2
 mkdir -p $g/raw ../../assets/themes/$g; cp hagley/{fit_grass.py,measure.py,sky_top.py,sky_match.py} $g/
 cp $T/$6.png $g/raw/hud.png; cp $T/$7.png $g/raw/props.png; cp $T/$8.png $g/raw/words.png; cp $T/$3.png $g/raw/plate_$4.png
 cd $g; python3 ../tools/fit_field.py raw/plate_$4.png|tail -1; python3 ../tools/fit_uniform.py raw/plate_$4.png > fit.log; tail -1 fit.log; python3 ../tools/measure_field.py plate.png | tail -1
-U=$(grep -o 'uncovered top [0-9]*' fit.log | awk '{print $3}'); [ "${U:-0}" -gt 0 ] && python3 sky_$5.py $U >/dev/null
+U=$(grep -o 'uncovered top [0-9]*' fit.log | awk '{print $3}'); [ "${U:-0}" -gt 0 ] && python3 -c "import cv2; p=cv2.imread('plate.png'); T=$U; p[:T]=p[T:2*T][::-1]; cv2.imwrite('plate.png',p)"   # mirror the painted rows (Joe: blur fill looked wrong)
 python3 -c "
 from PIL import Image
 im=Image.open('plate.png').convert('RGB'); im.save('../../../assets/themes/$key.webp',quality=86)
