@@ -233,3 +233,8 @@ Plates 491:191 (ash 1.49), 491:192 (cooled rock 1.513), 491:193 (black sand 1.51
 Boards/props/words: volcano 491:195–197, lava lake 492:198–200, tiki 492:201–203, forge 492:205–207. Pitches: volcano {41,732,387},
 lavalake {44,738,417}, tiki {75,727,417}, forge {49,765,314}.
 Space Station (19.c) top: the blurred colour fill replaced with mirrored wall at the sides + clean stars across the window (Joe: "blurred at the top").
+
+## 21. Neon — tne_city / tne_rooftop / tne_esports / tne_subway
+Plates 493:191 (navy floor 1.591, third try), 493:192 (dark roof 1.618, second try), 493:193 (pale arena 1.577), 493:194 (teal concrete 1.566).
+Boards/props/words 493:195–206 (city + rooftop on green key; boards re-keyed to magenta before compose). Pitches: city {54,743,415},
+rooftop {46,790,406}, esports {60,795,384}, subway {83,715,360}. Uncovered plate tops now filled by mirroring the painted rows (no blur fill).
