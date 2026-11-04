@@ -156,3 +156,8 @@ Add to the prompt: "FIELD SURFACE: <surface>, very even and calm, low contrast s
 Avoid tiled/flagstone patterns (they break the edge finder and look busy) — use one continuous material.
 Tools: tools/fit_field.py (edge by ray-walk colour jump, any surface) replaces fit_grass.py; tools/measure_field.py replaces measure.py; tools/redo.sh and setup_ground.sh use them.
 The props-sheet pitch has grass edging; strip it on non-grass grounds (green -> transparent in pitch.webp, inpaint pitch_rect.webp).
+
+## LETTERING (Joe, Nov 4: "we've gone a bit lazy in the fonts")
+Every ground gets its OWN letter shapes, not one rounded font in different colours. Keep the Newlands rule (chunky, clean, readable at a glance,
+nothing spiky/scratchy) but vary the letterform per league/ground (e.g. wanted-poster slab, riveted brass, carved stone, neon tube, icy facets).
+Halloween→Knight's (35 grounds) words sheets to be redone after the remaining leagues are built.
