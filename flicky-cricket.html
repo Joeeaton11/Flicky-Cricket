@@ -32829,7 +32829,16 @@ function findNearestFielder(shotAngle) {
 // Nov 3 (Joe): fielding. The fielder who can get to where the ball stops SOONEST goes (by distance and his speed,
 // never the keeper), runs to it so his hand meets the ball, waits if he's there first, picks it up (ball in his hand),
 // then throws it in to the keeper's gloves. The next ball waits until it's back with the keeper.
-const FIELD_FRAME_MS = 70, FIELD_TAKES = { pick: [3, 8], pick1: [3, 11], lb: [3, 11] };   // [grab frame, release frame]
+const FIELD_FRAME_MS = 70, FIELD_TAKES = { pick: [3, 8], pick1: [3, 11], lb: [3, 11], ret: [3, 12] };
+// Nov 4 (Joe): retrieve — ball going away from him: chases it, one-handed scoop on the run, turns, then throws (frames: 0-6 scoop, 7-9 turn, 10-17 throw)
+const RET_END = 18;
+function retFrame(G, i, x, y) {   // [sprite key, mirror] for frame i of the retrieve
+  if (i <= 6) { const [d, fl] = f3Face(G.rdx, G.rdy); return ['f3_pick1_d' + d + '_' + i, fl]; }
+  const bx = W / 2 - x, by = PITCH_BOTTOM() - y;
+  if (i <= 9) { const a0 = Math.atan2(G.rdy, G.rdx), a1 = Math.atan2(by, bx); let da = a1 - a0; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+    const a = a0 + da * (i - 6) / 4, [d, fl] = f3Face(Math.cos(a), Math.sin(a)); return ['f3_pick_d' + d + '_5', fl]; }
+  const [d, fl] = f3Face(bx, by); return ['f3_pick_d' + d + '_' + Math.min(13, i - 4), fl];
+}   // [grab frame, release frame]
 function ballSpot(angle, frac) {   // where the hit ball comes to rest (same sums as drawBall)
   const rad = angle * Math.PI / 180, r = shotReach(rad);
   return { x: W / 2 + Math.sin(rad) * W * FIELD_RX * frac * r, y: PITCH_BOTTOM() - Math.cos(rad) * H * FIELD_RY * frac * r };
@@ -32851,9 +32860,11 @@ function startFielding(angle, frac, nearFielder, opt) {
   let pick = (frac > 0.7 && diff < 15) ? 'lb' : diff > 28 ? 'pick1' : 'pick';   // long barrier straight at him, one hand wide of him
   if (opt.four || opt.save) pick = 'pick';   // gets up off the dive / off the rope with both hands
   if (!GP_SRC['f3_' + pick + '_d0_0']) pick = 'pick';
+  const rdx = s.x - f.x, rdy = s.y - f.y, rL = Math.hypot(rdx, rdy), bdx = s.x - W / 2, bdy = s.y - PITCH_BOTTOM(), bL = Math.hypot(bdx, bdy) || 1;
+  if (!opt.four && !opt.save && f.name !== 'keeper' && GP_SRC['f3_pick1_d0_0'] && rL > 40 * (W / 390) && (rdx * bdx + rdy * bdy) / (rL * bL) > 0.15) pick = 'ret';   // running after it
   // stand where his hand meets the ball on the pick-up frame
   let tx = s.x, ty = s.y;
-  if (gullyPaintedPeople() && f3On()) { _f3Cur = f; const [fd, ff] = f3Face(W / 2 - s.x, PITCH_BOTTOM() - s.y), h = f3Hand('f3_' + pick + '_d' + fd + '_' + FIELD_TAKES[pick][0], 0, 0, ff); tx -= h.x; ty -= h.y; }
+  if (gullyPaintedPeople() && f3On()) { _f3Cur = f; const [fd, ff] = f3Face(W / 2 - s.x, PITCH_BOTTOM() - s.y), h = pick === 'ret' ? f3Hand(retFrame({ rdx, rdy }, 3, s.x, s.y)[0], 0, 0, f3Face(rdx, rdy)[1]) : f3Hand('f3_' + pick + '_d' + fd + '_' + FIELD_TAKES[pick][0], 0, 0, ff); tx -= h.x; ty -= h.y; }
   const pickPos = { x: tx, y: ty };
   // Nov 3 (Joe): diving stop on a saved run — he waits a stride wide of the line and dives across as it arrives
   if (opt.save) { const ux = s.x - W / 2, uy = s.y - PITCH_BOTTOM(), L = Math.hypot(ux, uy) || 1, side = (f.x - s.x) * (-uy / L) + (f.y - s.y) * (ux / L) >= 0 ? 1 : -1;
@@ -32862,7 +32873,7 @@ function startFielding(angle, frac, nearFielder, opt) {
   // where the throw goes: the bowler's end when the ball's up that end (and always from the keeper), else the keeper
   const toBowler = f.name === 'keeper' || s.y < PITCH_TOP() + 14 * (W / 390);   // straight / long-off / long-on: bowler's end
   window._gField = { f, pick, pickPos, sx: s.x, sy: s.y, rest: false, pickAt: 0, inHand: false, thrown: false, stage: 'run', t0: performance.now(),
-    four: !!opt.four, save: !!opt.save, toBowler, backup: null, holdUntil: 0 };
+    four: !!opt.four, save: !!opt.save, toBowler, backup: null, holdUntil: 0, rdx, rdy };
   // a four beats him: if he'd get there before the ball, he reacts a beat late so it's past him as he dives at the rope
   if (opt.four) { const tf = Math.hypot(f.x - tx, f.y - ty) / ((f.speed || 0.02) * 60 * 1.8) * 16.7, ballT = 820;
     if (tf < ballT + 60) window._gField.holdUntil = performance.now() + (ballT + 60 - tf); }
@@ -32909,7 +32920,7 @@ function fieldTick(now) {
     window._gThrow = { x: h.x, y: h.y, tx: k.x, ty: k.y, at: now, dur, arc: Math.min(34, 6 + d * 0.12) };
   }
   if (G.thrown && G.backup) { G.backup.chasing = false; G.backup = null; }   // ball's on its way in: back-up man heads back
-  if (i >= 14) f.chasing = false;   // throw done: back to his spot
+  if (i >= (G.pick === 'ret' ? RET_END : 14)) f.chasing = false;   // throw done: back to his spot
 }
 // Nov 3 (Joe): the keeper moves to take the throw — a couple of steps across towards it, turned to face the thrower,
 // gloves up on the catch take as it arrives, holds it, then back behind the stumps. Returns where his gloves meet the ball.
@@ -34911,9 +34922,9 @@ function drawF3Fielder(x, y, chasing, diving, stridePhase, f) {
   if (f && f.reached && f.chasing) {
     const G = window._gField;
     if (G && G.f === f && G.pickAt) {                    // Nov 3 (Joe): picks the ball up, it's in his hand, then he throws it in
-      const i = Math.min(13, Math.floor((now - G.pickAt) / FIELD_FRAME_MS)), key = 'f3_' + G.pick + '_d' + fd + '_' + i;
-      gpShadow(x, y, 9); f3Draw(key, x, y, ff, id);
-      G.hand = f3Hand(key, x, y, ff); if (G.inHand) drawLooseBall(G.hand.x, G.hand.y, 2.6);
+      const i = Math.floor((now - G.pickAt) / FIELD_FRAME_MS), [key, kf] = G.pick === 'ret' ? retFrame(G, Math.min(RET_END - 1, i), x, y) : ['f3_' + G.pick + '_d' + fd + '_' + Math.min(13, i), ff];
+      gpShadow(x, y, 9); f3Draw(key, x, y, kf, id);
+      G.hand = f3Hand(key, x, y, kf); if (G.inHand) drawLooseBall(G.hand.x, G.hand.y, 2.6);
       return;
     }
     gpShadow(x, y, 9); f3Draw('f3_ready_d' + fd + '_0', x, y, ff, id); return;   // there first: waits for the ball
