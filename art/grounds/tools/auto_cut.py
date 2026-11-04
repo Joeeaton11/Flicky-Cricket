@@ -52,7 +52,7 @@ def reading_order(ps):
   return [p for r in rows for p in sorted(r[2], key=lambda q: q[0])]
 
 # ---------- props ----------
-P = keyed(props); ps, lab = pieces(P)
+P = keyed(props); ps, lab = pieces(P, dil=int(os.environ.get('PDIL', 6)))   # PDIL: bigger joins split pieces (e.g. a stray tentacle)
 pitch = max(ps, key=lambda p: p[3] - p[1]); rest = reading_order([p for p in ps if p is not pitch])
 if names == '?':
   for i, p in enumerate(rest): print(i, p[:4])
@@ -97,7 +97,7 @@ for y in range(W.shape[0]):
 if inb: bands.append((s0, W.shape[0]))
 bands = [b for b in bands if b[1] - b[0] > 30]; dy0, dy1 = bands[-1]
 wm = W.copy(); wm[dy0:] = 0
-lab2, n2 = ndimage.label(cv2.dilate((wm[..., 3] > 128).astype(np.uint8), np.ones((3, 21), np.uint8)))
+lab2, n2 = ndimage.label(cv2.dilate((wm[..., 3] > 128).astype(np.uint8), np.ones((int(os.environ.get('WDY', 3)), 21), np.uint8)))   # WDY: taller joins a detached '!' dot
 wps = []
 for i, sl in enumerate(ndimage.find_objects(lab2)):
   if sl is None: continue

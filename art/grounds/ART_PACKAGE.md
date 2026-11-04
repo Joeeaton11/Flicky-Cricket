@@ -259,3 +259,11 @@ Pitches: city {89,723,295}, airship {85,773,316}, factory {79,844,360}, docks {6
 Lettering: city riveted brass slab-serif, airship Victorian poster Clarendon (cream/red/blue), factory molten stencil, docks copper-pipe monoline.
 Shape wording swung both ways this time: "only one and a half" gave 1.34–1.47; "one and two thirds" + one-eighth strip gave 1.65–1.87.
 "about one and three fifths … one seventh strip" hit 1.555 on the airship. Socket crops need the measured radius (HoughCircles) + rim, not a fixed 55.
+
+## 25. Wizard's — twz_hall / twz_forest / twz_floating / twz_dragon / twz_underwater
+Plates 499:191 hall (ice-blue marble 1.617), 499:196 forest (lavender fairy-moss 1.586), 499:193 sky island (cream cloud-stone 1.650),
+499:194 dragon (golden sand 1.549), 499:197 lake palace (pale sand 1.617). Boards/props/words: hall 499:198–200, forest 201–203,
+sky 204–205 + words 213 (first words too close to the hall's swash serif), dragon 207–209, lake 210–212.
+Pitches: hall {49,768,342}, forest {84,793,321}, sky {59,752,311}, dragon {62,810,331}, lake {72,827,337}.
+Lettering: hall gold spellbook swash serif, forest carved mossy wood, sky art-deco two-tone, dragon crimson-scale chiselled block, lake mother-of-pearl wave.
+auto_cut env: WDY=25 joins a detached "!" dot (forest), PDIL=14 joins a split-off tentacle (lake).
