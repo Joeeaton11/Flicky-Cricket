@@ -243,3 +243,11 @@ rooftop {46,790,406}, esports {60,795,384}, subway {83,715,360}. Uncovered plate
 Plates 495:191 (red earth 1.619, fourth try), 495:192 (honey wood 1.594), 495:193 (river sand 1.595), 495:194 (ochre earth 1.577).
 Boards/props/words 495:195–206. Pitches: temple {66,753,379}, canopy {84,759,339}, river {44,788,387}, dino {29,751,358}.
 Canopy bail made from the stump's top section (sheet drew a Y-fork). setup_ground.sh now mirror-fills uncovered tops (no blur).
+
+## 23. Knight's — tkn_castle / tkn_joust / tkn_siege / tkn_hall / tkn_moat
+Plates 496:191 castle (1.628), 496:192 jousting (1.553), 496:202 siege (1.565), 496:203 hall (1.655), 496:195 moat (1.601).
+Boards/props/words: castle 496:196–198, jousting 496:199–201, siege 496:204–206, hall 496:207–209 (props redone: pitch had stumps painted on), moat 497:191–193.
+Pitches: castle {64,737,403}, joust {51,805,382}, siege {65,776,383}, hall {53,785,380}, moat {47,781,395}.
+LESSONS: striped barriers and dark-field/dark-ring combos fool the edge finder (siege dark earth read as full width). Wording that hit first time twice:
+"leaves a strip of stands about one tenth of the picture's width … packed with fans, so the field never touches the picture's edges. It is only one and a half
+times as tall as it is wide — a fat round egg, not a long thin oval." Generate retries as NEW frames (no nodeId) so a good earlier one isn't overwritten.
