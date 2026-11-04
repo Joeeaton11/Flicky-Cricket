@@ -251,3 +251,11 @@ Pitches: castle {64,737,403}, joust {51,805,382}, siege {65,776,383}, hall {53,7
 LESSONS: striped barriers and dark-field/dark-ring combos fool the edge finder (siege dark earth read as full width). Wording that hit first time twice:
 "leaves a strip of stands about one tenth of the picture's width … packed with fans, so the field never touches the picture's edges. It is only one and a half
 times as tall as it is wide — a fat round egg, not a long thin oval." Generate retries as NEW frames (no nodeId) so a good earlier one isn't overwritten.
+
+## 24. Brass — tbr_city / tbr_airship / tbr_factory / tbr_docks (first league with bespoke lettering)
+Plates 498:191 city (sage floor 1.507), 498:194 airship (honey deck 1.554), 498:192 factory (terracotta 1.625), 498:193 docks (grey stone 1.633).
+Boards/props/words: city 498:195–197, airship 498:198–200, factory 498:201–203, docks 498:204–206.
+Pitches: city {89,723,295}, airship {85,773,316}, factory {79,844,360}, docks {67,769,349}.
+Lettering: city riveted brass slab-serif, airship Victorian poster Clarendon (cream/red/blue), factory molten stencil, docks copper-pipe monoline.
+Shape wording swung both ways this time: "only one and a half" gave 1.34–1.47; "one and two thirds" + one-eighth strip gave 1.65–1.87.
+"about one and three fifths … one seventh strip" hit 1.555 on the airship. Socket crops need the measured radius (HoughCircles) + rim, not a fixed 55.
