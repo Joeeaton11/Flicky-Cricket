@@ -317,3 +317,9 @@ lords2 (gold-leaf honours-board serif, Old Father Time, pigeons), oval2 (riveted
 headingley2 (Yorkshire sandstone blocks, white rose, crows), edgbaston2 (sky-blue sporty italic, cartoon bear, blue tits),
 oldtrafford2 (scarlet enamel with chrome, worker bee, bees), trentbridge2 (Lincoln-green with gold bevel, archer hat, swans).
 Keys tl_lords, to_oval, th_* rewired in place. Review: ecl_sheet.jpg.
+33 v2 (Joe, Nov 5: "build fresh scenes... ground consistent... media centre at the bottom"): all six ECL plates rebuilt
+from scratch with each ground's real ends — pavilion end at the top, the opposite end's landmark along the bottom edge
+(Lord's Media Centre, Oval Vauxhall stand, Headingley Emerald Stand, Edgbaston Hollies, Old Trafford hotel, Trent Bridge
+Radcliffe Road), named side stands. Plate inputs: layout/leagues/ecl_plates_v2.json (adds a NEAR END line). Figma 513:191–196.
+New tools/sky_fade.py fills the uncovered top with a soft sky instead of mirroring (mirroring flipped tall landmarks).
+v1 plates kept in <ground>/raw/v1/.
