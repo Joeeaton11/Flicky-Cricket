@@ -310,3 +310,10 @@ funfair2 (toffee-apple letters, carousel canopy, heart balloons), circus2 (circu
 themepark2 (riveted ride-car bubble letters, coaster loop, coaster cars), fright2 (bone-white ghost-train letters, peeking ghost, ghosts).
 Keys tf_* rewired in place. Review: funfair_sheet.jpg. All four boards compose on their green key (purple/pink art survives).
 Plate FIELD wording now defaults to "one sixth strip, a little more than one and a half times as tall" (hit 1.50–1.63 first time on 3 of 4).
+
+## 33. ECL rebuilt to the signed-off layout
+
+lords2 (gold-leaf honours-board serif, Old Father Time, pigeons), oval2 (riveted iron-lattice letters, gasholder, swifts),
+headingley2 (Yorkshire sandstone blocks, white rose, crows), edgbaston2 (sky-blue sporty italic, cartoon bear, blue tits),
+oldtrafford2 (scarlet enamel with chrome, worker bee, bees), trentbridge2 (Lincoln-green with gold bevel, archer hat, swans).
+Keys tl_lords, to_oval, th_* rewired in place. Review: ecl_sheet.jpg.
