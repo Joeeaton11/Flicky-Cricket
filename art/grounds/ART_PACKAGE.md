@@ -273,3 +273,10 @@ Plates 500:213 reef (coral-pink sand 1.577, fourth try), 500:192 lagoon (golden 
 Boards/props/words: reef 500:200–202 (board + props redone: clownfish too close to a film character), lagoon 203–205, wreck 206–208, atlantis 209–211.
 Pitches: reef {101,784,327}, lagoon {64,775,328}, wreck {68,805,308}, atlantis {80,749,332}.
 Lettering: reef orange-and-white striped block, lagoon lashed bamboo canes, wreck glowing sea-glass, atlantis carved marble inscription with gold-leaf grooves.
+
+## 27. Eternal — tet_rome / tet_egypt / tet_greece / tet_aztec / tet_viking
+Plates 501:196 rome (raked sand 1.615), 501:192 egypt (gold sandstone 1.499), 501:193 greece (olive clay 1.617), 501:194 aztec (terracotta 1.488), 501:195 viking (packed snow 1.526).
+Boards/props/words: rome 501:198–200, egypt 201–203, greece 204–206, aztec 207–209, viking 210–212.
+Pitches: rome {78,898,370}, egypt {82,762,339}, greece {62,746,331}, aztec {71,777,331}, viking {78,763,318}.
+Lettering: rome bronze-gold Roman serif, egypt gold/turquoise collar stripes, greece blue varsity-block with marble side, aztec turquoise step-stone mosaic, viking riveted iron axe-cut.
+Compose note: the `mat` box is (row0,row1,col0,col1) — passing x/y order gives vertical streaks in the chase panel. Laurel/scarab/olive sprites overlapped the frame, so left off; viking shield pasted with a circle mask.
