@@ -303,3 +303,10 @@ storm2 (yellow oilskin letters with hazard stripes, anemometer, storm clouds). K
 Prompt builders now live in the repo: tools/plate_prompts.py <themes.json> <outdir>, tools/sheet_prompts.py <sheets.json> <outdir>;
 per-league inputs in layout/leagues/. auto_cut.py: PMERGE=<px> folds small bits (raindrops) into the nearest piece.
 beachnight2's board composes on its green key (compose_beachnight2.py) so the neon-pink rims survive.
+
+## 32. Funfair rebuilt to the signed-off layout
+
+funfair2 (toffee-apple letters, carousel canopy, heart balloons), circus2 (circus-poster wood type, ringmaster hat, trapeze acrobats),
+themepark2 (riveted ride-car bubble letters, coaster loop, coaster cars), fright2 (bone-white ghost-train letters, peeking ghost, ghosts).
+Keys tf_* rewired in place. Review: funfair_sheet.jpg. All four boards compose on their green key (purple/pink art survives).
+Plate FIELD wording now defaults to "one sixth strip, a little more than one and a half times as tall" (hit 1.50–1.63 first time on 3 of 4).
