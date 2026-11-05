@@ -326,3 +326,9 @@ v1 plates kept in <ground>/raw/v1/.
 33 v8 (Joe, Nov 5 late: Lord's v7 "will do", redo all ECL to match): whole-ground template — egg field, pavilion
 behind the top tip, named side stands, opposite-end landmark fully visible in the bottom band, stadium-scale crowd.
 Plates: lords 519:191, oval 520:191, headingley 520:192, edgbaston 520:193, oldtrafford 520:194, trentbridge 520:195.
+
+## 34. ACL on the whole-ground template (Lord's v7)
+mcg2 522:191 (Members Reserve / Great Southern / Ponsford), scg2 522:192 (copper-roof Members Pavilion, the Hill, Pink Test),
+gabba2 522:193 (maroon bowl, Story Bridge), optus2 522:194 (glowing roof canopy, Swan River), adelaide2 522:195 (heritage scoreboard,
+St Peter's). Boards 522:196–200, props 201–205, words 206–210. Lettering: green-gold block, cream heritage serif, maroon gold-edge,
+black with gold glow, white scoreboard tiles. Prompt builder: tools/ground_prompts.py + layout/leagues/acl_grounds.json.
