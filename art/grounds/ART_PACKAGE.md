@@ -287,3 +287,10 @@ Plates 504:203 gully (1.592), 504:198 maidan (1.515), 504:199 rooftop (1.516), 5
 Boards/props/words 505:211–228. Pitches: gully {66,821,322}, maidan {75,790,337}, rooftop {66,799,361}, school {76,743,338}, village {103,769,315}, railway {77,754,318}.
 Lettering: truck-art split pink/yellow, gold honours-board serif, paper-kite panels, chalk, rangoli clay-pot, station-sign enamel.
 Green-key boards re-keyed to magenta (raw/hud_m.png) before compose. Rewire helper: /tmp rewire.py replaces THEME_ART + THEMED_EXTRAS blocks in place.
+
+## 30. Floodlit rebuilt to the signed-off layout
+
+Seven grounds redone with close camera, themed field, bespoke lettering and new boards (compose_<dir>.py in art/ui/hud_lock):
+evening2 (pinstripe varsity, St George flag), twilight2 (seaside rock, life ring), afterglow2 (mirror-work, chhatri),
+fognight2 (marquee bulbs, gas lamp + iron crest), dusk2 (sequins, steel pan), bigground2 (gold chrome italic, trophy),
+coliseum2 (mosaic, brazier). Keys te_* rewired in place. Review sheet: floodlit_sheet.jpg.
