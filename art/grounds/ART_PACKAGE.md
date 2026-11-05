@@ -332,3 +332,11 @@ mcg2 522:191 (Members Reserve / Great Southern / Ponsford), scg2 522:192 (copper
 gabba2 522:193 (maroon bowl, Story Bridge), optus2 522:194 (glowing roof canopy, Swan River), adelaide2 522:195 (heritage scoreboard,
 St Peter's). Boards 522:196–200, props 201–205, words 206–210. Lettering: green-gold block, cream heritage serif, maroon gold-edge,
 black with gold glow, white scoreboard tiles. Prompt builder: tools/ground_prompts.py + layout/leagues/acl_grounds.json.
+
+## 35. ICL on the whole-ground template (Lord's v7) — old ICL kept for revert
+Joe (Nov 5): "I quite like these so might revert back. Don't name the stands. Make them look like the stadiums."
+Prompts describe each stadium's look only (no stand names): layout/leagues/icl_grounds.json + icl_sheets.json.
+New dirs mumbai2 … lucknow2 (plates 523:191–200, boards 523:201–210, props 211–220, words 221–229 + 524:191).
+Old art untouched in mumbai/ … lucknow/; old plates saved as assets/themes/ti_<city>_v1.webp.
+Revert = point THEME_ART.ti_<city>.dir and RESULT_ART back at the old dir and copy ti_<city>_v1.webp over ti_<city>.webp.
+Review: icl_sheet.jpg (old: icl_current.jpg).
