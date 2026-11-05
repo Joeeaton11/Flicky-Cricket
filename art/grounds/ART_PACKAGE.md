@@ -280,3 +280,10 @@ Boards/props/words: rome 501:198–200, egypt 201–203, greece 204–206, aztec
 Pitches: rome {78,898,370}, egypt {82,762,339}, greece {62,746,331}, aztec {71,777,331}, viking {78,763,318}.
 Lettering: rome bronze-gold Roman serif, egypt gold/turquoise collar stripes, greece blue varsity-block with marble side, aztec turquoise step-stone mosaic, viking riveted iron axe-cut.
 Compose note: the `mat` box is (row0,row1,col0,col1) — passing x/y order gives vertical streaks in the chase panel. Laurel/scarab/olive sprites overlapped the frame, so left off; viking shield pasted with a circle mask.
+
+## 29. Gully Cup redo to the current layout (close camera, 1/20 heads, one even scale, themed fields, bespoke lettering)
+New dirs gully2 / maidan3 / rooftop3 / school2 / village2 / railway2 (old dirs kept). Keys unchanged (tg_gully … ty_railway).
+Plates 504:203 gully (1.592), 504:198 maidan (1.515), 504:199 rooftop (1.516), 505:204 school (1.497), 505:209 village (1.635), 505:210 railway (1.540).
+Boards/props/words 505:211–228. Pitches: gully {66,821,322}, maidan {75,790,337}, rooftop {66,799,361}, school {76,743,338}, village {103,769,315}, railway {77,754,318}.
+Lettering: truck-art split pink/yellow, gold honours-board serif, paper-kite panels, chalk, rangoli clay-pot, station-sign enamel.
+Green-key boards re-keyed to magenta (raw/hud_m.png) before compose. Rewire helper: /tmp rewire.py replaces THEME_ART + THEMED_EXTRAS blocks in place.
