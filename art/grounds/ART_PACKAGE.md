@@ -294,3 +294,12 @@ Seven grounds redone with close camera, themed field, bespoke lettering and new 
 evening2 (pinstripe varsity, St George flag), twilight2 (seaside rock, life ring), afterglow2 (mirror-work, chhatri),
 fognight2 (marquee bulbs, gas lamp + iron crest), dusk2 (sequins, steel pan), bigground2 (gold chrome italic, trophy),
 coliseum2 (mosaic, brazier). Keys te_* rewired in place. Review sheet: floodlit_sheet.jpg.
+
+## 31. Coastal rebuilt to the signed-off layout
+
+beach2 (inflatable pool-toy letters, bucket and spade, kites), rockpool2 (wet-pebble letters, crab, puffins),
+harbour2 (boat signwriting, lobster pot, gulls with chips), beachnight2 (carved tiki wood with pink glow, tiki mask, fireflies),
+storm2 (yellow oilskin letters with hazard stripes, anemometer, storm clouds). Keys tc_* rewired in place. Review: coastal_sheet.jpg.
+Prompt builders now live in the repo: tools/plate_prompts.py <themes.json> <outdir>, tools/sheet_prompts.py <sheets.json> <outdir>;
+per-league inputs in layout/leagues/. auto_cut.py: PMERGE=<px> folds small bits (raindrops) into the nearest piece.
+beachnight2's board composes on its green key (compose_beachnight2.py) so the neon-pink rims survive.

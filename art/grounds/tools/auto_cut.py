@@ -34,6 +34,14 @@ def pieces(rgba, dil=6, minpx=400):
     sub = (lab[sl] == i + 1) & m[sl]
     if sub.sum() < minpx: continue
     out.append([sl[1].start, sl[0].start, sl[1].stop, sl[0].stop, sub.sum(), i + 1])
+  small = int(os.environ.get('PMERGE', 0))   # PMERGE=<px>: fold pieces smaller than this (raindrops, sparks) into the nearest bigger piece
+  if small:
+    big = [o for o in out if o[4] >= small]
+    for o in [o for o in out if o[4] < small]:
+      cx, cy = (o[0] + o[2]) / 2, (o[1] + o[3]) / 2
+      t = min(big, key=lambda b: max(b[0] - cx, 0, cx - b[2]) + max(b[1] - cy, 0, cy - b[3]))
+      lab[lab == o[5]] = t[5]; t[0], t[1], t[2], t[3] = min(t[0], o[0]), min(t[1], o[1]), max(t[2], o[2]), max(t[3], o[3]); t[4] += o[4]
+    out = big
   return out, lab
 
 def crop(rgba, lab, p, maxd=None):
