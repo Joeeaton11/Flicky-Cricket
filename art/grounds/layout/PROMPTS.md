@@ -161,3 +161,5 @@ The props-sheet pitch has grass edging; strip it on non-grass grounds (green -> 
 Every ground gets its OWN letter shapes, not one rounded font in different colours. Keep the Newlands rule (chunky, clean, readable at a glance,
 nothing spiky/scratchy) but vary the letterform per league/ground (e.g. wanted-poster slab, riveted brass, carved stone, neon tube, icy facets).
 Halloween→Knight's (35 grounds) words sheets to be redone after the remaining leagues are built.
+Done Nov 5: all 35 Halloween→Knight's words sheets redone (Figma 502:191–503:211), cut with tools/cut_words.py (words only; WDY=25 joins a loose "!" dot).
+Old sheets kept as <ground>/raw/words_v1.png. Review: art/grounds/lettering_redo_sheet.jpg.
