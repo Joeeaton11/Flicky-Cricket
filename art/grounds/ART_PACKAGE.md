@@ -323,3 +323,6 @@ from scratch with each ground's real ends — pavilion end at the top, the oppos
 Radcliffe Road), named side stands. Plate inputs: layout/leagues/ecl_plates_v2.json (adds a NEAR END line). Figma 513:191–196.
 New tools/sky_fade.py fills the uncovered top with a soft sky instead of mirroring (mirroring flipped tall landmarks).
 v1 plates kept in <ground>/raw/v1/.
+33 v8 (Joe, Nov 5 late: Lord's v7 "will do", redo all ECL to match): whole-ground template — egg field, pavilion
+behind the top tip, named side stands, opposite-end landmark fully visible in the bottom band, stadium-scale crowd.
+Plates: lords 519:191, oval 520:191, headingley 520:192, edgbaston 520:193, oldtrafford 520:194, trentbridge 520:195.
