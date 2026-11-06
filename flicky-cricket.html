@@ -65637,40 +65637,85 @@ function duelEnd(c) {
   if (res === 'win' && d.streak >= 2) bits.push(`${d.streak} IN A ROW`);
   return { res, title: res === 'win' ? 'DUEL WON!' : res === 'tie' ? 'DUEL TIED' : 'DUEL LOST', line, extra: bits.concat(paid).join(' · ') || `${d.trophies} DUEL TROPHIES`, again: `DUEL AGAIN <i class="hIco hi-coin"></i>${duelEntry(duelTable()).toLocaleString()}` };
 }
-// ---------- the draw: a full 32-player ladder, who played who, scores, who knocked who out ----------
-function openCupDraw() {
+// ---------- the draw (v2, Nov 6): round tabs you swipe, your match pinned, "your road", and a two-sided full-draw card ----------
+function cupFlag(run, i) { return i === 0 ? '★' : DUEL_FLAGS[Math.floor(_seeded('cf' + run.seed + ':' + i)() * DUEL_FLAGS.length)]; }
+function cupShort(r) { return ['LAST 32', 'LAST 16', 'QF', 'SF', 'FINAL'][r]; }
+function cupDrawCanvas(run, R) {   // two-sided World Cup style chart, made to be screenshotted and shared
+  const C = GAME_CONFIG.season.cup, W = 1800, H = 1060, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+  const F = px => `${px}px 'Lilita One','Arial Black',Arial,sans-serif`, nm = i => i == null ? 'TBD' : i === 0 ? 'YOU' : run.names[i];
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#13254a'); bg.addColorStop(1, '#071022'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.textAlign = 'center'; g.fillStyle = '#FFC93A'; g.font = F(46); g.fillText('FLICKY CUP', W / 2, 62);
+  g.fillStyle = '#B4C2DD'; g.font = F(22); g.fillText(`${THEMED_LEAGUES[run.li].name.toUpperCase()} · 32 PLAYERS`, W / 2, 96);
+  const TOP = 140, BOT = H - 30, colW = W / 9, bw = colW - 26, bh = 50;
+  const box = (x, y, m, hi) => {
+    g.fillStyle = '#0f1e3d'; g.strokeStyle = hi ? '#FFC93A' : '#22386a'; g.lineWidth = hi ? 4 : 2; g.beginPath(); g.roundRect(x, y, bw, bh, 9); g.fill(); g.stroke();
+    [[m.a, m.sa], [m.b, m.sb]].forEach(([i, sc], k) => { const done = m.w != null, win = done && m.w === i, yy = y + 20 + k * 24;
+      g.textAlign = 'left'; g.font = F(17); g.fillStyle = i === 0 ? '#FFC93A' : !done ? '#cfd8ea' : win ? '#fff' : '#5f7096';
+      let t = nm(i); while (g.measureText(t).width > bw - 46 && t.length > 3) t = t.slice(0, -1); g.fillText(t, x + 9, yy);
+      if (done && !win) { const tw = g.measureText(t).width; g.fillRect(x + 9, yy - 6, tw, 2); }
+      g.textAlign = 'right'; g.fillText(sc == null ? '' : String(sc) + (win && m.sd ? '*' : ''), x + bw - 9, yy); });
+  };
+  const ys = (r, k, half) => { const n = 8 >> r; return TOP + (k + 0.5) * (BOT - TOP) / n - bh / 2; };
+  for (let r = 0; r < 4; r++) for (let side = 0; side < 2; side++) {
+    const n = 8 >> r, x = side ? W - (r + 1) * colW + 13 : r * colW + 13;
+    for (let k = 0; k < n; k++) { const m = R[r][side * n + k], y = ys(r, k), mine = m.a === 0 || m.b === 0;
+      const nx = side ? x - colW : x + colW, ny = r < 3 ? ys(r + 1, Math.floor(k / 2)) : TOP + (BOT - TOP) / 2 - bh / 2;
+      g.strokeStyle = mine && m.w === 0 ? '#FFC93A' : '#2c4374'; g.lineWidth = mine && m.w === 0 ? 4 : 2; g.beginPath();
+      const ex = side ? x : x + bw, mx = side ? x - 13 : x + bw + 13, tx = r < 3 ? (side ? nx + bw : nx) : (side ? W / 2 + bw / 2 : W / 2 - bw / 2);
+      g.moveTo(ex, y + bh / 2); g.lineTo(mx, y + bh / 2); g.lineTo(mx, ny + bh / 2); g.lineTo(tx, ny + bh / 2); g.stroke();
+      box(x, y, m, mine); }
+  }
+  const fm = R[4][0], fy = TOP + (BOT - TOP) / 2 - bh / 2; box(W / 2 - bw / 2, fy, fm, fm.a === 0 || fm.b === 0);
+  g.textAlign = 'center'; g.font = F(20); g.fillStyle = '#7f93bd'; g.fillText('FINAL', W / 2, fy - 14);
+  g.font = F(64); g.fillText('🏆', W / 2, fy - 90); g.font = F(18); g.fillText('WINNER', W / 2, fy + bh + 36);
+  g.font = F(30); g.fillStyle = fm.w === 0 ? '#FFC93A' : '#fff'; g.fillText(fm.w == null ? '?' : nm(fm.w), W / 2, fy + bh + 72);
+  g.font = F(16); g.fillStyle = '#5f7096'; g.fillText('* won in sudden death', W / 2, BOT + 14);
+  return cv;
+}
+function shareCupDraw() {
+  const run = cupState().run; if (!run) return; const cv = cupDrawCanvas(run, cupBracket(run));
+  cv.toBlob(blob => { const file = new File([blob], 'flicky-cup.png', { type: 'image/png' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: 'Flicky Cup', text: run.champ ? 'I won the Flicky Cup!' : 'My Flicky Cup run' }).catch(() => {});
+    else { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = 'flicky-cup.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); } }, 'image/png');
+}
+function openCupDraw(page) {
   const cs = cupState(), run = cs.run; if (!run) return;
-  const C = GAME_CONFIG.season.cup, R = cupBracket(run), SLOT = 56, BW = 136, CW = 158, TOP = 38, H = 16 * SLOT + TOP + 10;
+  const C = GAME_CONFIG.season.cup, R = cupBracket(run), nm = i => i == null ? 'TBD' : i === 0 ? 'YOU' : run.names[i];
   let el = document.getElementById('cupDraw');
   if (!el) { el = document.createElement('div'); el.id = 'cupDraw'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Cup draw'); document.body.appendChild(el); }
-  const nm = i => i == null ? 'TBD' : i === 0 ? 'YOU' : run.names[i];
-  let boxes = '', lines = '', heads = '';
-  R.forEach((ms, r) => {
-    const x = 12 + r * CW, step = SLOT * (1 << r);
-    heads += `<span class="cdH" style="left:${x}px;width:${BW}px">${C.rounds[r]}</span>`;
-    ms.forEach((m, k) => {
-      const cy = TOP + (k + 0.5) * step, done = m.w != null, me = m.a === 0 || m.b === 0, path = me && (m.a === 0 || m.b === 0);
-      const row = (i, sc, other) => `<div class="cdR${done ? (m.w === i ? ' w' : ' l') : ''}${i === 0 ? ' you' : ''}"><span>${nm(i)}</span><b>${sc == null ? '' : sc}${done && m.w === i && m.sd ? '<i>SD</i>' : ''}</b></div>`;
-      boxes += `<div class="cdM${path ? ' path' : ''}${me && !done && !run.out ? ' now' : ''}" style="left:${x}px;top:${cy - 23}px;width:${BW}px">${row(m.a, m.sa)}${row(m.b, m.sb)}</div>`;
-      if (r < R.length - 1) { const nx = x + CW, ny = TOP + (Math.floor(k / 2) + 0.5) * SLOT * (1 << (r + 1));
-        lines += `<path d="M${x + BW} ${cy}H${x + BW + (CW - BW) / 2}V${ny}H${nx}" class="${me && done && m.w === 0 ? 'gold' : ''}"/>`; }
-    });
-  });
-  const fin = R[R.length - 1][0], champ = fin.w, cx = 12 + R.length * CW, cyc = TOP + 8 * SLOT;
-  lines += `<path d="M${12 + (R.length - 1) * CW + BW} ${cyc}H${cx}" class="${champ === 0 ? 'gold' : ''}"/>`;
-  boxes += `<div class="cdChamp" style="left:${cx}px;top:${cyc - 60}px">${typeof CHEST_IMG_SRC !== 'undefined' ? '<span class="cdCup">🏆</span>' : ''}<small>WINNER</small><b class="${champ === 0 ? 'you' : ''}">${champ == null ? '?' : nm(champ)}</b></div>`;
-  const W = cx + 150, status = run.champ ? 'YOU WON THE CUP!' : run.out ? `KNOCKED OUT IN THE ${C.rounds[run.path[run.path.length - 1].round]} BY ${run.names[R[run.path[run.path.length - 1].round][0].b]}` : `YOU'RE IN THE ${C.rounds[run.round]} · NEXT: ${run.names[R[run.round][0].b]}`;
+  const last = run.path.length ? run.path[run.path.length - 1] : null, cur = run.out || run.champ ? (last ? last.round : 0) : run.round;
+  const status = run.champ ? 'YOU WON THE CUP!' : run.out ? `KNOCKED OUT IN THE ${C.rounds[last.round]} BY ${nm(R[last.round][0].b)}` : `${C.rounds[run.round]} · NEXT: ${nm(R[run.round][0].b)}`;
+  const card = (m, big) => { const done = m.w != null, mine = m.a === 0 || m.b === 0;
+    const row = (i, sc) => `<div class="cdR${done ? (m.w === i ? ' w' : ' l') : ''}${i === 0 ? ' you' : ''}"><em>${i == null ? '' : cupFlag(run, i)}</em><span>${nm(i)}</span><b>${sc == null ? (done ? '' : i == null ? '' : '–') : sc}${done && m.w === i && m.sd ? '<i>SD</i>' : ''}</b></div>`;
+    return `<div class="cdM${mine ? ' mine' : ''}${big ? ' big' : ''}${mine && !done && !run.out && !run.champ ? ' now' : ''}">${row(m.a, m.sa)}${row(m.b, m.sb)}</div>`; };
+  const road = C.rounds.map((rn, r) => { const pl = run.path.find(x => x.round === r), m = R[r][0];
+    const st = pl ? pl.res : (!run.out && !run.champ && r === run.round) ? 'next' : 'future';
+    return `<button class="cdRd ${st}" data-cdpage="${r}"><small>${cupShort(r)}</small><b>${pl ? `${pl.me}–${pl.them}${pl.sd ? '*' : ''}` : st === 'next' ? 'NEXT' : '·'}</b><span>${st === 'future' ? '' : nm(m.b)}</span></button>`; }).join('');
+  const pages = R.map((ms, r) => {
+    const pin = ms[0].a === 0 && (run.path.some(x => x.round === r) || (!run.out && !run.champ && r === run.round)) ? `<div class="cdPin"><small>YOUR MATCH</small>${card(ms[0], true)}</div>` : '';
+    if (r === R.length - 1) { const f = ms[0];
+      return `<section class="cdPage">${pin}<div class="cdFinal">${card(f, true)}<div class="cdWin"><span class="cdCup">🏆</span><small>WINNER</small><b class="${f.w === 0 ? 'you' : ''}">${f.w == null ? 'TO BE DECIDED' : nm(f.w)}</b></div></div></section>`; }
+    let groups = ''; for (let k = 0; k < ms.length; k += 2) groups += `<div class="cdPair">${card(ms[k])}${card(ms[k + 1])}<i class="cdBr"></i><span class="cdTo">${C.rounds[r + 1].replace('ROUND OF ', 'LAST ')} · MATCH ${k / 2 + 1}</span></div>`;
+    return `<section class="cdPage">${pin}<div class="cdAll">ALL ${ms.length} MATCHES</div>${groups}</section>`;
+  }).join('') + `<section class="cdPage"><div class="cdAll">THE WHOLE DRAW</div><div class="cdFull" data-cdzoom></div><button class="gcBuy evGo cdShare" data-cdshare>SHARE THE DRAW</button></section>`;
   el.innerHTML = `<div class="cdTop"><button class="evBack" data-cdclose aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div><b>FLICKY CUP</b><small>${THEMED_LEAGUES[run.li].name} · 32 PLAYERS</small></div></div>
-    <div class="cdStatus">${status}</div>
-    <div class="cdScroll"><div class="cdBoard" style="width:${W}px;height:${H}px">${heads}<svg width="${W}" height="${H}">${lines}</svg>${boxes}</div></div>`;
+    <div class="cdStatus">${status}</div><div class="cdRoad">${road}</div>
+    <div class="cdTabs">${C.rounds.map((_, r) => `<button data-cdpage="${r}">${cupShort(r)}</button>`).join('')}<button data-cdpage="5">DRAW</button></div>
+    <div class="cdPages">${pages}</div>`;
+  el.querySelector('.cdFull').appendChild(cupDrawCanvas(run, R));
   el.classList.add('show');
-  const sc = el.querySelector('.cdScroll'), cr = Math.min(run.out || run.champ ? (run.path.length ? run.path[run.path.length - 1].round : 0) : run.round, R.length - 1);
-  requestAnimationFrame(() => { sc.scrollLeft = Math.max(0, 12 + cr * CW - 40); sc.scrollTop = Math.max(0, TOP + 0.5 * SLOT * (1 << cr) - sc.clientHeight / 2); });
+  const box = el.querySelector('.cdPages'), tabs = [...el.querySelectorAll('.cdTabs button')];
+  const sync = () => { const i = Math.round(box.scrollLeft / Math.max(1, box.clientWidth)); tabs.forEach((b, j) => b.classList.toggle('on', j === i)); };
+  box.addEventListener('scroll', sync, { passive: true });
+  requestAnimationFrame(() => { box.scrollLeft = (page != null ? page : cur) * box.clientWidth; sync(); });
 }
 document.addEventListener('click', e => {
   const t = e.target && e.target.closest ? e.target : null; if (!t) return;
   if (t.closest('[data-cupdraw]')) { e.stopImmediatePropagation(); openCupDraw(); try { playUiTap(); } catch (err) {} return; }
-  if (t.closest('[data-cdclose]')) { document.getElementById('cupDraw').classList.remove('show'); try { playUiTap(); } catch (err) {} }
+  if (t.closest('[data-cdclose]')) { document.getElementById('cupDraw').classList.remove('show'); try { playUiTap(); } catch (err) {} return; }
+  const pg = t.closest('[data-cdpage]'); if (pg) { const box = document.querySelector('#cupDraw .cdPages'); box.scrollTo({ left: +pg.dataset.cdpage * box.clientWidth, behavior: 'smooth' }); try { playUiTap(); } catch (err) {} return; }
+  if (t.closest('[data-cdshare]')) { shareCupDraw(); return; }
+  if (t.closest('[data-cdzoom]')) { t.closest('[data-cdzoom]').classList.toggle('zoom'); }
 }, true);
 // ---------- KNOCKOUT CUP: 32-player draw, five rounds of duels, lose and you're out ----------
 function cupState() { const s = seasonState(); s.cup = s.cup || { run: null, wins: 0, best: 0, entered: 0 }; return s.cup; }
@@ -66003,34 +66048,54 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .evGoal{text-align:center;font-size:18px;letter-spacing:.03em}
   .duTbl{display:inline-flex;align-items:center;gap:10px}
   .cdBtn{margin-right:6px}
-  #cupDraw{position:fixed;inset:0;z-index:9000;background:#071022;color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
+  #cupDraw{position:fixed;inset:0;z-index:9000;background:linear-gradient(#0d1a36,#071022);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
   #cupDraw.show{display:flex}
-  #cupDraw .cdTop{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top) + 12px) 16px 8px}
+  #cupDraw .cdTop{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top) + 12px) 16px 6px}
   #cupDraw .cdTop b{display:block;font-size:22px;letter-spacing:.04em}
   #cupDraw .cdTop small{font-size:12px;color:#B4C2DD;letter-spacing:.06em}
-  #cupDraw .cdStatus{margin:0 16px 10px;padding:10px 14px;border-radius:14px;background:#13254a;color:#FFC93A;font-size:14px;letter-spacing:.04em;text-align:center}
-  #cupDraw .cdScroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
-  #cupDraw .cdBoard{position:relative}
-  #cupDraw .cdBoard > svg{position:absolute;left:0;top:0;pointer-events:none}
-  #cupDraw .cdBoard > svg path{fill:none;stroke:#2c4374;stroke-width:2}
-  #cupDraw .cdBoard > svg path.gold{stroke:#FFC93A;stroke-width:3}
-  #cupDraw .cdH{position:absolute;top:8px;font-size:11px;letter-spacing:.08em;color:#7f93bd;text-align:center}
-  #cupDraw .cdM{position:absolute;height:46px;border-radius:10px;background:#0f1e3d;border:1.5px solid #22386a;overflow:hidden}
-  #cupDraw .cdM.path{border-color:#FFC93A}
-  #cupDraw .cdM.now{box-shadow:0 0 0 3px rgba(255,201,58,.35)}
-  #cupDraw .cdR{display:flex;justify-content:space-between;align-items:center;height:22px;padding:0 8px;font-size:13px;letter-spacing:.02em;color:#cfd8ea}
+  #cupDraw .cdStatus{margin:2px 16px 8px;padding:9px 12px;border-radius:12px;background:#13254a;color:#FFC93A;font-size:14px;letter-spacing:.04em;text-align:center}
+  #cupDraw .cdRoad{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:0 16px 10px}
+  #cupDraw .cdRd{border:0;border-radius:12px;padding:6px 2px;background:#0f1e3d;color:#7f93bd;font:inherit;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;min-width:0}
+  #cupDraw .cdRd small{font-size:10px;letter-spacing:.06em}
+  #cupDraw .cdRd b{font-size:16px;color:#cfd8ea}
+  #cupDraw .cdRd span{font-size:9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 3px}
+  #cupDraw .cdRd.win{background:#123c2a}#cupDraw .cdRd.win b{color:#7CF29A}
+  #cupDraw .cdRd.lose{background:#43161d}#cupDraw .cdRd.lose b{color:#FF8A8A}
+  #cupDraw .cdRd.next{box-shadow:inset 0 0 0 2px #FFC93A}#cupDraw .cdRd.next b{color:#FFC93A}
+  #cupDraw .cdTabs{display:flex;gap:4px;margin:0 16px;padding:4px;border-radius:14px;background:#0a1630}
+  #cupDraw .cdTabs button{flex:1;border:0;border-radius:10px;padding:8px 0;background:none;color:#7f93bd;font:inherit;font-size:12px;letter-spacing:.04em;cursor:pointer}
+  #cupDraw .cdTabs button.on{background:#FFC93A;color:#1a1200}
+  #cupDraw .cdPages{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none}
+  #cupDraw .cdPages::-webkit-scrollbar{display:none}
+  #cupDraw .cdPage{flex:0 0 100%;scroll-snap-align:start;overflow-y:auto;padding:12px 16px calc(env(safe-area-inset-bottom) + 20px);box-sizing:border-box}
+  #cupDraw .cdPin{margin-bottom:14px}
+  #cupDraw .cdPin small,#cupDraw .cdAll{display:block;font-size:11px;letter-spacing:.1em;color:#7f93bd;margin:2px 2px 6px}
+  #cupDraw .cdPair{position:relative;display:flex;flex-direction:column;gap:6px;padding-right:58px;margin-bottom:14px}
+  #cupDraw .cdBr{position:absolute;right:40px;top:23px;bottom:23px;width:12px;border:2px solid #2c4374;border-left:0;border-radius:0 8px 8px 0}
+  #cupDraw .cdTo{position:absolute;right:0;top:50%;transform:translateY(-50%);width:40px;font-size:9px;line-height:1.2;color:#5f7096;text-align:center}
+  #cupDraw .cdM{border-radius:12px;background:#0f1e3d;border:1.5px solid #22386a;overflow:hidden}
+  #cupDraw .cdM.mine{border-color:#FFC93A}
+  #cupDraw .cdM.now{box-shadow:0 0 0 3px rgba(255,201,58,.3)}
+  #cupDraw .cdR{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;font-size:15px;letter-spacing:.02em;color:#cfd8ea}
+  #cupDraw .cdM.big .cdR{height:44px;font-size:18px}
   #cupDraw .cdR + .cdR{border-top:1px solid #1b2e57}
-  #cupDraw .cdR span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:92px}
+  #cupDraw .cdR em{font-style:normal;width:20px;text-align:center;color:#FFC93A}
+  #cupDraw .cdR span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #cupDraw .cdR.w{color:#fff}
-  #cupDraw .cdR.l{color:#5f7096}
+  #cupDraw .cdR.l{color:#56678d}
   #cupDraw .cdR.l span{text-decoration:line-through}
   #cupDraw .cdR.you span{color:#FFC93A}
-  #cupDraw .cdR b i{font-style:normal;font-size:9px;margin-left:4px;color:#7fd0ff}
-  #cupDraw .cdChamp{position:absolute;width:130px;text-align:center}
-  #cupDraw .cdChamp .cdCup{display:block;font-size:44px}
-  #cupDraw .cdChamp small{display:block;font-size:11px;color:#7f93bd;letter-spacing:.08em}
-  #cupDraw .cdChamp b{font-size:16px}
-  #cupDraw .cdChamp b.you{color:#FFC93A}
+  #cupDraw .cdR b{font-size:1.1em}
+  #cupDraw .cdR b i{font-style:normal;font-size:10px;margin-left:5px;color:#7fd0ff}
+  #cupDraw .cdFinal{margin-top:10px}
+  #cupDraw .cdWin{text-align:center;margin-top:22px}
+  #cupDraw .cdCup{display:block;font-size:64px;line-height:1}
+  #cupDraw .cdWin small{display:block;font-size:12px;color:#7f93bd;letter-spacing:.1em;margin-top:6px}
+  #cupDraw .cdWin b{font-size:26px}#cupDraw .cdWin b.you{color:#FFC93A}
+  #cupDraw .cdFull{border-radius:12px;overflow:auto;border:1.5px solid #22386a;cursor:zoom-in}
+  #cupDraw .cdFull canvas{display:block;width:100%;height:auto}
+  #cupDraw .cdFull.zoom{cursor:zoom-out}#cupDraw .cdFull.zoom canvas{width:260%}
+  #cupDraw .cdShare{display:block;margin:14px auto 0}
   .duTbl button{width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:22px;line-height:1;cursor:pointer}
   .duTbl button:disabled{opacity:.25}
   .duPot{display:block;white-space:nowrap;font-size:13px;color:#FFC93A;margin-top:4px;letter-spacing:.05em}
