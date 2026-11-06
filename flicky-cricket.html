@@ -3865,6 +3865,15 @@
     background:rgba(1,22,44,0.85); border:2px solid #050A14; }
   #startBtn { flex:none; width:68%; height:74px; font-size:44px; }
   #startBtn.again { font-size:30px; }
+  #homePlayBtns { display:flex; gap:10px; width:68%; justify-content:center; }
+  #homePlayBtns.duel { width:88%; }
+  #homePlayBtns #startBtn { flex:1; width:auto; }
+  #homeDuelBtn { flex:none; width:84px; height:74px; padding:0; border-radius:22px; border:3px solid var(--hOut,#050A14); cursor:pointer;
+    background:linear-gradient(#ff7a6a,#e0322c 50%,#a8141e); box-shadow:0 5px 0 #5a0a10; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0;
+    font:17px 'Lilita One','Arial Black',Arial,sans-serif; color:#fff; letter-spacing:.06em; text-shadow:0 2px 0 #5a0a10; }
+  #homeDuelBtn[hidden] { display:none; }
+  #homeDuelBtn img { width:40px; height:40px; margin-top:-2px; filter:drop-shadow(0 2px 2px rgba(0,0,0,.4)); }
+  #homeDuelBtn:active { transform:translateY(3px); box-shadow:0 2px 0 #5a0a10; }
   /* Leagues title left-aligned next to the back button, like every other screen */
   #leagueHeader { padding-left:8px !important; gap:12px; }
   #leagueTitleBlock { flex:1; text-align:left !important; }
@@ -3971,7 +3980,7 @@
           <span class="lcGo" aria-hidden="true">›</span><span class="lcRoad"><i class="hIco hi-trophy"></i><span class="lcTrack"><span class="lcFill" id="homeRoadFill"></span><span id="homeRoadTxt">0 / 8</span></span></span>
         </span>
       </button>
-      <button id="startBtn"><svg viewBox="0 0 30 32" aria-hidden="true"><path d="M5 3 L27 16 L5 29 Z" fill="#fff" stroke="#A04E00" stroke-width="3" stroke-linejoin="round"/></svg><span>PLAY</span></button>
+      <div id="homePlayBtns"><button id="startBtn"><svg viewBox="0 0 30 32" aria-hidden="true"><path d="M5 3 L27 16 L5 29 Z" fill="#fff" stroke="#A04E00" stroke-width="3" stroke-linejoin="round"/></svg><span>PLAY</span></button><button id="homeDuelBtn" hidden aria-label="Duels and the Flicky Cup"><img alt="" src="assets/ui/icon_duel_badge.webp"><span>DUEL</span></button></div>
     </div>
     <div id="nextOpponentDisplay" class="srOnly"></div>
   </div>
@@ -8091,6 +8100,7 @@ function updateHomeLeagueCard(lg, nextLg, trophies) {
   tag.textContent = (lg.subtitle || '').split('\u00b7')[0].trim().toUpperCase();
   tag.style.background = `linear-gradient(${lg.accentColor}, ${lg.accentColor2 || lg.accentColor})`;
   document.getElementById('homeLeagueEntry').textContent = lg.entry.toLocaleString();
+  { const d = document.getElementById('homeDuelBtn'); if (d) { const on = typeof featureOn === 'function' && featureOn('compete'); d.hidden = !on; d.parentElement.classList.toggle('duel', on); } }
   const fill = document.getElementById('homeRoadFill'), txt = document.getElementById('homeRoadTxt');
   if (nextLg) {
     const _base = THEMED_LEAGUES[currentLeagueIdx()].unlock;
@@ -66058,6 +66068,8 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .evName small{font-size:12px;letter-spacing:.06em;color:var(--ec);margin-top:3px;text-shadow:0 1px 0 #050A14}
   .evGoal{text-align:center;font-size:18px;letter-spacing:.03em}
   .duTbl{display:inline-flex;align-items:center;gap:10px}
+  .xmIco.ev-duel{background:url(assets/ui/icon_duel.webp) center/contain no-repeat}
+  .xmIco.ev-cup{background:url(assets/ui/icon_cup.webp) center/contain no-repeat}
   .duDraw{display:inline-block;margin-top:6px;border:0;border-radius:999px;padding:6px 14px;background:rgba(255,201,58,.16);color:#FFC93A;font:inherit;font-size:13px;letter-spacing:.05em;cursor:pointer}
   #cupDraw{position:fixed;inset:0;z-index:9000;background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--lg,#2457D6) 38%,#0d1a36) 0%,#0d1a36 55%,#071022 100%);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
   #cupDraw.show{display:flex}
@@ -66216,6 +66228,9 @@ function paintLeagueStill(cv, idx) {
   try { if (live) { const a = live(cv); if (a && a.stop) a.stop(); } else L.drawArt(cv.getContext('2d'), 620, 360); } catch (e) {}
 }
 // Event poster key art (Diwali Figma 310:191; Pass = NOV 2026 trophy room, Figma 325:191 — REPAINT EVERY MONTH with that month's kit colour, see HANDOVER); keyed by event id without the year
+// Seasonal art (Joe, Nov 6: most of this will be re-themed by season): add EV_KEY_ART['duel_christmas'] etc. and it
+// replaces the default while an event with that id prefix is running.
+function evArt(k) { let th = ''; try { const ev = activeEvent(); th = ev ? String(ev.id).replace(/\d+$/, '') : ''; } catch (e) {} return (th && EV_KEY_ART[k + '_' + th]) || EV_KEY_ART[k]; }
 const EV_KEY_ART = { duel: 'assets/ui/ev_duels.webp', cup: 'assets/ui/ev_cup.webp', diwali: 'assets/ui/ui_741_2868bcf8.webp', pass: 'assets/ui/ui_742_6042454f.webp' };
 function renderCompeteV2() {
   // EVENTS v4 (Oct 30): a poster per event you swipe through (like the Leagues carousel, Clash Royale events, Brawl
@@ -66227,20 +66242,20 @@ function renderCompeteV2() {
   const SVG = {
     daily: '<i class="xmIco ev-daily"></i>',
     tourney: '<i class="xmIco ev-tourney"></i>',
-    duel: '<i class="xmIco ev-tourney"></i>',
-    cup: '<i class="xmIco ev-tourney"></i>',
+    duel: '<i class="xmIco ev-duel"></i>',
+    cup: '<i class="xmIco ev-cup"></i>',
     endless: '<i class="xmIco ev-endless"></i>',
     pass: '<i class="xmIco ev-pass"></i>',
     event: '<i class="xmIco ev-event"></i>' };
-  const nodeArt = r => r.bag ? bag(r.bag) : r.gems ? `<img alt="" src="${REWARD_HEAP_ART.gems_s}">` : r.coins ? `<img alt="" src="${REWARD_HEAP_ART.coins_s}">`
+  const nodeArt = r => r.img ? `<img alt="" src="${r.img}">` : r.bag ? bag(r.bag) : r.gems ? `<img alt="" src="${REWARD_HEAP_ART.gems_s}">` : r.coins ? `<img alt="" src="${REWARD_HEAP_ART.coins_s}">`
     : r.booster ? '<i class="bIco bo-lucky_grip evNodeIco"></i>' : r.cos ? `<canvas class="kitCrop" data-kitcrop="${r.kind === 'trim' ? 'trim' : 'shirt'}" data-shirt="${r.kind === 'shirt' && typeof r.cos === 'string' && PLAYER_SHIRTS.find(x => x.id === r.cos) ? r.cos : 'pass' + passSeasonKey().replace('-', '')}"></canvas>`
     : r.medal ? `<span class="evMedal m${r.medal}">${r.medal}</span>` : '';
   const track = (nodes, fill) => `<div class="evRoad"><div class="evRoadLine"><i style="width:${Math.max(0, Math.min(100, fill))}%"></i></div>
       ${nodes.map(n => `<div class="evNode${n.done ? ' done' : ''}${n.next ? ' next' : ''}"><div class="evNodeArt">${nodeArt(n.r)}${n.done ? '<b class="tick">✓</b>' : ''}</div><span>${n.label}</span><small>${n.sub || ''}</small></div>`).join('')}</div>`;
   const posters = [];
-  const art = o => o.key === 'pass' && window.EV_PASS_HERO ? `<div class="evPassHero" style="background-image:linear-gradient(rgba(0,0,0,0) 55%,rgba(9,19,40,.6)),url(${PASS_ROAD_ART.banner})"><canvas class="pl" id="evPassPl" width="10" height="10"></canvas><img class="bag" alt="" src="${CHEST_IMG_SRC.platinum}"></div>` : o.key && EV_KEY_ART[o.key] ? `<div class="evKeyArt" style="background-image:url(${EV_KEY_ART[o.key]})"></div>` : o.lg ? `<canvas data-lgart="${o.lg}"></canvas>` : `<div class="evPlain">${o.big || ''}</div>`;
+  const art = o => o.key === 'pass' && window.EV_PASS_HERO ? `<div class="evPassHero" style="background-image:linear-gradient(rgba(0,0,0,0) 55%,rgba(9,19,40,.6)),url(${PASS_ROAD_ART.banner})"><canvas class="pl" id="evPassPl" width="10" height="10"></canvas><img class="bag" alt="" src="${CHEST_IMG_SRC.platinum}"></div>` : o.key && evArt(o.key) ? `<div class="evKeyArt" style="background-image:url(${evArt(o.key)})"></div>` : o.lg ? `<canvas data-lgart="${o.lg}"></canvas>` : `<div class="evPlain">${o.big || ''}</div>`;
   const poster = o => `<article class="evPoster" data-pk="${o.k}" style="--ec:${o.col}">
-      <div class="evHero">${art(o)}<span class="evBadge">${SVG[o.ico]}</span><span class="evClock">${o.timer}</span>
+      <div class="evHero">${art(o)}${o.noBadge ? '' : `<span class="evBadge">${SVG[o.ico]}</span>`}<span class="evClock">${o.timer}</span>
         <div class="evName"><b>${o.name}</b><small>${o.tag}</small></div></div>
       <div class="evGoal">${o.goal}</div>
       ${o.road}
@@ -66260,7 +66275,7 @@ function renderCompeteV2() {
       const nodes = R.slice(rk + 1, rk + 4).map((x, k) => ({ r: x.r || { medal: x.name[0] }, label: x.name, sub: `${x.at} TROPHIES`, next: k === 0 }));
       const recent = du.recent.length ? `<div class="duRecent">${du.recent.map(x => `<span class="${x.res}">${x.res === 'win' ? 'W' : x.res === 'tie' ? 'T' : 'L'} · ${x.flag} ${x.name} · ${x.me}–${x.them}</span>`).join('')}</div>` : '';
       const pick = T.length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${T.indexOf(li) ? '' : ' disabled'}>‹</button><b>${THEMED_LEAGUES[li].name}</b><button data-duel="next" aria-label="Higher table"${T.indexOf(li) < T.length - 1 ? '' : ' disabled'}>›</button></span>` : `<span class="duTbl"><b>${THEMED_LEAGUES[li].name}</b></span>`;
-      posters.push(poster({ k: 'duel', ico: 'tourney', col: '#E8463A', key: 'duel', lg: li, timer: du.w + du.l + du.d ? `<b>${du.w}W ${du.l}L</b>${du.streak >= 2 ? ` · ${du.streak} IN A ROW` : ''}` : '<b>HEAD TO HEAD</b>', name: 'DUELS', tag: `${R[rk].name} RANK · ${du.trophies} TROPHIES`,
+      posters.push(poster({ k: 'duel', ico: 'duel', noBadge: true, col: '#E8463A', key: 'duel', lg: li, timer: du.w + du.l + du.d ? `<b>${du.w}W ${du.l}L</b>${du.streak >= 2 ? ` · ${du.streak} IN A ROW` : ''}` : '<b>HEAD TO HEAD</b>', name: 'DUELS', tag: `${R[rk].name} RANK · ${du.trophies} TROPHIES`,
         goal: `${pick}<div class="duPot">ENTRY ${duelEntry(li).toLocaleString()} COINS · WIN ${duelPot(li).toLocaleString()}</div>`,
         road: nodes.length ? track(nodes, fill) : '',
         rules: `Six balls each, the same six balls. After each of your balls you see what your rival did with it. Most runs wins the pot; level after six goes to sudden death, one ball each. A win is +${D.win} trophies (+${D.streakBonus} from ${D.streakAt} in a row), a loss −${D.lose}. Each new rank pays a bag once.${recent}`,
@@ -66268,11 +66283,11 @@ function renderCompeteV2() {
     { const C = S.cup, cs = cupState(), run = cupLive(), li = run ? run.li : duelTable(), E = cupEntry(li), at = run ? run.round : -1;
       todo.cup = !!run;
       const fmt = p => [p.e ? (E * p.e).toLocaleString() + ' COINS' : '', p.bag ? bagNm(p.bag) + ' BAG' : '', p.gems ? p.gems + ' GEMS' : ''].filter(Boolean).join(' + ');
-      const nodes = [[3, 'SEMIS', C.prize[3], { bag: 'silver' }], [4, 'FINAL', C.prize[4], { bag: 'gold' }], [5, 'WINNER', C.champion, { bag: 'gold', gems: 1 }]]
-        .map(([r, lbl, p, art]) => ({ r: art, label: lbl, sub: fmt(p).split(' + ')[0], done: at >= r, next: at >= 0 ? at + 1 === r || (at < 3 && r === 3) : r === 3 }));
+      const nodes = [[3, 'SEMIS', C.prize[3], { bag: 'silver' }, 'SILVER BAG'], [4, 'FINAL', C.prize[4], { bag: 'gold' }, 'GOLD BAG'], [5, 'WINNER', C.champion, { img: CUP_TROPHY_SRC }, 'THE CUP']]
+        .map(([r, lbl, p, art, sub]) => ({ r: art, label: lbl, sub: `${sub} + ${(E * p.e).toLocaleString()}`, done: at >= r, next: at >= 0 ? at + 1 === r || (at < 3 && r === 3) : r === 3 }));
       const path = run && run.path.length ? `<div class="duRecent">${run.path.map(x => `<span class="${x.res}">${C.rounds[x.round]} · ${x.name} · ${x.me}–${x.them}${x.sd ? ' (SD)' : ''}</span>`).join('')}</div>` : '';
-      posters.push(poster({ k: 'cup', ico: 'tourney', col: '#8A5CF6', key: 'cup', lg: li, timer: run ? `<b>${C.rounds[run.round]}</b>` : `<b>${cs.wins ? cs.wins + ' CUP' + (cs.wins === 1 ? '' : 'S') + ' WON' : 'KNOCKOUT'}</b>`, name: 'FLICKY CUP', tag: `${THEMED_LEAGUES[li].name} · 32 PLAYERS · LOSE AND YOU'RE OUT`,
-        goal: run ? `${C.rounds[run.round]}<small class="duPot">NEXT: ${run.next || 'THE DRAW IS MADE'}</small><button class="duDraw" data-cupdraw>SEE THE DRAW ›</button>` : (cs.run ? `<button class="duDraw" data-cupdraw>LAST CUP'S DRAW ›</button>` : '') +  `${duelTables().length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${duelTables().indexOf(li) ? '' : ' disabled'}>‹</button><b>5 ROUNDS</b><button data-duel="next" aria-label="Higher table"${duelTables().indexOf(li) < duelTables().length - 1 ? '' : ' disabled'}>›</button></span>` : '5 ROUNDS'}<div class="duPot">ENTRY ${E.toLocaleString()} COINS</div>`,
+      posters.push(poster({ k: 'cup', ico: 'cup', noBadge: true, col: '#8A5CF6', key: 'cup', lg: li, timer: run ? `<b>${C.rounds[run.round]}</b>` : `<b>${cs.wins ? cs.wins + ' CUP' + (cs.wins === 1 ? '' : 'S') + ' WON' : 'KNOCKOUT'}</b>`, name: 'FLICKY CUP', tag: `${THEMED_LEAGUES[li].name} · 32 PLAYERS · LOSE AND YOU'RE OUT`,
+        goal: run ? `${C.rounds[run.round]}<small class="duPot">NEXT: ${run.names[cupBracket(run)[run.round][0].b]}</small><button class="duDraw" data-cupdraw>SEE THE DRAW ›</button>` : (cs.run ? `<button class="duDraw" data-cupdraw>LAST CUP'S DRAW ›</button>` : '') +  `${duelTables().length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${duelTables().indexOf(li) ? '' : ' disabled'}>‹</button><b>5 ROUNDS</b><button data-duel="next" aria-label="Higher table"${duelTables().indexOf(li) < duelTables().length - 1 ? '' : ' disabled'}>›</button></span>` : '5 ROUNDS'}<div class="duPot">ENTRY ${E.toLocaleString()} COINS</div>`,
         road: track(nodes, at < 0 ? 0 : Math.min(100, Math.max(0, at - 2) / 3 * 100)),
         rules: `A 32-player draw, FA Cup style. Every round is a six-ball duel: win and you're in the next round's draw, lose and you're out. Prizes: quarter-finals ${fmt(C.prize[2])}, semi-finals ${fmt(C.prize[3])}, runner-up ${fmt(C.prize[4])}, winner ${fmt(C.champion)}.${path}`,
         btn: (run ? `<button class="gcBuy evGo" data-mode="cup">PLAY ${cupShort(run.round)}</button>` : `<button class="gcBuy evGo" data-mode="cup">ENTER · ${E.toLocaleString()}<i class="hIco hi-coin"></i></button>`) })); }
@@ -66340,7 +66355,8 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('click', e => {
   const t = e.target && e.target.closest ? e.target : null; if (!t) return;
-  if (t.closest('#competeBtn')) { payWeeklyBoards(); renderCompete(); document.getElementById('competePanel').classList.add('show'); try { playUiTap(); } catch (err) {} return; }
+  if (t.closest('#competeBtn') || t.closest('#homeDuelBtn')) { const toDuel = !!t.closest('#homeDuelBtn'); payWeeklyBoards(); renderCompete(); document.getElementById('competePanel').classList.add('show'); try { playUiTap(); } catch (err) {}
+    if (toDuel) requestAnimationFrame(() => requestAnimationFrame(() => { const car = document.querySelector('#competePanel .evCarousel'), p = car && car.querySelector('[data-pk="duel"]'); if (car && p) car.scrollLeft = p.offsetLeft - car.offsetLeft; })); return; }
   if (t.closest('#competeClose') || t.id === 'competePanel') { document.getElementById('competePanel').classList.remove('show'); return; }
   const ri = t.closest('[data-rules]'); if (ri) { const box = document.querySelector('#competePanel .cpRules[data-for="' + ri.dataset.rules + '"], #competePanel .evRules[data-for="' + ri.dataset.rules + '"]'); if (box) box.classList.toggle('open'); try { playUiTap(); } catch (err) {} return; }
   if (t.closest('[data-openpass]')) { document.getElementById('competePanel').classList.remove('show'); renderPass(); document.getElementById('passPanel').classList.add('show'); try { playUiTap(); } catch (err) {} return; }
