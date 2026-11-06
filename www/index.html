@@ -3865,6 +3865,15 @@
     background:rgba(1,22,44,0.85); border:2px solid #050A14; }
   #startBtn { flex:none; width:68%; height:74px; font-size:44px; }
   #startBtn.again { font-size:30px; }
+  #homePlayBtns { display:flex; gap:10px; width:68%; justify-content:center; }
+  #homePlayBtns.duel { width:88%; }
+  #homePlayBtns #startBtn { flex:1; width:auto; }
+  #homeDuelBtn { flex:none; width:84px; height:74px; padding:0; border-radius:22px; border:3px solid var(--hOut,#050A14); cursor:pointer;
+    background:linear-gradient(#ff7a6a,#e0322c 50%,#a8141e); box-shadow:0 5px 0 #5a0a10; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0;
+    font:17px 'Lilita One','Arial Black',Arial,sans-serif; color:#fff; letter-spacing:.06em; text-shadow:0 2px 0 #5a0a10; }
+  #homeDuelBtn[hidden] { display:none; }
+  #homeDuelBtn img { width:40px; height:40px; margin-top:-2px; filter:drop-shadow(0 2px 2px rgba(0,0,0,.4)); }
+  #homeDuelBtn:active { transform:translateY(3px); box-shadow:0 2px 0 #5a0a10; }
   /* Leagues title left-aligned next to the back button, like every other screen */
   #leagueHeader { padding-left:8px !important; gap:12px; }
   #leagueTitleBlock { flex:1; text-align:left !important; }
@@ -3971,7 +3980,7 @@
           <span class="lcGo" aria-hidden="true">›</span><span class="lcRoad"><i class="hIco hi-trophy"></i><span class="lcTrack"><span class="lcFill" id="homeRoadFill"></span><span id="homeRoadTxt">0 / 8</span></span></span>
         </span>
       </button>
-      <button id="startBtn"><svg viewBox="0 0 30 32" aria-hidden="true"><path d="M5 3 L27 16 L5 29 Z" fill="#fff" stroke="#A04E00" stroke-width="3" stroke-linejoin="round"/></svg><span>PLAY</span></button>
+      <div id="homePlayBtns"><button id="startBtn"><svg viewBox="0 0 30 32" aria-hidden="true"><path d="M5 3 L27 16 L5 29 Z" fill="#fff" stroke="#A04E00" stroke-width="3" stroke-linejoin="round"/></svg><span>PLAY</span></button><button id="homeDuelBtn" hidden aria-label="Duels and the Flicky Cup"><img alt="" src="assets/ui/icon_duel_badge.webp"><span>DUEL</span></button></div>
     </div>
     <div id="nextOpponentDisplay" class="srOnly"></div>
   </div>
@@ -4339,6 +4348,19 @@ const GAME_CONFIG = {
     dailyChallenge: { freeAttempts: 1, extraAttemptGems: 10, streakBagAt: 3 },
     tournament: { bands: [[1, 8], [9, 18], [19, 28]], rewards: { top1: { bag: 'gold', gems: 200 }, top10: { bag: 'gold' }, top50: { bag: 'silver' }, all: { bag: 'bronze' } } },
     endless: { wickets: 1, ticketGems: 20, secondLifeGems: 30, milestones: [50, 100, 200] },
+    // DUELS (Nov 6, Joe: Golf Clash style head-to-head). Async: your rival batted first, you chase their total off the
+    // same balls. Entry = the table's league entry, the winner takes the pot (2x), a tie refunds. Trophies set your
+    // rank; each new rank pays once. Rivals come from BACKEND.duelRival (local practice rivals until Firebase).
+    // KNOCKOUT CUP (Nov 6, Joe: 'FA Cup style'): 32-player draw, five duel rounds, lose and you're out. Entry = 3x the
+    // table's league entry; prize by how far you got (E = entry). Rivals get a little stronger each round.
+    cup: { days: [5, 6, 0], entryMult: 3,   // days = when a new cup can be entered (Fri, Sat, Sun); a cup in progress can always be finished
+ rounds: ['ROUND OF 32', 'ROUND OF 16', 'QUARTER-FINAL', 'SEMI-FINAL', 'FINAL'], step: 0.05,
+      prize: [ null, null, { e: 1 }, { e: 2, bag: 'silver' }, { e: 4, bag: 'gold' } ], champion: { e: 10, bag: 'gold', gems: 100 } },
+    duel: { balls: 12, wickets: 2,   // Nov 6 (Joe: six felt too short) — two overs each
+      suddenDeathMax: 8, potMult: 2, freePerDay: 1, tableStep: 50, tooEasy: 400, easeAfterLoss: 0.05, easeMax: 3,
+      winBag: [[8, 'wooden'], [18, 'bronze'], [99, 'silver']], win: 30, streakBonus: 10, streakAt: 3, lose: 20,
+      ranks: [ { at: 0, name: 'CLUB' }, { at: 300, name: 'COUNTY', r: { bag: 'silver' } }, { at: 800, name: 'STATE', r: { bag: 'gold' } },
+               { at: 1500, name: 'INTERNATIONAL', r: { bag: 'gold', gems: 100 } }, { at: 2500, name: 'LEGEND', r: { bag: 'platinum', gems: 200 } } ] },
     ranked: { resetFraction: 0.5 },
     pass: { road: { milestones: [6, 12, 18, 24], msGems: 150, fillCoins: 500, fillBoosters: 3 },   // Pass v3 'The Road' (Joe, Nov 1): 4 big gem moments + final platinum
       tiers: 30, xpPerTier: 400,   // 400 (not the blueprint's 100): ~10 matches a day + missions ≈ 420 XP/day, so tier 30 lands around day 28
@@ -7935,7 +7957,7 @@ function startGame() {
   if (!window.chase) setupChase('league', window._activeLeagueIdx != null ? window._activeLeagueIdx : selectedLeagueIdx());
   window._hudNeedShown = null; hideMoment();
   updateHud();
-  if (['league', 'challenge', 'tourney', 'nets'].includes(window.chase.mode)) {
+  if (['league', 'challenge', 'tourney', 'nets', 'duel'].includes(window.chase.mode)) {
     // intro moment: NEED x OFF y big in the pop-up area, then it shrinks into the scoreboard
     state = 'intro'; ball.active = false; window._introLong = false; window._introShort = false;
     showMoment('intro');
@@ -8081,6 +8103,7 @@ function updateHomeLeagueCard(lg, nextLg, trophies) {
   tag.textContent = (lg.subtitle || '').split('\u00b7')[0].trim().toUpperCase();
   tag.style.background = `linear-gradient(${lg.accentColor}, ${lg.accentColor2 || lg.accentColor})`;
   document.getElementById('homeLeagueEntry').textContent = lg.entry.toLocaleString();
+  { const d = document.getElementById('homeDuelBtn'); if (d) { const on = typeof featureOn === 'function' && featureOn('compete'); d.hidden = !on; d.parentElement.classList.toggle('duel', on); } }
   const fill = document.getElementById('homeRoadFill'), txt = document.getElementById('homeRoadTxt');
   if (nextLg) {
     const _base = THEMED_LEAGUES[currentLeagueIdx()].unlock;
@@ -32713,31 +32736,32 @@ function startBallSequence() {
     { w: lerp(0.04, 0.08, d), spd:1.20, swg:0.6,  zb:+0.08 }, // yorker-length (hard to reach)
   ];
 
-  // weighted random pick
+  // weighted random pick (_drand: a duel seeds it so both players face the same six balls)
+  const _drand = () => (window.chase && window.chase.drng) ? window.chase.drng() : Math.random();
   const totalW = DELIVERIES.reduce((s, x) => s + x.w, 0);
-  let pick = Math.random() * totalW, delivery = DELIVERIES[0];
+  let pick = _drand() * totalW, delivery = DELIVERIES[0];
   for (const dv of DELIVERIES) { pick -= dv.w; if (pick <= 0) { delivery = dv; break; } }
 
   // ── Assemble this ball's characteristics ──
-  const paceVariance = (Math.random() - 0.5) * 0.003; // small per-ball noise always present
+  const paceVariance = (_drand() - 0.5) * 0.003; // small per-ball noise always present
   ballSpeed = (baseSpeed + seasonRamp + paceVariance) * delivery.spd;
 
   const swingWidth = 0.18 * delivery.swg;
-  ball.targetX = 0.5 + (Math.random() - 0.5) * Math.min(swingWidth, 0.40);
+  ball.targetX = 0.5 + (_drand() - 0.5) * Math.min(swingWidth, 0.40);
   ball.lineSide = ball.targetX > 0.5 ? 1 : (ball.targetX < 0.5 ? -1 : 0);
 
-  ball.zoneCenter = 0.92 + delivery.zb + (Math.random() - 0.5) * 0.10;
+  ball.zoneCenter = 0.92 + delivery.zb + (_drand() - 0.5) * 0.10;
   ball.zoneCenter = Math.max(0.76, Math.min(1.02, ball.zoneCenter));
   // Nov 3 (Joe): a spinner bowls every second over — slower, a touch fuller, and it turns after pitching.
   // Off spin (right-arm) turns into the right-hander, from off (screen right) to leg; leg spin turns away.
   ball.turn = 0; window._bowlPre = 'b3_';
-  if (ballsBowled === 0 || !window._spinKind) window._spinKind = Math.random() < 0.5 ? 'off' : 'leg';
+  if (ballsBowled === 0 || !window._spinKind) window._spinKind = _drand() < 0.5 ? 'off' : 'leg';
   if (Math.floor(ballsBowled / 6) % 2 === 1 && !firstMatch && GP_SRC.b3o_stand && GP_SRC.b3l_stand && gullyPaintedPeople() && b3On()) {
     const off = window._spinKind === 'off';
     window._bowlPre = off ? 'b3o_' : 'b3l_';
-    ballSpeed = (baseSpeed + paceVariance) * (0.72 + Math.random() * 0.1);   // spin pace, whatever the seam pick was
-    ball.targetX = 0.5 + (off ? 0.045 : -0.035) + (Math.random() - 0.5) * 0.07;
-    ball.turn = (off ? -1 : 1) * (0.035 + Math.random() * 0.05);
+    ballSpeed = (baseSpeed + paceVariance) * (0.72 + _drand() * 0.1);   // spin pace, whatever the seam pick was
+    ball.targetX = 0.5 + (off ? 0.045 : -0.035) + (_drand() - 0.5) * 0.07;
+    ball.turn = (off ? -1 : 1) * (0.035 + _drand() * 0.05);
     ball.lineSide = (ball.targetX + ball.turn) > 0.5 ? 1 : ((ball.targetX + ball.turn) < 0.5 ? -1 : 0);
     ball.zoneCenter = Math.max(0.76, Math.min(1.02, ball.zoneCenter + 0.02));
   }
@@ -33634,7 +33658,7 @@ function endGame() {
   if (!window.chase && window._modeEndAt && Date.now() - window._modeEndAt < 6000) return;   // nets/challenge already ended: a late call must not show a league result
   hideMoment();
   if (window.chase && window.chase.mode === 'nets') { netsEnd(); return; }
-  if (window.chase && ['challenge', 'tourney', 'endless'].includes(window.chase.mode)) { modeEnd(); return; }
+  if (window.chase && ['challenge', 'tourney', 'endless', 'duel'].includes(window.chase.mode)) { modeEnd(); return; }
   state = 'menu';
   if (runs > best) {
     best = runs;
@@ -62187,6 +62211,7 @@ function gameLoop() {
     gullyThrowDraw(); drawFieldBallFallback();
     drawParticles();
     drawFlyingStumps();
+    try { drawDuelGhost(); } catch (e) {}
     drawBoundaryShockwave();
     drawBoundaryParticles();
     drawPopText();
@@ -63194,6 +63219,7 @@ function chaseBall(runsScored) {
 function chaseAfterBall() {
   const c = window.chase;
   if (!c || c.mode === 'nets' || c.mode === 'endless') return false;
+  if (c.mode === 'duel') return duelAfterBall(false);
   if (c.mode !== 'tourney' && runs >= c.target) { chaseWon(); return true; }
   if (c.used >= c.balls) { state = 'result'; setTimeout(() => { if (!extraOverOffer()) endGame(); }, 700); return true; }
   const left = chaseBallsLeft(), need = chaseNeed();
@@ -63220,6 +63246,7 @@ function chaseWicket(kind) {
   if (!c) { setTimeout(() => endGame(), 2000); return; }
   c.used++; c.wkLost++; c.log.push('W');
   haptic([80, 30, 80]);
+  if (c.mode === 'duel') { setTimeout(() => { if (window.chase === c) duelAfterBall(true); }, 1250); return; }
   if (c.wkLost >= c.wickets) {
     if (c.mode === 'endless' && c.secondLife) { setTimeout(() => endlessSecondLife(yes => { if (yes && window.chase) { window.chase.wkLost--; chaseNewBatter(); } else endGame(); }), 1600); return; }
     setTimeout(() => endGame(), 2000); return; }
@@ -63383,10 +63410,14 @@ function showMoment(kind, d) {
     if (c.mode === 'nets') {
       html = `<div class="mmS"><span class="msL">${lg.name || ''}</span><b class="msN" style="font-size:110px;color:#7fd0ff">NETS</b><span class="msO" style="font-size:26px;white-space:nowrap">FREE PRACTICE · 1 WICKET</span>${netsBest() > 0 ? `<span class="msWin">NETS BEST · <b style="color:#FFC93A">${netsBest()}</b></span>` : ''}</div>`;
       ms = 1300; window._introShort = true; window._hudFadeAt = performance.now() + ms + 100;
+    } else if (c.mode === 'duel' && c.rival) {   // Nov 6: duels are a six-ball shootout, no target
+      html = `<div class="mmS"><span class="msL">${c.cup ? GAME_CONFIG.season.cup.rounds[c.cupRound] : 'DUEL'} · ${c.rival.flag} ${c.rival.name}</span><span class="msNeed">HEAD TO HEAD</span><b class="msN">${c.balls}</b><span class="msO">BALLS EACH</span>
+        <span class="msWin">${c.cup ? 'WIN AND GO THROUGH' : `WIN THE POT <i class="hIco hi-coin"></i>${(c.pot || 0).toLocaleString()}`}</span></div>`;
+      ms = 1500; window._introShort = true; window._hudFadeAt = performance.now() + ms + 100;
     } else if ((window.INTRO_STYLE || 'slam') === 'slam' && c.mode !== 'tourney' && c.target) {   // Oct 30: one big number over the field, short
       const bag = !c.mode || c.mode === 'league' ? (lg.winChest && CHEST_TYPES[lg.winChest]) : null;
-      html = `<div class="mmS"><span class="msL">${c.mode === 'challenge' ? 'DAILY CHALLENGE' : (lg.name || '')}</span><span class="msNeed">NEED</span><b class="msN">${c.target}</b><span class="msO">OFF ${c.balls} BALLS</span>
-        ${bag ? `<span class="msWin">WIN${lg.winCoins ? ` <i class="hIco hi-coin"></i>${lg.winCoins}` : ''} · <b style="color:${bag.color}">${bag.name} BAG</b></span>` : ''}</div>`;
+      html = `<div class="mmS"><span class="msL">${c.mode === 'challenge' ? 'DAILY CHALLENGE' : c.mode === 'duel' && c.rival ? `DUEL · ${c.rival.flag} ${c.rival.name} MADE ${c.rival.runs}` : (lg.name || '')}</span><span class="msNeed">NEED</span><b class="msN">${c.target}</b><span class="msO">OFF ${c.balls} BALLS</span>
+        ${c.mode === 'duel' ? `<span class="msWin">WIN THE POT <i class="hIco hi-coin"></i>${(c.pot || 0).toLocaleString()}</span>` : ''}${bag ? `<span class="msWin">WIN${lg.winCoins ? ` <i class="hIco hi-coin"></i>${lg.winCoins}` : ''} · <b style="color:${bag.color}">${bag.name} BAG</b></span>` : ''}</div>`;
       ms = 1300; window._introShort = true; window._hudFadeAt = performance.now() + ms + 100;
     } else if ((window.INTRO_STYLE || 'slam') === 'v2' && c.mode !== 'tourney' && c.target) {   // Oct 30: TV-style chase graphic
       const bag = !c.mode || c.mode === 'league' ? (lg.winChest && CHEST_TYPES[lg.winChest]) : null, sk = (() => { try { const n = streakState().current, nx = streakTier(n + 1); return n >= 2 ? { n, m: nx.coinMult } : null; } catch (e) { return null; } })();
@@ -63419,6 +63450,10 @@ function showMoment(kind, d) {
   } else if (kind === 'lastover') {
     html = `<div class="mmUrg"><span class="mmBig" style="font-size:48px;color:#FFC93A">LAST OVER</span><span style="font-size:22px;text-shadow:0 3px 0 #050A14">NEED ${d.need} OFF 6</span></div>`;
     ms = 1800;
+  } else if (kind === 'duel') {   // Nov 6: the ghost ball shows the rival's ball, so this is just the race
+    const lc = d.me > d.them ? '#7CF29A' : d.me < d.them ? '#FF5A3C' : '#FFC93A';
+    html = `<div class="mmSum"><span class="a">YOU <b style="color:${lc}">${d.me}</b> · ${flagHtml(d.flag)} ${String(d.name).slice(0, 10)} <b>${d.them}</b></span>${d.lead ? `<span class="b">${d.lead}</span>` : ''}</div>`;
+    ms = 1500;
   } else if (kind === 'summary') {   // small, every ball: the ask, coloured by the rate needed
     const rt = d.need / Math.max(1, d.left), col = rt > 2 ? '#FF5A3C' : rt > 1.25 ? '#FFC93A' : '#7CF29A';
     html = `<div class="mmSum"><span class="a">NEED <b style="color:${col}">${d.need}</b></span><span class="b">OFF ${d.left} BALL${d.left === 1 ? '' : 'S'}</span></div>`;
@@ -63465,8 +63500,8 @@ function neLook(kind, title, again, againCls, back) {
   const a = document.getElementById('netsAgain'), b = document.getElementById('netsBack');
   a.innerHTML = again; a.className = againCls || ''; b.textContent = back || 'BACK';
   let pm = document.getElementById('netsMatch');
-  if (kind === 'nets') { if (!pm) { pm = document.createElement('button'); pm.id = 'netsMatch'; document.querySelector('#netsEnd .row').insertAdjacentElement('afterend', pm); }
-    pm.textContent = 'PLAY A MATCH'; pm.style.display = ''; } else if (pm) pm.style.display = 'none';
+  if (kind === 'nets' || window._cupResult) { if (!pm) { pm = document.createElement('button'); pm.id = 'netsMatch'; document.querySelector('#netsEnd .row').insertAdjacentElement('afterend', pm); }
+    pm.textContent = window._cupResult ? 'THE DRAW' : 'PLAY A MATCH'; pm.style.display = ''; if (window._cupResult) pm.setAttribute('data-cupdraw', ''); else pm.removeAttribute('data-cupdraw'); } else if (pm) { pm.style.display = 'none'; pm.removeAttribute('data-cupdraw'); }
 }
 function netsEnd() {
   try { if (_fxBigEl) { _fxBigEl.remove(); _fxBigEl = null; } } catch (e) {}
@@ -63486,7 +63521,7 @@ function netsEnd() {
 }
 document.addEventListener('click', e => {
   if (e.target && e.target.id === 'netsAgain') { document.getElementById('netsEnd').classList.remove('show'); if (window._netsAgainMode) { const m = window._netsAgainMode; window._netsAgainMode = null; playMode(m === 'tourney' ? 'tourney' : m); } else playNets(window._netsLeague); }
-  if (e.target && e.target.id === 'netsMatch') { document.getElementById('netsEnd').classList.remove('show'); try { track('nets_to_match', {}); playLeague(selectedLeagueIdx()); } catch (err) { document.getElementById('homeLeagueCard').click(); } return; }
+  if (e.target && e.target.id === 'netsMatch' && !e.target.hasAttribute('data-cupdraw')) { document.getElementById('netsEnd').classList.remove('show'); try { track('nets_to_match', {}); playLeague(selectedLeagueIdx()); } catch (err) { document.getElementById('homeLeagueCard').click(); } return; }
   if (e.target && e.target.id === 'netsBack') {
     document.getElementById('netsEnd').classList.remove('show');
     closeAllScreens(); leagueScreen.classList.remove('hidden'); renderLeagueScreen(); showNav('league'); muteBtn.classList.remove('hidden');
@@ -63570,7 +63605,7 @@ function drawMatchHud() {
   ctx.fillStyle = lg.accentColor || '#2457D6'; ctx.beginPath(); ctx.arc(bdx, bdy, 10 * s, 0, 7); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.font = FONT(11); ctx.textAlign = 'center'; ctx.fillText(((lg.name || 'N')[0] || 'N'), bdx, bdy + 4 * s); } }
   const won = c.won;
-  const runsMode = c.mode === 'nets' || c.mode === 'tourney' || c.mode === 'endless';
+  const runsMode = c.mode === 'nets' || c.mode === 'tourney' || c.mode === 'endless' || c.mode === 'duel';
   if (HI) { if (won || close) { ctx.fillStyle = won ? 'rgba(13,110,46,.75)' : 'rgba(200,34,44,.6)'; const q = HD.chase; _hudRR(hx(q[0]), hy(q[1]), (q[2] - q[0]) * bw, (q[3] - q[1]) * bw, 4 * s); ctx.fill(); } }
   else { ctx.fillStyle = won ? '#0d6e2e' : runsMode ? '#1e3a8a' : close ? '#c8222c' : '#7a1420';
   ctx.fillRect(x0 + 30 * s, y0, bw - 30 * s, tbH); }
@@ -63580,7 +63615,7 @@ function drawMatchHud() {
     ctx.fillStyle = '#fff'; ctx.font = FONT(28); ctx.fillText(String(runs), tx, mid + 10 * sT);
     const nw = ctx.measureText(String(runs)).width;
     ctx.font = FONT(12); ctx.fillStyle = '#c9d8ff'; ctx.fillText('RUNS', tx + nw + 6 * sT, mid - 2 * sT);
-    ctx.font = FONT(13); ctx.fillStyle = '#fff'; ctx.fillText(c.mode === 'tourney' ? (chaseBallsLeft() === 1 ? 'LAST BALL' : `${chaseBallsLeft()} BALLS LEFT`) : c.mode === 'endless' ? 'ENDLESS · NO LIMIT' : 'NETS · NO LIMIT', tx + nw + 6 * sT, mid + 12 * sT);
+    ctx.font = FONT(13); ctx.fillStyle = '#fff'; ctx.fillText(c.mode === 'duel' ? (c.sd ? `RIVAL ${c.rv} · SUDDEN DEATH` : `RIVAL ${c.rv} · ${chaseBallsLeft()} LEFT`) : c.mode === 'tourney' ? (chaseBallsLeft() === 1 ? 'LAST BALL' : `${chaseBallsLeft()} BALLS LEFT`) : c.mode === 'endless' ? 'ENDLESS · NO LIMIT' : 'NETS · NO LIMIT', tx + nw + 6 * sT, mid + 12 * sT);
   } else {
     // ticking: the shown number counts down towards the real one
     const need = chaseNeed();
@@ -63607,7 +63642,8 @@ function drawMatchHud() {
   const sc = `${runs}-${c.wkLost}`; ctx.fillText(sc, scx, r2);
   const sw2 = ctx.measureText(sc).width;
   ctx.font = FONT(13); ctx.fillStyle = '#B4C2DD';
-  if (runsMode) ctx.fillText(c.mode === 'tourney' ? 'TOURNEY' : `BEST ${c.mode === 'nets' ? netsBest() : best}`, scx + sw2 + 6 * sT, r2);   // chase: the target is already in the line above
+  if (runsMode) ctx.fillText(c.mode === 'duel' ? (c.cup ? 'CUP' : 'DUEL') : c.mode === 'tourney' ? 'TOURNEY' : `BEST ${c.mode === 'nets' ? netsBest() : best}`, scx + sw2 + 6 * sT, r2);
+  // chase: the target is already in the line above
   if (c.mode === 'nets') { ctx.font = FONT(13); ctx.fillStyle = '#B4C2DD'; ctx.textAlign = 'right';
     ctx.fillText(`BALLS ${c.used || 0} · 4s ${thisRunFours} · 6s ${thisRunSixes}`, x0 + bw - 10 * s, r2); ctx.textAlign = 'left';
     if (netsBest() > 0 && runs > netsBest() && !c._bestShown) { c._bestShown = 1; setTimeout(() => { try { showMoment('netsbest'); playAchievementChime(); } catch (e) {} }, 300); } }
@@ -65526,8 +65562,314 @@ function tourneyStats(idx) { const b = bandOf(idx), mid = b === 1 ? 5 : b === 2 
 function endlessKey() { return `e:${weekKey()}`; }
 function endlessScene() { const sc = allScenesUpTo(27); return sc[Math.floor(_seeded('es' + weekKey())() * sc.length)]; }
 function endlessStats() { return { mean: 38, sd: 22 }; }
+// ---------- DUELS (Nov 6): chase a rival's innings off the same balls; winner takes the pot ----------
+// Nov 6 (Joe: the cup draw looked fake — COVERDRIVE, COVERDRIVE_6, COVERDRIVE_33…): believable player handles.
+const RIVAL_FIRST = ['Sam', 'Ali', 'Ben', 'Dev', 'Liam', 'Ravi', 'Zak', 'Hamza', 'Arjun', 'Tom', 'Jack', 'Kane', 'Ollie', 'Rohan', 'Shan', 'Harry', 'Danny', 'Mo', 'Adil', 'Rishi', 'Kyle', 'Nathan', 'Asif', 'Aaron', 'Jamie', 'Sanjay', 'Imran', 'Callum', 'Ethan', 'Noah', 'Priya', 'Sophie', 'Aisha', 'Meera', 'Ellie', 'Zara', 'Anya', 'Lucy', 'Nadia', 'Kiran', 'Vikram', 'Owen', 'Faisal', 'Tariq', 'Josh', 'Reece', 'Leo', 'Isaac', 'Amir', 'Neel', 'Yusuf', 'Ryan', 'Dan', 'Will', 'Chloe', 'Maya', 'Pooja', 'Hassan', 'Kai', 'Theo'];
+const RIVAL_WORD = ['Sixer', 'Yorker', 'Googly', 'Flick', 'Hook', 'Scoop', 'Slog', 'Ramp', 'Sweep', 'Gully', 'Bouncer', 'Edge', 'Ton', 'Stumps', 'Cover', 'Pull', 'Spin', 'Swing', 'Seam', 'Duck', 'Helmet', 'Willow', 'Boundary', 'Nets', 'Slip'];
+const RIVAL_TAIL = ['King', 'Queen', 'Boss', 'Machine', 'Master', 'Ninja', 'Lord', 'Hero', 'Wizard', 'Legend', 'Pro', 'Ace', 'Fan', 'Kid'];
+function rivalName(r) { const f = RIVAL_FIRST[Math.floor(r() * RIVAL_FIRST.length)], w = RIVAL_WORD[Math.floor(r() * RIVAL_WORD.length)], t = RIVAL_TAIL[Math.floor(r() * RIVAL_TAIL.length)], n = Math.floor(r() * 99) + 1, k = r();
+  return (k < 0.3 ? f + n : k < 0.5 ? f + '_' + w : k < 0.68 ? w + t : k < 0.82 ? f + w : k < 0.92 ? 'The' + w + t : f.toUpperCase() + (n + 1900 + Math.floor(r() * 120)).toString().slice(-2)).slice(0, 14); }
+// Nov 6: painted flags (Figma 530:191) in place of emoji; anything without a painted flag falls back to the emoji
+const FLAG_ART = ['in', 'gb', 'au', 'pk', 'za', 'nz', 'lk', 'bd', 'jm', 'af', 'eng', 'wi'];
+function flagCode(e) { e = String(e || ''); if (e.includes('\u{E0065}\u{E006E}\u{E0067}')) return 'eng';
+  const cps = [...e].map(ch => ch.codePointAt(0)).filter(c => c >= 0x1F1E6 && c <= 0x1F1FF); return cps.length === 2 ? cps.map(c => String.fromCharCode(c - 0x1F1E6 + 97)).join('') : ''; }
+function flagHtml(e, cls) { const k = flagCode(e); return FLAG_ART.includes(k) ? `<img class="flg${cls ? ' ' + cls : ''}" alt="" src="assets/ui/flags/${k}.webp">` : (e || ''); }
+const DUEL_FLAGS = ['🇮🇳', '🇬🇧', '🇦🇺', '🇵🇰', '🇿🇦', '🇳🇿', '🇱🇰', '🇧🇩', '🇯🇲', '🇦🇫'];
+function duelState() { const s = seasonState(); s.duel = s.duel || { trophies: 0, w: 0, l: 0, d: 0, streak: 0, bestStreak: 0, ranksPaid: 0, recent: [], table: 0, mine: [], day: null, today: 0 };
+  if (s.duel.day !== todayKey()) { s.duel.day = todayKey(); s.duel.today = 0; } return s.duel; }
+function duelRank(t) { const R = GAME_CONFIG.season.duel.ranks; let i = 0; R.forEach((r, k) => { if (t >= r.at) i = k; }); return i; }
+function duelTables() { const hi = Math.max(1, highestLeagueIdx()), out = []; for (let i = 1; i <= hi; i++) if (THEMED_LEAGUES[i] && THEMED_LEAGUES[i].entry) out.push(i); return out.length ? out : [1]; }
+function duelTable() { const d = duelState(), T = duelTables(); if (!T.includes(d.table)) d.table = T.includes(currentLeagueIdx()) ? currentLeagueIdx() : T[T.length - 1]; return d.table; }
+function duelEntry(li) { return duelFreeLeft() ? 0 : THEMED_LEAGUES[li].entry; }
+function duelFreeLeft() { const d = duelState(); return (d.freeDay === todayKey() ? 0 : GAME_CONFIG.season.duel.freePerDay); }
+function duelReq(li) { return Math.max(0, duelTables().indexOf(li)) * GAME_CONFIG.season.duel.tableStep; }   // trophies needed to sit at this table
+function duelOpen(li) { return duelState().trophies >= duelReq(li); }
+function duelTooEasy(li) { return duelState().trophies >= duelReq(li) + GAME_CONFIG.season.duel.tooEasy && duelTables().some(x => x > li && duelOpen(x)); }
+function duelBag(li) { const B = GAME_CONFIG.season.duel.winBag; return (B.find(b => li <= b[0]) || B[B.length - 1])[1]; }
+function duelPot(li) { return THEMED_LEAGUES[li].entry * GAME_CONFIG.season.duel.potMult; }
+// local rival: six balls of a believable innings for this table (+ sudden-death balls), a touch stronger as trophies climb
+const DUEL_DIST = { k: ['W', 0, 1, 2, 4, 6], weak: [.12, .35, .30, .10, .09, .04], elite: [.02, .04, .08, .06, .30, .50] };
+function duelDist(perBall) {   // mix weak → elite so the expected runs a ball match the table
+  const ev = k => DUEL_DIST.k.reduce((t, o, i) => t + (o === 'W' ? 0 : o) * (DUEL_DIST.weak[i] * (1 - k) + DUEL_DIST.elite[i] * k), 0);
+  let lo = 0, hi = 1; for (let n = 0; n < 24; n++) { const m = (lo + hi) / 2; if (ev(m) < perBall) lo = m; else hi = m; }
+  const k = (lo + hi) / 2; return DUEL_DIST.weak.map((w, i) => w * (1 - k) + DUEL_DIST.elite[i] * k);
+}
+function duelDraw(r, dist) { let x = r(); for (let i = 0; i < dist.length; i++) { x -= dist[i]; if (x <= 0) return DUEL_DIST.k[i]; } return 1; }
+BACKEND.duelRival = function (li, seed, boost) {
+  const r = _seeded('du' + seed), band = matchBand(li), D = GAME_CONFIG.season.duel;
+  const ds = duelState(), ease = D.easeAfterLoss * Math.min(D.easeMax, ds.ls || 0);   // a little easier after losses in a row, so it stays near 50/50
+  const per = leagueTarget(THEMED_LEAGUES[li]) / band.balls * (0.93 + Math.min(0.15, ds.trophies / 8000) + (boost || 0) - ease);
+  const dist = duelDist(per), log = [], sd = [];
+  for (let i = 0; i < D.balls; i++) log.push(duelDraw(r, dist));
+  for (let i = 0; i < D.suddenDeathMax; i++) sd.push(duelDraw(r, dist));
+  const hx = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)), mine = PLAYER_SHIRTS.find(x => x.id === curLook().shirt), mc = mine ? hx(mine.c) : [0, 0, 0];
+  const shirts = PLAYER_SHIRTS.filter(x => { const q = hx(x.c); return x.id !== 'white' && x.id !== 'cream' && Math.hypot(q[0] - mc[0], q[1] - mc[1], q[2] - mc[2]) > 120; }).map(x => x.id);   // a kit that clearly isn't yours
+  const nm = rivalName(r), fem = /^(Priya|Sophie|Aisha|Meera|Ellie|Zara|Anya|Lucy|Nadia|Chloe|Maya|Pooja|PRIYA|SOPHIE|AISHA|MEERA|ELLIE|ZARA|ANYA|LUCY|NADIA|CHLOE|MAYA|POOJA)/.test(nm);
+  return { name: nm, flag: DUEL_FLAGS[Math.floor(r() * DUEL_FLAGS.length)], log, sd, seed: String(seed), trophies: Math.max(0, Math.round(ds.trophies + (r() - 0.5) * 140)), shirt: shirts[Math.floor(r() * shirts.length)], g: fem ? 'f' : 'm' };
+
+};
+// your innings, kept so the online version can hand it to other players as their rival
+BACKEND.duelSubmit = function (li, runs, wk, log) { const d = duelState(); d.mine.unshift({ li, runs, wk, log: (log || []).slice(0, 20), at: Date.now() }); d.mine = d.mine.slice(0, 20); };
+function duelTotal(log, n, wickets) { let t = 0, w = 0; for (let i = 0; i < Math.min(n, log.length); i++) { if (w >= wickets) break; if (log[i] === 'W') w++; else t += log[i]; } return { runs: t, wk: w }; }
+function startDuelMatch(li, rival, extra) {
+  const D = GAME_CONFIG.season.duel;
+  document.getElementById('competePanel').classList.remove('show');
+  window._activeLeagueIdx = li; window._leagueTargetFloor = 0; window._modeScene = null;
+  setupChase('league', li);
+  Object.assign(window.chase, { mode: 'duel', balls: D.balls, wickets: D.wickets, target: 0, rival, rv: 0, rvWk: 0, sd: 0, sdRes: null, drng: _seeded('dl' + rival.seed) }, extra || {});
+  closeAllScreens(); duelVersus(rival, extra || {}, () => startGame());
+}
+// Nov 6: a two-second face-off before the first ball (Golf Clash style versus card); tap to skip
+function duelVersus(rival, extra, go) {
+  let el = document.getElementById('duelVs'); if (!el) { el = document.createElement('div'); el.id = 'duelVs'; document.body.appendChild(el); }
+  const me = curLook(), d = duelState(), C = GAME_CONFIG.season.cup;
+  const head = extra.cup ? `FLICKY CUP · ${C.rounds[extra.cupRound]}` : `DUEL · ${THEMED_LEAGUES[window._activeLeagueIdx] ? THEMED_LEAGUES[window._activeLeagueIdx].name : ''}`;
+  const prize = extra.cup ? '<span>WIN AND GO THROUGH</span>' : `<span>POT <i class="hIco hi-coin"></i>${(extra.pot || 0).toLocaleString()} + ${bagNm(duelBag(window._activeLeagueIdx || 1))} BAG</span>`;
+  el.innerHTML = `<div class="vsHead">${head}</div>
+    <div class="vsSide me"><canvas width="10" height="10"></canvas><b>${(me.name || 'YOU').slice(0, 14)}</b><small>${flagHtml(me.flag)} · <i class="hIco hi-trophy"></i>${d.trophies}</small></div>
+    <div class="vsMid"><img alt="" src="assets/ui/icon_duel.webp"><span>VS</span></div>
+    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small></div>
+    <div class="vsFoot">${prize}<em>${GAME_CONFIG.season.duel.balls} BALLS EACH · SAME BALLS</em></div>`;
+  const cv = el.querySelectorAll('canvas');
+  try { paintPlayerTo(cv[0], me); paintPlayerTo(cv[1], Object.assign({}, me, { shirt: rival.shirt || 'maroon', g: rival.g || 'm', name: rival.name })); } catch (e) {}
+  el.className = 'show'; try { playTone({ freq: 160, duration: .25, volume: .2, type: 'triangle' }); haptic(40); } catch (e) {}
+  let done = false; const fin = () => { if (done) return; done = true; el.className = 'out'; setTimeout(() => { el.className = ''; }, 300); go(); };
+  el.onclick = fin; setTimeout(fin, 2300);
+}
+// Nov 6: the rival's ball for the same delivery, shown as a ghost ball on the field (where it went), not just a number
+function duelGhost(out, seed) { const r = _seeded('gh' + seed); window._duelGhost = { t0: performance.now(), out, a: -Math.PI * (0.12 + r() * 0.76) + (r() < 0.25 ? Math.PI * (r() < 0.5 ? -0.12 : 1.12) : 0), j: r() }; }
+function drawDuelGhost() {
+  const g = window._duelGhost; if (!g) return; const t = (performance.now() - g.t0) / 1000; if (t > 1.7) { window._duelGhost = null; return; }
+  const cx = W / 2, cy = H * FIELD_CY, rx = W * FIELD_RX, ry = H * FIELD_RY, sx = W / 2, sy = PITCH_BOTTOM() - 8;
+  const o = g.out, wk = o === 'W', K = { 0: 0.22, 1: 0.48, 2: 0.68, 3: 0.8, 4: 0.97, 6: 1.18 }[o] ?? 0.4;
+  const ex = wk ? W / 2 : cx + Math.cos(g.a) * rx * K, ey = wk ? PITCH_BOTTOM() + 9 : cy + Math.sin(g.a) * ry * K;
+  const ox = wk ? W / 2 + (g.j - 0.5) * 20 : sx, oy = wk ? sy - H * 0.22 : sy;
+  const p = Math.min(1, t / (o === 6 ? 1.0 : 0.8)), e = 1 - Math.pow(1 - p, 2.2), x = ox + (ex - ox) * e, y = oy + (ey - oy) * e;
+  const lift = o === 6 ? Math.sin(Math.PI * e) * H * 0.07 : 0, al = t < 1.25 ? 1 : Math.max(0, 1 - (t - 1.25) / 0.45);
+  ctx.save(); ctx.globalAlpha = al * 0.55; ctx.strokeStyle = '#8fd0ff'; ctx.lineWidth = 3; ctx.setLineDash([6, 7]);
+  ctx.beginPath(); for (let i = 0; i <= 20; i++) { const q = e * i / 20, qx = ox + (ex - ox) * q, qy = oy + (ey - oy) * q - (o === 6 ? Math.sin(Math.PI * q) * H * 0.07 : 0); i ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy); } ctx.stroke(); ctx.setLineDash([]);
+  const br = 10 + lift / H * 70; ctx.globalAlpha = al; ctx.fillStyle = 'rgba(143,208,255,.95)'; ctx.shadowColor = '#4aa8ff'; ctx.shadowBlur = 14;
+  ctx.beginPath(); ctx.arc(x, y - lift, br, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, y, br * 0.9, br * 0.4, 0, 0, 7); ctx.fill();
+  if (p >= 1) { const word = wk ? 'OUT' : o === 0 ? 'DOT' : String(o), big = o === 4 || o === 6 || wk;
+    ctx.globalAlpha = al; ctx.font = `${big ? 34 : 24}px 'Lilita One','Arial Black',Arial,sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#050A14';
+    const ty = Math.max(H * 0.24, Math.min(H * 0.9, ey - 18)), tx = Math.max(40, Math.min(W - 40, ex));
+    ctx.strokeText(word, tx, ty); ctx.fillStyle = wk ? '#7CF29A' : big ? '#FF6A4A' : '#8fd0ff'; ctx.fillText(word, tx, ty);
+    ctx.font = "12px 'Lilita One','Arial Black',Arial,sans-serif"; ctx.lineWidth = 4; ctx.strokeText('RIVAL', tx, ty - (big ? 30 : 22)); ctx.fillStyle = '#fff'; ctx.fillText('RIVAL', tx, ty - (big ? 30 : 22)); }
+  ctx.restore();
+}
+function playDuel() {
+  const li = duelTable(), entry = duelEntry(li), d = duelState();
+  if (!duelOpen(li)) { showMessage(`Needs ${duelReq(li)} duel trophies`, '#ff6b6b', 1600); return; }
+  if (career.coins < entry) { showMessage('Not enough coins!', '#ff6b6b', 1500); return; }
+  if (!entry) d.freeDay = todayKey();
+  career.coins -= entry; saveCareerStats();
+  d.today++; const rival = BACKEND.duelRival(li, Date.now() + ':' + d.w + d.l + d.d); SAVE.save();
+  track('match_start', { mode: 'duel', table: li, entry });
+  startDuelMatch(li, rival, { entry, pot: duelPot(li) });
+}
+const DUEL_WORD = { W: 'OUT!', 0: 'DOT BALL', 1: 'ONE', 2: 'TWO', 3: 'THREE', 4: 'FOUR', 6: 'SIX' };
+// after each of your balls: reveal the rival's ball for the same delivery, then carry on, go to sudden death, or finish
+function duelAfterBall(wicket) {
+  const c = window.chase, rv = c.rival, D = GAME_CONFIG.season.duel, mine = c.log[c.log.length - 1];
+  let theirs, end = false;
+  if (!c.sd) {
+    const i = c.used - 1; theirs = duelTotal(rv.log, i, c.wickets).wk >= c.wickets ? 'ALL OUT' : rv.log[i];
+    const t = duelTotal(rv.log, c.used, c.wickets); c.rv = t.runs; c.rvWk = t.wk;
+    if (c.used >= c.balls || c.wkLost >= c.wickets) {   // your innings is over: the rest of theirs plays out
+      const all = duelTotal(rv.log, D.balls, c.wickets); c.rv = all.runs; c.rvWk = all.wk;
+      if (c.used < D.balls) theirs = `${c.rv} OFF ${D.balls}`;
+      if (runs !== c.rv) end = true; else { c.sd = 1; c.balls = c.used + 1; if (c.wkLost >= c.wickets) c.wkLost = c.wickets - 1; } }
+  } else {
+    theirs = rv.sd[c.sd - 1]; const me = mine === 'W' ? 0 : mine, them = theirs === 'W' ? 0 : theirs;
+    if (me !== them) { c.sdRes = me > them ? 'me' : 'rival'; end = true; }
+    else if (c.sd >= D.suddenDeathMax) { c.sdRes = c.cup ? (_seeded('ct' + rv.seed)() < 0.5 ? 'me' : 'rival') : null; end = true; }
+    else { c.sd++; c.balls++; if (c.wkLost >= c.wickets) c.wkLost = c.wickets - 1; }
+  }
+  const lead = c.sd && !end ? 'LEVEL · SUDDEN DEATH' : null;
+  if (theirs === 'W' || typeof theirs === 'number') duelGhost(theirs, rv.seed + ':' + c.used + ':' + c.sd);
+  showMoment('duel', { theirs, name: rv.name, flag: rv.flag, me: runs, them: c.rv, lead });
+  window._momentHold = 1500;
+  if (end) { state = 'result'; setTimeout(() => endGame(), 1900); return true; }
+  if (wicket) setTimeout(chaseNewBatter, 2300);
+  return false;
+}
+function duelResult(c) { return c.sdRes ? (c.sdRes === 'me' ? 'win' : 'lose') : c.sd ? 'tie' : runs > c.rv ? 'win' : runs < c.rv ? 'lose' : 'tie'; }
+function duelEnd(c) {
+  const D = GAME_CONFIG.season.duel, d = duelState(), rv = c.rival, me = runs, res = duelResult(c);
+  BACKEND.duelSubmit(c.leagueIdx, me, c.wkLost, c.log);
+  const line = `You ${me}-${Math.min(c.wkLost, c.wickets)} · ${rv.name} ${c.rv}-${c.rvWk}${c.sd ? ' · SUDDEN DEATH' : ''}`;
+  if (c.cup) return cupAfterDuel(c, res, line);
+  let coins = 0, tg = 0;
+  const easy = duelTooEasy(c.leagueIdx); let bag = '';
+  if (res === 'win') { d.w++; d.streak++; d.ls = 0; d.bestStreak = Math.max(d.bestStreak, d.streak); coins = c.pot; tg = easy ? 0 : D.win + (d.streak >= D.streakAt ? D.streakBonus : 0); bag = grantReward({ bag: duelBag(c.leagueIdx) }); }
+  else if (res === 'tie') { d.d++; coins = c.entry; }
+  else { d.l++; d.streak = 0; d.ls = (d.ls || 0) + 1; tg = -Math.min(D.lose, d.trophies); }
+  d.trophies += tg; if (coins) { career.coins += coins; saveCareerStats(); }
+  const paid = []; const rk = duelRank(d.trophies);
+  while (d.ranksPaid < rk) { d.ranksPaid++; const R = D.ranks[d.ranksPaid]; if (R.r) paid.push(R.name + ' RANK: ' + grantReward(R.r)); }
+  d.recent.unshift({ name: rv.name, flag: rv.flag, them: c.rv, me, res, li: c.leagueIdx, at: Date.now() }); d.recent = d.recent.slice(0, 5); SAVE.save();
+  track('duel_end', { res, me, them: c.rv, sd: c.sd, table: c.leagueIdx, trophies: d.trophies });
+  const bits = []; if (coins) bits.push(`+${coins.toLocaleString()} COINS${res === 'tie' ? ' (ENTRY BACK)' : ''}`); if (tg) bits.push(`${tg > 0 ? '+' : ''}${tg} DUEL TROPHIES`);
+  if (bag) bits.push(bag); if (res === 'win' && easy) bits.push('NO TROPHIES AT THIS TABLE — MOVE UP');
+  if (res === 'win' && d.streak >= 2) bits.push(`${d.streak} IN A ROW`);
+  return { res, title: res === 'win' ? 'DUEL WON!' : res === 'tie' ? 'DUEL TIED' : 'DUEL LOST', line, extra: bits.concat(paid).join(' · ') || `${d.trophies} DUEL TROPHIES`, again: duelEntry(duelTable()) ? `DUEL AGAIN <i class="hIco hi-coin"></i>${duelEntry(duelTable()).toLocaleString()}` : 'DUEL AGAIN · FREE' };
+}
+// ---------- the draw (v2, Nov 6): round tabs you swipe, your match pinned, "your road", and a two-sided full-draw card ----------
+const CUP_TROPHY_SRC = 'assets/ui/cup_trophy.webp', CUP_PLAQUE_SRC = 'assets/ui/cup_plaque.webp';
+const CUP_TROPHY_IMG = (() => { const im = new Image(); im.src = CUP_TROPHY_SRC; return im; })();
+function cupFlag(run, i) { return i === 0 ? '★' : DUEL_FLAGS[Math.floor(_seeded('cf' + run.seed + ':' + i)() * DUEL_FLAGS.length)]; }
+function cupShort(r) { return ['LAST 32', 'LAST 16', 'QF', 'SF', 'FINAL'][r]; }
+function cupDrawCanvas(run, R) {   // two-sided World Cup style chart, made to be screenshotted and shared
+  const C = GAME_CONFIG.season.cup, W = 1800, H = 1060, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+  const F = px => `${px}px 'Lilita One','Arial Black',Arial,sans-serif`, nm = i => i == null ? 'TBD' : i === 0 ? 'YOU' : run.names[i];
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#13254a'); bg.addColorStop(1, '#071022'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.textAlign = 'center'; g.fillStyle = '#FFC93A'; g.font = F(46); g.fillText('FLICKY CUP', W / 2, 62);
+  g.fillStyle = '#B4C2DD'; g.font = F(22); g.fillText(`${THEMED_LEAGUES[run.li].name.toUpperCase()} · 32 PLAYERS`, W / 2, 96);
+  const TOP = 140, BOT = H - 30, colW = W / 9, bw = colW - 26, bh = 50;
+  const box = (x, y, m, hi) => {
+    g.fillStyle = '#0f1e3d'; g.strokeStyle = hi ? '#FFC93A' : '#22386a'; g.lineWidth = hi ? 4 : 2; g.beginPath(); g.roundRect(x, y, bw, bh, 9); g.fill(); g.stroke();
+    [[m.a, m.sa], [m.b, m.sb]].forEach(([i, sc], k) => { const done = m.w != null, win = done && m.w === i, yy = y + 20 + k * 24;
+      g.textAlign = 'left'; g.font = F(17); g.fillStyle = i === 0 ? '#FFC93A' : !done ? '#cfd8ea' : win ? '#fff' : '#5f7096';
+      let t = nm(i); while (g.measureText(t).width > bw - 46 && t.length > 3) t = t.slice(0, -1); g.fillText(t, x + 9, yy);
+      if (done && !win) { const tw = g.measureText(t).width; g.fillRect(x + 9, yy - 6, tw, 2); }
+      g.textAlign = 'right'; g.fillText(sc == null ? '' : String(sc) + (win && m.sd ? '*' : ''), x + bw - 9, yy); });
+  };
+  const ys = (r, k, half) => { const n = 8 >> r; return TOP + (k + 0.5) * (BOT - TOP) / n - bh / 2; };
+  for (let r = 0; r < 4; r++) for (let side = 0; side < 2; side++) {
+    const n = 8 >> r, x = side ? W - (r + 1) * colW + 13 : r * colW + 13;
+    for (let k = 0; k < n; k++) { const m = R[r][side * n + k], y = ys(r, k), mine = m.a === 0 || m.b === 0;
+      const nx = side ? x - colW : x + colW, ny = r < 3 ? ys(r + 1, Math.floor(k / 2)) : TOP + (BOT - TOP) / 2 - bh / 2;
+      g.strokeStyle = mine && m.w === 0 ? '#FFC93A' : '#2c4374'; g.lineWidth = mine && m.w === 0 ? 4 : 2; g.beginPath();
+      const ex = side ? x : x + bw, mx = side ? x - 13 : x + bw + 13, tx = r < 3 ? (side ? nx + bw : nx) : (side ? W / 2 + bw / 2 : W / 2 - bw / 2);
+      g.moveTo(ex, y + bh / 2); g.lineTo(mx, y + bh / 2); g.lineTo(mx, ny + bh / 2); g.lineTo(tx, ny + bh / 2); g.stroke();
+      box(x, y, m, mine); }
+  }
+  const fm = R[4][0], fy = TOP + (BOT - TOP) / 2 - bh / 2; box(W / 2 - bw / 2, fy, fm, fm.a === 0 || fm.b === 0);
+  g.textAlign = 'center'; g.font = F(20); g.fillStyle = '#7f93bd'; g.fillText('FINAL', W / 2, fy - 14);
+  if (CUP_TROPHY_IMG.complete && CUP_TROPHY_IMG.naturalWidth) { const th = 190, tw = th * CUP_TROPHY_IMG.naturalWidth / CUP_TROPHY_IMG.naturalHeight; g.drawImage(CUP_TROPHY_IMG, W / 2 - tw / 2, fy - 40 - th, tw, th); } else { g.font = F(64); g.fillText('🏆', W / 2, fy - 90); }
+  g.font = F(18); g.fillText('WINNER', W / 2, fy + bh + 36);
+  g.font = F(30); g.fillStyle = fm.w === 0 ? '#FFC93A' : '#fff'; g.fillText(fm.w == null ? '?' : nm(fm.w), W / 2, fy + bh + 72);
+  g.font = F(16); g.fillStyle = '#5f7096'; g.fillText('* won in sudden death', W / 2, BOT + 14);
+  return cv;
+}
+function shareCupDraw() {
+  const run = cupState().run; if (!run) return; const cv = cupDrawCanvas(run, cupBracket(run));
+  cv.toBlob(blob => { const file = new File([blob], 'flicky-cup.png', { type: 'image/png' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: 'Flicky Cup', text: run.champ ? 'I won the Flicky Cup!' : 'My Flicky Cup run' }).catch(() => {});
+    else { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = 'flicky-cup.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); } }, 'image/png');
+}
+function openCupDraw(page) {
+  const cs = cupState(), run = cs.run; if (!run) return;
+  const C = GAME_CONFIG.season.cup, R = cupBracket(run), nm = i => i == null ? 'TBD' : i === 0 ? 'YOU' : run.names[i];
+  let el = document.getElementById('cupDraw');
+  if (!el) { el = document.createElement('div'); el.id = 'cupDraw'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Cup draw'); document.body.appendChild(el); }
+  const last = run.path.length ? run.path[run.path.length - 1] : null, cur = run.out || run.champ ? (last ? last.round : 0) : run.round;
+  const status = run.champ ? 'CUP WINNERS!' : run.out ? `OUT IN THE ${C.rounds[last.round]}` : `IN THE ${C.rounds[run.round]}`;
+  const card = (m, big) => { const done = m.w != null, mine = m.a === 0 || m.b === 0;
+    const row = (i, sc) => `<div class="cdR${done ? (m.w === i ? ' w' : ' l') : ''}${i === 0 ? ' you' : ''}"><em>${i == null ? '' : i === 0 ? '★' : flagHtml(cupFlag(run, i))}</em><span>${nm(i)}</span><b>${sc == null ? (done ? '' : i == null ? '' : '–') : sc}${done && m.w === i && m.sd ? '<i>SD</i>' : ''}</b></div>`;
+    return `<div class="cdM${mine ? ' mine' : ''}${big ? ' big' : ''}${mine && !done && !run.out && !run.champ ? ' now' : ''}">${row(m.a, m.sa)}${row(m.b, m.sb)}</div>`; };
+  const road = C.rounds.map((rn, r) => { const pl = run.path.find(x => x.round === r), m = R[r][0];
+    const st = pl ? pl.res : (!run.out && !run.champ && r === run.round) ? 'next' : 'future';
+    const who = pl ? (pl.res === 'win' ? 'beat ' : 'lost to ') + nm(m.b) : st === 'next' ? 'vs ' + nm(m.b) : run.out || run.champ ? '' : 'to come';
+    return `<button class="cdRd ${st}" data-cdpage="${r}"><small>${C.rounds[r]}</small><b>${pl ? `${pl.me}–${pl.them}${pl.sd ? '*' : ''}` : st === 'next' ? 'NEXT' : '–'}</b><span>${who}</span></button>`; }).join('');
+  const pages = R.map((ms, r) => {
+    const pin = ms[0].a === 0 && (run.path.some(x => x.round === r) || (!run.out && !run.champ && r === run.round)) ? `<div class="cdPin"><small>YOUR MATCH</small>${card(ms[0], true)}</div>` : '';
+    if (r === R.length - 1) { const f = ms[0];
+      return `<section class="cdPage">${pin}<div class="cdFinal">${card(f, true)}<div class="cdWin"><img class="cdCup" alt="" src="${CUP_TROPHY_SRC}"><small>WINNER</small><b class="${f.w === 0 ? 'you' : ''}">${f.w == null ? 'TO BE DECIDED' : nm(f.w)}</b></div></div></section>`; }
+    let groups = ''; for (let k = 0; k < ms.length; k += 2) groups += `<div class="cdPair">${card(ms[k])}${card(ms[k + 1])}<i class="cdBr"></i></div>`;
+    return `<section class="cdPage">${pin}<div class="cdAll">ALL ${ms.length} MATCHES</div>${groups}</section>`;
+  }).join('') + `<section class="cdPage"><div class="cdAll">THE WHOLE DRAW</div><div class="cdFull" data-cdzoom></div><button class="gcBuy evGo cdShare" data-cdshare>SHARE THE DRAW</button></section>`;
+  el.style.setProperty('--lg', THEMED_LEAGUES[run.li].accentColor || '#2457D6');
+  el.innerHTML = `<div class="cdTop"><button class="evBack" data-cdclose aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="cdPlaque" style="background-image:url(${CUP_PLAQUE_SRC})"><img alt="" src="${CUP_TROPHY_SRC}"><div><b>FLICKY CUP</b><small>${THEMED_LEAGUES[run.li].name} · ${status}</small></div></div></div>
+    <div class="cdRoad">${road}</div>
+    <div class="cdTabs">${C.rounds.map((_, r) => `<button data-cdpage="${r}">${cupShort(r)}</button>`).join('')}<button data-cdpage="5">DRAW</button></div>
+    <div class="cdPages">${pages}</div>`;
+  el.querySelector('.cdFull').appendChild(cupDrawCanvas(run, R));
+  el.classList.add('show');
+  const box = el.querySelector('.cdPages'), tabs = [...el.querySelectorAll('.cdTabs button')];
+  const sync = () => { const i = Math.round(box.scrollLeft / Math.max(1, box.clientWidth)); tabs.forEach((b, j) => b.classList.toggle('on', j === i)); };
+  box.addEventListener('scroll', sync, { passive: true });
+  requestAnimationFrame(() => { box.scrollLeft = (page != null ? page : cur) * box.clientWidth; sync(); const rd = el.querySelector('.cdRoad'), b = rd.children[cur]; if (b) rd.scrollLeft = b.offsetLeft - rd.clientWidth / 2 + b.offsetWidth / 2; });
+}
+document.addEventListener('click', e => {
+  const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+  if (t.closest('[data-cupdraw]')) { e.stopImmediatePropagation(); openCupDraw(); try { playUiTap(); } catch (err) {} return; }
+  if (t.closest('[data-cdclose]')) { document.getElementById('cupDraw').classList.remove('show'); try { playUiTap(); } catch (err) {} return; }
+  const pg = t.closest('[data-cdpage]'); if (pg) { const box = document.querySelector('#cupDraw .cdPages'); box.scrollTo({ left: +pg.dataset.cdpage * box.clientWidth, behavior: 'smooth' }); try { playUiTap(); } catch (err) {} return; }
+  if (t.closest('[data-cdshare]')) { shareCupDraw(); return; }
+  if (t.closest('[data-cdzoom]')) { t.closest('[data-cdzoom]').classList.toggle('zoom'); }
+}, true);
+// ---------- KNOCKOUT CUP: 32-player draw, five rounds of duels, lose and you're out ----------
+function cupState() { const s = seasonState(); s.cup = s.cup || { run: null, wins: 0, best: 0, entered: 0 }; return s.cup; }
+function cupEntry(li) { return THEMED_LEAGUES[li].entry * GAME_CONFIG.season.cup.entryMult; }
+function cupPrize(round, champ) { const C = GAME_CONFIG.season.cup; return champ ? C.champion : C.prize[round]; }
+function cupNewDraw(li, seed) {   // 32 names (you're slot 0); your opponent each round is the winner of the next block of the draw
+  const r = _seeded('cd' + seed), names = ['YOU']; while (names.length < 32) { const n = rivalName(r); if (!names.some(x => x.toLowerCase() === n.toLowerCase())) names.push(n); }
+  return { li, seed: String(seed), round: 0, names, out: false, champ: false, path: [] };
+}
+// the whole draw: every match, every round. Your matches come from what you played; the rest are simulated
+// (seeded, so the same draw always plays out the same way) once their round has been played.
+function cupBracket(run) {
+  const C = GAME_CONFIG.season.cup, li = run.li, dist = duelDist(leagueTarget(THEMED_LEAGUES[li]) / matchBand(li).balls * 0.93), D = GAME_CONFIG.season.duel;
+  const sim = key => { const r = _seeded(key), lg = []; for (let i = 0; i < D.balls; i++) lg.push(duelDraw(r, dist)); return duelTotal(lg, D.balls, D.wickets).runs; };
+  const over = run.out || run.champ, rounds = []; let cur = run.names.map((_, i) => i);
+  for (let r = 0; r < C.rounds.length; r++) {
+    const ms = [], next = [];
+    for (let m = 0; m < cur.length / 2; m++) {
+      const a = cur[2 * m], b = cur[2 * m + 1], rec = { a, b, sa: null, sb: null, w: null, sd: false, mine: a === 0 || b === 0 };
+      if (rec.mine) { const pl = run.path.find(x => x.round === r); if (pl) { rec.sa = pl.me; rec.sb = pl.them; rec.sd = pl.sd; rec.w = pl.res === 'win' ? 0 : b; } }
+      else if (a != null && b != null && (over || r <= run.round)) {
+        const k = `cm${run.seed}:${r}:${m}`; rec.sa = sim(k + 'a'); rec.sb = sim(k + 'b');
+        if (rec.sa === rec.sb) { rec.sd = true; rec.w = _seeded(k + 's')() < 0.5 ? a : b; } else rec.w = rec.sa > rec.sb ? a : b; }
+      ms.push(rec); next.push(rec.w);
+    }
+    rounds.push(ms); cur = next;
+  }
+  return rounds;
+}
+function cupOpenNow() { return window.CUP_ALWAYS || GAME_CONFIG.season.cup.days.includes(_nowDate().getDay()); }
+function cupOpensLabel() { const ms = cupOpensIn(); if (ms < 864e5) return 'OPENS IN ' + fmtLeft(ms); const d = new Date(_nowDate().getTime() + ms); return 'OPENS ' + ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][d.getDay()]; }
+function cupOpensIn() { const d = _nowDate(); for (let k = 1; k <= 7; k++) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate() + k); if (GAME_CONFIG.season.cup.days.includes(x.getDay())) return x - d; } return 0; }
+function cupLive() { const run = cupState().run; return run && !run.out && !run.champ ? run : null; }
+function playCup() {
+  const cs = cupState(); let run = cupLive();
+  if (!run) {
+    if (!cupOpenNow()) { showMessage('The cup is on at the weekend', '#ff6b6b', 1600); return; }
+    const li = duelTable(), e = cupEntry(li);
+    if (career.coins < e) { showMessage('Not enough coins!', '#ff6b6b', 1500); return; }
+    career.coins -= e; saveCareerStats(); cs.entered++; run = cs.run = cupNewDraw(li, Date.now()); SAVE.save();
+    track('cup_enter', { table: li, entry: e });
+  }
+  const C = GAME_CONFIG.season.cup, mm = cupBracket(run)[run.round][0], opp = run.names[mm.b] || run.names[1];
+  const rival = BACKEND.duelRival(run.li, run.seed + ':r' + run.round, C.step * run.round); rival.name = opp;
+  run.next = rival.name; SAVE.save();
+  startDuelMatch(run.li, rival, { cup: true, cupRound: run.round });
+}
+function cupAfterDuel(c, res, line) {
+  const cs = cupState(), run = cs.run, C = GAME_CONFIG.season.cup, rn = C.rounds[run.round], E = cupEntry(run.li);
+  run.path.push({ round: run.round, name: c.rival.name, me: runs, them: c.rv, res, sd: !!c.sd });
+  let title, extra, again;
+  if (res === 'win' && run.round === C.rounds.length - 1) {
+    run.champ = true; cs.wins++; cs.best = C.rounds.length; cs.won = (cs.won || []).concat([{ li: run.li, at: Date.now() }]); const p = C.champion;
+    career.coins += E * p.e; saveCareerStats();
+    title = 'CUP WINNERS!'; extra = `+${(E * p.e).toLocaleString()} COINS · ${grantReward({ bag: p.bag, gems: p.gems })}`; again = `NEW CUP <i class="hIco hi-coin"></i>${cupEntry(duelTable()).toLocaleString()}`;
+  } else if (res === 'win') {
+    run.round++; cs.best = Math.max(cs.best, run.round); const left = C.rounds.length - run.round; { const nm = cupBracket(run)[run.round][0]; run.next = run.names[nm.b]; }
+    title = run.round === C.rounds.length - 1 ? 'INTO THE FINAL!' : `THROUGH TO THE ${C.rounds[run.round]}S!`.replace('ROUND OF 16S', 'LAST 16');
+    extra = `${left} win${left === 1 ? '' : 's'} from the cup`; again = `PLAY ${C.rounds[run.round]}`;
+  } else {
+    run.out = true; const p = C.prize[run.round]; let got = '';
+    if (p) { career.coins += E * p.e; saveCareerStats(); got = `+${(E * p.e).toLocaleString()} COINS` + (p.bag ? ' · ' + grantReward({ bag: p.bag }) : ''); }
+    title = 'KNOCKED OUT'; extra = `Out in the ${rn.toLowerCase()}${got ? ' · ' + got : ''}`; again = `NEW CUP <i class="hIco hi-coin"></i>${cupEntry(duelTable()).toLocaleString()}`;
+  }
+  SAVE.save(); track('cup_round', { round: run.round, res, table: run.li });
+  return { res: res === 'win' ? 'win' : 'lose', title, line, extra, again, cup: true };
+}
 
 function playMode(kind) {
+  if (kind === 'duel') { playDuel(); return; }
+  if (kind === 'cup') { playCup(); return; }
   const tk = ticketsToday(), S = GAME_CONFIG.season, cur = currentLeagueIdx();
   const free = kind === 'challenge' ? tk.challenge < S.dailyChallenge.freeAttempts : tk[kind] < 1;
   const cost = kind === 'challenge' ? { gems: S.dailyChallenge.extraAttemptGems } : kind === 'endless' ? { gems: S.endless.ticketGems } : { coins: 2 * THEMED_LEAGUES[Math.max(1, cur)].entry };
@@ -65594,6 +65936,8 @@ function modeEnd() {
   } else if (c.mode === 'tourney') {
     BACKEND.submit(c.board, runs); const st = tourneyStats(c.leagueIdx), rk = BACKEND.rank(c.board, st.mean, st.sd);
     title = 'TOURNAMENT'; line = `${runs} runs · your best ${rk.best} · rank #${rk.rank} of ${rk.of}`; extra = `Ends in ${passDaysLeftWeek()} day${passDaysLeftWeek() === 1 ? '' : 's'} · top 1% gold bag + 200 gems`;
+  } else if (c.mode === 'duel') {
+    const r = duelEnd(c); title = r.title; line = r.line; extra = r.extra; c._duelRes = r.res; c._duelAgain = r.again; if (r.cup) c.mode = 'cup';
   } else if (c.mode === 'endless') {
     BACKEND.submit(c.board, runs); const st = endlessStats(), rk = BACKEND.rank(c.board, st.mean, st.sd);
     const ms = GAME_CONFIG.season.endless.milestones.filter(m => runs >= m), s = seasonState(); s.endlessBadges = s.endlessBadges || {};
@@ -65605,7 +65949,9 @@ function modeEnd() {
   document.getElementById('netsRuns').textContent = runs + ' RUNS';
   document.querySelector('#netsEnd .card > span').textContent = title;
   { const G = GAME_CONFIG.season.dailyChallenge.extraAttemptGems;
-    if (c.mode === 'challenge') neLook(won ? 'win' : 'lose', won ? 'CHALLENGE WON!' : `${Math.max(0, c.target - runs)} SHORT`, won ? 'PLAY AGAIN' : `TRY AGAIN <i class="hIco hi-gem"></i>${G}`, won ? '' : 'gem');
+    window._cupResult = c.mode === 'cup';
+    if (c.mode === 'duel' || c.mode === 'cup') neLook(c._duelRes === 'lose' ? 'lose' : c._duelRes === 'win' ? 'win' : 'mode', title, c._duelAgain, '');
+    else if (c.mode === 'challenge') neLook(won ? 'win' : 'lose', won ? 'CHALLENGE WON!' : `${Math.max(0, c.target - runs)} SHORT`, won ? 'PLAY AGAIN' : `TRY AGAIN <i class="hIco hi-gem"></i>${G}`, won ? '' : 'gem');
     else neLook('mode', title, 'PLAY AGAIN', ''); }
   document.getElementById('netsLine').textContent = line;
   document.querySelector('#netsEnd .card > span:nth-of-type(4)').textContent = extra || (c.mode === 'challenge' ? 'A new challenge every day.' : 'Scores reset every Monday.');
@@ -65787,6 +66133,87 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .evName b{font-weight:400;font-size:28px;line-height:1;text-shadow:0 3px 0 #050A14}
   .evName small{font-size:12px;letter-spacing:.06em;color:var(--ec);margin-top:3px;text-shadow:0 1px 0 #050A14}
   .evGoal{text-align:center;font-size:18px;letter-spacing:.03em}
+  .duTbl{display:inline-flex;align-items:center;gap:10px}
+  img.flg{height:1em;width:auto;vertical-align:-.12em;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+  #duelVs img.flg{height:18px}#cupDraw .cdR em img.flg{height:16px}.mmSum img.flg{height:.9em}
+  .evSw{display:flex;justify-content:center;gap:8px;margin:2px 0 4px}
+  .evSw b,.evSw button{border-radius:999px;padding:5px 12px;font:inherit;font-size:12px;letter-spacing:.05em}
+  .evSw b{background:#FFC93A;color:#1a1200}.evSw button{border:0;background:rgba(255,255,255,.1);color:#cfd8ea;cursor:pointer}
+  .cupCab{display:flex;align-items:flex-end;justify-content:center;gap:4px;margin-top:6px}.cupCab img{height:34px}.cupCab span{font-size:12px;color:#FFC93A;margin-left:6px}
+  #duelVs{position:fixed;inset:0;z-index:9500;display:none;grid-template-columns:1fr auto 1fr;grid-template-rows:auto 1fr auto;align-items:center;padding:calc(env(safe-area-inset-top) + 40px) 10px calc(env(safe-area-inset-bottom) + 50px);
+    background:linear-gradient(105deg,#b3202b 0%,#7a1018 48%,#0b1f55 52%,#1d4fc4 100%);color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
+  #duelVs.show{display:grid;animation:vsIn .28s ease-out}#duelVs.out{display:grid;opacity:0;transition:opacity .28s}
+  @keyframes vsIn{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:none}}
+  #duelVs .vsHead{grid-column:1/-1;text-align:center;font-size:16px;letter-spacing:.1em;color:#FFE08A}
+  #duelVs .vsSide{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+  #duelVs .vsSide canvas{width:100%;max-width:170px;aspect-ratio:3/5;height:auto}
+  #duelVs .vsSide.them canvas{transform:scaleX(-1)}#duelVs .vsSide.me{animation:vsL .4s ease-out}#duelVs .vsSide.them{animation:vsR .4s ease-out}
+  @keyframes vsL{from{transform:translateX(-60%)}}@keyframes vsR{from{transform:translateX(60%)}}
+  #duelVs .vsSide b{font-size:20px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 3px 0 #050A14}
+  #duelVs .vsSide small{font-size:13px;color:#e8eefc;display:flex;align-items:center;gap:3px}#duelVs .vsSide small .hIco{width:16px;height:16px}
+  #duelVs .vsMid{display:flex;flex-direction:column;align-items:center}#duelVs .vsMid img{width:74px}
+  #duelVs .vsMid span{font-size:52px;color:#FFC93A;text-shadow:0 4px 0 #5a2a00;margin-top:-8px;animation:vsPop .5s cubic-bezier(.3,1.6,.5,1)}
+  @keyframes vsPop{from{transform:scale(0)}}
+  #duelVs .vsFoot{grid-column:1/-1;text-align:center;font-size:20px;color:#FFE08A;display:flex;flex-direction:column;gap:4px;align-items:center}
+  #duelVs .vsFoot span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}#duelVs .vsFoot .hIco{width:20px;height:20px;vertical-align:-3px}#duelVs .vsFoot em{font-style:normal;font-size:12px;color:#cfd8ea;letter-spacing:.08em}
+  .xmIco.ev-duel{background:url(assets/ui/icon_duel.webp) center/contain no-repeat}
+  .xmIco.ev-cup{background:url(assets/ui/icon_cup.webp) center/contain no-repeat}
+  .duDraw{display:inline-block;margin-top:6px;border:0;border-radius:999px;padding:6px 14px;background:rgba(255,201,58,.16);color:#FFC93A;font:inherit;font-size:13px;letter-spacing:.05em;cursor:pointer}
+  #cupDraw{position:fixed;inset:0;z-index:9000;background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--lg,#2457D6) 38%,#0d1a36) 0%,#0d1a36 55%,#071022 100%);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
+  #cupDraw.show{display:flex}
+  #cupDraw .cdTop{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 8px}
+  #cupDraw .cdPlaque{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:60px;padding:0 18px 0 12px;background:center/100% 100% no-repeat}
+  #cupDraw .cdPlaque img{height:50px;margin-top:-10px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.5))}
+  #cupDraw .cdPlaque b{display:block;font-size:21px;letter-spacing:.04em;color:#FFE08A;text-shadow:0 2px 0 #3a1f05}
+  #cupDraw .cdPlaque small{display:block;font-size:11px;color:#f3dcb0;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #cupDraw .cdRoad{display:flex;gap:8px;margin:0 0 10px;padding:0 16px;overflow-x:auto;scrollbar-width:none}
+  #cupDraw .cdRoad::-webkit-scrollbar{display:none}
+  #cupDraw .cdRd{flex:0 0 118px;border:0;border-radius:14px;padding:7px 6px 8px;background:#0f1e3d;color:#7f93bd;font:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+  #cupDraw .cdRd small{font-size:10px;letter-spacing:.06em}
+  #cupDraw .cdRd b{font-size:22px;line-height:1.05;color:#cfd8ea}
+  #cupDraw .cdRd span{font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #cupDraw .cdRd.win{background:#123c2a}#cupDraw .cdRd.win b{color:#7CF29A}#cupDraw .cdRd.win span{color:#bfe9c8}
+  #cupDraw .cdRd.lose{background:#43161d}#cupDraw .cdRd.lose b{color:#FF8A8A}#cupDraw .cdRd.lose span{color:#f3c0c0}
+  #cupDraw .cdRd.next{box-shadow:inset 0 0 0 2px #FFC93A}#cupDraw .cdRd.next b{color:#FFC93A}#cupDraw .cdRd.next span{color:#fff}
+  #cupDraw .cdTabs{display:flex;gap:4px;margin:0 16px;padding:4px;border-radius:14px;background:#0a1630}
+  #cupDraw .cdTabs button{flex:1;border:0;border-radius:10px;padding:8px 0;background:none;color:#7f93bd;font:inherit;font-size:12px;letter-spacing:.04em;cursor:pointer}
+  #cupDraw .cdTabs button.on{background:#FFC93A;color:#1a1200}
+  #cupDraw .cdPages{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none}
+  #cupDraw .cdPages::-webkit-scrollbar{display:none}
+  #cupDraw .cdPage{flex:0 0 100%;scroll-snap-align:start;overflow-y:auto;padding:12px 16px calc(env(safe-area-inset-bottom) + 20px);box-sizing:border-box}
+  #cupDraw .cdPin{margin-bottom:14px}
+  #cupDraw .cdPin small,#cupDraw .cdAll{display:block;font-size:11px;letter-spacing:.1em;color:#7f93bd;margin:2px 2px 6px}
+  #cupDraw .cdPair{position:relative;display:flex;flex-direction:column;gap:6px;padding-right:22px;margin-bottom:14px}
+  #cupDraw .cdBr{position:absolute;right:6px;top:23px;bottom:23px;width:12px;border:2px solid #2c4374;border-left:0;border-radius:0 8px 8px 0}
+  #cupDraw .cdM{border-radius:12px;background:#0f1e3d;border:1.5px solid #22386a;overflow:hidden}
+  #cupDraw .cdM.mine{border-color:#FFC93A}
+  #cupDraw .cdM.now{box-shadow:0 0 0 3px rgba(255,201,58,.3)}
+  #cupDraw .cdR{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;font-size:15px;letter-spacing:.02em;color:#cfd8ea}
+  #cupDraw .cdM.big .cdR{height:44px;font-size:18px}
+  #cupDraw .cdR + .cdR{border-top:1px solid #1b2e57}
+  #cupDraw .cdR em{font-style:normal;width:20px;text-align:center;color:#FFC93A}
+  #cupDraw .cdR span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #cupDraw .cdR.w{color:#fff}
+  #cupDraw .cdR.l{color:#56678d}
+  #cupDraw .cdR.l span{text-decoration:line-through}
+  #cupDraw .cdR.you span{color:#FFC93A}
+  #cupDraw .cdR b{font-size:1.1em}
+  #cupDraw .cdR b i{font-style:normal;font-size:10px;margin-left:5px;color:#7fd0ff}
+  #cupDraw .cdFinal{margin-top:10px}
+  #cupDraw .cdWin{text-align:center;margin-top:22px}
+  #cupDraw .cdCup{display:block;height:150px;margin:0 auto;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
+  #cupDraw .cdWin small{display:block;font-size:12px;color:#7f93bd;letter-spacing:.1em;margin-top:6px}
+  #cupDraw .cdWin b{font-size:26px}#cupDraw .cdWin b.you{color:#FFC93A}
+  #cupDraw .cdFull{border-radius:12px;overflow:auto;border:1.5px solid #22386a;cursor:zoom-in}
+  #cupDraw .cdFull canvas{display:block;width:100%;height:auto}
+  #cupDraw .cdFull.zoom{cursor:zoom-out}#cupDraw .cdFull.zoom canvas{width:260%}
+  #cupDraw .cdShare{display:block;margin:14px auto 0}
+  .duTbl button{width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:22px;line-height:1;cursor:pointer}
+  .duTbl button:disabled{opacity:.25}
+  .duPot{display:block;white-space:nowrap;font-size:13px;color:#FFC93A;margin-top:4px;letter-spacing:.05em}
+  .duRecent{display:flex;flex-direction:column;gap:3px;margin-top:8px}
+  .duRecent span{font-size:12px;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.06)}
+  .duRecent .win{color:#7be08a}.duRecent .lose{color:#ff8a8a}.duRecent .tie{color:#cfd8ea}
   .evGoal em{font-style:normal;font-size:34px;line-height:1;color:#FFC93A;text-shadow:0 3px 0 #050A14}
   .evRoad{position:relative;display:flex;justify-content:space-between;padding:0 8px}
   .evRoadLine{position:absolute;left:46px;right:46px;top:30px;height:8px;border-radius:4px;background:#050A14;overflow:hidden}
@@ -65889,7 +66316,10 @@ function paintLeagueStill(cv, idx) {
   try { if (live) { const a = live(cv); if (a && a.stop) a.stop(); } else L.drawArt(cv.getContext('2d'), 620, 360); } catch (e) {}
 }
 // Event poster key art (Diwali Figma 310:191; Pass = NOV 2026 trophy room, Figma 325:191 — REPAINT EVERY MONTH with that month's kit colour, see HANDOVER); keyed by event id without the year
-const EV_KEY_ART = { diwali: 'assets/ui/ui_741_2868bcf8.webp', pass: 'assets/ui/ui_742_6042454f.webp' };
+// Seasonal art (Joe, Nov 6: most of this will be re-themed by season): add EV_KEY_ART['duel_christmas'] etc. and it
+// replaces the default while an event with that id prefix is running.
+function evArt(k) { let th = ''; try { const ev = activeEvent(); th = ev ? String(ev.id).replace(/\d+$/, '') : ''; } catch (e) {} return (th && EV_KEY_ART[k + '_' + th]) || EV_KEY_ART[k]; }
+const EV_KEY_ART = { tourney: 'assets/ui/ev_weekly.webp', duel: 'assets/ui/ev_duels.webp', cup: 'assets/ui/ev_cup.webp', diwali: 'assets/ui/ui_741_2868bcf8.webp', pass: 'assets/ui/ui_742_6042454f.webp' };
 function renderCompeteV2() {
   // EVENTS v4 (Oct 30): a poster per event you swipe through (like the Leagues carousel, Clash Royale events, Brawl
   // Stars mode cards). Chips on top jump to any event and flag what needs doing; every poster leads with the goal,
@@ -65900,20 +66330,22 @@ function renderCompeteV2() {
   const SVG = {
     daily: '<i class="xmIco ev-daily"></i>',
     tourney: '<i class="xmIco ev-tourney"></i>',
+    duel: '<i class="xmIco ev-duel"></i>',
+    cup: '<i class="xmIco ev-cup"></i>',
     endless: '<i class="xmIco ev-endless"></i>',
     pass: '<i class="xmIco ev-pass"></i>',
     event: '<i class="xmIco ev-event"></i>' };
-  const nodeArt = r => r.bag ? bag(r.bag) : r.gems ? `<img alt="" src="${REWARD_HEAP_ART.gems_s}">` : r.coins ? `<img alt="" src="${REWARD_HEAP_ART.coins_s}">`
+  const nodeArt = r => r.img ? `<img alt="" src="${r.img}">` : r.bag ? bag(r.bag) : r.gems ? `<img alt="" src="${REWARD_HEAP_ART.gems_s}">` : r.coins ? `<img alt="" src="${REWARD_HEAP_ART.coins_s}">`
     : r.booster ? '<i class="bIco bo-lucky_grip evNodeIco"></i>' : r.cos ? `<canvas class="kitCrop" data-kitcrop="${r.kind === 'trim' ? 'trim' : 'shirt'}" data-shirt="${r.kind === 'shirt' && typeof r.cos === 'string' && PLAYER_SHIRTS.find(x => x.id === r.cos) ? r.cos : 'pass' + passSeasonKey().replace('-', '')}"></canvas>`
     : r.medal ? `<span class="evMedal m${r.medal}">${r.medal}</span>` : '';
   const track = (nodes, fill) => `<div class="evRoad"><div class="evRoadLine"><i style="width:${Math.max(0, Math.min(100, fill))}%"></i></div>
       ${nodes.map(n => `<div class="evNode${n.done ? ' done' : ''}${n.next ? ' next' : ''}"><div class="evNodeArt">${nodeArt(n.r)}${n.done ? '<b class="tick">✓</b>' : ''}</div><span>${n.label}</span><small>${n.sub || ''}</small></div>`).join('')}</div>`;
   const posters = [];
-  const art = o => o.key === 'pass' && window.EV_PASS_HERO ? `<div class="evPassHero" style="background-image:linear-gradient(rgba(0,0,0,0) 55%,rgba(9,19,40,.6)),url(${PASS_ROAD_ART.banner})"><canvas class="pl" id="evPassPl" width="10" height="10"></canvas><img class="bag" alt="" src="${CHEST_IMG_SRC.platinum}"></div>` : o.key && EV_KEY_ART[o.key] ? `<div class="evKeyArt" style="background-image:url(${EV_KEY_ART[o.key]})"></div>` : o.lg ? `<canvas data-lgart="${o.lg}"></canvas>` : `<div class="evPlain">${o.big || ''}</div>`;
+  const art = o => o.key === 'pass' && window.EV_PASS_HERO ? `<div class="evPassHero" style="background-image:linear-gradient(rgba(0,0,0,0) 55%,rgba(9,19,40,.6)),url(${PASS_ROAD_ART.banner})"><canvas class="pl" id="evPassPl" width="10" height="10"></canvas><img class="bag" alt="" src="${CHEST_IMG_SRC.platinum}"></div>` : o.key && evArt(o.key) ? `<div class="evKeyArt" style="background-image:url(${evArt(o.key)})"></div>` : o.lg ? `<canvas data-lgart="${o.lg}"></canvas>` : `<div class="evPlain">${o.big || ''}</div>`;
   const poster = o => `<article class="evPoster" data-pk="${o.k}" style="--ec:${o.col}">
-      <div class="evHero">${art(o)}<span class="evBadge">${SVG[o.ico]}</span><span class="evClock">${o.timer}</span>
+      <div class="evHero">${art(o)}${o.noBadge ? '' : `<span class="evBadge">${SVG[o.ico]}</span>`}<span class="evClock">${o.timer}</span>
         <div class="evName"><b>${o.name}</b><small>${o.tag}</small></div></div>
-      <div class="evGoal">${o.goal}</div>
+      ${o.sw || ''}<div class="evGoal">${o.goal}</div>
       ${o.road}
       <div class="evRules" data-for="${o.k}">${o.rules}</div>
       <div class="evFootRow"><button class="evHow" data-rules="${o.k}">i HOW IT WORKS</button>${o.btn}</div></article>`;
@@ -65925,6 +66357,30 @@ function renderCompeteV2() {
     const tst = tourneyStats(cur), trk = BACKEND.rank(tourneyKey(cur), tst.mean, tst.sd), est = endlessStats(), erk = BACKEND.rank(endlessKey(), est.mean, est.sd), es = endlessScene();
     const st = (ch.streak || 0) % 3;
     todo.daily = tk.challenge < S.dailyChallenge.freeAttempts; todo.tourney = tk.tourney < 1; todo.endless = tk.endless < 1;
+    { const du = duelState(), D = S.duel, li = duelTable(), T = duelTables(), rk = duelRank(du.trophies), R = D.ranks, nx = R[rk + 1];
+      todo.duel = duelFreeLeft() > 0 && duelOpen(li);
+      const lockNote = !duelOpen(li) ? `<div class="duPot" style="color:#ff8a8a">NEEDS ${duelReq(li)} DUEL TROPHIES</div>` : duelTooEasy(li) ? '<div class="duPot" style="color:#7fd0ff">TOO EASY FOR YOU · NO TROPHIES HERE</div>' : '';
+      const lo = R[rk].at, fill = nx ? (du.trophies - lo) / (nx.at - lo) * 50 : 100;
+      const nodes = R.slice(rk + 1, rk + 4).map((x, k) => ({ r: x.r || { medal: x.name[0] }, label: x.name, sub: `${x.at} TROPHIES`, next: k === 0 }));
+      const recent = du.recent.length ? `<div class="duRecent">${du.recent.map(x => `<span class="${x.res}">${x.res === 'win' ? 'W' : x.res === 'tie' ? 'T' : 'L'} · ${flagHtml(x.flag)} ${x.name} · ${x.me}–${x.them}</span>`).join('')}</div>` : '';
+      const pick = T.length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${T.indexOf(li) ? '' : ' disabled'}>‹</button><b>${THEMED_LEAGUES[li].name}</b><button data-duel="next" aria-label="Higher table"${T.indexOf(li) < T.length - 1 ? '' : ' disabled'}>›</button></span>` : `<span class="duTbl"><b>${THEMED_LEAGUES[li].name}</b></span>`;
+      posters.push(poster({ k: 'duel', ico: 'duel', noBadge: true, col: '#E8463A', key: 'duel', lg: li, timer: du.w + du.l + du.d ? `<b>${du.w}W ${du.l}L</b>${du.streak >= 2 ? ` · ${du.streak} IN A ROW` : ''}` : '<b>HEAD TO HEAD</b>', name: 'DUELS', tag: `${R[rk].name} RANK · ${du.trophies} TROPHIES`,
+        goal: `${pick}<div class="duPot">${duelEntry(li) ? `ENTRY ${duelEntry(li).toLocaleString()} COINS` : 'FREE DUEL TODAY'} · WIN ${duelPot(li).toLocaleString()} + ${bagNm(duelBag(li))} BAG</div>${lockNote}`,
+        road: nodes.length ? track(nodes, fill) : '',
+        rules: `${D.balls} balls each, the same balls for both of you. After each of your balls you see what your rival did with it. Most runs wins the pot and a bag; level at the end goes to sudden death, one ball each. One free duel a day. Higher tables open as your duel trophies rise. A win is +${D.win} trophies (+${D.streakBonus} from ${D.streakAt} in a row), a loss −${D.lose}. Each new rank pays a bag once.${recent}`,
+        btn: !duelOpen(li) ? `<button class="gcBuy evGo goal" disabled>LOCKED</button>` : `<button class="gcBuy evGo" data-mode="duel">${duelEntry(li) ? `DUEL · ${duelEntry(li).toLocaleString()}<i class="hIco hi-coin"></i>` : 'DUEL · FREE'}</button>` })); }
+    { const C = S.cup, cs = cupState(), run = cupLive(), li = run ? run.li : duelTable(), E = cupEntry(li), at = run ? run.round : -1;
+      todo.cup = !!run;
+      const fmt = p => [p.e ? (E * p.e).toLocaleString() + ' COINS' : '', p.bag ? bagNm(p.bag) + ' BAG' : '', p.gems ? p.gems + ' GEMS' : ''].filter(Boolean).join(' + ');
+      const nodes = [[3, 'SEMIS', C.prize[3], { bag: 'silver' }, 'SILVER BAG'], [4, 'FINAL', C.prize[4], { bag: 'gold' }, 'GOLD BAG'], [5, 'WINNER', C.champion, { img: CUP_TROPHY_SRC }, 'THE CUP']]
+        .map(([r, lbl, p, art, sub]) => ({ r: art, label: lbl, sub: `${sub} + ${(E * p.e).toLocaleString()}`, done: at >= r, next: at >= 0 ? at + 1 === r || (at < 3 && r === 3) : r === 3 }));
+      const path = run && run.path.length ? `<div class="duRecent">${run.path.map(x => `<span class="${x.res}">${C.rounds[x.round]} · ${x.name} · ${x.me}–${x.them}${x.sd ? ' (SD)' : ''}</span>`).join('')}</div>` : '';
+      const cab = cs.won && cs.won.length ? `<div class="cupCab">${cs.won.slice(-6).map(w => `<img alt="" src="${CUP_TROPHY_SRC}" title="${THEMED_LEAGUES[w.li].name}">`).join('')}<span>${cs.won.length} WON</span></div>` : '';
+      posters.push(poster({ k: 'cup', ico: 'cup', noBadge: true, col: '#8A5CF6', key: 'cup', lg: li, timer: run ? `<b>${C.rounds[run.round]}</b>` : cupOpenNow() ? '<b>THIS WEEKEND</b>' : `<b>${cupOpensLabel()}</b>`, name: 'FLICKY CUP', tag: `${THEMED_LEAGUES[li].name} · 32 PLAYERS · LOSE AND YOU'RE OUT`,
+        goal: run ? `${C.rounds[run.round]}<small class="duPot">NEXT: ${run.names[cupBracket(run)[run.round][0].b]}</small><button class="duDraw" data-cupdraw>SEE THE DRAW ›</button>` : (cs.run ? `<button class="duDraw" data-cupdraw>LAST CUP'S DRAW ›</button>` : '') +  `${duelTables().length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${duelTables().indexOf(li) ? '' : ' disabled'}>‹</button><b>5 ROUNDS</b><button data-duel="next" aria-label="Higher table"${duelTables().indexOf(li) < duelTables().length - 1 ? '' : ' disabled'}>›</button></span>` : '5 ROUNDS'}<div class="duPot">ENTRY ${E.toLocaleString()} COINS</div>${cab}`,
+        road: track(nodes, at < 0 ? 0 : Math.min(100, Math.max(0, at - 2) / 3 * 100)),
+        rules: `A 32-player draw, FA Cup style, every weekend (Friday to Sunday). Every round is a duel: win and you're in the next round's draw, lose and you're out. Prizes: quarter-finals ${fmt(C.prize[2])}, semi-finals ${fmt(C.prize[3])}, runner-up ${fmt(C.prize[4])}, winner ${fmt(C.champion)}.${path}`,
+        btn: !run && !cupOpenNow() ? `<button class="gcBuy evGo goal" disabled>${cupOpensLabel()}</button>` : (run ? `<button class="gcBuy evGo" data-mode="cup">PLAY ${cupShort(run.round)}</button>` : `<button class="gcBuy evGo" data-mode="cup">ENTER · ${E.toLocaleString()}<i class="hIco hi-coin"></i></button>`) })); }
     posters.push(poster({ k: 'daily', ico: 'daily', col: '#2BB3A0', lg: d.leagueIdx, timer: `NEW IN <b>${fmtLeft(toMid)}</b>`, name: 'DAILY CHALLENGE', tag: `${sceneName(d.scene)} · SAME FOR EVERYONE`,
       goal: `NEED <em>${d.target}</em> OFF <em>${d.balls}</em> BALLS`,
       road: track([1, 2, 3].map(n => ({ r: n === 3 ? { bag: 'silver' } : { medal: 'win' }, label: `DAY ${n}`, sub: n === 3 ? 'SILVER BAG' : 'WIN', done: n <= st, next: n === st + 1 })), st / 2 * 100),
@@ -65932,13 +66388,13 @@ function renderCompeteV2() {
       btn: play('challenge', todo.daily, S.dailyChallenge.extraAttemptGems + '<i class="hIco hi-gem"></i>') }));
     const rk = trk ? trk.rank : 0, tiers = [[50, 'TOP 50%', { bag: 'silver' }, 'SILVER BAG'], [10, 'TOP 10%', { bag: 'gold' }, 'GOLD BAG'], [1, 'TOP 1%', { bag: 'gold' }, '+200 GEMS']];
     const tfill = !rk ? 0 : rk <= 1 ? 100 : rk <= 10 ? 50 + (10 - rk) / 9 * 50 : rk <= 50 ? (50 - rk) / 40 * 50 : 0;
-    posters.push(poster({ k: 'tourney', ico: 'tourney', col: '#FFC93A', lg: cur, timer: `ENDS IN <b>${passDaysLeftWeek()} DAYS</b>`, name: 'WEEKLY TOURNAMENT', tag: `${THEMED_LEAGUES[cur].name} · SCORE ATTACK`,
+    posters.push(poster({ sw: '<div class="evSw"><b>TOURNAMENT</b><button data-pjump="endless">ENDLESS ›</button></div>', k: 'tourney', key: 'tourney', noBadge: true, ico: 'tourney', col: '#FFC93A', lg: cur, timer: `ENDS IN <b>${passDaysLeftWeek()} DAYS</b>`, name: 'WEEKLY TOURNAMENT', tag: `${THEMED_LEAGUES[cur].name} · SCORE ATTACK`,
       goal: trk ? `YOU'RE <em>#${rk}</em> · BEST <em>${trk.best}</em>` : `MOST RUNS OFF <em>${matchBand(cur).balls}</em> BALLS`,
       road: track(tiers.map((t, i) => ({ r: t[2], label: t[1], sub: t[3], done: rk && rk <= t[0], next: (!rk && i === 0) || (rk && rk > t[0] && (i === 0 || rk <= tiers[i - 1][0])) })), tfill),
       rules: `${matchBand(cur).balls} balls, 2 wickets, as many runs as you can. Your best score this week counts. Everyone who plays gets a bronze bag.${trk ? boardHtml(trk) : ''}`,
       btn: play('tourney', todo.tourney, (2 * THEMED_LEAGUES[cur].entry).toLocaleString() + '<i class="hIco hi-coin"></i>') }));
     const badges = seasonState().endlessBadges || {}, eb = erk ? erk.best : 0, ms = GAME_CONFIG.season.endless.milestones;
-    posters.push(poster({ k: 'endless', ico: 'endless', col: '#ff7ad9', lg: leagueOfScene(es), timer: `NEW GROUND IN <b>${passDaysLeftWeek()} DAYS</b>`, name: 'ENDLESS INNINGS', tag: `${sceneName(es)} · ONE WICKET`,
+    posters.push(poster({ sw: '<div class="evSw"><button data-pjump="tourney">‹ TOURNAMENT</button><b>ENDLESS</b></div>', k: 'endless', ico: 'endless', col: '#ff7ad9', lg: leagueOfScene(es), timer: `NEW GROUND IN <b>${passDaysLeftWeek()} DAYS</b>`, name: 'ENDLESS INNINGS', tag: `${sceneName(es)} · ONE WICKET`,
       goal: eb ? `YOUR BEST <em>${eb}</em> RUNS` : `HOW FAR CAN YOU GO?`,
       road: track(ms.map((m, i) => ({ r: { medal: m }, label: `${m} RUNS`, sub: 'BADGE', done: !!badges[m] || eb >= m, next: eb < m && (i === 0 || eb >= ms[i - 1]) })), Math.min(100, eb / ms[ms.length - 1] * 100)),
       rules: `Unlimited balls and one wicket, with one second life. Ranked like the tournament.${erk ? boardHtml(erk) : ''}`,
@@ -65965,8 +66421,9 @@ function renderCompeteV2() {
         rules: 'Earn the event currency in league matches and climb its reward track. The last reward is an exclusive kit.', btn: '<button class="gcBuy evGo goal" disabled>COMING SOON</button>' })); } }
   function cur() { return Math.max(1, currentLeagueIdx()); }
   const keys = [...posters.join('').matchAll(/data-pk="(\w+)"/g)].map(m => m[1]);
-  const LBL = { daily: 'DAILY', tourney: 'WEEKLY', endless: 'ENDLESS', pass: 'PASS', event: 'DIWALI' };
-  const chips = `<div class="evChips">${keys.map(k => `<button class="evChip" data-pjump="${k}">${SVG[k === 'tourney' ? 'tourney' : k]}<span>${LBL[k] || k.toUpperCase()}</span>${todo[k] ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>`;
+  const LBL = { duel: 'DUELS', cup: 'CUP', daily: 'DAILY', tourney: 'WEEKLY', endless: 'ENDLESS', pass: 'PASS', event: 'DIWALI' };
+  if (todo.endless) todo.tourney = true;
+  const chips = `<div class="evChips">${keys.filter(k => k !== 'endless').map(k => `<button class="evChip" data-pjump="${k}">${SVG[k === 'tourney' ? 'tourney' : k]}<span>${LBL[k] || k.toUpperCase()}</span>${todo[k] ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>`;
   const seasonStrip = on ? `<div class="evSeasonBar">${bag('silver')}<span>SEASON ${seasonNumber()} ENDS IN <b>${passDaysLeft()} DAY${passDaysLeft() === 1 ? '' : 'S'}</b> · your best league's bag + gems</span></div>` : '';
   document.getElementById('competePanel').classList.add('fs');   // full screen, like Leagues (Joe, Oct 30)
   sh.innerHTML = `<div class="evTop"><button class="evBack" id="competeClose" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b>EVENTS</b>
@@ -65976,7 +66433,7 @@ function renderCompeteV2() {
   sh.querySelectorAll('canvas[data-lgart]').forEach(cv => paintLeagueStill(cv, +cv.dataset.lgart));
   { const pc = sh.querySelector('#evPassPl'); if (pc) paintPlayerTo(pc, Object.assign({}, curLook(), { shirt: 'pass' + passSeasonKey().replace('-', '') })); }
   const car = sh.querySelector('.evCarousel');
-  const sync = () => { const i = Math.round(car.scrollLeft / Math.max(1, car.clientWidth)); sh.querySelectorAll('.evChip').forEach((c, j) => c.classList.toggle('on', j === i)); sh.querySelectorAll('.evPips i').forEach((p, j) => p.classList.toggle('on', j === i)); };
+  const sync = () => { const i = Math.round(car.scrollLeft / Math.max(1, car.clientWidth)); sh.querySelectorAll('.evChip').forEach(c => c.classList.toggle('on', c.dataset.pjump === (keys[i] === 'endless' ? 'tourney' : keys[i]))); sh.querySelectorAll('.evPips i').forEach((p, j) => p.classList.toggle('on', j === i)); };
   car.addEventListener('scroll', sync, { passive: true });
   // open on the first event that needs doing
   const first = Math.max(0, keys.findIndex(k => todo[k]));
@@ -65989,10 +66446,12 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('click', e => {
   const t = e.target && e.target.closest ? e.target : null; if (!t) return;
-  if (t.closest('#competeBtn')) { payWeeklyBoards(); renderCompete(); document.getElementById('competePanel').classList.add('show'); try { playUiTap(); } catch (err) {} return; }
+  if (t.closest('#competeBtn') || t.closest('#homeDuelBtn')) { const toDuel = !!t.closest('#homeDuelBtn'); payWeeklyBoards(); renderCompete(); document.getElementById('competePanel').classList.add('show'); try { playUiTap(); } catch (err) {}
+    if (toDuel) requestAnimationFrame(() => requestAnimationFrame(() => { const car = document.querySelector('#competePanel .evCarousel'), p = car && car.querySelector('[data-pk="duel"]'); if (car && p) car.scrollLeft = p.offsetLeft - car.offsetLeft; })); return; }
   if (t.closest('#competeClose') || t.id === 'competePanel') { document.getElementById('competePanel').classList.remove('show'); return; }
   const ri = t.closest('[data-rules]'); if (ri) { const box = document.querySelector('#competePanel .cpRules[data-for="' + ri.dataset.rules + '"], #competePanel .evRules[data-for="' + ri.dataset.rules + '"]'); if (box) box.classList.toggle('open'); try { playUiTap(); } catch (err) {} return; }
   if (t.closest('[data-openpass]')) { document.getElementById('competePanel').classList.remove('show'); renderPass(); document.getElementById('passPanel').classList.add('show'); try { playUiTap(); } catch (err) {} return; }
+  const du = t.closest('[data-duel]'); if (du) { const pk = du.closest('[data-pk]') ? du.closest('[data-pk]').dataset.pk : 'duel'; const T = duelTables(), d = duelState(), i = T.indexOf(duelTable()); d.table = T[Math.max(0, Math.min(T.length - 1, i + (du.dataset.duel === 'next' ? 1 : -1)))]; SAVE.save(); renderCompete(); try { playUiTap(); } catch (err) {} requestAnimationFrame(() => { const car = document.querySelector('#competePanel .evCarousel'), p = car && car.querySelector(`[data-pk="${pk}"]`); if (p) car.scrollLeft = p.offsetLeft - car.offsetLeft; }); return; }
   const m = t.closest('[data-mode]'); if (m) { playMode(m.dataset.mode); return; }
   const ev = t.closest('[data-ev]'); if (ev) { if (ev.dataset.ev === 'claim') { const l = eventClaim(); if (l) showMessage('+ ' + l.join(' · '), '#FFC93A', 2600); renderCompete(); } else buyEventBundle(); return; }
 }, true);
