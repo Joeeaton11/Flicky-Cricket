@@ -189,3 +189,157 @@ Nodes: Galle 462:191, Colombo 462:194, Kandy 462:195, Dambulla 463:191, Mumbai 4
 
 ## Speed-up (Joe, Nov 3): one review sheet per league; tools/auto_cut.py replaces hand-measured cut.py
 `python3 tools/auto_cut.py <dir> <props.png> <words.png> stump,bail,ball,ring,x_flag,x_gull_up,x_gull_dn,x_<fan>` — finds pieces in reading order (pitch = tallest), creases, words (3-row layout) and digits automatically; prints pitch {ct,cb,wb}. Ask words prompts for "three rows with wide gaps". Every ground stays bespoke, same close camera + Sylhet-v2 crowd size.
+
+## PCL (league 14): Pakistan grounds, built as one batch with auto_cut + tools/setup_ground.sh. Scene keys tpk_*. Branch pcl-14a.
+- 14.a Gaddafi Stadium (plate 480:195, 1.578; board 480:197, props 480:198, words 480:199) pitch {55,779,279}. Extras: parakeets, green flag, dhol.
+- 14.b Karachi National (plate 480:192, 1.499; board 480:200, props 481:201, words 481:202) pitch {60,771,237}. Extras: black kites, yellow flag, truck-art horn.
+- 14.c Rawalpindi (plate 480:193, 1.635; board 481:203, props 481:204, words 481:205) pitch {47,761,285}. Extras: falcons, white-green flag, pakol.
+- 14.d Multan (plate 480:194, 1.486; board 481:206, props 481:207, words 481:208) pitch {71,770,308}. Extras: hoopoes, blue flag, Multani pot.
+
+## Buccaneer Cup (league 15): pirate grounds, close camera + pirate crowd + NO-STRETCH. Scene keys tpi_*. Branch pir-15a.
+- 15.a Cove (plate 482:191; board 482:198, props 482:199, words 482:200) pitch {80,785,272}. Extras: parrots, black flag, treasure chest.
+- 15.b Galleon (plate 482:195, ratio 1.633; a cutlass overlaps the bottom-left board; board 482:203, props 482:204 cannonball ball, words 482:205) pitch {81,760,306}. Extras: seagulls, red pennant, cannon.
+- 15.c Treasure Island (plate 482:196; board 482:206, props 482:207 red X on pitch, words 482:208) pitch {94,807,315}. Extras: monkeys, green flag, shovel.
+- 15.d Fortress (plate 482:201, ratio 1.632; board 482:209, props 482:210, words 482:211) pitch {93,800,255}. Extras: bats, black flag, lantern.
+- Buccaneer Cup re-surfaced (themed fields): cove sand 483:192, galleon deck planks 483:193, island jungle earth 483:199, fortress crushed stone 483:197. Pitch grass edging stripped.
+
+## 16. Witches' Ashes (Halloween) — thw_festival / thw_graveyard / thw_crypt / thw_mansion / thw_forest
+Themed fields, "fat egg" field wording, crowd heads ~1/20 width. Plates 484:200 (purple turf), 484:196 (grave soil), 484:197 (pale flagstone),
+484:198 (ballroom planks), 484:199 (moss). Boards/props/words 484:201–215 (magenta key). Pitches: festival {49,777,232}, graveyard {54,794,242},
+crypt {54,793,245}, mansion {105,821,246}, forest {55,774,240}. Compose scripts art/ui/hud_lock/compose_{festival,graveyard,crypt,mansion,forest}.py.
+Festival painted ratio 1.47 (field ~19 px wide at the sides); mansion plank seams make the fitter noisy (dev 9) but the overlay sits on the ring.
+
+## 17. Frontier Cup — tfr_town / tfr_canyon / tfr_ghosttown / tfr_rodeo
+Plates 485:191 (dirt; first try came out 1.77, regenerated with "WIDE … only one and a half times … fat round egg"), 485:192 (sandstone 1.577),
+485:193 (pale clay 1.619), 485:194 (sawdust 1.545). Boards/props/words 485:195–206 (canyon props re-made as hawks).
+Pitches: town {80,771,391}, canyon {74,750,328}, ghosttown {35,812,446}, rodeo {54,721,349}. auto_cut crease search now starts 2% down (ghost town crease sat at 4%).
+Ghost town board has no corner sprite (the cow skull overlaps the frame on the sheet).
+
+## 18. Frozen Ashes — tfz_arctic / tfz_glacier / tfz_tundra / tfz_icepalace
+Plates 486:191 (snow 1.544), 486:192 (glacier ice 1.536 — "WIDE…fat round egg…top a quarter" gave 1.22, "clearly TALLER…upright egg" gave 1.83; the
+PROMPTS.md "fat egg" block as written gave 1.54), 486:193 (frost 1.525), 486:194 (frozen lake 1.567 after adding "curving continuously…sides bulge").
+Boards/props/words 486:195–206. Pitches: arctic {59,785,429}, glacier {73,681,393}, tundra {63,756,366} (CT=63 override), icepalace {50,703,447}.
+auto_cut creases now = the row that differs most from the pitch's own colour (red/blue/violet crease lines); CT=/CB= env overrides.
+LESSON: use the PROMPTS.md FIELD block word for word; tweaks swing the ratio badly.
+
+## 19. Cosmos Cup — tco_moon / tco_mars / tco_station / tco_asteroid / tco_alien
+Plates 488:191 (moon dust 1.562), 488:192 (Mars sand 1.481), 488:193 (mint floor 1.619), 488:194 (lilac dust 1.576), 488:195 (alien sand 1.496,
+redone so the far-end crowd is full size). Boards/props/words 488:196–210. Pitches: moon {63,798,438}, mars {79,775,455}, station {53,735,384},
+asteroid {51,751,403}, alien {56,770,410}. Asteroid bail (an upright crystal) rotated flat after cutting.
+FIELD wording: "fat egg" block as written swings 1.56–1.80; "WIDE…only…fat round egg" swings 1.39–1.51; "It is wide:" + fat-egg block ≈1.50–1.62.
+
+## 20. Inferno — tin_volcano / tin_lavalake / tin_tiki / tin_forge
+Plates 491:191 (ash 1.49), 491:192 (cooled rock 1.513), 491:193 (black sand 1.51), 492:204 (bronze floor 1.47 — four tries; others 1.38–1.77).
+Boards/props/words: volcano 491:195–197, lava lake 492:198–200, tiki 492:201–203, forge 492:205–207. Pitches: volcano {41,732,387},
+lavalake {44,738,417}, tiki {75,727,417}, forge {49,765,314}.
+Space Station (19.c) top: the blurred colour fill replaced with mirrored wall at the sides + clean stars across the window (Joe: "blurred at the top").
+
+## 21. Neon — tne_city / tne_rooftop / tne_esports / tne_subway
+Plates 493:191 (navy floor 1.591, third try), 493:192 (dark roof 1.618, second try), 493:193 (pale arena 1.577), 493:194 (teal concrete 1.604, redone: first version touched the picture edges so the side fill doubled the neon ring).
+Boards/props/words 493:195–206 (city + rooftop on green key; boards re-keyed to magenta before compose). Pitches: city {54,743,415},
+rooftop {46,790,406}, esports {60,795,384}, subway {83,715,360}. Uncovered plate tops now filled by mirroring the painted rows (no blur fill).
+
+## 22. Jungle — tju_temple / tju_canopy / tju_river / tju_dino
+Plates 495:191 (red earth 1.619, fourth try), 495:192 (honey wood 1.594), 495:193 (river sand 1.595), 495:194 (ochre earth 1.577).
+Boards/props/words 495:195–206. Pitches: temple {66,753,379}, canopy {84,759,339}, river {44,788,387}, dino {29,751,358}.
+Canopy bail made from the stump's top section (sheet drew a Y-fork). setup_ground.sh now mirror-fills uncovered tops (no blur).
+
+## 23. Knight's — tkn_castle / tkn_joust / tkn_siege / tkn_hall / tkn_moat
+Plates 496:191 castle (1.628), 496:192 jousting (1.553), 496:202 siege (1.565), 496:203 hall (1.655), 496:195 moat (1.601).
+Boards/props/words: castle 496:196–198, jousting 496:199–201, siege 496:204–206, hall 496:207–209 (props redone: pitch had stumps painted on), moat 497:191–193.
+Pitches: castle {64,737,403}, joust {51,805,382}, siege {65,776,383}, hall {53,785,380}, moat {47,781,395}.
+LESSONS: striped barriers and dark-field/dark-ring combos fool the edge finder (siege dark earth read as full width). Wording that hit first time twice:
+"leaves a strip of stands about one tenth of the picture's width … packed with fans, so the field never touches the picture's edges. It is only one and a half
+times as tall as it is wide — a fat round egg, not a long thin oval." Generate retries as NEW frames (no nodeId) so a good earlier one isn't overwritten.
+
+## 24. Brass — tbr_city / tbr_airship / tbr_factory / tbr_docks (first league with bespoke lettering)
+Plates 498:191 city (sage floor 1.507), 498:194 airship (honey deck 1.554), 498:192 factory (terracotta 1.625), 498:193 docks (grey stone 1.633).
+Boards/props/words: city 498:195–197, airship 498:198–200, factory 498:201–203, docks 498:204–206.
+Pitches: city {89,723,295}, airship {85,773,316}, factory {79,844,360}, docks {67,769,349}.
+Lettering: city riveted brass slab-serif, airship Victorian poster Clarendon (cream/red/blue), factory molten stencil, docks copper-pipe monoline.
+Shape wording swung both ways this time: "only one and a half" gave 1.34–1.47; "one and two thirds" + one-eighth strip gave 1.65–1.87.
+"about one and three fifths … one seventh strip" hit 1.555 on the airship. Socket crops need the measured radius (HoughCircles) + rim, not a fixed 55.
+
+## 25. Wizard's — twz_hall / twz_forest / twz_floating / twz_dragon / twz_underwater
+Plates 499:191 hall (ice-blue marble 1.617), 499:196 forest (lavender fairy-moss 1.586), 499:193 sky island (cream cloud-stone 1.650),
+499:194 dragon (golden sand 1.549), 499:197 lake palace (pale sand 1.617). Boards/props/words: hall 499:198–200, forest 201–203,
+sky 204–205 + words 213 (first words too close to the hall's swash serif), dragon 207–209, lake 210–212.
+Pitches: hall {49,768,342}, forest {84,793,321}, sky {59,752,311}, dragon {62,810,331}, lake {72,827,337}.
+Lettering: hall gold spellbook swash serif, forest carved mossy wood, sky art-deco two-tone, dragon crimson-scale chiselled block, lake mother-of-pearl wave.
+auto_cut env: WDY=25 joins a detached "!" dot (forest), PDIL=14 joins a split-off tentacle (lake).
+
+## 26. Deep — tdp_reef / tdp_lagoon / tdp_wreck / tdp_atlantis
+Plates 500:213 reef (coral-pink sand 1.577, fourth try), 500:192 lagoon (golden sand 1.638), 500:196 wreck (sea-green deck 1.483), 500:194 atlantis (ivory marble 1.529).
+Boards/props/words: reef 500:200–202 (board + props redone: clownfish too close to a film character), lagoon 203–205, wreck 206–208, atlantis 209–211.
+Pitches: reef {101,784,327}, lagoon {64,775,328}, wreck {68,805,308}, atlantis {80,749,332}.
+Lettering: reef orange-and-white striped block, lagoon lashed bamboo canes, wreck glowing sea-glass, atlantis carved marble inscription with gold-leaf grooves.
+
+## 27. Eternal — tet_rome / tet_egypt / tet_greece / tet_aztec / tet_viking
+Plates 501:196 rome (raked sand 1.615), 501:192 egypt (gold sandstone 1.499), 501:193 greece (olive clay 1.617), 501:194 aztec (terracotta 1.488), 501:195 viking (packed snow 1.526).
+Boards/props/words: rome 501:198–200, egypt 201–203, greece 204–206, aztec 207–209, viking 210–212.
+Pitches: rome {78,898,370}, egypt {82,762,339}, greece {62,746,331}, aztec {71,777,331}, viking {78,763,318}.
+Lettering: rome bronze-gold Roman serif, egypt gold/turquoise collar stripes, greece blue varsity-block with marble side, aztec turquoise step-stone mosaic, viking riveted iron axe-cut.
+Compose note: the `mat` box is (row0,row1,col0,col1) — passing x/y order gives vertical streaks in the chase panel. Laurel/scarab/olive sprites overlapped the frame, so left off; viking shield pasted with a circle mask.
+
+## 29. Gully Cup redo to the current layout (close camera, 1/20 heads, one even scale, themed fields, bespoke lettering)
+New dirs gully2 / maidan3 / rooftop3 / school2 / village2 / railway2 (old dirs kept). Keys unchanged (tg_gully … ty_railway).
+Plates 504:203 gully (1.592), 504:198 maidan (1.515), 504:199 rooftop (1.516), 505:204 school (1.497), 505:209 village (1.635), 505:210 railway (1.540).
+Boards/props/words 505:211–228. Pitches: gully {66,821,322}, maidan {75,790,337}, rooftop {66,799,361}, school {76,743,338}, village {103,769,315}, railway {77,754,318}.
+Lettering: truck-art split pink/yellow, gold honours-board serif, paper-kite panels, chalk, rangoli clay-pot, station-sign enamel.
+Green-key boards re-keyed to magenta (raw/hud_m.png) before compose. Rewire helper: /tmp rewire.py replaces THEME_ART + THEMED_EXTRAS blocks in place.
+
+## 30. Floodlit rebuilt to the signed-off layout
+
+Seven grounds redone with close camera, themed field, bespoke lettering and new boards (compose_<dir>.py in art/ui/hud_lock):
+evening2 (pinstripe varsity, St George flag), twilight2 (seaside rock, life ring), afterglow2 (mirror-work, chhatri),
+fognight2 (marquee bulbs, gas lamp + iron crest), dusk2 (sequins, steel pan), bigground2 (gold chrome italic, trophy),
+coliseum2 (mosaic, brazier). Keys te_* rewired in place. Review sheet: floodlit_sheet.jpg.
+
+## 31. Coastal rebuilt to the signed-off layout
+
+beach2 (inflatable pool-toy letters, bucket and spade, kites), rockpool2 (wet-pebble letters, crab, puffins),
+harbour2 (boat signwriting, lobster pot, gulls with chips), beachnight2 (carved tiki wood with pink glow, tiki mask, fireflies),
+storm2 (yellow oilskin letters with hazard stripes, anemometer, storm clouds). Keys tc_* rewired in place. Review: coastal_sheet.jpg.
+Prompt builders now live in the repo: tools/plate_prompts.py <themes.json> <outdir>, tools/sheet_prompts.py <sheets.json> <outdir>;
+per-league inputs in layout/leagues/. auto_cut.py: PMERGE=<px> folds small bits (raindrops) into the nearest piece.
+beachnight2's board composes on its green key (compose_beachnight2.py) so the neon-pink rims survive.
+
+## 32. Funfair rebuilt to the signed-off layout
+
+funfair2 (toffee-apple letters, carousel canopy, heart balloons), circus2 (circus-poster wood type, ringmaster hat, trapeze acrobats),
+themepark2 (riveted ride-car bubble letters, coaster loop, coaster cars), fright2 (bone-white ghost-train letters, peeking ghost, ghosts).
+Keys tf_* rewired in place. Review: funfair_sheet.jpg. All four boards compose on their green key (purple/pink art survives).
+Plate FIELD wording now defaults to "one sixth strip, a little more than one and a half times as tall" (hit 1.50–1.63 first time on 3 of 4).
+
+## 33. ECL rebuilt to the signed-off layout
+
+lords2 (gold-leaf honours-board serif, Old Father Time, pigeons), oval2 (riveted iron-lattice letters, gasholder, swifts),
+headingley2 (Yorkshire sandstone blocks, white rose, crows), edgbaston2 (sky-blue sporty italic, cartoon bear, blue tits),
+oldtrafford2 (scarlet enamel with chrome, worker bee, bees), trentbridge2 (Lincoln-green with gold bevel, archer hat, swans).
+Keys tl_lords, to_oval, th_* rewired in place. Review: ecl_sheet.jpg.
+33 v2 (Joe, Nov 5: "build fresh scenes... ground consistent... media centre at the bottom"): all six ECL plates rebuilt
+from scratch with each ground's real ends — pavilion end at the top, the opposite end's landmark along the bottom edge
+(Lord's Media Centre, Oval Vauxhall stand, Headingley Emerald Stand, Edgbaston Hollies, Old Trafford hotel, Trent Bridge
+Radcliffe Road), named side stands. Plate inputs: layout/leagues/ecl_plates_v2.json (adds a NEAR END line). Figma 513:191–196.
+New tools/sky_fade.py fills the uncovered top with a soft sky instead of mirroring (mirroring flipped tall landmarks).
+v1 plates kept in <ground>/raw/v1/.
+33 v8 (Joe, Nov 5 late: Lord's v7 "will do", redo all ECL to match): whole-ground template — egg field, pavilion
+behind the top tip, named side stands, opposite-end landmark fully visible in the bottom band, stadium-scale crowd.
+Plates: lords 519:191, oval 520:191, headingley 520:192, edgbaston 520:193, oldtrafford 520:194, trentbridge 520:195.
+
+## 34. ACL on the whole-ground template (Lord's v7)
+mcg2 522:191 (Members Reserve / Great Southern / Ponsford), scg2 522:192 (copper-roof Members Pavilion, the Hill, Pink Test),
+gabba2 522:193 (maroon bowl, Story Bridge), optus2 522:194 (glowing roof canopy, Swan River), adelaide2 522:195 (heritage scoreboard,
+St Peter's). Boards 522:196–200, props 201–205, words 206–210. Lettering: green-gold block, cream heritage serif, maroon gold-edge,
+black with gold glow, white scoreboard tiles. Prompt builder: tools/ground_prompts.py + layout/leagues/acl_grounds.json.
+
+## 35. ICL on the whole-ground template (Lord's v7) — old ICL kept for revert
+Joe (Nov 5): "I quite like these so might revert back. Don't name the stands. Make them look like the stadiums."
+Prompts describe each stadium's look only (no stand names): layout/leagues/icl_grounds.json + icl_sheets.json.
+New dirs mumbai2 … lucknow2 (plates 523:191–200, boards 523:201–210, props 211–220, words 221–229 + 524:191).
+Old art untouched in mumbai/ … lucknow/; old plates saved as assets/themes/ti_<city>_v1.webp.
+Revert = point THEME_ART.ti_<city>.dir and RESULT_ART back at the old dir and copy ti_<city>_v1.webp over ti_<city>.webp.
+Review: icl_sheet.jpg (old: icl_current.jpg).
+Nov 6: Joe compared (icl_before_after.jpg) and prefers the old ICL — game rewired back to mumbai/ … lucknow/ and old plates.
+The redo stays in mumbai2/ … lucknow2/ (unwired) for reference.
+Nov 6: Delhi plate redone to look like Arun Jaitley Stadium (grey concrete bowl, plain roofed pavilion, Kotla ruins + Ashokan pillar, Jama Masjid, Red Fort) — Figma 525:191, delhi/raw/plate_525-191.png. Old board/props/lettering kept. Compare: delhi_compare.jpg.

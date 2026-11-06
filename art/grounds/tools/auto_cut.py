@@ -34,6 +34,14 @@ def pieces(rgba, dil=6, minpx=400):
     sub = (lab[sl] == i + 1) & m[sl]
     if sub.sum() < minpx: continue
     out.append([sl[1].start, sl[0].start, sl[1].stop, sl[0].stop, sub.sum(), i + 1])
+  small = int(os.environ.get('PMERGE', 0))   # PMERGE=<px>: fold pieces smaller than this (raindrops, sparks) into the nearest bigger piece
+  if small:
+    big = [o for o in out if o[4] >= small]
+    for o in [o for o in out if o[4] < small]:
+      cx, cy = (o[0] + o[2]) / 2, (o[1] + o[3]) / 2
+      t = min(big, key=lambda b: max(b[0] - cx, 0, cx - b[2]) + max(b[1] - cy, 0, cy - b[3]))
+      lab[lab == o[5]] = t[5]; t[0], t[1], t[2], t[3] = min(t[0], o[0]), min(t[1], o[1]), max(t[2], o[2]), max(t[3], o[3]); t[4] += o[4]
+    out = big
   return out, lab
 
 def crop(rgba, lab, p, maxd=None):
@@ -52,7 +60,7 @@ def reading_order(ps):
   return [p for r in rows for p in sorted(r[2], key=lambda q: q[0])]
 
 # ---------- props ----------
-P = keyed(props); ps, lab = pieces(P)
+P = keyed(props); ps, lab = pieces(P, dil=int(os.environ.get('PDIL', 6)))   # PDIL: bigger joins split pieces (e.g. a stray tentacle)
 pitch = max(ps, key=lambda p: p[3] - p[1]); rest = reading_order([p for p in ps if p is not pitch])
 if names == '?':
   for i, p in enumerate(rest): print(i, p[:4])
@@ -64,13 +72,16 @@ pc = crop(P, lab, pitch); pc.save(D + 'pitch.webp', quality=90)
 x0, y0, x1, y1 = pitch[:4]; g = cv2.cvtColor(P[..., :3], cv2.COLOR_RGB2GRAY).astype(float); al = P[..., 3] > 128
 rows = [y for y in range(y0, y1) if al[y, x0:x1].any()]; top, bot = rows[0], rows[-1]; H = bot - top
 def edges(y): xs = np.where(al[y, x0:x1])[0]; return x0 + xs.min() + 6, x0 + xs.max() - 6
-def crease(a, b):
+rgbP = P[..., :3].astype(float); medc = np.median(rgbP[y0:y1, x0:x1][al[y0:y1, x0:x1]], 0)
+def crease(a, b):   # crease = the row that differs most from the pitch's own colour (works for white, red, blue, glowing lines)
   best = None
   for y in range(int(a), int(b)):
-    l, r = edges(y); v = g[y, l + 20:r - 20].mean() if r - l > 50 else 0
+    l, r = edges(y); v = np.sqrt(((rgbP[y, l + 20:r - 20] - medc) ** 2).sum(1)).mean() if r - l > 50 else 0
     if best is None or v > best[0]: best = (v, y)
   return best[1]
-ct, cb = crease(top + 0.04 * H, top + 0.22 * H), crease(bot - 0.22 * H, bot - 0.04 * H)
+ct, cb = crease(top + 0.02 * H, top + 0.22 * H), crease(bot - 0.22 * H, bot - 0.04 * H)
+if os.environ.get('CT'): ct = top + int(os.environ['CT'])   # manual override (rows below the strip top) when the end line out-scores the popping crease
+if os.environ.get('CB'): cb = top + int(os.environ['CB'])
 (l1, r1), (l2, r2) = edges(ct), edges(cb); quad = np.float32([[l1, ct], [r1, ct], [r2, cb], [l2, cb]]); Wr, Hr = 200, 523
 Mx = cv2.getPerspectiveTransform(quad, np.float32([[0, 0], [Wr, 0], [Wr, Hr], [0, Hr]]))
 Image.fromarray(cv2.warpPerspective(np.ascontiguousarray(P[..., :3]), Mx, (Wr, Hr), flags=cv2.INTER_CUBIC)).save(D + 'pitch_rect.webp', quality=92)
@@ -94,7 +105,7 @@ for y in range(W.shape[0]):
 if inb: bands.append((s0, W.shape[0]))
 bands = [b for b in bands if b[1] - b[0] > 30]; dy0, dy1 = bands[-1]
 wm = W.copy(); wm[dy0:] = 0
-lab2, n2 = ndimage.label(cv2.dilate((wm[..., 3] > 128).astype(np.uint8), np.ones((3, 21), np.uint8)))
+lab2, n2 = ndimage.label(cv2.dilate((wm[..., 3] > 128).astype(np.uint8), np.ones((int(os.environ.get('WDY', 3)), 21), np.uint8)))   # WDY: taller joins a detached '!' dot
 wps = []
 for i, sl in enumerate(ndimage.find_objects(lab2)):
   if sl is None: continue
