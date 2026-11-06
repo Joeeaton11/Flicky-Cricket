@@ -4353,9 +4353,11 @@ const GAME_CONFIG = {
     // rank; each new rank pays once. Rivals come from BACKEND.duelRival (local practice rivals until Firebase).
     // KNOCKOUT CUP (Nov 6, Joe: 'FA Cup style'): 32-player draw, five duel rounds, lose and you're out. Entry = 3x the
     // table's league entry; prize by how far you got (E = entry). Rivals get a little stronger each round.
-    cup: { entryMult: 3, rounds: ['ROUND OF 32', 'ROUND OF 16', 'QUARTER-FINAL', 'SEMI-FINAL', 'FINAL'], step: 0.05,
+    cup: { days: [5, 6, 0], entryMult: 3,   // days = when a new cup can be entered (Fri, Sat, Sun); a cup in progress can always be finished
+ rounds: ['ROUND OF 32', 'ROUND OF 16', 'QUARTER-FINAL', 'SEMI-FINAL', 'FINAL'], step: 0.05,
       prize: [ null, null, { e: 1 }, { e: 2, bag: 'silver' }, { e: 4, bag: 'gold' } ], champion: { e: 10, bag: 'gold', gems: 100 } },
-    duel: { balls: 6, wickets: 2, suddenDeathMax: 8, potMult: 2, win: 30, streakBonus: 10, streakAt: 3, lose: 20,
+    duel: { balls: 6, wickets: 2, suddenDeathMax: 8, potMult: 2, freePerDay: 1, tableStep: 50, tooEasy: 400, easeAfterLoss: 0.05, easeMax: 3,
+      winBag: [[8, 'wooden'], [18, 'bronze'], [99, 'silver']], win: 30, streakBonus: 10, streakAt: 3, lose: 20,
       ranks: [ { at: 0, name: 'CLUB' }, { at: 300, name: 'COUNTY', r: { bag: 'silver' } }, { at: 800, name: 'STATE', r: { bag: 'gold' } },
                { at: 1500, name: 'INTERNATIONAL', r: { bag: 'gold', gems: 100 } }, { at: 2500, name: 'LEGEND', r: { bag: 'platinum', gems: 200 } } ] },
     ranked: { resetFraction: 0.5 },
@@ -62208,6 +62210,7 @@ function gameLoop() {
     gullyThrowDraw(); drawFieldBallFallback();
     drawParticles();
     drawFlyingStumps();
+    try { drawDuelGhost(); } catch (e) {}
     drawBoundaryShockwave();
     drawBoundaryParticles();
     drawPopText();
@@ -65572,8 +65575,13 @@ function duelState() { const s = seasonState(); s.duel = s.duel || { trophies: 0
 function duelRank(t) { const R = GAME_CONFIG.season.duel.ranks; let i = 0; R.forEach((r, k) => { if (t >= r.at) i = k; }); return i; }
 function duelTables() { const hi = Math.max(1, highestLeagueIdx()), out = []; for (let i = 1; i <= hi; i++) if (THEMED_LEAGUES[i] && THEMED_LEAGUES[i].entry) out.push(i); return out.length ? out : [1]; }
 function duelTable() { const d = duelState(), T = duelTables(); if (!T.includes(d.table)) d.table = T.includes(currentLeagueIdx()) ? currentLeagueIdx() : T[T.length - 1]; return d.table; }
-function duelEntry(li) { return THEMED_LEAGUES[li].entry; }
-function duelPot(li) { return duelEntry(li) * GAME_CONFIG.season.duel.potMult; }
+function duelEntry(li) { return duelFreeLeft() ? 0 : THEMED_LEAGUES[li].entry; }
+function duelFreeLeft() { const d = duelState(); return (d.freeDay === todayKey() ? 0 : GAME_CONFIG.season.duel.freePerDay); }
+function duelReq(li) { return Math.max(0, duelTables().indexOf(li)) * GAME_CONFIG.season.duel.tableStep; }   // trophies needed to sit at this table
+function duelOpen(li) { return duelState().trophies >= duelReq(li); }
+function duelTooEasy(li) { return duelState().trophies >= duelReq(li) + GAME_CONFIG.season.duel.tooEasy && duelTables().some(x => x > li && duelOpen(x)); }
+function duelBag(li) { const B = GAME_CONFIG.season.duel.winBag; return (B.find(b => li <= b[0]) || B[B.length - 1])[1]; }
+function duelPot(li) { return THEMED_LEAGUES[li].entry * GAME_CONFIG.season.duel.potMult; }
 // local rival: six balls of a believable innings for this table (+ sudden-death balls), a touch stronger as trophies climb
 const DUEL_DIST = { k: ['W', 0, 1, 2, 4, 6], weak: [.12, .35, .30, .10, .09, .04], elite: [.02, .04, .08, .06, .30, .50] };
 function duelDist(perBall) {   // mix weak → elite so the expected runs a ball match the table
@@ -65584,11 +65592,16 @@ function duelDist(perBall) {   // mix weak → elite so the expected runs a ball
 function duelDraw(r, dist) { let x = r(); for (let i = 0; i < dist.length; i++) { x -= dist[i]; if (x <= 0) return DUEL_DIST.k[i]; } return 1; }
 BACKEND.duelRival = function (li, seed, boost) {
   const r = _seeded('du' + seed), band = matchBand(li), D = GAME_CONFIG.season.duel;
-  const per = leagueTarget(THEMED_LEAGUES[li]) / band.balls * (0.93 + Math.min(0.15, duelState().trophies / 8000) + (boost || 0));
+  const ds = duelState(), ease = D.easeAfterLoss * Math.min(D.easeMax, ds.ls || 0);   // a little easier after losses in a row, so it stays near 50/50
+  const per = leagueTarget(THEMED_LEAGUES[li]) / band.balls * (0.93 + Math.min(0.15, ds.trophies / 8000) + (boost || 0) - ease);
   const dist = duelDist(per), log = [], sd = [];
   for (let i = 0; i < D.balls; i++) log.push(duelDraw(r, dist));
   for (let i = 0; i < D.suddenDeathMax; i++) sd.push(duelDraw(r, dist));
-  return { name: rivalName(r), flag: DUEL_FLAGS[Math.floor(r() * DUEL_FLAGS.length)], log, sd, seed: String(seed) };
+  const hx = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)), mine = PLAYER_SHIRTS.find(x => x.id === curLook().shirt), mc = mine ? hx(mine.c) : [0, 0, 0];
+  const shirts = PLAYER_SHIRTS.filter(x => { const q = hx(x.c); return Math.hypot(q[0] - mc[0], q[1] - mc[1], q[2] - mc[2]) > 120; }).map(x => x.id);   // a kit that clearly isn't yours
+  const nm = rivalName(r), fem = /^(Priya|Sophie|Aisha|Meera|Ellie|Zara|Anya|Lucy|Nadia|Chloe|Maya|Pooja|PRIYA|SOPHIE|AISHA|MEERA|ELLIE|ZARA|ANYA|LUCY|NADIA|CHLOE|MAYA|POOJA)/.test(nm);
+  return { name: nm, flag: DUEL_FLAGS[Math.floor(r() * DUEL_FLAGS.length)], log, sd, seed: String(seed), trophies: Math.max(0, Math.round(ds.trophies + (r() - 0.5) * 140)), shirt: shirts[Math.floor(r() * shirts.length)], g: fem ? 'f' : 'm' };
+
 };
 // your innings, kept so the online version can hand it to other players as their rival
 BACKEND.duelSubmit = function (li, runs, wk, log) { const d = duelState(); d.mine.unshift({ li, runs, wk, log: (log || []).slice(0, 20), at: Date.now() }); d.mine = d.mine.slice(0, 20); };
@@ -65599,13 +65612,54 @@ function startDuelMatch(li, rival, extra) {
   window._activeLeagueIdx = li; window._leagueTargetFloor = 0; window._modeScene = null;
   setupChase('league', li);
   Object.assign(window.chase, { mode: 'duel', balls: D.balls, wickets: D.wickets, target: 0, rival, rv: 0, rvWk: 0, sd: 0, sdRes: null, drng: _seeded('dl' + rival.seed) }, extra || {});
-  closeAllScreens(); startGame();
+  closeAllScreens(); duelVersus(rival, extra || {}, () => startGame());
+}
+// Nov 6: a two-second face-off before the first ball (Golf Clash style versus card); tap to skip
+function duelVersus(rival, extra, go) {
+  let el = document.getElementById('duelVs'); if (!el) { el = document.createElement('div'); el.id = 'duelVs'; document.body.appendChild(el); }
+  const me = curLook(), d = duelState(), C = GAME_CONFIG.season.cup;
+  const head = extra.cup ? `FLICKY CUP · ${C.rounds[extra.cupRound]}` : `DUEL · ${THEMED_LEAGUES[window._activeLeagueIdx] ? THEMED_LEAGUES[window._activeLeagueIdx].name : ''}`;
+  const prize = extra.cup ? '<span>WIN AND GO THROUGH</span>' : `<span>POT <i class="hIco hi-coin"></i>${(extra.pot || 0).toLocaleString()} + ${bagNm(duelBag(window._activeLeagueIdx || 1))} BAG</span>`;
+  el.innerHTML = `<div class="vsHead">${head}</div>
+    <div class="vsSide me"><canvas width="10" height="10"></canvas><b>${(me.name || 'YOU').slice(0, 14)}</b><small>${me.flag || ''} · <i class="hIco hi-trophy"></i>${d.trophies}</small></div>
+    <div class="vsMid"><img alt="" src="assets/ui/icon_duel.webp"><span>VS</span></div>
+    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${rival.flag} · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small></div>
+    <div class="vsFoot">${prize}<em>6 BALLS EACH · SAME BALLS</em></div>`;
+  const cv = el.querySelectorAll('canvas');
+  try { paintPlayerTo(cv[0], me); paintPlayerTo(cv[1], Object.assign({}, me, { shirt: rival.shirt || 'maroon', g: rival.g || 'm', name: rival.name })); } catch (e) {}
+  el.className = 'show'; try { playTone({ freq: 160, duration: .25, volume: .2, type: 'triangle' }); haptic(40); } catch (e) {}
+  let done = false; const fin = () => { if (done) return; done = true; el.className = 'out'; setTimeout(() => { el.className = ''; }, 300); go(); };
+  el.onclick = fin; setTimeout(fin, 2300);
+}
+// Nov 6: the rival's ball for the same delivery, shown as a ghost ball on the field (where it went), not just a number
+function duelGhost(out, seed) { const r = _seeded('gh' + seed); window._duelGhost = { t0: performance.now(), out, a: -Math.PI * (0.12 + r() * 0.76) + (r() < 0.25 ? Math.PI * (r() < 0.5 ? -0.12 : 1.12) : 0), j: r() }; }
+function drawDuelGhost() {
+  const g = window._duelGhost; if (!g) return; const t = (performance.now() - g.t0) / 1000; if (t > 1.7) { window._duelGhost = null; return; }
+  const cx = W / 2, cy = H * FIELD_CY, rx = W * FIELD_RX, ry = H * FIELD_RY, sx = W / 2, sy = PITCH_BOTTOM() - 8;
+  const o = g.out, wk = o === 'W', K = { 0: 0.22, 1: 0.48, 2: 0.68, 3: 0.8, 4: 0.97, 6: 1.18 }[o] ?? 0.4;
+  const ex = wk ? W / 2 : cx + Math.cos(g.a) * rx * K, ey = wk ? PITCH_BOTTOM() + 9 : cy + Math.sin(g.a) * ry * K;
+  const ox = wk ? W / 2 + (g.j - 0.5) * 20 : sx, oy = wk ? sy - H * 0.22 : sy;
+  const p = Math.min(1, t / (o === 6 ? 1.0 : 0.8)), e = 1 - Math.pow(1 - p, 2.2), x = ox + (ex - ox) * e, y = oy + (ey - oy) * e;
+  const lift = o === 6 ? Math.sin(Math.PI * e) * H * 0.07 : 0, al = t < 1.25 ? 1 : Math.max(0, 1 - (t - 1.25) / 0.45);
+  ctx.save(); ctx.globalAlpha = al * 0.55; ctx.strokeStyle = '#8fd0ff'; ctx.lineWidth = 3; ctx.setLineDash([6, 7]);
+  ctx.beginPath(); for (let i = 0; i <= 20; i++) { const q = e * i / 20, qx = ox + (ex - ox) * q, qy = oy + (ey - oy) * q - (o === 6 ? Math.sin(Math.PI * q) * H * 0.07 : 0); i ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy); } ctx.stroke(); ctx.setLineDash([]);
+  const br = 10 + lift / H * 70; ctx.globalAlpha = al; ctx.fillStyle = 'rgba(143,208,255,.95)'; ctx.shadowColor = '#4aa8ff'; ctx.shadowBlur = 14;
+  ctx.beginPath(); ctx.arc(x, y - lift, br, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, y, br * 0.9, br * 0.4, 0, 0, 7); ctx.fill();
+  if (p >= 1) { const word = wk ? 'OUT' : o === 0 ? 'DOT' : String(o), big = o === 4 || o === 6 || wk;
+    ctx.globalAlpha = al; ctx.font = `${big ? 34 : 24}px 'Lilita One','Arial Black',Arial,sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#050A14';
+    const ty = Math.max(H * 0.24, Math.min(H * 0.9, ey - 18)), tx = Math.max(40, Math.min(W - 40, ex));
+    ctx.strokeText(word, tx, ty); ctx.fillStyle = wk ? '#7CF29A' : big ? '#FF6A4A' : '#8fd0ff'; ctx.fillText(word, tx, ty);
+    ctx.font = "12px 'Lilita One','Arial Black',Arial,sans-serif"; ctx.lineWidth = 4; ctx.strokeText('RIVAL', tx, ty - (big ? 30 : 22)); ctx.fillStyle = '#fff'; ctx.fillText('RIVAL', tx, ty - (big ? 30 : 22)); }
+  ctx.restore();
 }
 function playDuel() {
-  const li = duelTable(), entry = duelEntry(li);
+  const li = duelTable(), entry = duelEntry(li), d = duelState();
+  if (!duelOpen(li)) { showMessage(`Needs ${duelReq(li)} duel trophies`, '#ff6b6b', 1600); return; }
   if (career.coins < entry) { showMessage('Not enough coins!', '#ff6b6b', 1500); return; }
+  if (!entry) d.freeDay = todayKey();
   career.coins -= entry; saveCareerStats();
-  const d = duelState(); d.today++; const rival = BACKEND.duelRival(li, Date.now() + ':' + d.w + d.l + d.d); SAVE.save();
+  d.today++; const rival = BACKEND.duelRival(li, Date.now() + ':' + d.w + d.l + d.d); SAVE.save();
   track('match_start', { mode: 'duel', table: li, entry });
   startDuelMatch(li, rival, { entry, pot: duelPot(li) });
 }
@@ -65628,6 +65682,7 @@ function duelAfterBall(wicket) {
     else { c.sd++; c.balls++; if (c.wkLost >= c.wickets) c.wkLost = c.wickets - 1; }
   }
   const lead = c.sd && !end ? 'LEVEL · SUDDEN DEATH' : null;
+  if (theirs === 'W' || typeof theirs === 'number') duelGhost(theirs, rv.seed + ':' + c.used + ':' + c.sd);
   showMoment('duel', { theirs, name: rv.name, flag: rv.flag, me: runs, them: c.rv, lead });
   window._momentHold = 1500;
   if (end) { state = 'result'; setTimeout(() => endGame(), 1900); return true; }
@@ -65641,17 +65696,19 @@ function duelEnd(c) {
   const line = `You ${me}-${Math.min(c.wkLost, c.wickets)} · ${rv.flag} ${rv.name} ${c.rv}-${c.rvWk}${c.sd ? ' · SUDDEN DEATH' : ''}`;
   if (c.cup) return cupAfterDuel(c, res, line);
   let coins = 0, tg = 0;
-  if (res === 'win') { d.w++; d.streak++; d.bestStreak = Math.max(d.bestStreak, d.streak); coins = c.pot; tg = D.win + (d.streak >= D.streakAt ? D.streakBonus : 0); }
+  const easy = duelTooEasy(c.leagueIdx); let bag = '';
+  if (res === 'win') { d.w++; d.streak++; d.ls = 0; d.bestStreak = Math.max(d.bestStreak, d.streak); coins = c.pot; tg = easy ? 0 : D.win + (d.streak >= D.streakAt ? D.streakBonus : 0); bag = grantReward({ bag: duelBag(c.leagueIdx) }); }
   else if (res === 'tie') { d.d++; coins = c.entry; }
-  else { d.l++; d.streak = 0; tg = -Math.min(D.lose, d.trophies); }
+  else { d.l++; d.streak = 0; d.ls = (d.ls || 0) + 1; tg = -Math.min(D.lose, d.trophies); }
   d.trophies += tg; if (coins) { career.coins += coins; saveCareerStats(); }
   const paid = []; const rk = duelRank(d.trophies);
   while (d.ranksPaid < rk) { d.ranksPaid++; const R = D.ranks[d.ranksPaid]; if (R.r) paid.push(R.name + ' RANK: ' + grantReward(R.r)); }
   d.recent.unshift({ name: rv.name, flag: rv.flag, them: c.rv, me, res, li: c.leagueIdx, at: Date.now() }); d.recent = d.recent.slice(0, 5); SAVE.save();
   track('duel_end', { res, me, them: c.rv, sd: c.sd, table: c.leagueIdx, trophies: d.trophies });
   const bits = []; if (coins) bits.push(`+${coins.toLocaleString()} COINS${res === 'tie' ? ' (ENTRY BACK)' : ''}`); if (tg) bits.push(`${tg > 0 ? '+' : ''}${tg} DUEL TROPHIES`);
+  if (bag) bits.push(bag); if (res === 'win' && easy) bits.push('NO TROPHIES AT THIS TABLE — MOVE UP');
   if (res === 'win' && d.streak >= 2) bits.push(`${d.streak} IN A ROW`);
-  return { res, title: res === 'win' ? 'DUEL WON!' : res === 'tie' ? 'DUEL TIED' : 'DUEL LOST', line, extra: bits.concat(paid).join(' · ') || `${d.trophies} DUEL TROPHIES`, again: `DUEL AGAIN <i class="hIco hi-coin"></i>${duelEntry(duelTable()).toLocaleString()}` };
+  return { res, title: res === 'win' ? 'DUEL WON!' : res === 'tie' ? 'DUEL TIED' : 'DUEL LOST', line, extra: bits.concat(paid).join(' · ') || `${d.trophies} DUEL TROPHIES`, again: duelEntry(duelTable()) ? `DUEL AGAIN <i class="hIco hi-coin"></i>${duelEntry(duelTable()).toLocaleString()}` : 'DUEL AGAIN · FREE' };
 }
 // ---------- the draw (v2, Nov 6): round tabs you swipe, your match pinned, "your road", and a two-sided full-draw card ----------
 const CUP_TROPHY_SRC = 'assets/ui/cup_trophy.webp', CUP_PLAQUE_SRC = 'assets/ui/cup_plaque.webp';
@@ -65766,10 +65823,13 @@ function cupBracket(run) {
   }
   return rounds;
 }
+function cupOpenNow() { return window.CUP_ALWAYS || GAME_CONFIG.season.cup.days.includes(_nowDate().getDay()); }
+function cupOpensIn() { const d = _nowDate(); for (let k = 1; k <= 7; k++) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate() + k); if (GAME_CONFIG.season.cup.days.includes(x.getDay())) return x - d; } return 0; }
 function cupLive() { const run = cupState().run; return run && !run.out && !run.champ ? run : null; }
 function playCup() {
   const cs = cupState(); let run = cupLive();
   if (!run) {
+    if (!cupOpenNow()) { showMessage('The cup is on at the weekend', '#ff6b6b', 1600); return; }
     const li = duelTable(), e = cupEntry(li);
     if (career.coins < e) { showMessage('Not enough coins!', '#ff6b6b', 1500); return; }
     career.coins -= e; saveCareerStats(); cs.entered++; run = cs.run = cupNewDraw(li, Date.now()); SAVE.save();
@@ -65785,7 +65845,7 @@ function cupAfterDuel(c, res, line) {
   run.path.push({ round: run.round, name: c.rival.name, me: runs, them: c.rv, res, sd: !!c.sd });
   let title, extra, again;
   if (res === 'win' && run.round === C.rounds.length - 1) {
-    run.champ = true; cs.wins++; cs.best = C.rounds.length; const p = C.champion;
+    run.champ = true; cs.wins++; cs.best = C.rounds.length; cs.won = (cs.won || []).concat([{ li: run.li, at: Date.now() }]); const p = C.champion;
     career.coins += E * p.e; saveCareerStats();
     title = 'CUP WINNERS!'; extra = `+${(E * p.e).toLocaleString()} COINS · ${grantReward({ bag: p.bag, gems: p.gems })}`; again = `NEW CUP <i class="hIco hi-coin"></i>${cupEntry(duelTable()).toLocaleString()}`;
   } else if (res === 'win') {
@@ -66068,6 +66128,26 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .evName small{font-size:12px;letter-spacing:.06em;color:var(--ec);margin-top:3px;text-shadow:0 1px 0 #050A14}
   .evGoal{text-align:center;font-size:18px;letter-spacing:.03em}
   .duTbl{display:inline-flex;align-items:center;gap:10px}
+  .evSw{display:flex;justify-content:center;gap:8px;margin:2px 0 4px}
+  .evSw b,.evSw button{border-radius:999px;padding:5px 12px;font:inherit;font-size:12px;letter-spacing:.05em}
+  .evSw b{background:#FFC93A;color:#1a1200}.evSw button{border:0;background:rgba(255,255,255,.1);color:#cfd8ea;cursor:pointer}
+  .cupCab{display:flex;align-items:flex-end;gap:4px;margin-bottom:8px}.cupCab img{height:34px}.cupCab span{font-size:12px;color:#FFC93A;margin-left:6px}
+  #duelVs{position:fixed;inset:0;z-index:9500;display:none;grid-template-columns:1fr auto 1fr;grid-template-rows:auto 1fr auto;align-items:center;padding:calc(env(safe-area-inset-top) + 40px) 10px calc(env(safe-area-inset-bottom) + 50px);
+    background:linear-gradient(105deg,#b3202b 0%,#7a1018 48%,#0b1f55 52%,#1d4fc4 100%);color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
+  #duelVs.show{display:grid;animation:vsIn .28s ease-out}#duelVs.out{display:grid;opacity:0;transition:opacity .28s}
+  @keyframes vsIn{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:none}}
+  #duelVs .vsHead{grid-column:1/-1;text-align:center;font-size:16px;letter-spacing:.1em;color:#FFE08A}
+  #duelVs .vsSide{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+  #duelVs .vsSide canvas{width:100%;max-width:170px;aspect-ratio:3/5;height:auto}
+  #duelVs .vsSide.them canvas{transform:scaleX(-1)}#duelVs .vsSide.me{animation:vsL .4s ease-out}#duelVs .vsSide.them{animation:vsR .4s ease-out}
+  @keyframes vsL{from{transform:translateX(-60%)}}@keyframes vsR{from{transform:translateX(60%)}}
+  #duelVs .vsSide b{font-size:20px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 3px 0 #050A14}
+  #duelVs .vsSide small{font-size:13px;color:#e8eefc;display:flex;align-items:center;gap:3px}#duelVs .vsSide small .hIco{width:16px;height:16px}
+  #duelVs .vsMid{display:flex;flex-direction:column;align-items:center}#duelVs .vsMid img{width:74px}
+  #duelVs .vsMid span{font-size:52px;color:#FFC93A;text-shadow:0 4px 0 #5a2a00;margin-top:-8px;animation:vsPop .5s cubic-bezier(.3,1.6,.5,1)}
+  @keyframes vsPop{from{transform:scale(0)}}
+  #duelVs .vsFoot{grid-column:1/-1;text-align:center;font-size:20px;color:#FFE08A;display:flex;flex-direction:column;gap:4px;align-items:center}
+  #duelVs .vsFoot span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}#duelVs .vsFoot .hIco{width:20px;height:20px;vertical-align:-3px}#duelVs .vsFoot em{font-style:normal;font-size:12px;color:#cfd8ea;letter-spacing:.08em}
   .xmIco.ev-duel{background:url(assets/ui/icon_duel.webp) center/contain no-repeat}
   .xmIco.ev-cup{background:url(assets/ui/icon_cup.webp) center/contain no-repeat}
   .duDraw{display:inline-block;margin-top:6px;border:0;border-radius:999px;padding:6px 14px;background:rgba(255,201,58,.16);color:#FFC93A;font:inherit;font-size:13px;letter-spacing:.05em;cursor:pointer}
@@ -66257,7 +66337,7 @@ function renderCompeteV2() {
   const poster = o => `<article class="evPoster" data-pk="${o.k}" style="--ec:${o.col}">
       <div class="evHero">${art(o)}${o.noBadge ? '' : `<span class="evBadge">${SVG[o.ico]}</span>`}<span class="evClock">${o.timer}</span>
         <div class="evName"><b>${o.name}</b><small>${o.tag}</small></div></div>
-      <div class="evGoal">${o.goal}</div>
+      ${o.sw || ''}<div class="evGoal">${o.goal}</div>
       ${o.road}
       <div class="evRules" data-for="${o.k}">${o.rules}</div>
       <div class="evFootRow"><button class="evHow" data-rules="${o.k}">i HOW IT WORKS</button>${o.btn}</div></article>`;
@@ -66270,27 +66350,29 @@ function renderCompeteV2() {
     const st = (ch.streak || 0) % 3;
     todo.daily = tk.challenge < S.dailyChallenge.freeAttempts; todo.tourney = tk.tourney < 1; todo.endless = tk.endless < 1;
     { const du = duelState(), D = S.duel, li = duelTable(), T = duelTables(), rk = duelRank(du.trophies), R = D.ranks, nx = R[rk + 1];
-      todo.duel = du.today < 1 && career.coins >= duelEntry(li);
+      todo.duel = duelFreeLeft() > 0 && duelOpen(li);
+      const lockNote = !duelOpen(li) ? `<div class="duPot" style="color:#ff8a8a">NEEDS ${duelReq(li)} DUEL TROPHIES</div>` : duelTooEasy(li) ? '<div class="duPot" style="color:#7fd0ff">TOO EASY FOR YOU · NO TROPHIES HERE</div>' : '';
       const lo = R[rk].at, fill = nx ? (du.trophies - lo) / (nx.at - lo) * 50 : 100;
       const nodes = R.slice(rk + 1, rk + 4).map((x, k) => ({ r: x.r || { medal: x.name[0] }, label: x.name, sub: `${x.at} TROPHIES`, next: k === 0 }));
       const recent = du.recent.length ? `<div class="duRecent">${du.recent.map(x => `<span class="${x.res}">${x.res === 'win' ? 'W' : x.res === 'tie' ? 'T' : 'L'} · ${x.flag} ${x.name} · ${x.me}–${x.them}</span>`).join('')}</div>` : '';
       const pick = T.length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${T.indexOf(li) ? '' : ' disabled'}>‹</button><b>${THEMED_LEAGUES[li].name}</b><button data-duel="next" aria-label="Higher table"${T.indexOf(li) < T.length - 1 ? '' : ' disabled'}>›</button></span>` : `<span class="duTbl"><b>${THEMED_LEAGUES[li].name}</b></span>`;
       posters.push(poster({ k: 'duel', ico: 'duel', noBadge: true, col: '#E8463A', key: 'duel', lg: li, timer: du.w + du.l + du.d ? `<b>${du.w}W ${du.l}L</b>${du.streak >= 2 ? ` · ${du.streak} IN A ROW` : ''}` : '<b>HEAD TO HEAD</b>', name: 'DUELS', tag: `${R[rk].name} RANK · ${du.trophies} TROPHIES`,
-        goal: `${pick}<div class="duPot">ENTRY ${duelEntry(li).toLocaleString()} COINS · WIN ${duelPot(li).toLocaleString()}</div>`,
+        goal: `${pick}<div class="duPot">${duelEntry(li) ? `ENTRY ${duelEntry(li).toLocaleString()} COINS` : 'FREE DUEL TODAY'} · WIN ${duelPot(li).toLocaleString()} + ${bagNm(duelBag(li))} BAG</div>${lockNote}`,
         road: nodes.length ? track(nodes, fill) : '',
-        rules: `Six balls each, the same six balls. After each of your balls you see what your rival did with it. Most runs wins the pot; level after six goes to sudden death, one ball each. A win is +${D.win} trophies (+${D.streakBonus} from ${D.streakAt} in a row), a loss −${D.lose}. Each new rank pays a bag once.${recent}`,
-        btn: `<button class="gcBuy evGo" data-mode="duel">DUEL · ${duelEntry(li).toLocaleString()}<i class="hIco hi-coin"></i></button>` })); }
+        rules: `Six balls each, the same six balls. After each of your balls you see what your rival did with it. Most runs wins the pot and a bag; level after six goes to sudden death, one ball each. One free duel a day. Higher tables open as your duel trophies rise. A win is +${D.win} trophies (+${D.streakBonus} from ${D.streakAt} in a row), a loss −${D.lose}. Each new rank pays a bag once.${recent}`,
+        btn: !duelOpen(li) ? `<button class="gcBuy evGo goal" disabled>LOCKED</button>` : `<button class="gcBuy evGo" data-mode="duel">${duelEntry(li) ? `DUEL · ${duelEntry(li).toLocaleString()}<i class="hIco hi-coin"></i>` : 'DUEL · FREE'}</button>` })); }
     { const C = S.cup, cs = cupState(), run = cupLive(), li = run ? run.li : duelTable(), E = cupEntry(li), at = run ? run.round : -1;
       todo.cup = !!run;
       const fmt = p => [p.e ? (E * p.e).toLocaleString() + ' COINS' : '', p.bag ? bagNm(p.bag) + ' BAG' : '', p.gems ? p.gems + ' GEMS' : ''].filter(Boolean).join(' + ');
       const nodes = [[3, 'SEMIS', C.prize[3], { bag: 'silver' }, 'SILVER BAG'], [4, 'FINAL', C.prize[4], { bag: 'gold' }, 'GOLD BAG'], [5, 'WINNER', C.champion, { img: CUP_TROPHY_SRC }, 'THE CUP']]
         .map(([r, lbl, p, art, sub]) => ({ r: art, label: lbl, sub: `${sub} + ${(E * p.e).toLocaleString()}`, done: at >= r, next: at >= 0 ? at + 1 === r || (at < 3 && r === 3) : r === 3 }));
       const path = run && run.path.length ? `<div class="duRecent">${run.path.map(x => `<span class="${x.res}">${C.rounds[x.round]} · ${x.name} · ${x.me}–${x.them}${x.sd ? ' (SD)' : ''}</span>`).join('')}</div>` : '';
-      posters.push(poster({ k: 'cup', ico: 'cup', noBadge: true, col: '#8A5CF6', key: 'cup', lg: li, timer: run ? `<b>${C.rounds[run.round]}</b>` : `<b>${cs.wins ? cs.wins + ' CUP' + (cs.wins === 1 ? '' : 'S') + ' WON' : 'KNOCKOUT'}</b>`, name: 'FLICKY CUP', tag: `${THEMED_LEAGUES[li].name} · 32 PLAYERS · LOSE AND YOU'RE OUT`,
+      const cab = cs.won && cs.won.length ? `<div class="cupCab">${cs.won.slice(-6).map(w => `<img alt="" src="${CUP_TROPHY_SRC}" title="${THEMED_LEAGUES[w.li].name}">`).join('')}<span>${cs.won.length} WON</span></div>` : '';
+      posters.push(poster({ k: 'cup', ico: 'cup', noBadge: true, col: '#8A5CF6', key: 'cup', lg: li, timer: run ? `<b>${C.rounds[run.round]}</b>` : cupOpenNow() ? '<b>THIS WEEKEND</b>' : `OPENS IN <b>${fmtLeft(cupOpensIn())}</b>`, name: 'FLICKY CUP', tag: `${THEMED_LEAGUES[li].name} · 32 PLAYERS · LOSE AND YOU'RE OUT`,
         goal: run ? `${C.rounds[run.round]}<small class="duPot">NEXT: ${run.names[cupBracket(run)[run.round][0].b]}</small><button class="duDraw" data-cupdraw>SEE THE DRAW ›</button>` : (cs.run ? `<button class="duDraw" data-cupdraw>LAST CUP'S DRAW ›</button>` : '') +  `${duelTables().length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${duelTables().indexOf(li) ? '' : ' disabled'}>‹</button><b>5 ROUNDS</b><button data-duel="next" aria-label="Higher table"${duelTables().indexOf(li) < duelTables().length - 1 ? '' : ' disabled'}>›</button></span>` : '5 ROUNDS'}<div class="duPot">ENTRY ${E.toLocaleString()} COINS</div>`,
         road: track(nodes, at < 0 ? 0 : Math.min(100, Math.max(0, at - 2) / 3 * 100)),
-        rules: `A 32-player draw, FA Cup style. Every round is a six-ball duel: win and you're in the next round's draw, lose and you're out. Prizes: quarter-finals ${fmt(C.prize[2])}, semi-finals ${fmt(C.prize[3])}, runner-up ${fmt(C.prize[4])}, winner ${fmt(C.champion)}.${path}`,
-        btn: (run ? `<button class="gcBuy evGo" data-mode="cup">PLAY ${cupShort(run.round)}</button>` : `<button class="gcBuy evGo" data-mode="cup">ENTER · ${E.toLocaleString()}<i class="hIco hi-coin"></i></button>`) })); }
+        rules: `${cab}A 32-player draw, FA Cup style, every weekend (Friday to Sunday). Every round is a six-ball duel: win and you're in the next round's draw, lose and you're out. Prizes: quarter-finals ${fmt(C.prize[2])}, semi-finals ${fmt(C.prize[3])}, runner-up ${fmt(C.prize[4])}, winner ${fmt(C.champion)}.${path}`,
+        btn: !run && !cupOpenNow() ? `<button class="gcBuy evGo goal" disabled>OPENS IN ${fmtLeft(cupOpensIn())}</button>` : (run ? `<button class="gcBuy evGo" data-mode="cup">PLAY ${cupShort(run.round)}</button>` : `<button class="gcBuy evGo" data-mode="cup">ENTER · ${E.toLocaleString()}<i class="hIco hi-coin"></i></button>`) })); }
     posters.push(poster({ k: 'daily', ico: 'daily', col: '#2BB3A0', lg: d.leagueIdx, timer: `NEW IN <b>${fmtLeft(toMid)}</b>`, name: 'DAILY CHALLENGE', tag: `${sceneName(d.scene)} · SAME FOR EVERYONE`,
       goal: `NEED <em>${d.target}</em> OFF <em>${d.balls}</em> BALLS`,
       road: track([1, 2, 3].map(n => ({ r: n === 3 ? { bag: 'silver' } : { medal: 'win' }, label: `DAY ${n}`, sub: n === 3 ? 'SILVER BAG' : 'WIN', done: n <= st, next: n === st + 1 })), st / 2 * 100),
@@ -66298,13 +66380,13 @@ function renderCompeteV2() {
       btn: play('challenge', todo.daily, S.dailyChallenge.extraAttemptGems + '<i class="hIco hi-gem"></i>') }));
     const rk = trk ? trk.rank : 0, tiers = [[50, 'TOP 50%', { bag: 'silver' }, 'SILVER BAG'], [10, 'TOP 10%', { bag: 'gold' }, 'GOLD BAG'], [1, 'TOP 1%', { bag: 'gold' }, '+200 GEMS']];
     const tfill = !rk ? 0 : rk <= 1 ? 100 : rk <= 10 ? 50 + (10 - rk) / 9 * 50 : rk <= 50 ? (50 - rk) / 40 * 50 : 0;
-    posters.push(poster({ k: 'tourney', ico: 'tourney', col: '#FFC93A', lg: cur, timer: `ENDS IN <b>${passDaysLeftWeek()} DAYS</b>`, name: 'WEEKLY TOURNAMENT', tag: `${THEMED_LEAGUES[cur].name} · SCORE ATTACK`,
+    posters.push(poster({ sw: '<div class="evSw"><b>TOURNAMENT</b><button data-pjump="endless">ENDLESS ›</button></div>', k: 'tourney', ico: 'tourney', col: '#FFC93A', lg: cur, timer: `ENDS IN <b>${passDaysLeftWeek()} DAYS</b>`, name: 'WEEKLY TOURNAMENT', tag: `${THEMED_LEAGUES[cur].name} · SCORE ATTACK`,
       goal: trk ? `YOU'RE <em>#${rk}</em> · BEST <em>${trk.best}</em>` : `MOST RUNS OFF <em>${matchBand(cur).balls}</em> BALLS`,
       road: track(tiers.map((t, i) => ({ r: t[2], label: t[1], sub: t[3], done: rk && rk <= t[0], next: (!rk && i === 0) || (rk && rk > t[0] && (i === 0 || rk <= tiers[i - 1][0])) })), tfill),
       rules: `${matchBand(cur).balls} balls, 2 wickets, as many runs as you can. Your best score this week counts. Everyone who plays gets a bronze bag.${trk ? boardHtml(trk) : ''}`,
       btn: play('tourney', todo.tourney, (2 * THEMED_LEAGUES[cur].entry).toLocaleString() + '<i class="hIco hi-coin"></i>') }));
     const badges = seasonState().endlessBadges || {}, eb = erk ? erk.best : 0, ms = GAME_CONFIG.season.endless.milestones;
-    posters.push(poster({ k: 'endless', ico: 'endless', col: '#ff7ad9', lg: leagueOfScene(es), timer: `NEW GROUND IN <b>${passDaysLeftWeek()} DAYS</b>`, name: 'ENDLESS INNINGS', tag: `${sceneName(es)} · ONE WICKET`,
+    posters.push(poster({ sw: '<div class="evSw"><button data-pjump="tourney">‹ TOURNAMENT</button><b>ENDLESS</b></div>', k: 'endless', ico: 'endless', col: '#ff7ad9', lg: leagueOfScene(es), timer: `NEW GROUND IN <b>${passDaysLeftWeek()} DAYS</b>`, name: 'ENDLESS INNINGS', tag: `${sceneName(es)} · ONE WICKET`,
       goal: eb ? `YOUR BEST <em>${eb}</em> RUNS` : `HOW FAR CAN YOU GO?`,
       road: track(ms.map((m, i) => ({ r: { medal: m }, label: `${m} RUNS`, sub: 'BADGE', done: !!badges[m] || eb >= m, next: eb < m && (i === 0 || eb >= ms[i - 1]) })), Math.min(100, eb / ms[ms.length - 1] * 100)),
       rules: `Unlimited balls and one wicket, with one second life. Ranked like the tournament.${erk ? boardHtml(erk) : ''}`,
@@ -66332,7 +66414,8 @@ function renderCompeteV2() {
   function cur() { return Math.max(1, currentLeagueIdx()); }
   const keys = [...posters.join('').matchAll(/data-pk="(\w+)"/g)].map(m => m[1]);
   const LBL = { duel: 'DUELS', cup: 'CUP', daily: 'DAILY', tourney: 'WEEKLY', endless: 'ENDLESS', pass: 'PASS', event: 'DIWALI' };
-  const chips = `<div class="evChips">${keys.map(k => `<button class="evChip" data-pjump="${k}">${SVG[k === 'tourney' ? 'tourney' : k]}<span>${LBL[k] || k.toUpperCase()}</span>${todo[k] ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>`;
+  if (todo.endless) todo.tourney = true;
+  const chips = `<div class="evChips">${keys.filter(k => k !== 'endless').map(k => `<button class="evChip" data-pjump="${k}">${SVG[k === 'tourney' ? 'tourney' : k]}<span>${LBL[k] || k.toUpperCase()}</span>${todo[k] ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>`;
   const seasonStrip = on ? `<div class="evSeasonBar">${bag('silver')}<span>SEASON ${seasonNumber()} ENDS IN <b>${passDaysLeft()} DAY${passDaysLeft() === 1 ? '' : 'S'}</b> · your best league's bag + gems</span></div>` : '';
   document.getElementById('competePanel').classList.add('fs');   // full screen, like Leagues (Joe, Oct 30)
   sh.innerHTML = `<div class="evTop"><button class="evBack" id="competeClose" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b>EVENTS</b>
@@ -66342,7 +66425,7 @@ function renderCompeteV2() {
   sh.querySelectorAll('canvas[data-lgart]').forEach(cv => paintLeagueStill(cv, +cv.dataset.lgart));
   { const pc = sh.querySelector('#evPassPl'); if (pc) paintPlayerTo(pc, Object.assign({}, curLook(), { shirt: 'pass' + passSeasonKey().replace('-', '') })); }
   const car = sh.querySelector('.evCarousel');
-  const sync = () => { const i = Math.round(car.scrollLeft / Math.max(1, car.clientWidth)); sh.querySelectorAll('.evChip').forEach((c, j) => c.classList.toggle('on', j === i)); sh.querySelectorAll('.evPips i').forEach((p, j) => p.classList.toggle('on', j === i)); };
+  const sync = () => { const i = Math.round(car.scrollLeft / Math.max(1, car.clientWidth)); sh.querySelectorAll('.evChip').forEach(c => c.classList.toggle('on', c.dataset.pjump === (keys[i] === 'endless' ? 'tourney' : keys[i]))); sh.querySelectorAll('.evPips i').forEach((p, j) => p.classList.toggle('on', j === i)); };
   car.addEventListener('scroll', sync, { passive: true });
   // open on the first event that needs doing
   const first = Math.max(0, keys.findIndex(k => todo[k]));
