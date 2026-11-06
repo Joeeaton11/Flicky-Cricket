@@ -342,3 +342,4 @@ Revert = point THEME_ART.ti_<city>.dir and RESULT_ART back at the old dir and co
 Review: icl_sheet.jpg (old: icl_current.jpg).
 Nov 6: Joe compared (icl_before_after.jpg) and prefers the old ICL — game rewired back to mumbai/ … lucknow/ and old plates.
 The redo stays in mumbai2/ … lucknow2/ (unwired) for reference.
+Nov 6: Delhi plate redone to look like Arun Jaitley Stadium (grey concrete bowl, plain roofed pavilion, Kotla ruins + Ashokan pillar, Jama Masjid, Red Fort) — Figma 525:191, delhi/raw/plate_525-191.png. Old board/props/lettering kept. Compare: delhi_compare.jpg.
