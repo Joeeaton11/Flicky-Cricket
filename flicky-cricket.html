@@ -63487,8 +63487,8 @@ function neLook(kind, title, again, againCls, back) {
   const a = document.getElementById('netsAgain'), b = document.getElementById('netsBack');
   a.innerHTML = again; a.className = againCls || ''; b.textContent = back || 'BACK';
   let pm = document.getElementById('netsMatch');
-  if (kind === 'nets') { if (!pm) { pm = document.createElement('button'); pm.id = 'netsMatch'; document.querySelector('#netsEnd .row').insertAdjacentElement('afterend', pm); }
-    pm.textContent = 'PLAY A MATCH'; pm.style.display = ''; } else if (pm) pm.style.display = 'none';
+  if (kind === 'nets' || window._cupResult) { if (!pm) { pm = document.createElement('button'); pm.id = 'netsMatch'; document.querySelector('#netsEnd .row').insertAdjacentElement('afterend', pm); }
+    pm.textContent = window._cupResult ? 'THE DRAW' : 'PLAY A MATCH'; pm.style.display = ''; if (window._cupResult) pm.setAttribute('data-cupdraw', ''); else pm.removeAttribute('data-cupdraw'); } else if (pm) { pm.style.display = 'none'; pm.removeAttribute('data-cupdraw'); }
 }
 function netsEnd() {
   try { if (_fxBigEl) { _fxBigEl.remove(); _fxBigEl = null; } } catch (e) {}
@@ -63508,7 +63508,7 @@ function netsEnd() {
 }
 document.addEventListener('click', e => {
   if (e.target && e.target.id === 'netsAgain') { document.getElementById('netsEnd').classList.remove('show'); if (window._netsAgainMode) { const m = window._netsAgainMode; window._netsAgainMode = null; playMode(m === 'tourney' ? 'tourney' : m); } else playNets(window._netsLeague); }
-  if (e.target && e.target.id === 'netsMatch') { document.getElementById('netsEnd').classList.remove('show'); try { track('nets_to_match', {}); playLeague(selectedLeagueIdx()); } catch (err) { document.getElementById('homeLeagueCard').click(); } return; }
+  if (e.target && e.target.id === 'netsMatch' && !e.target.hasAttribute('data-cupdraw')) { document.getElementById('netsEnd').classList.remove('show'); try { track('nets_to_match', {}); playLeague(selectedLeagueIdx()); } catch (err) { document.getElementById('homeLeagueCard').click(); } return; }
   if (e.target && e.target.id === 'netsBack') {
     document.getElementById('netsEnd').classList.remove('show');
     closeAllScreens(); leagueScreen.classList.remove('hidden'); renderLeagueScreen(); showNav('league'); muteBtn.classList.remove('hidden');
@@ -65637,6 +65637,41 @@ function duelEnd(c) {
   if (res === 'win' && d.streak >= 2) bits.push(`${d.streak} IN A ROW`);
   return { res, title: res === 'win' ? 'DUEL WON!' : res === 'tie' ? 'DUEL TIED' : 'DUEL LOST', line, extra: bits.concat(paid).join(' · ') || `${d.trophies} DUEL TROPHIES`, again: `DUEL AGAIN <i class="hIco hi-coin"></i>${duelEntry(duelTable()).toLocaleString()}` };
 }
+// ---------- the draw: a full 32-player ladder, who played who, scores, who knocked who out ----------
+function openCupDraw() {
+  const cs = cupState(), run = cs.run; if (!run) return;
+  const C = GAME_CONFIG.season.cup, R = cupBracket(run), SLOT = 56, BW = 136, CW = 158, TOP = 38, H = 16 * SLOT + TOP + 10;
+  let el = document.getElementById('cupDraw');
+  if (!el) { el = document.createElement('div'); el.id = 'cupDraw'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Cup draw'); document.body.appendChild(el); }
+  const nm = i => i == null ? 'TBD' : i === 0 ? 'YOU' : run.names[i];
+  let boxes = '', lines = '', heads = '';
+  R.forEach((ms, r) => {
+    const x = 12 + r * CW, step = SLOT * (1 << r);
+    heads += `<span class="cdH" style="left:${x}px;width:${BW}px">${C.rounds[r]}</span>`;
+    ms.forEach((m, k) => {
+      const cy = TOP + (k + 0.5) * step, done = m.w != null, me = m.a === 0 || m.b === 0, path = me && (m.a === 0 || m.b === 0);
+      const row = (i, sc, other) => `<div class="cdR${done ? (m.w === i ? ' w' : ' l') : ''}${i === 0 ? ' you' : ''}"><span>${nm(i)}</span><b>${sc == null ? '' : sc}${done && m.w === i && m.sd ? '<i>SD</i>' : ''}</b></div>`;
+      boxes += `<div class="cdM${path ? ' path' : ''}${me && !done && !run.out ? ' now' : ''}" style="left:${x}px;top:${cy - 23}px;width:${BW}px">${row(m.a, m.sa)}${row(m.b, m.sb)}</div>`;
+      if (r < R.length - 1) { const nx = x + CW, ny = TOP + (Math.floor(k / 2) + 0.5) * SLOT * (1 << (r + 1));
+        lines += `<path d="M${x + BW} ${cy}H${x + BW + (CW - BW) / 2}V${ny}H${nx}" class="${me && done && m.w === 0 ? 'gold' : ''}"/>`; }
+    });
+  });
+  const fin = R[R.length - 1][0], champ = fin.w, cx = 12 + R.length * CW, cyc = TOP + 8 * SLOT;
+  lines += `<path d="M${12 + (R.length - 1) * CW + BW} ${cyc}H${cx}" class="${champ === 0 ? 'gold' : ''}"/>`;
+  boxes += `<div class="cdChamp" style="left:${cx}px;top:${cyc - 60}px">${typeof CHEST_IMG_SRC !== 'undefined' ? '<span class="cdCup">🏆</span>' : ''}<small>WINNER</small><b class="${champ === 0 ? 'you' : ''}">${champ == null ? '?' : nm(champ)}</b></div>`;
+  const W = cx + 150, status = run.champ ? 'YOU WON THE CUP!' : run.out ? `KNOCKED OUT IN THE ${C.rounds[run.path[run.path.length - 1].round]} BY ${run.names[R[run.path[run.path.length - 1].round][0].b]}` : `YOU'RE IN THE ${C.rounds[run.round]} · NEXT: ${run.names[R[run.round][0].b]}`;
+  el.innerHTML = `<div class="cdTop"><button class="evBack" data-cdclose aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div><b>FLICKY CUP</b><small>${THEMED_LEAGUES[run.li].name} · 32 PLAYERS</small></div></div>
+    <div class="cdStatus">${status}</div>
+    <div class="cdScroll"><div class="cdBoard" style="width:${W}px;height:${H}px">${heads}<svg width="${W}" height="${H}">${lines}</svg>${boxes}</div></div>`;
+  el.classList.add('show');
+  const sc = el.querySelector('.cdScroll'), cr = Math.min(run.out || run.champ ? (run.path.length ? run.path[run.path.length - 1].round : 0) : run.round, R.length - 1);
+  requestAnimationFrame(() => { sc.scrollLeft = Math.max(0, 12 + cr * CW - 40); sc.scrollTop = Math.max(0, TOP + 0.5 * SLOT * (1 << cr) - sc.clientHeight / 2); });
+}
+document.addEventListener('click', e => {
+  const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+  if (t.closest('[data-cupdraw]')) { e.stopImmediatePropagation(); openCupDraw(); try { playUiTap(); } catch (err) {} return; }
+  if (t.closest('[data-cdclose]')) { document.getElementById('cupDraw').classList.remove('show'); try { playUiTap(); } catch (err) {} }
+}, true);
 // ---------- KNOCKOUT CUP: 32-player draw, five rounds of duels, lose and you're out ----------
 function cupState() { const s = seasonState(); s.cup = s.cup || { run: null, wins: 0, best: 0, entered: 0 }; return s.cup; }
 function cupEntry(li) { return THEMED_LEAGUES[li].entry * GAME_CONFIG.season.cup.entryMult; }
@@ -65644,6 +65679,26 @@ function cupPrize(round, champ) { const C = GAME_CONFIG.season.cup; return champ
 function cupNewDraw(li, seed) {   // 32 names (you're slot 0); your opponent each round is the winner of the next block of the draw
   const r = _seeded('cd' + seed), names = ['YOU']; while (names.length < 32) { const n = BOARD_NAMES[Math.floor(r() * BOARD_NAMES.length)] + (r() < 0.6 ? '_' + Math.floor(r() * 90 + 10) : ''); if (!names.includes(n)) names.push(n); }
   return { li, seed: String(seed), round: 0, names, out: false, champ: false, path: [] };
+}
+// the whole draw: every match, every round. Your matches come from what you played; the rest are simulated
+// (seeded, so the same draw always plays out the same way) once their round has been played.
+function cupBracket(run) {
+  const C = GAME_CONFIG.season.cup, li = run.li, dist = duelDist(leagueTarget(THEMED_LEAGUES[li]) / matchBand(li).balls * 0.93), D = GAME_CONFIG.season.duel;
+  const sim = key => { const r = _seeded(key), lg = []; for (let i = 0; i < D.balls; i++) lg.push(duelDraw(r, dist)); return duelTotal(lg, D.balls, D.wickets).runs; };
+  const over = run.out || run.champ, rounds = []; let cur = run.names.map((_, i) => i);
+  for (let r = 0; r < C.rounds.length; r++) {
+    const ms = [], next = [];
+    for (let m = 0; m < cur.length / 2; m++) {
+      const a = cur[2 * m], b = cur[2 * m + 1], rec = { a, b, sa: null, sb: null, w: null, sd: false, mine: a === 0 || b === 0 };
+      if (rec.mine) { const pl = run.path.find(x => x.round === r); if (pl) { rec.sa = pl.me; rec.sb = pl.them; rec.sd = pl.sd; rec.w = pl.res === 'win' ? 0 : b; } }
+      else if (a != null && b != null && (over || r <= run.round)) {
+        const k = `cm${run.seed}:${r}:${m}`; rec.sa = sim(k + 'a'); rec.sb = sim(k + 'b');
+        if (rec.sa === rec.sb) { rec.sd = true; rec.w = _seeded(k + 's')() < 0.5 ? a : b; } else rec.w = rec.sa > rec.sb ? a : b; }
+      ms.push(rec); next.push(rec.w);
+    }
+    rounds.push(ms); cur = next;
+  }
+  return rounds;
 }
 function cupLive() { const run = cupState().run; return run && !run.out && !run.champ ? run : null; }
 function playCup() {
@@ -65654,7 +65709,7 @@ function playCup() {
     career.coins -= e; saveCareerStats(); cs.entered++; run = cs.run = cupNewDraw(li, Date.now()); SAVE.save();
     track('cup_enter', { table: li, entry: e });
   }
-  const C = GAME_CONFIG.season.cup, opp = run.names[(1 << run.round) + Math.floor(_seeded('co' + run.seed + run.round)() * (1 << run.round))] || run.names[1];
+  const C = GAME_CONFIG.season.cup, mm = cupBracket(run)[run.round][0], opp = run.names[mm.b] || run.names[1];
   const rival = BACKEND.duelRival(run.li, run.seed + ':r' + run.round, C.step * run.round); rival.name = opp.slice(0, 12);
   run.next = rival.name; SAVE.save();
   startDuelMatch(run.li, rival, { cup: true, cupRound: run.round });
@@ -65668,7 +65723,7 @@ function cupAfterDuel(c, res, line) {
     career.coins += E * p.e; saveCareerStats();
     title = 'CUP WINNERS!'; extra = `+${(E * p.e).toLocaleString()} COINS · ${grantReward({ bag: p.bag, gems: p.gems })}`; again = `NEW CUP <i class="hIco hi-coin"></i>${cupEntry(duelTable()).toLocaleString()}`;
   } else if (res === 'win') {
-    run.round++; cs.best = Math.max(cs.best, run.round); const left = C.rounds.length - run.round;
+    run.round++; cs.best = Math.max(cs.best, run.round); const left = C.rounds.length - run.round; { const nm = cupBracket(run)[run.round][0]; run.next = run.names[nm.b]; }
     title = run.round === C.rounds.length - 1 ? 'INTO THE FINAL!' : `THROUGH TO THE ${C.rounds[run.round]}S!`.replace('ROUND OF 16S', 'LAST 16');
     extra = `${left} win${left === 1 ? '' : 's'} from the cup`; again = `PLAY ${C.rounds[run.round]}`;
   } else {
@@ -65762,6 +65817,7 @@ function modeEnd() {
   document.getElementById('netsRuns').textContent = runs + ' RUNS';
   document.querySelector('#netsEnd .card > span').textContent = title;
   { const G = GAME_CONFIG.season.dailyChallenge.extraAttemptGems;
+    window._cupResult = c.mode === 'cup';
     if (c.mode === 'duel' || c.mode === 'cup') neLook(c._duelRes === 'lose' ? 'lose' : c._duelRes === 'win' ? 'win' : 'mode', title, c._duelAgain, '');
     else if (c.mode === 'challenge') neLook(won ? 'win' : 'lose', won ? 'CHALLENGE WON!' : `${Math.max(0, c.target - runs)} SHORT`, won ? 'PLAY AGAIN' : `TRY AGAIN <i class="hIco hi-gem"></i>${G}`, won ? '' : 'gem');
     else neLook('mode', title, 'PLAY AGAIN', ''); }
@@ -65946,6 +66002,35 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .evName small{font-size:12px;letter-spacing:.06em;color:var(--ec);margin-top:3px;text-shadow:0 1px 0 #050A14}
   .evGoal{text-align:center;font-size:18px;letter-spacing:.03em}
   .duTbl{display:inline-flex;align-items:center;gap:10px}
+  .cdBtn{margin-right:6px}
+  #cupDraw{position:fixed;inset:0;z-index:9000;background:#071022;color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
+  #cupDraw.show{display:flex}
+  #cupDraw .cdTop{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top) + 12px) 16px 8px}
+  #cupDraw .cdTop b{display:block;font-size:22px;letter-spacing:.04em}
+  #cupDraw .cdTop small{font-size:12px;color:#B4C2DD;letter-spacing:.06em}
+  #cupDraw .cdStatus{margin:0 16px 10px;padding:10px 14px;border-radius:14px;background:#13254a;color:#FFC93A;font-size:14px;letter-spacing:.04em;text-align:center}
+  #cupDraw .cdScroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+  #cupDraw .cdBoard{position:relative}
+  #cupDraw .cdBoard > svg{position:absolute;left:0;top:0;pointer-events:none}
+  #cupDraw .cdBoard > svg path{fill:none;stroke:#2c4374;stroke-width:2}
+  #cupDraw .cdBoard > svg path.gold{stroke:#FFC93A;stroke-width:3}
+  #cupDraw .cdH{position:absolute;top:8px;font-size:11px;letter-spacing:.08em;color:#7f93bd;text-align:center}
+  #cupDraw .cdM{position:absolute;height:46px;border-radius:10px;background:#0f1e3d;border:1.5px solid #22386a;overflow:hidden}
+  #cupDraw .cdM.path{border-color:#FFC93A}
+  #cupDraw .cdM.now{box-shadow:0 0 0 3px rgba(255,201,58,.35)}
+  #cupDraw .cdR{display:flex;justify-content:space-between;align-items:center;height:22px;padding:0 8px;font-size:13px;letter-spacing:.02em;color:#cfd8ea}
+  #cupDraw .cdR + .cdR{border-top:1px solid #1b2e57}
+  #cupDraw .cdR span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:92px}
+  #cupDraw .cdR.w{color:#fff}
+  #cupDraw .cdR.l{color:#5f7096}
+  #cupDraw .cdR.l span{text-decoration:line-through}
+  #cupDraw .cdR.you span{color:#FFC93A}
+  #cupDraw .cdR b i{font-style:normal;font-size:9px;margin-left:4px;color:#7fd0ff}
+  #cupDraw .cdChamp{position:absolute;width:130px;text-align:center}
+  #cupDraw .cdChamp .cdCup{display:block;font-size:44px}
+  #cupDraw .cdChamp small{display:block;font-size:11px;color:#7f93bd;letter-spacing:.08em}
+  #cupDraw .cdChamp b{font-size:16px}
+  #cupDraw .cdChamp b.you{color:#FFC93A}
   .duTbl button{width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:22px;line-height:1;cursor:pointer}
   .duTbl button:disabled{opacity:.25}
   .duPot{display:block;white-space:nowrap;font-size:13px;color:#FFC93A;margin-top:4px;letter-spacing:.05em}
@@ -66113,7 +66198,7 @@ function renderCompeteV2() {
         goal: run ? `${C.rounds[run.round]}<small class="duPot">NEXT: ${run.next || 'THE DRAW IS MADE'}</small>` : `${duelTables().length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${duelTables().indexOf(li) ? '' : ' disabled'}>‹</button><b>5 ROUNDS</b><button data-duel="next" aria-label="Higher table"${duelTables().indexOf(li) < duelTables().length - 1 ? '' : ' disabled'}>›</button></span>` : '5 ROUNDS'}<div class="duPot">ENTRY ${E.toLocaleString()} COINS</div>`,
         road: track(nodes, at < 0 ? 0 : Math.min(100, at / 5 * 100)),
         rules: `A 32-player draw, FA Cup style. Every round is a six-ball duel: win and you're in the next round's draw, lose and you're out. Prizes: quarter-finals ${fmt(C.prize[2])}, semi-finals ${fmt(C.prize[3])}, runner-up ${fmt(C.prize[4])}, winner ${fmt(C.champion)}.${path}`,
-        btn: run ? `<button class="gcBuy evGo" data-mode="cup">PLAY ${C.rounds[run.round]}</button>` : `<button class="gcBuy evGo" data-mode="cup">ENTER · ${E.toLocaleString()}<i class="hIco hi-coin"></i></button>` })); }
+        btn: (cs.run ? `<button class="evHow cdBtn" data-cupdraw>THE DRAW</button>` : '') + (run ? `<button class="gcBuy evGo" data-mode="cup">PLAY ${C.rounds[run.round]}</button>` : `<button class="gcBuy evGo" data-mode="cup">ENTER · ${E.toLocaleString()}<i class="hIco hi-coin"></i></button>`) })); }
     posters.push(poster({ k: 'daily', ico: 'daily', col: '#2BB3A0', lg: d.leagueIdx, timer: `NEW IN <b>${fmtLeft(toMid)}</b>`, name: 'DAILY CHALLENGE', tag: `${sceneName(d.scene)} · SAME FOR EVERYONE`,
       goal: `NEED <em>${d.target}</em> OFF <em>${d.balls}</em> BALLS`,
       road: track([1, 2, 3].map(n => ({ r: n === 3 ? { bag: 'silver' } : { medal: 'win' }, label: `DAY ${n}`, sub: n === 3 ? 'SILVER BAG' : 'WIN', done: n <= st, next: n === st + 1 })), st / 2 * 100),
