@@ -340,3 +340,5 @@ New dirs mumbai2 … lucknow2 (plates 523:191–200, boards 523:201–210, props
 Old art untouched in mumbai/ … lucknow/; old plates saved as assets/themes/ti_<city>_v1.webp.
 Revert = point THEME_ART.ti_<city>.dir and RESULT_ART back at the old dir and copy ti_<city>_v1.webp over ti_<city>.webp.
 Review: icl_sheet.jpg (old: icl_current.jpg).
+Nov 6: Joe compared (icl_before_after.jpg) and prefers the old ICL — game rewired back to mumbai/ … lucknow/ and old plates.
+The redo stays in mumbai2/ … lucknow2/ (unwired) for reference.
