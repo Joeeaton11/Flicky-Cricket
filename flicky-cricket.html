@@ -33090,7 +33090,7 @@ function resolveShot(distance, shotAngle, timingQuality, rawPower, fatigued, mis
     popShockwave = { x: W/2, y: H*0.4, r: 10, maxR: Math.max(W,H)*0.75, alpha: 0.9, color: _bthS.six.c };
     popText = { text: 'SIX!', x: W/2, y: H * 0.38, life: 18, maxLife: 18,
                 color: '#f4d03f', big: true, dom: true };
-    fxBig('six');
+    fxBig('six'); try { celebFx(); } catch (e) {}
   } else if (outcome === 'FOUR!') {
     hapticBig();
     spawnParticles(bx, by, 'rgba(255,255,255,ALPHA)', 20, distance);
@@ -61011,6 +61011,7 @@ function drawWicketKeeper() {
 }
 
 // In-match colours for each kit item: c = main colour, a = trim / grille / grip
+const EVENT_BATS = {};   // event bat wraps (cosmetic over the equipped bat's colours)
 const KIT_LOOK = {
   bat_classic:{c:'#e9cf98',a:'#e8dcc0',s:'#2f7d3a'}, bat_slogger:{c:'#d9b178',a:'#1b1b1b',s:'#5b636e'}, bat_surgeon:{c:'#d9b178',a:'#2f7d3a',s:'#2f9d47'},
   bat_hurricane:{c:'#d9b178',a:'#d8342c',s:'#d8342c'}, bat_enforcer:{c:'#5a3b24',a:'#3a3a3a',s:'#8a8f96'}, bat_maestro:{c:'#e9b47a',a:'#e8641c',s:'#e8641c'},
@@ -61024,7 +61025,7 @@ const KIT_LOOK = {
   shoes_trainer:{c:'#f4f4f4',a:'#2a2a2a'}, shoes_dasher:{c:'#f4f4f4',a:'#f07a1e'}, shoes_anchor:{c:'#1e2a4a',a:'#f4f4f4'}, shoes_quickstep:{c:'#eef2f6',a:'#2f63c8'},
   shoes_mercury:{c:'#f4f4f4',a:'#2f9d47'}, shoes_ironfoot:{c:'#7a5230',a:'#3f8f3a'}, shoes_pinnacle:{c:'#f6f0dc',a:'#e0b13a'}, shoes_aurora:{c:'#e8eef8',a:'#7b5cd6'},
 };
-function kitLook(slot) { return KIT_LOOK[equippedItems[slot]] || null; }
+function kitLook(slot) { if (slot === 'bat' && playerLook && playerLook.batWrap && EVENT_BATS[playerLook.batWrap] && ownedCos.includes(playerLook.batWrap + ':bat')) return EVENT_BATS[playerLook.batWrap]; return KIT_LOOK[equippedItems[slot]] || null; }
 function drawBatsman() {
   const bx = W/2;
   // For scenes with a background image the pitch is painted at different coords;
@@ -65698,6 +65699,7 @@ function duelResult(c) { return c.sdRes ? (c.sdRes === 'me' ? 'win' : 'lose') : 
 function duelEnd(c) {
   const D = GAME_CONFIG.season.duel, d = duelState(), rv = c.rival, me = runs, res = duelResult(c);
   BACKEND.duelSubmit(c.leagueIdx, me, c.wkLost, c.log);
+  { const ev = activeEvent(); if (ev) eventAdd(ev.perMatch + (res === 'win' ? ev.perWin : 0) + c.log.filter(x => x === 6).length * ev.perSix); }
   const line = `You ${me}-${Math.min(c.wkLost, c.wickets)} · ${rv.name} ${c.rv}-${c.rvWk}${c.sd ? ' · SUDDEN DEATH' : ''}`;
   if (c.cup) return cupAfterDuel(c, res, line);
   let coins = 0, tg = 0;
@@ -65998,9 +66000,27 @@ GAME_CONFIG.season.events = GAME_CONFIG.season.events || [
   { id: 'diwali26', name: 'DIWALI CUP', start: '2026-11-05', end: '2026-11-16', currency: 'DIYAS', perMatch: 1, perSix: 1, perWin: 2,
     track: [{ coins: 200 }, { booster: 'golden_ball' }, { gems: 15 }, { coins: 400 }, { bag: 'silver' }, { booster: 'power_bat', boosterCount: 2 }, { gems: 25 }, { coins: 800 }, { bag: 'gold' },
             { gems: 40 }, { booster: 'random', boosterCount: 3 }, { coins: 1500 }, { bag: 'gold' }, { gems: 75 }, { cos: 'diwali26', kind: 'shirt', label: 'DIWALI KIT' }],
-    every: 10, bundle: { price: 4.99, diyas: 100, bag: 'gold', gems: 300 }, kit: { id: 'diwali26', name: 'DIWALI', c: '#F28C1C' } },
+    every: 10, bundle: { price: 4.99, diyas: 100, bag: 'gold', gems: 300 }, kit: { id: 'diwali26', name: 'DIWALI', c: '#F28C1C' },
+    icon: 'assets/ui/events/diya.webp',
+    shop: [ { id: 'diwali_bat', kind: 'bat', name: 'DIYA BAT', icon: 'assets/ui/events/bat_diwali.webp', look: { c: '#e8a33a', a: '#c8102e', s: '#f2b632' }, price: { cur: 60 } },
+            { id: 'diwali_fx', kind: 'celeb', name: 'FIREWORK SIXES', icon: 'assets/ui/events/firework.webp', fx: 'firework', price: { cur: 80 } },
+            { id: 'diwaligold', kind: 'trim', name: 'DIWALI GOLD TRIM', c: '#f2b632', price: { cur: 40 } },
+            { id: 'diwali_bat', kind: 'bat', alt: 'gems', price: { gems: 150 } } ] },
+  // Nov 6 (Joe: 'presents'): Christmas — presents for league matches AND duels, a track ending in the Christmas jumper kit, and an event shop
+  { id: 'xmas26', name: 'CHRISTMAS CUP', start: '2026-12-12', end: '2027-01-04', currency: 'PRESENTS', perMatch: 1, perSix: 1, perWin: 2, icon: 'assets/ui/events/present.webp',
+    track: [{ coins: 250 }, { booster: 'golden_ball' }, { gems: 15 }, { coins: 500 }, { bag: 'silver' }, { booster: 'power_bat', boosterCount: 2 }, { gems: 25 }, { coins: 900 }, { bag: 'gold' },
+            { gems: 40 }, { booster: 'random', boosterCount: 3 }, { coins: 1600 }, { bag: 'gold' }, { gems: 75 }, { cos: 'xmas26', kind: 'shirt', label: 'CHRISTMAS JUMPER KIT' }],
+    every: 10, bundle: { price: 4.99, diyas: 100, bag: 'gold', gems: 300 }, kit: { id: 'xmas26', name: 'CHRISTMAS JUMPER', c: '#B3202B' },
+    shop: [ { id: 'xmas_bat', kind: 'bat', name: 'CANDY CANE BAT', icon: 'assets/ui/events/bat_candycane.webp', look: { c: '#f3ead8', a: '#1f7a3a', s: '#d8202c' }, price: { cur: 60 } },
+            { id: 'xmas_fx', kind: 'celeb', name: 'SNOWFALL SIXES', icon: 'assets/ui/events/snow.webp', fx: 'snow', price: { cur: 80 } },
+            { id: 'xmasholly', kind: 'trim', name: 'HOLLY GREEN TRIM', c: '#1f7a3a', price: { cur: 40 } },
+            { id: 'xmas_bag', kind: 'reward', name: 'GOLD BAG', icon: 'assets/ui/events/present_ball.webp', r: { bag: 'gold' }, price: { cur: 50 }, repeat: true } ] },
 ];
-GAME_CONFIG.season.events.forEach(ev => { if (ev.kit && !PLAYER_SHIRTS.find(x => x.id === ev.kit.id)) PLAYER_SHIRTS.push({ id: ev.kit.id, name: ev.kit.name, c: ev.kit.c, unlock: { event: ev.id } }); });
+// Event calendar (Joe, Nov 6) — one every 2–3 weeks; each is this same system + new art: New Year, IPL season (Mar–May), Easter,
+// start of the English summer, The Hundred / the Ashes when on, Halloween, Diwali, Christmas.
+GAME_CONFIG.season.events.forEach(ev => { if (ev.kit && !PLAYER_SHIRTS.find(x => x.id === ev.kit.id)) PLAYER_SHIRTS.push({ id: ev.kit.id, name: ev.kit.name, c: ev.kit.c, unlock: { event: ev.id } });
+  (ev.shop || []).forEach(it => { if (it.kind === 'trim' && !PLAYER_TRIMS.find(x => x.id === it.id)) PLAYER_TRIMS.push({ id: it.id, name: it.name.replace(/ TRIM$/, ''), c: it.c, unlock: { event: ev.id } });
+    if (it.kind === 'bat' && it.look) EVENT_BATS[it.id] = it.look; }); });
 function activeEvent() { const d = _nowDate(), ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; return GAME_CONFIG.season.events.find(ev => ds >= ev.start && ds <= ev.end) || null; }
 function nextEvent() { const d = _nowDate(), ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; return GAME_CONFIG.season.events.filter(ev => ev.start > ds).sort((a, b) => a.start < b.start ? -1 : 1)[0] || null; }
 function eventState(ev) { const s = seasonState(); s.events = s.events || {}; return s.events[ev.id] = s.events[ev.id] || { cur: 0, claimed: 0, bundle: false }; }
@@ -66011,6 +66031,47 @@ function eventClaim() {
     if (r.cos) { if (!ownedCos.includes(r.cos + ':' + r.kind)) { ownedCos.push(r.cos + ':' + r.kind); SAVE.setItem('flickyCosmetics', JSON.stringify(ownedCos)); } labels.push(r.label); } else labels.push(grantReward(r)); }
   SAVE.save(); return labels.length ? labels : null;
 }
+// ---------- EVENT SHOP (Nov 6): spend the event currency (what you've earned minus what you've spent; the track counts all earned) ----------
+function eventBal(ev) { const st = eventState(ev); return st.cur - (st.spent || 0); }
+function shopOwned(it) { return it.kind === 'reward' ? false : ownedCos.includes(it.id + ':' + it.kind); }
+function shopEquipped(it) { const L = curLook(); return it.kind === 'bat' ? L.batWrap === it.id : it.kind === 'celeb' ? L.celeb === it.id : it.kind === 'trim' ? L.trim === it.id : it.kind === 'shirt' ? L.shirt === it.id : false; }
+function shopEquip(it) { if (!playerLook) playerLook = curLook(); const L = playerLook;
+  if (it.kind === 'bat') L.batWrap = L.batWrap === it.id ? null : it.id; else if (it.kind === 'celeb') L.celeb = L.celeb === it.id ? null : it.id; else L[it.kind] = it.id;
+  savePlayerLook(); try { refreshPlayerArt(); } catch (e) {} try { _gpBatCache && Object.keys(_gpBatCache).forEach(k => delete _gpBatCache[k]); } catch (e) {} }
+function shopBuy(ev, i) {
+  const it = ev.shop[i], st = eventState(ev), cost = it.price; if (shopOwned(it)) { shopEquip(it); openEventShop(); return; }
+  const give = () => { if (it.kind === 'reward') { const l = grantReward(it.r); showMessage('+ ' + l, '#FFC93A', 2200); }
+    else { ownedCos.push(it.id + ':' + it.kind); SAVE.setItem('flickyCosmetics', JSON.stringify(ownedCos)); shopEquip(it); showMessage(`${it.name} — EQUIPPED`, '#FFC93A', 2000); }
+    try { hapticBig(); } catch (e) {} track('event_shop_buy', { ev: ev.id, item: it.id, cur: cost.cur || 0, gems: cost.gems || 0 }); SAVE.save(); openEventShop(); };
+  if (cost.cur) { if (eventBal(ev) < cost.cur) { showMessage(`Not enough ${ev.currency.toLowerCase()}`, '#ff6b6b', 1500); return; } st.spent = (st.spent || 0) + cost.cur; give(); }
+  else if (cost.gems) bagConfirm(cost.gems, `Unlock ${it.name}?`, () => { if (gems < cost.gems) { showMessage('Not enough gems!', '#ff6b6b', 1500); return; } gems -= cost.gems; saveEquipmentState(); give(); });
+}
+function openEventShop() {
+  const ev = activeEvent(); if (!ev || !ev.shop) return;
+  let el = document.getElementById('evShop'); if (!el) { el = document.createElement('div'); el.id = 'evShop'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Event shop'); document.body.appendChild(el); }
+  const cur = `<img class="esCur" alt="" src="${ev.icon}">`, items = ev.shop.map((it, i) => ({ it: it.alt ? Object.assign({}, ev.shop.find(x => x.id === it.id && !x.alt), { price: it.price, alt: true }) : it, i }))
+    .filter(x => !(x.it.alt && shopOwned(x.it)));
+  const prev = it => it.icon ? `<img alt="" src="${it.icon}">` : it.kind === 'trim' || it.kind === 'shirt' ? `<span class="esSw" style="background:${it.c}"></span>` : '';
+  el.innerHTML = `<div class="esCard"><div class="esTop"><b>${ev.name} SHOP</b><span class="esBal">${cur}<em>${eventBal(ev)}</em></span><button class="esX" data-esclose aria-label="Close">✕</button></div>
+    <div class="esGrid">${items.map(({ it, i }) => { const own = shopOwned(it), eq = own && shopEquipped(it);
+      const btn = own ? `<button data-esbuy="${i}" class="${eq ? 'on' : ''}">${eq ? 'EQUIPPED' : 'EQUIP'}</button>` : it.price.cur ? `<button data-esbuy="${i}">${cur}${it.price.cur}</button>` : `<button data-esbuy="${i}" class="gem"><i class="hIco hi-gem"></i>${it.price.gems}</button>`;
+      return `<div class="esItem${own ? ' own' : ''}"><div class="esArt">${prev(it)}</div><b>${it.name}</b><small>${it.kind === 'bat' ? 'BAT WRAP' : it.kind === 'celeb' ? 'SIX CELEBRATION' : it.kind === 'trim' ? 'KIT TRIM' : it.kind === 'reward' ? 'BUY AS OFTEN AS YOU LIKE' : 'KIT'}${it.alt ? ' · OR GEMS' : ''}</small>${btn}</div>`; }).join('')}</div>
+    <p class="esNote">Looks only — nothing here changes your stats. Shop items leave when the event ends on ${new Date(ev.end + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}.</p></div>`;
+  el.classList.add('show');
+}
+document.addEventListener('click', e => { const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+  if (t.closest('[data-evshop]')) { e.stopImmediatePropagation(); openEventShop(); try { playUiTap(); } catch (err) {} return; }
+  if (t.closest('[data-esclose]') || t.id === 'evShop') { document.getElementById('evShop').classList.remove('show'); try { renderCompete(); } catch (err) {} return; }
+  const b = t.closest('[data-esbuy]'); if (b) { const ev = activeEvent(); if (ev) shopBuy(ev, +b.dataset.esbuy); try { playUiTap(); } catch (err) {} }
+}, true);
+// six celebrations from the shop (snow, fireworks), drawn as a short DOM overlay so they work on every ground
+function celebFx() { const L = curLook(); if (!L.celeb) return; let fx = null; GAME_CONFIG.season.events.forEach(ev => (ev.shop || []).forEach(it => { if (it.id === L.celeb && it.kind === 'celeb') fx = it.fx; }));
+  if (!fx || !ownedCos.includes(L.celeb + ':celeb')) return;
+  const box = document.createElement('div'); box.className = 'celFx ' + fx; let h = '';
+  if (fx === 'snow') for (let i = 0; i < 46; i++) h += `<i style="left:${Math.random() * 100}%;animation-delay:${Math.random() * 0.9}s;animation-duration:${1.8 + Math.random() * 1.4}s;width:${5 + Math.random() * 8}px;height:${5 + Math.random() * 8}px"></i>`;
+  else for (let k = 0; k < 4; k++) { const x = 15 + Math.random() * 70, y = 12 + Math.random() * 35, c = ['#FFD54A', '#FF4FA3', '#4CE06A', '#5AC8FF'][k];
+    for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2; h += `<i style="left:${x}%;top:${y}%;--dx:${Math.cos(a) * 70}px;--dy:${Math.sin(a) * 70}px;background:${c};animation-delay:${k * 0.22}s"></i>`; } }
+  box.innerHTML = h; document.body.appendChild(box); setTimeout(() => box.remove(), 3600); }
 function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st = eventState(ev); if (st.bundle) return;
   buyRealMoney('event_' + ev.id, ev.bundle.price, () => { st.bundle = true; st.cur += ev.bundle.diyas; SAVE.save(); return grantReward({ bag: ev.bundle.bag, gems: ev.bundle.gems }) + ` + ${ev.bundle.diyas} ${ev.currency}`; }); renderCompete(); }
 
@@ -66134,6 +66195,28 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .evName small{font-size:12px;letter-spacing:.06em;color:var(--ec);margin-top:3px;text-shadow:0 1px 0 #050A14}
   .evGoal{text-align:center;font-size:18px;letter-spacing:.03em}
   .duTbl{display:inline-flex;align-items:center;gap:10px}
+  .evCurI{height:30px;vertical-align:-6px;margin-right:6px}
+  #evShop{position:fixed;inset:0;z-index:9600;display:none;align-items:flex-end;justify-content:center;background:rgba(5,10,20,.72);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #evShop.show{display:flex}
+  #evShop .esCard{width:100%;max-width:460px;max-height:86vh;overflow:auto;border-radius:24px 24px 0 0;background:linear-gradient(#1a2f5c,#0b1630);padding:16px 16px calc(env(safe-area-inset-bottom) + 18px);box-sizing:border-box;border-top:3px solid #FFC93A}
+  #evShop .esTop{display:flex;align-items:center;gap:10px;margin-bottom:12px}#evShop .esTop b{flex:1;font-size:20px;letter-spacing:.04em}
+  #evShop .esBal{display:flex;align-items:center;gap:6px;padding:4px 12px 4px 6px;border-radius:999px;background:#050A14;font-size:18px;color:#FFC93A}#evShop .esBal img{height:26px}
+  #evShop .esX{width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer}
+  #evShop .esGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  #evShop .esItem{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border-radius:18px;background:#0f1e3d;border:1.5px solid #22386a;text-align:center}
+  #evShop .esItem.own{border-color:#4CC47A}
+  #evShop .esArt{height:92px;display:flex;align-items:center;justify-content:center}#evShop .esArt img{max-height:88px;max-width:110px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.4))}
+  #evShop .esSw{width:70px;height:70px;border-radius:18px;border:4px solid #fff;box-shadow:0 4px 0 #050A14}
+  #evShop .esItem b{font-size:15px}#evShop .esItem small{font-size:10px;color:#9fb0d4;letter-spacing:.05em;min-height:24px}
+  #evShop .esItem button{margin-top:auto;width:100%;border:0;border-radius:12px;padding:9px 0;font:inherit;font-size:16px;cursor:pointer;color:#1a1200;background:linear-gradient(#FFE07A,#FFB01A);box-shadow:0 3px 0 #9a5a00;display:flex;align-items:center;justify-content:center;gap:5px}
+  #evShop .esItem button img.esCur{height:20px}#evShop .esItem button.gem{background:linear-gradient(#d79bff,#8a3cf0);color:#fff;box-shadow:0 3px 0 #4a1a8a}
+  #evShop .esItem button.on{background:#1f5a38;color:#9ff0b8;box-shadow:none}
+  #evShop .esNote{font-size:11px;color:#8195bd;text-align:center;margin:12px 4px 0;font-family:system-ui,sans-serif}
+  .celFx{position:fixed;inset:0;z-index:8800;pointer-events:none;overflow:hidden}
+  .celFx.snow i{position:absolute;top:-12px;border-radius:50%;background:#fff;box-shadow:0 0 6px rgba(255,255,255,.9);animation:celSnow linear forwards}
+  @keyframes celSnow{to{transform:translate3d(30px,105vh,0)}}
+  .celFx.firework i{position:absolute;width:7px;height:7px;border-radius:50%;opacity:0;box-shadow:0 0 8px currentColor;animation:celFw 1.3s ease-out forwards}
+  @keyframes celFw{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),calc(var(--dy) + 30px)) scale(.4)}}
   img.flg{height:1em;width:auto;vertical-align:-.12em;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
   #duelVs img.flg{height:18px}#cupDraw .cdR em img.flg{height:16px}.mmSum img.flg{height:.9em}
   .evSw{display:flex;justify-content:center;gap:8px;margin:2px 0 4px}
@@ -66319,7 +66402,7 @@ function paintLeagueStill(cv, idx) {
 // Seasonal art (Joe, Nov 6: most of this will be re-themed by season): add EV_KEY_ART['duel_christmas'] etc. and it
 // replaces the default while an event with that id prefix is running.
 function evArt(k) { let th = ''; try { const ev = activeEvent(); th = ev ? String(ev.id).replace(/\d+$/, '') : ''; } catch (e) {} return (th && EV_KEY_ART[k + '_' + th]) || EV_KEY_ART[k]; }
-const EV_KEY_ART = { tourney: 'assets/ui/ev_weekly.webp', duel: 'assets/ui/ev_duels.webp', cup: 'assets/ui/ev_cup.webp', diwali: 'assets/ui/ui_741_2868bcf8.webp', pass: 'assets/ui/ui_742_6042454f.webp' };
+const EV_KEY_ART = { xmas: 'assets/ui/events/ev_xmas.webp', duel_xmas: 'assets/ui/events/ev_duel_xmas.webp', cup_xmas: 'assets/ui/events/ev_cup_xmas.webp', tourney: 'assets/ui/ev_weekly.webp', duel: 'assets/ui/ev_duels.webp', cup: 'assets/ui/ev_cup.webp', diwali: 'assets/ui/ui_741_2868bcf8.webp', pass: 'assets/ui/ui_742_6042454f.webp' };
 function renderCompeteV2() {
   // EVENTS v4 (Oct 30): a poster per event you swipe through (like the Leagues carousel, Clash Royale events, Brawl
   // Stars mode cards). Chips on top jump to any event and flag what needs doing; every poster leads with the goal,
@@ -66412,8 +66495,8 @@ function renderCompeteV2() {
     if (ev) { const st = eventState(ev), left = Math.max(0, Math.ceil((new Date(ev.end + 'T23:59:59') - now) / 864e5)), nextAt = (st.claimed + 1) * ev.every, can = st.claimed < ev.track.length && st.cur >= nextAt; todo.event = can;
       const nodes = [0, 1, 2].map(k => st.claimed + k).filter(i => i < ev.track.length).map((i, k) => ({ r: ev.track[i], label: `${(i + 1) * ev.every} ${ev.currency}`, sub: rewardLabel(ev.track[i]).slice(0, 14), done: st.cur >= (i + 1) * ev.every, next: k === 0 }));
       posters.push(poster({ k: 'event', ico: 'event', col: '#F28C1C', key: String(ev.id).replace(/\d+$/, ''), lg: cur(), timer: `ENDS IN <b>${left} DAYS</b>`, name: ev.name, tag: `EXCLUSIVE ${ev.kit ? ev.kit.name.toUpperCase() + ' ' : ''}KIT AT THE END`,
-        goal: `<em>${st.cur}</em> ${ev.currency}`, road: track(nodes, Math.min(100, (st.cur - st.claimed * ev.every) / ev.every * 50)),
-        rules: `Earn ${ev.currency} in league matches: ${ev.perMatch} a match, +${ev.perWin} a win, +${ev.perSix} a six.`,
+        goal: `${ev.icon ? `<img class="evCurI" alt="" src="${ev.icon}">` : ''}<em>${st.cur}</em> ${ev.currency}${ev.shop ? `<button class="duDraw" data-evshop>EVENT SHOP · ${eventBal(ev)} TO SPEND ›</button>` : ''}`, road: track(nodes, Math.min(100, (st.cur - st.claimed * ev.every) / ev.every * 50)),
+        rules: `Earn ${ev.currency} in league matches and duels: ${ev.perMatch} a match, +${ev.perWin} a win, +${ev.perSix} a six. The track counts everything you earn; spending in the event shop doesn't set it back.`,
         btn: can ? '<button class="gcBuy evGo claim" data-ev="claim">CLAIM</button>' : st.bundle ? '<button class="gcBuy evGo goal" disabled>PLAY LEAGUE MATCHES</button>' : `<button class="gcBuy evGo" data-ev="bundle">BUNDLE · £${ev.bundle.price.toFixed(2)}</button>` })); }
     else if (nx) { const days = Math.max(0, Math.ceil((new Date(nx.start + 'T00:00:00') - now) / 864e5));
       posters.push(poster({ k: 'event', ico: 'event', col: '#F28C1C', key: String(nx.id).replace(/\d+$/, ''), big: bag((nx.bundle && nx.bundle.bag) || 'gold', 'evBigArt'), timer: `STARTS IN <b>${days} DAYS</b>`, name: nx.name, tag: `${Math.round((new Date(nx.end) - new Date(nx.start)) / 864e5) + 1}-DAY EVENT`,
@@ -66421,7 +66504,7 @@ function renderCompeteV2() {
         rules: 'Earn the event currency in league matches and climb its reward track. The last reward is an exclusive kit.', btn: '<button class="gcBuy evGo goal" disabled>COMING SOON</button>' })); } }
   function cur() { return Math.max(1, currentLeagueIdx()); }
   const keys = [...posters.join('').matchAll(/data-pk="(\w+)"/g)].map(m => m[1]);
-  const LBL = { duel: 'DUELS', cup: 'CUP', daily: 'DAILY', tourney: 'WEEKLY', endless: 'ENDLESS', pass: 'PASS', event: 'DIWALI' };
+  const LBL = { duel: 'DUELS', cup: 'CUP', daily: 'DAILY', tourney: 'WEEKLY', endless: 'ENDLESS', pass: 'PASS', event: (() => { const e = activeEvent() || nextEvent(); return e ? e.name.split(' ')[0] : 'EVENT'; })() };
   if (todo.endless) todo.tourney = true;
   const chips = `<div class="evChips">${keys.filter(k => k !== 'endless').map(k => `<button class="evChip" data-pjump="${k}">${SVG[k === 'tourney' ? 'tourney' : k]}<span>${LBL[k] || k.toUpperCase()}</span>${todo[k] ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>`;
   const seasonStrip = on ? `<div class="evSeasonBar">${bag('silver')}<span>SEASON ${seasonNumber()} ENDS IN <b>${passDaysLeft()} DAY${passDaysLeft() === 1 ? '' : 'S'}</b> · your best league's bag + gems</span></div>` : '';
