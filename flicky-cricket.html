@@ -63452,7 +63452,7 @@ function showMoment(kind, d) {
   } else if (kind === 'duel') {   // Nov 6: the rival's ball for the same delivery, then the race
     const w = DUEL_WORD[d.theirs] || String(d.theirs), col = d.theirs === 'W' ? '#7CF29A' : d.theirs === 6 || d.theirs === 4 ? '#FF5A3C' : '#fff';
     const lc = d.me > d.them ? '#7CF29A' : d.me < d.them ? '#FF5A3C' : '#FFC93A';
-    html = `<div class="mmSum"><span class="a">${d.flag} ${String(d.name).slice(0, 10)}: <b style="color:${col}">${w}</b></span><span class="b">YOU <b style="color:${lc}">${d.me}</b> · THEM ${d.them}${d.lead ? ' · ' + d.lead : ''}</span></div>`;
+    html = `<div class="mmSum"><span class="a">${flagHtml(d.flag)} ${String(d.name).slice(0, 10)}: <b style="color:${col}">${w}</b></span><span class="b">YOU <b style="color:${lc}">${d.me}</b> · THEM ${d.them}${d.lead ? ' · ' + d.lead : ''}</span></div>`;
     ms = 1500;
   } else if (kind === 'summary') {   // small, every ball: the ask, coloured by the rate needed
     const rt = d.need / Math.max(1, d.left), col = rt > 2 ? '#FF5A3C' : rt > 1.25 ? '#FFC93A' : '#7CF29A';
@@ -65569,6 +65569,11 @@ const RIVAL_WORD = ['Sixer', 'Yorker', 'Googly', 'Flick', 'Hook', 'Scoop', 'Slog
 const RIVAL_TAIL = ['King', 'Queen', 'Boss', 'Machine', 'Master', 'Ninja', 'Lord', 'Hero', 'Wizard', 'Legend', 'Pro', 'Ace', 'Fan', 'Kid'];
 function rivalName(r) { const f = RIVAL_FIRST[Math.floor(r() * RIVAL_FIRST.length)], w = RIVAL_WORD[Math.floor(r() * RIVAL_WORD.length)], t = RIVAL_TAIL[Math.floor(r() * RIVAL_TAIL.length)], n = Math.floor(r() * 99) + 1, k = r();
   return (k < 0.3 ? f + n : k < 0.5 ? f + '_' + w : k < 0.68 ? w + t : k < 0.82 ? f + w : k < 0.92 ? 'The' + w + t : f.toUpperCase() + (n + 1900 + Math.floor(r() * 120)).toString().slice(-2)).slice(0, 14); }
+// Nov 6: painted flags (Figma 530:191) in place of emoji; anything without a painted flag falls back to the emoji
+const FLAG_ART = ['in', 'gb', 'au', 'pk', 'za', 'nz', 'lk', 'bd', 'jm', 'af', 'eng', 'wi'];
+function flagCode(e) { e = String(e || ''); if (e.includes('\u{E0065}\u{E006E}\u{E0067}')) return 'eng';
+  const cps = [...e].map(ch => ch.codePointAt(0)).filter(c => c >= 0x1F1E6 && c <= 0x1F1FF); return cps.length === 2 ? cps.map(c => String.fromCharCode(c - 0x1F1E6 + 97)).join('') : ''; }
+function flagHtml(e, cls) { const k = flagCode(e); return FLAG_ART.includes(k) ? `<img class="flg${cls ? ' ' + cls : ''}" alt="" src="assets/ui/flags/${k}.webp">` : (e || ''); }
 const DUEL_FLAGS = ['🇮🇳', '🇬🇧', '🇦🇺', '🇵🇰', '🇿🇦', '🇳🇿', '🇱🇰', '🇧🇩', '🇯🇲', '🇦🇫'];
 function duelState() { const s = seasonState(); s.duel = s.duel || { trophies: 0, w: 0, l: 0, d: 0, streak: 0, bestStreak: 0, ranksPaid: 0, recent: [], table: 0, mine: [], day: null, today: 0 };
   if (s.duel.day !== todayKey()) { s.duel.day = todayKey(); s.duel.today = 0; } return s.duel; }
@@ -65621,9 +65626,9 @@ function duelVersus(rival, extra, go) {
   const head = extra.cup ? `FLICKY CUP · ${C.rounds[extra.cupRound]}` : `DUEL · ${THEMED_LEAGUES[window._activeLeagueIdx] ? THEMED_LEAGUES[window._activeLeagueIdx].name : ''}`;
   const prize = extra.cup ? '<span>WIN AND GO THROUGH</span>' : `<span>POT <i class="hIco hi-coin"></i>${(extra.pot || 0).toLocaleString()} + ${bagNm(duelBag(window._activeLeagueIdx || 1))} BAG</span>`;
   el.innerHTML = `<div class="vsHead">${head}</div>
-    <div class="vsSide me"><canvas width="10" height="10"></canvas><b>${(me.name || 'YOU').slice(0, 14)}</b><small>${me.flag || ''} · <i class="hIco hi-trophy"></i>${d.trophies}</small></div>
+    <div class="vsSide me"><canvas width="10" height="10"></canvas><b>${(me.name || 'YOU').slice(0, 14)}</b><small>${flagHtml(me.flag)} · <i class="hIco hi-trophy"></i>${d.trophies}</small></div>
     <div class="vsMid"><img alt="" src="assets/ui/icon_duel.webp"><span>VS</span></div>
-    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${rival.flag} · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small></div>
+    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small></div>
     <div class="vsFoot">${prize}<em>6 BALLS EACH · SAME BALLS</em></div>`;
   const cv = el.querySelectorAll('canvas');
   try { paintPlayerTo(cv[0], me); paintPlayerTo(cv[1], Object.assign({}, me, { shirt: rival.shirt || 'maroon', g: rival.g || 'm', name: rival.name })); } catch (e) {}
@@ -65693,7 +65698,7 @@ function duelResult(c) { return c.sdRes ? (c.sdRes === 'me' ? 'win' : 'lose') : 
 function duelEnd(c) {
   const D = GAME_CONFIG.season.duel, d = duelState(), rv = c.rival, me = runs, res = duelResult(c);
   BACKEND.duelSubmit(c.leagueIdx, me, c.wkLost, c.log);
-  const line = `You ${me}-${Math.min(c.wkLost, c.wickets)} · ${rv.flag} ${rv.name} ${c.rv}-${c.rvWk}${c.sd ? ' · SUDDEN DEATH' : ''}`;
+  const line = `You ${me}-${Math.min(c.wkLost, c.wickets)} · ${rv.name} ${c.rv}-${c.rvWk}${c.sd ? ' · SUDDEN DEATH' : ''}`;
   if (c.cup) return cupAfterDuel(c, res, line);
   let coins = 0, tg = 0;
   const easy = duelTooEasy(c.leagueIdx); let bag = '';
@@ -65762,7 +65767,7 @@ function openCupDraw(page) {
   const last = run.path.length ? run.path[run.path.length - 1] : null, cur = run.out || run.champ ? (last ? last.round : 0) : run.round;
   const status = run.champ ? 'CUP WINNERS!' : run.out ? `OUT IN THE ${C.rounds[last.round]}` : `IN THE ${C.rounds[run.round]}`;
   const card = (m, big) => { const done = m.w != null, mine = m.a === 0 || m.b === 0;
-    const row = (i, sc) => `<div class="cdR${done ? (m.w === i ? ' w' : ' l') : ''}${i === 0 ? ' you' : ''}"><em>${i == null ? '' : cupFlag(run, i)}</em><span>${nm(i)}</span><b>${sc == null ? (done ? '' : i == null ? '' : '–') : sc}${done && m.w === i && m.sd ? '<i>SD</i>' : ''}</b></div>`;
+    const row = (i, sc) => `<div class="cdR${done ? (m.w === i ? ' w' : ' l') : ''}${i === 0 ? ' you' : ''}"><em>${i == null ? '' : i === 0 ? '★' : flagHtml(cupFlag(run, i))}</em><span>${nm(i)}</span><b>${sc == null ? (done ? '' : i == null ? '' : '–') : sc}${done && m.w === i && m.sd ? '<i>SD</i>' : ''}</b></div>`;
     return `<div class="cdM${mine ? ' mine' : ''}${big ? ' big' : ''}${mine && !done && !run.out && !run.champ ? ' now' : ''}">${row(m.a, m.sa)}${row(m.b, m.sb)}</div>`; };
   const road = C.rounds.map((rn, r) => { const pl = run.path.find(x => x.round === r), m = R[r][0];
     const st = pl ? pl.res : (!run.out && !run.champ && r === run.round) ? 'next' : 'future';
@@ -65824,6 +65829,7 @@ function cupBracket(run) {
   return rounds;
 }
 function cupOpenNow() { return window.CUP_ALWAYS || GAME_CONFIG.season.cup.days.includes(_nowDate().getDay()); }
+function cupOpensLabel() { const ms = cupOpensIn(); if (ms < 864e5) return 'OPENS IN ' + fmtLeft(ms); const d = new Date(_nowDate().getTime() + ms); return 'OPENS ' + ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][d.getDay()]; }
 function cupOpensIn() { const d = _nowDate(); for (let k = 1; k <= 7; k++) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate() + k); if (GAME_CONFIG.season.cup.days.includes(x.getDay())) return x - d; } return 0; }
 function cupLive() { const run = cupState().run; return run && !run.out && !run.champ ? run : null; }
 function playCup() {
@@ -66128,10 +66134,12 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .evName small{font-size:12px;letter-spacing:.06em;color:var(--ec);margin-top:3px;text-shadow:0 1px 0 #050A14}
   .evGoal{text-align:center;font-size:18px;letter-spacing:.03em}
   .duTbl{display:inline-flex;align-items:center;gap:10px}
+  img.flg{height:1em;width:auto;vertical-align:-.12em;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+  #duelVs img.flg{height:18px}#cupDraw .cdR em img.flg{height:16px}.mmSum img.flg{height:.9em}
   .evSw{display:flex;justify-content:center;gap:8px;margin:2px 0 4px}
   .evSw b,.evSw button{border-radius:999px;padding:5px 12px;font:inherit;font-size:12px;letter-spacing:.05em}
   .evSw b{background:#FFC93A;color:#1a1200}.evSw button{border:0;background:rgba(255,255,255,.1);color:#cfd8ea;cursor:pointer}
-  .cupCab{display:flex;align-items:flex-end;gap:4px;margin-bottom:8px}.cupCab img{height:34px}.cupCab span{font-size:12px;color:#FFC93A;margin-left:6px}
+  .cupCab{display:flex;align-items:flex-end;justify-content:center;gap:4px;margin-top:6px}.cupCab img{height:34px}.cupCab span{font-size:12px;color:#FFC93A;margin-left:6px}
   #duelVs{position:fixed;inset:0;z-index:9500;display:none;grid-template-columns:1fr auto 1fr;grid-template-rows:auto 1fr auto;align-items:center;padding:calc(env(safe-area-inset-top) + 40px) 10px calc(env(safe-area-inset-bottom) + 50px);
     background:linear-gradient(105deg,#b3202b 0%,#7a1018 48%,#0b1f55 52%,#1d4fc4 100%);color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
   #duelVs.show{display:grid;animation:vsIn .28s ease-out}#duelVs.out{display:grid;opacity:0;transition:opacity .28s}
@@ -66354,7 +66362,7 @@ function renderCompeteV2() {
       const lockNote = !duelOpen(li) ? `<div class="duPot" style="color:#ff8a8a">NEEDS ${duelReq(li)} DUEL TROPHIES</div>` : duelTooEasy(li) ? '<div class="duPot" style="color:#7fd0ff">TOO EASY FOR YOU · NO TROPHIES HERE</div>' : '';
       const lo = R[rk].at, fill = nx ? (du.trophies - lo) / (nx.at - lo) * 50 : 100;
       const nodes = R.slice(rk + 1, rk + 4).map((x, k) => ({ r: x.r || { medal: x.name[0] }, label: x.name, sub: `${x.at} TROPHIES`, next: k === 0 }));
-      const recent = du.recent.length ? `<div class="duRecent">${du.recent.map(x => `<span class="${x.res}">${x.res === 'win' ? 'W' : x.res === 'tie' ? 'T' : 'L'} · ${x.flag} ${x.name} · ${x.me}–${x.them}</span>`).join('')}</div>` : '';
+      const recent = du.recent.length ? `<div class="duRecent">${du.recent.map(x => `<span class="${x.res}">${x.res === 'win' ? 'W' : x.res === 'tie' ? 'T' : 'L'} · ${flagHtml(x.flag)} ${x.name} · ${x.me}–${x.them}</span>`).join('')}</div>` : '';
       const pick = T.length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${T.indexOf(li) ? '' : ' disabled'}>‹</button><b>${THEMED_LEAGUES[li].name}</b><button data-duel="next" aria-label="Higher table"${T.indexOf(li) < T.length - 1 ? '' : ' disabled'}>›</button></span>` : `<span class="duTbl"><b>${THEMED_LEAGUES[li].name}</b></span>`;
       posters.push(poster({ k: 'duel', ico: 'duel', noBadge: true, col: '#E8463A', key: 'duel', lg: li, timer: du.w + du.l + du.d ? `<b>${du.w}W ${du.l}L</b>${du.streak >= 2 ? ` · ${du.streak} IN A ROW` : ''}` : '<b>HEAD TO HEAD</b>', name: 'DUELS', tag: `${R[rk].name} RANK · ${du.trophies} TROPHIES`,
         goal: `${pick}<div class="duPot">${duelEntry(li) ? `ENTRY ${duelEntry(li).toLocaleString()} COINS` : 'FREE DUEL TODAY'} · WIN ${duelPot(li).toLocaleString()} + ${bagNm(duelBag(li))} BAG</div>${lockNote}`,
@@ -66368,11 +66376,11 @@ function renderCompeteV2() {
         .map(([r, lbl, p, art, sub]) => ({ r: art, label: lbl, sub: `${sub} + ${(E * p.e).toLocaleString()}`, done: at >= r, next: at >= 0 ? at + 1 === r || (at < 3 && r === 3) : r === 3 }));
       const path = run && run.path.length ? `<div class="duRecent">${run.path.map(x => `<span class="${x.res}">${C.rounds[x.round]} · ${x.name} · ${x.me}–${x.them}${x.sd ? ' (SD)' : ''}</span>`).join('')}</div>` : '';
       const cab = cs.won && cs.won.length ? `<div class="cupCab">${cs.won.slice(-6).map(w => `<img alt="" src="${CUP_TROPHY_SRC}" title="${THEMED_LEAGUES[w.li].name}">`).join('')}<span>${cs.won.length} WON</span></div>` : '';
-      posters.push(poster({ k: 'cup', ico: 'cup', noBadge: true, col: '#8A5CF6', key: 'cup', lg: li, timer: run ? `<b>${C.rounds[run.round]}</b>` : cupOpenNow() ? '<b>THIS WEEKEND</b>' : `OPENS IN <b>${fmtLeft(cupOpensIn())}</b>`, name: 'FLICKY CUP', tag: `${THEMED_LEAGUES[li].name} · 32 PLAYERS · LOSE AND YOU'RE OUT`,
-        goal: run ? `${C.rounds[run.round]}<small class="duPot">NEXT: ${run.names[cupBracket(run)[run.round][0].b]}</small><button class="duDraw" data-cupdraw>SEE THE DRAW ›</button>` : (cs.run ? `<button class="duDraw" data-cupdraw>LAST CUP'S DRAW ›</button>` : '') +  `${duelTables().length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${duelTables().indexOf(li) ? '' : ' disabled'}>‹</button><b>5 ROUNDS</b><button data-duel="next" aria-label="Higher table"${duelTables().indexOf(li) < duelTables().length - 1 ? '' : ' disabled'}>›</button></span>` : '5 ROUNDS'}<div class="duPot">ENTRY ${E.toLocaleString()} COINS</div>`,
+      posters.push(poster({ k: 'cup', ico: 'cup', noBadge: true, col: '#8A5CF6', key: 'cup', lg: li, timer: run ? `<b>${C.rounds[run.round]}</b>` : cupOpenNow() ? '<b>THIS WEEKEND</b>' : `<b>${cupOpensLabel()}</b>`, name: 'FLICKY CUP', tag: `${THEMED_LEAGUES[li].name} · 32 PLAYERS · LOSE AND YOU'RE OUT`,
+        goal: run ? `${C.rounds[run.round]}<small class="duPot">NEXT: ${run.names[cupBracket(run)[run.round][0].b]}</small><button class="duDraw" data-cupdraw>SEE THE DRAW ›</button>` : (cs.run ? `<button class="duDraw" data-cupdraw>LAST CUP'S DRAW ›</button>` : '') +  `${duelTables().length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${duelTables().indexOf(li) ? '' : ' disabled'}>‹</button><b>5 ROUNDS</b><button data-duel="next" aria-label="Higher table"${duelTables().indexOf(li) < duelTables().length - 1 ? '' : ' disabled'}>›</button></span>` : '5 ROUNDS'}<div class="duPot">ENTRY ${E.toLocaleString()} COINS</div>${cab}`,
         road: track(nodes, at < 0 ? 0 : Math.min(100, Math.max(0, at - 2) / 3 * 100)),
-        rules: `${cab}A 32-player draw, FA Cup style, every weekend (Friday to Sunday). Every round is a six-ball duel: win and you're in the next round's draw, lose and you're out. Prizes: quarter-finals ${fmt(C.prize[2])}, semi-finals ${fmt(C.prize[3])}, runner-up ${fmt(C.prize[4])}, winner ${fmt(C.champion)}.${path}`,
-        btn: !run && !cupOpenNow() ? `<button class="gcBuy evGo goal" disabled>OPENS IN ${fmtLeft(cupOpensIn())}</button>` : (run ? `<button class="gcBuy evGo" data-mode="cup">PLAY ${cupShort(run.round)}</button>` : `<button class="gcBuy evGo" data-mode="cup">ENTER · ${E.toLocaleString()}<i class="hIco hi-coin"></i></button>`) })); }
+        rules: `A 32-player draw, FA Cup style, every weekend (Friday to Sunday). Every round is a six-ball duel: win and you're in the next round's draw, lose and you're out. Prizes: quarter-finals ${fmt(C.prize[2])}, semi-finals ${fmt(C.prize[3])}, runner-up ${fmt(C.prize[4])}, winner ${fmt(C.champion)}.${path}`,
+        btn: !run && !cupOpenNow() ? `<button class="gcBuy evGo goal" disabled>${cupOpensLabel()}</button>` : (run ? `<button class="gcBuy evGo" data-mode="cup">PLAY ${cupShort(run.round)}</button>` : `<button class="gcBuy evGo" data-mode="cup">ENTER · ${E.toLocaleString()}<i class="hIco hi-coin"></i></button>`) })); }
     posters.push(poster({ k: 'daily', ico: 'daily', col: '#2BB3A0', lg: d.leagueIdx, timer: `NEW IN <b>${fmtLeft(toMid)}</b>`, name: 'DAILY CHALLENGE', tag: `${sceneName(d.scene)} · SAME FOR EVERYONE`,
       goal: `NEED <em>${d.target}</em> OFF <em>${d.balls}</em> BALLS`,
       road: track([1, 2, 3].map(n => ({ r: n === 3 ? { bag: 'silver' } : { medal: 'win' }, label: `DAY ${n}`, sub: n === 3 ? 'SILVER BAG' : 'WIN', done: n <= st, next: n === st + 1 })), st / 2 * 100),
