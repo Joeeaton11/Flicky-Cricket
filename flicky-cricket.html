@@ -64943,6 +64943,15 @@ function renderShopV2(container) {
       return tile({ tint: TINT[d.item.rarity], over: `${slotOf(d.item).toUpperCase()} · <span style="color:${rarityColor(d.item.rarity)}">${d.item.rarity.toUpperCase()}</span>`, name: d.item.name, art: itemArt(d.item), qty: `×${d.n}`,
         btn: got ? 'BOUGHT' : d.coins ? d.coins.toLocaleString() + coin : d.gems + gem, btnAttr: ` data-deal="${i}"`, disabled: got }); }).join('')}</div>`;
   }
+  { const ev = activeEvent();   // Nov 6 (Joe: keep it in the game's style) — the event shop is a shelf of the real Shop, same tiles
+    if (ev && ev.shop) { const ic = `<img class="evCurS" alt="" src="${ev.icon}">`, left = Math.max(0, Math.ceil((new Date(ev.end + 'T23:59:59') - Date.now()) / 864e5));
+      const base = it => it.alt ? Object.assign({}, ev.shop.find(x => x.id === it.id && !x.alt), { price: it.price, alt: true }) : it;
+      const KIND = { bat: 'BAT WRAP', celeb: 'SIX CELEBRATION', trim: 'KIT TRIM', shirt: 'KIT', reward: 'BAG' };
+      deal += `<div class="gcHd"><img class="evHdI" alt="" src="${ev.icon}"><span>${ev.name.replace(/ CUP$/, '')} SHOP</span><i class="ln"></i><em>${ic}<b>${eventBal(ev)}</b> · ${left} DAY${left === 1 ? '' : 'S'}</em></div>`
+        + `<div class="gcGrid" data-shelf="ev">${ev.shop.map((r, i) => ({ it: base(r), i })).filter(x => !(x.it.alt && shopOwned(x.it))).map(({ it, i }) => { const own = shopOwned(it), eq = own && shopEquipped(it);
+          const art = it.icon ? `<img class="gcPic evPic" alt="" src="${it.icon}">` : `<canvas class="evPl" data-evpl="${it.kind}:${it.id}" width="10" height="10"></canvas>`;
+          return tile({ tint: ev.kit ? ev.kit.c : '#b3202b', over: KIND[it.kind] + (it.alt ? ' · GEMS' : ''), name: it.name.replace(/ (TRIM|BAT)$/, m => m), art, note: it.kind === 'celeb' ? 'Plays on every six' : it.kind === 'reward' ? 'Buy as often as you like' : 'Looks only',
+            btn: own ? (eq ? 'EQUIPPED' : 'EQUIP') : it.price.cur ? `${it.price.cur}${ic}` : `${it.price.gems}<i class="hIco hi-gem"></i>`, btnCls: own ? (eq ? 'on' : '') : it.price.cur ? 'ev' : '', btnAttr: ` data-esbuy="${i}"` }); }).join('')}</div>`; } }
   deal += hd('BOOSTERS', 'PACKS OF ' + GAME_CONFIG.kit.boosterPack.count) + `<div class="gcGrid four" data-shelf="boost">${['power_bat', 'lucky_grip', 'golden_ball', 'fresh_legs'].map(id =>
     tile({ tint: '#2f5fb0', name: `<span style="color:${BOOSTER_INFO[id].col}">${BOOSTER_INFO[id].short}</span>`, art: BOOST_ART[id], qty: `×${GAME_CONFIG.kit.boosterPack.count}`, note: `${BOOSTER_INFO[id].desc}<br>YOU HAVE ${boosterCount(id)}`,
       btn: GAME_CONFIG.kit.boosterPack.gems + gem, btnAttr: ` data-boost="${id}"` })).join('')}</div>`;
@@ -64976,6 +64985,9 @@ function renderShopV2(container) {
   requestAnimationFrame(() => {
     if (window._shopKeepY != null) { cont.scrollTop = window._shopKeepY; window._shopKeepY = null; }
     else if (window._shopTab && window._shopTab !== 'deals') shopJump(cont, window._shopTab, false);
+    cont.querySelectorAll('canvas[data-evpl]').forEach(cv => { const [k, id] = cv.dataset.evpl.split(':'); try { paintPlayerTo(cv, Object.assign({}, curLook(), { [k]: id })); } catch (e) {} });
+    if (window._shopShelf) { const sh = cont.querySelector(`[data-shelf="${window._shopShelf}"]`), tb = cont.querySelector('.sh3 .shTabs'); window._shopShelf = null;
+      if (sh) cont.scrollTop = Math.max(0, cont.scrollTop + sh.getBoundingClientRect().top - cont.getBoundingClientRect().top - (tb ? tb.offsetHeight : 0) - 60); }
     window._shopTab = 'deals';
     // room under the last section so it can reach the tab bar (keeps the highlight honest at the bottom)
     { const last = cont.querySelector('.gcSec:last-of-type'), tb = cont.querySelector('.sh3 .shTabs');
@@ -66046,7 +66058,10 @@ function shopBuy(ev, i) {
   if (cost.cur) { if (eventBal(ev) < cost.cur) { showMessage(`Not enough ${ev.currency.toLowerCase()}`, '#ff6b6b', 1500); return; } st.spent = (st.spent || 0) + cost.cur; give(); }
   else if (cost.gems) bagConfirm(cost.gems, `Unlock ${it.name}?`, () => { if (gems < cost.gems) { showMessage('Not enough gems!', '#ff6b6b', 1500); return; } gems -= cost.gems; saveEquipmentState(); give(); });
 }
-function openEventShop() {
+function openEventShop() {   // the shelf in the real Shop replaced the bottom sheet (Nov 6); kept as a refresh hook
+  if (document.querySelector('.sh3')) { const c = document.getElementById('equipContent'); window._shopKeepY = c ? c.scrollTop : null; try { updateEquipTopBar(); updateMenuHUD(); } catch (e) {} openEquipTab('shop'); return; }
+}
+function openEventShopSheet() {
   const ev = activeEvent(); if (!ev || !ev.shop) return;
   let el = document.getElementById('evShop'); if (!el) { el = document.createElement('div'); el.id = 'evShop'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Event shop'); document.body.appendChild(el); }
   const cur = `<img class="esCur" alt="" src="${ev.icon}">`, items = ev.shop.map((it, i) => ({ it: it.alt ? Object.assign({}, ev.shop.find(x => x.id === it.id && !x.alt), { price: it.price, alt: true }) : it, i }))
@@ -66060,9 +66075,9 @@ function openEventShop() {
   el.classList.add('show');
 }
 document.addEventListener('click', e => { const t = e.target && e.target.closest ? e.target : null; if (!t) return;
-  if (t.closest('[data-evshop]')) { e.stopImmediatePropagation(); openEventShop(); try { playUiTap(); } catch (err) {} return; }
+  if (t.closest('[data-evshop]')) { e.stopImmediatePropagation(); document.getElementById('competePanel').classList.remove('show'); window._shopShelf = 'ev'; openShop('deals'); return; }
   if (t.closest('[data-esclose]') || t.id === 'evShop') { document.getElementById('evShop').classList.remove('show'); try { renderCompete(); } catch (err) {} return; }
-  const b = t.closest('[data-esbuy]'); if (b) { const ev = activeEvent(); if (ev) shopBuy(ev, +b.dataset.esbuy); try { playUiTap(); } catch (err) {} }
+  const b = t.closest('[data-esbuy]'); if (b) { e.stopImmediatePropagation(); const ev = activeEvent(); if (ev) shopBuy(ev, +b.dataset.esbuy); try { playUiTap(); } catch (err) {} }
 }, true);
 // six celebrations from the shop (snow, fireworks), drawn as a short DOM overlay so they work on every ground
 function celebFx() { const L = curLook(); if (!L.celeb) return; let fx = null; GAME_CONFIG.season.events.forEach(ev => (ev.shop || []).forEach(it => { if (it.id === L.celeb && it.kind === 'celeb') fx = it.fx; }));
@@ -66196,6 +66211,12 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .evGoal{text-align:center;font-size:18px;letter-spacing:.03em}
   .duTbl{display:inline-flex;align-items:center;gap:10px}
   .evCurI{height:30px;vertical-align:-6px;margin-right:6px}
+  .gcHd .evHdI{height:30px;width:auto;margin-right:2px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+  .gcHd em .evCurS{height:18px;vertical-align:-3px;margin:0 3px}
+  .gcBuy .evCurS{height:24px;margin-left:4px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+  .gcTile .evPic{max-height:96px;object-fit:contain}
+  .gcTile canvas.evPl{height:100px;width:auto;margin-bottom:0}
+  .gcBuy.on{background:linear-gradient(#5fd38a,#2b9a57)!important;opacity:.85}
   #evShop{position:fixed;inset:0;z-index:9600;display:none;align-items:flex-end;justify-content:center;background:rgba(5,10,20,.72);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
   #evShop.show{display:flex}
   #evShop .esCard{width:100%;max-width:460px;max-height:86vh;overflow:auto;border-radius:24px 24px 0 0;background:linear-gradient(#1a2f5c,#0b1630);padding:16px 16px calc(env(safe-area-inset-bottom) + 18px);box-sizing:border-box;border-top:3px solid #FFC93A}
