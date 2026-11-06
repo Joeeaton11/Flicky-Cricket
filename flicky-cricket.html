@@ -65550,6 +65550,12 @@ function endlessKey() { return `e:${weekKey()}`; }
 function endlessScene() { const sc = allScenesUpTo(27); return sc[Math.floor(_seeded('es' + weekKey())() * sc.length)]; }
 function endlessStats() { return { mean: 38, sd: 22 }; }
 // ---------- DUELS (Nov 6): chase a rival's innings off the same balls; winner takes the pot ----------
+// Nov 6 (Joe: the cup draw looked fake — COVERDRIVE, COVERDRIVE_6, COVERDRIVE_33…): believable player handles.
+const RIVAL_FIRST = ['Sam', 'Ali', 'Ben', 'Dev', 'Liam', 'Ravi', 'Zak', 'Hamza', 'Arjun', 'Tom', 'Jack', 'Kane', 'Ollie', 'Rohan', 'Shan', 'Harry', 'Danny', 'Mo', 'Adil', 'Rishi', 'Kyle', 'Nathan', 'Asif', 'Aaron', 'Jamie', 'Sanjay', 'Imran', 'Callum', 'Ethan', 'Noah', 'Priya', 'Sophie', 'Aisha', 'Meera', 'Ellie', 'Zara', 'Anya', 'Lucy', 'Nadia', 'Kiran', 'Vikram', 'Owen', 'Faisal', 'Tariq', 'Josh', 'Reece', 'Leo', 'Isaac', 'Amir', 'Neel', 'Yusuf', 'Ryan', 'Dan', 'Will', 'Chloe', 'Maya', 'Pooja', 'Hassan', 'Kai', 'Theo'];
+const RIVAL_WORD = ['Sixer', 'Yorker', 'Googly', 'Flick', 'Hook', 'Scoop', 'Slog', 'Ramp', 'Sweep', 'Gully', 'Bouncer', 'Edge', 'Ton', 'Stumps', 'Cover', 'Pull', 'Spin', 'Swing', 'Seam', 'Duck', 'Helmet', 'Willow', 'Boundary', 'Nets', 'Slip'];
+const RIVAL_TAIL = ['King', 'Queen', 'Boss', 'Machine', 'Master', 'Ninja', 'Lord', 'Hero', 'Wizard', 'Legend', 'Pro', 'Ace', 'Fan', 'Kid'];
+function rivalName(r) { const f = RIVAL_FIRST[Math.floor(r() * RIVAL_FIRST.length)], w = RIVAL_WORD[Math.floor(r() * RIVAL_WORD.length)], t = RIVAL_TAIL[Math.floor(r() * RIVAL_TAIL.length)], n = Math.floor(r() * 99) + 1, k = r();
+  return (k < 0.3 ? f + n : k < 0.5 ? f + '_' + w : k < 0.68 ? w + t : k < 0.82 ? f + w : k < 0.92 ? 'The' + w + t : f.toUpperCase() + (n + 1900 + Math.floor(r() * 120)).toString().slice(-2)).slice(0, 14); }
 const DUEL_FLAGS = ['🇮🇳', '🇬🇧', '🇦🇺', '🇵🇰', '🇿🇦', '🇳🇿', '🇱🇰', '🇧🇩', '🇯🇲', '🇦🇫'];
 function duelState() { const s = seasonState(); s.duel = s.duel || { trophies: 0, w: 0, l: 0, d: 0, streak: 0, bestStreak: 0, ranksPaid: 0, recent: [], table: 0, mine: [], day: null, today: 0 };
   if (s.duel.day !== todayKey()) { s.duel.day = todayKey(); s.duel.today = 0; } return s.duel; }
@@ -65572,7 +65578,7 @@ BACKEND.duelRival = function (li, seed, boost) {
   const dist = duelDist(per), log = [], sd = [];
   for (let i = 0; i < D.balls; i++) log.push(duelDraw(r, dist));
   for (let i = 0; i < D.suddenDeathMax; i++) sd.push(duelDraw(r, dist));
-  return { name: BOARD_NAMES[Math.floor(r() * BOARD_NAMES.length)], flag: DUEL_FLAGS[Math.floor(r() * DUEL_FLAGS.length)], log, sd, seed: String(seed) };
+  return { name: rivalName(r), flag: DUEL_FLAGS[Math.floor(r() * DUEL_FLAGS.length)], log, sd, seed: String(seed) };
 };
 // your innings, kept so the online version can hand it to other players as their rival
 BACKEND.duelSubmit = function (li, runs, wk, log) { const d = duelState(); d.mine.unshift({ li, runs, wk, log: (log || []).slice(0, 20), at: Date.now() }); d.mine = d.mine.slice(0, 20); };
@@ -65638,6 +65644,8 @@ function duelEnd(c) {
   return { res, title: res === 'win' ? 'DUEL WON!' : res === 'tie' ? 'DUEL TIED' : 'DUEL LOST', line, extra: bits.concat(paid).join(' · ') || `${d.trophies} DUEL TROPHIES`, again: `DUEL AGAIN <i class="hIco hi-coin"></i>${duelEntry(duelTable()).toLocaleString()}` };
 }
 // ---------- the draw (v2, Nov 6): round tabs you swipe, your match pinned, "your road", and a two-sided full-draw card ----------
+const CUP_TROPHY_SRC = 'assets/ui/cup_trophy.webp', CUP_PLAQUE_SRC = 'assets/ui/cup_plaque.webp';
+const CUP_TROPHY_IMG = (() => { const im = new Image(); im.src = CUP_TROPHY_SRC; return im; })();
 function cupFlag(run, i) { return i === 0 ? '★' : DUEL_FLAGS[Math.floor(_seeded('cf' + run.seed + ':' + i)() * DUEL_FLAGS.length)]; }
 function cupShort(r) { return ['LAST 32', 'LAST 16', 'QF', 'SF', 'FINAL'][r]; }
 function cupDrawCanvas(run, R) {   // two-sided World Cup style chart, made to be screenshotted and shared
@@ -65667,7 +65675,8 @@ function cupDrawCanvas(run, R) {   // two-sided World Cup style chart, made to b
   }
   const fm = R[4][0], fy = TOP + (BOT - TOP) / 2 - bh / 2; box(W / 2 - bw / 2, fy, fm, fm.a === 0 || fm.b === 0);
   g.textAlign = 'center'; g.font = F(20); g.fillStyle = '#7f93bd'; g.fillText('FINAL', W / 2, fy - 14);
-  g.font = F(64); g.fillText('🏆', W / 2, fy - 90); g.font = F(18); g.fillText('WINNER', W / 2, fy + bh + 36);
+  if (CUP_TROPHY_IMG.complete && CUP_TROPHY_IMG.naturalWidth) { const th = 190, tw = th * CUP_TROPHY_IMG.naturalWidth / CUP_TROPHY_IMG.naturalHeight; g.drawImage(CUP_TROPHY_IMG, W / 2 - tw / 2, fy - 40 - th, tw, th); } else { g.font = F(64); g.fillText('🏆', W / 2, fy - 90); }
+  g.font = F(18); g.fillText('WINNER', W / 2, fy + bh + 36);
   g.font = F(30); g.fillStyle = fm.w === 0 ? '#FFC93A' : '#fff'; g.fillText(fm.w == null ? '?' : nm(fm.w), W / 2, fy + bh + 72);
   g.font = F(16); g.fillStyle = '#5f7096'; g.fillText('* won in sudden death', W / 2, BOT + 14);
   return cv;
@@ -65684,22 +65693,24 @@ function openCupDraw(page) {
   let el = document.getElementById('cupDraw');
   if (!el) { el = document.createElement('div'); el.id = 'cupDraw'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Cup draw'); document.body.appendChild(el); }
   const last = run.path.length ? run.path[run.path.length - 1] : null, cur = run.out || run.champ ? (last ? last.round : 0) : run.round;
-  const status = run.champ ? 'YOU WON THE CUP!' : run.out ? `KNOCKED OUT IN THE ${C.rounds[last.round]} BY ${nm(R[last.round][0].b)}` : `${C.rounds[run.round]} · NEXT: ${nm(R[run.round][0].b)}`;
+  const status = run.champ ? 'CUP WINNERS!' : run.out ? `OUT IN THE ${C.rounds[last.round]}` : `IN THE ${C.rounds[run.round]}`;
   const card = (m, big) => { const done = m.w != null, mine = m.a === 0 || m.b === 0;
     const row = (i, sc) => `<div class="cdR${done ? (m.w === i ? ' w' : ' l') : ''}${i === 0 ? ' you' : ''}"><em>${i == null ? '' : cupFlag(run, i)}</em><span>${nm(i)}</span><b>${sc == null ? (done ? '' : i == null ? '' : '–') : sc}${done && m.w === i && m.sd ? '<i>SD</i>' : ''}</b></div>`;
     return `<div class="cdM${mine ? ' mine' : ''}${big ? ' big' : ''}${mine && !done && !run.out && !run.champ ? ' now' : ''}">${row(m.a, m.sa)}${row(m.b, m.sb)}</div>`; };
   const road = C.rounds.map((rn, r) => { const pl = run.path.find(x => x.round === r), m = R[r][0];
     const st = pl ? pl.res : (!run.out && !run.champ && r === run.round) ? 'next' : 'future';
-    return `<button class="cdRd ${st}" data-cdpage="${r}"><small>${cupShort(r)}</small><b>${pl ? `${pl.me}–${pl.them}${pl.sd ? '*' : ''}` : st === 'next' ? 'NEXT' : '·'}</b><span>${st === 'future' ? '' : nm(m.b)}</span></button>`; }).join('');
+    const who = pl ? (pl.res === 'win' ? 'beat ' : 'lost to ') + nm(m.b) : st === 'next' ? 'vs ' + nm(m.b) : run.out || run.champ ? '' : 'to come';
+    return `<button class="cdRd ${st}" data-cdpage="${r}"><small>${C.rounds[r]}</small><b>${pl ? `${pl.me}–${pl.them}${pl.sd ? '*' : ''}` : st === 'next' ? 'NEXT' : '–'}</b><span>${who}</span></button>`; }).join('');
   const pages = R.map((ms, r) => {
     const pin = ms[0].a === 0 && (run.path.some(x => x.round === r) || (!run.out && !run.champ && r === run.round)) ? `<div class="cdPin"><small>YOUR MATCH</small>${card(ms[0], true)}</div>` : '';
     if (r === R.length - 1) { const f = ms[0];
-      return `<section class="cdPage">${pin}<div class="cdFinal">${card(f, true)}<div class="cdWin"><span class="cdCup">🏆</span><small>WINNER</small><b class="${f.w === 0 ? 'you' : ''}">${f.w == null ? 'TO BE DECIDED' : nm(f.w)}</b></div></div></section>`; }
-    let groups = ''; for (let k = 0; k < ms.length; k += 2) groups += `<div class="cdPair">${card(ms[k])}${card(ms[k + 1])}<i class="cdBr"></i><span class="cdTo">${C.rounds[r + 1].replace('ROUND OF ', 'LAST ')} · MATCH ${k / 2 + 1}</span></div>`;
+      return `<section class="cdPage">${pin}<div class="cdFinal">${card(f, true)}<div class="cdWin"><img class="cdCup" alt="" src="${CUP_TROPHY_SRC}"><small>WINNER</small><b class="${f.w === 0 ? 'you' : ''}">${f.w == null ? 'TO BE DECIDED' : nm(f.w)}</b></div></div></section>`; }
+    let groups = ''; for (let k = 0; k < ms.length; k += 2) groups += `<div class="cdPair">${card(ms[k])}${card(ms[k + 1])}<i class="cdBr"></i></div>`;
     return `<section class="cdPage">${pin}<div class="cdAll">ALL ${ms.length} MATCHES</div>${groups}</section>`;
   }).join('') + `<section class="cdPage"><div class="cdAll">THE WHOLE DRAW</div><div class="cdFull" data-cdzoom></div><button class="gcBuy evGo cdShare" data-cdshare>SHARE THE DRAW</button></section>`;
-  el.innerHTML = `<div class="cdTop"><button class="evBack" data-cdclose aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div><b>FLICKY CUP</b><small>${THEMED_LEAGUES[run.li].name} · 32 PLAYERS</small></div></div>
-    <div class="cdStatus">${status}</div><div class="cdRoad">${road}</div>
+  el.style.setProperty('--lg', THEMED_LEAGUES[run.li].accentColor || '#2457D6');
+  el.innerHTML = `<div class="cdTop"><button class="evBack" data-cdclose aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="cdPlaque" style="background-image:url(${CUP_PLAQUE_SRC})"><img alt="" src="${CUP_TROPHY_SRC}"><div><b>FLICKY CUP</b><small>${THEMED_LEAGUES[run.li].name} · ${status}</small></div></div></div>
+    <div class="cdRoad">${road}</div>
     <div class="cdTabs">${C.rounds.map((_, r) => `<button data-cdpage="${r}">${cupShort(r)}</button>`).join('')}<button data-cdpage="5">DRAW</button></div>
     <div class="cdPages">${pages}</div>`;
   el.querySelector('.cdFull').appendChild(cupDrawCanvas(run, R));
@@ -65707,7 +65718,7 @@ function openCupDraw(page) {
   const box = el.querySelector('.cdPages'), tabs = [...el.querySelectorAll('.cdTabs button')];
   const sync = () => { const i = Math.round(box.scrollLeft / Math.max(1, box.clientWidth)); tabs.forEach((b, j) => b.classList.toggle('on', j === i)); };
   box.addEventListener('scroll', sync, { passive: true });
-  requestAnimationFrame(() => { box.scrollLeft = (page != null ? page : cur) * box.clientWidth; sync(); });
+  requestAnimationFrame(() => { box.scrollLeft = (page != null ? page : cur) * box.clientWidth; sync(); const rd = el.querySelector('.cdRoad'), b = rd.children[cur]; if (b) rd.scrollLeft = b.offsetLeft - rd.clientWidth / 2 + b.offsetWidth / 2; });
 }
 document.addEventListener('click', e => {
   const t = e.target && e.target.closest ? e.target : null; if (!t) return;
@@ -65722,7 +65733,7 @@ function cupState() { const s = seasonState(); s.cup = s.cup || { run: null, win
 function cupEntry(li) { return THEMED_LEAGUES[li].entry * GAME_CONFIG.season.cup.entryMult; }
 function cupPrize(round, champ) { const C = GAME_CONFIG.season.cup; return champ ? C.champion : C.prize[round]; }
 function cupNewDraw(li, seed) {   // 32 names (you're slot 0); your opponent each round is the winner of the next block of the draw
-  const r = _seeded('cd' + seed), names = ['YOU']; while (names.length < 32) { const n = BOARD_NAMES[Math.floor(r() * BOARD_NAMES.length)] + (r() < 0.6 ? '_' + Math.floor(r() * 90 + 10) : ''); if (!names.includes(n)) names.push(n); }
+  const r = _seeded('cd' + seed), names = ['YOU']; while (names.length < 32) { const n = rivalName(r); if (!names.some(x => x.toLowerCase() === n.toLowerCase())) names.push(n); }
   return { li, seed: String(seed), round: 0, names, out: false, champ: false, path: [] };
 }
 // the whole draw: every match, every round. Your matches come from what you played; the rest are simulated
@@ -65755,7 +65766,7 @@ function playCup() {
     track('cup_enter', { table: li, entry: e });
   }
   const C = GAME_CONFIG.season.cup, mm = cupBracket(run)[run.round][0], opp = run.names[mm.b] || run.names[1];
-  const rival = BACKEND.duelRival(run.li, run.seed + ':r' + run.round, C.step * run.round); rival.name = opp.slice(0, 12);
+  const rival = BACKEND.duelRival(run.li, run.seed + ':r' + run.round, C.step * run.round); rival.name = opp;
   run.next = rival.name; SAVE.save();
   startDuelMatch(run.li, rival, { cup: true, cupRound: run.round });
 }
@@ -66047,21 +66058,23 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .evName small{font-size:12px;letter-spacing:.06em;color:var(--ec);margin-top:3px;text-shadow:0 1px 0 #050A14}
   .evGoal{text-align:center;font-size:18px;letter-spacing:.03em}
   .duTbl{display:inline-flex;align-items:center;gap:10px}
-  .cdBtn{margin-right:6px}
-  #cupDraw{position:fixed;inset:0;z-index:9000;background:linear-gradient(#0d1a36,#071022);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
+  .duDraw{display:inline-block;margin-top:6px;border:0;border-radius:999px;padding:6px 14px;background:rgba(255,201,58,.16);color:#FFC93A;font:inherit;font-size:13px;letter-spacing:.05em;cursor:pointer}
+  #cupDraw{position:fixed;inset:0;z-index:9000;background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--lg,#2457D6) 38%,#0d1a36) 0%,#0d1a36 55%,#071022 100%);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
   #cupDraw.show{display:flex}
-  #cupDraw .cdTop{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top) + 12px) 16px 6px}
-  #cupDraw .cdTop b{display:block;font-size:22px;letter-spacing:.04em}
-  #cupDraw .cdTop small{font-size:12px;color:#B4C2DD;letter-spacing:.06em}
-  #cupDraw .cdStatus{margin:2px 16px 8px;padding:9px 12px;border-radius:12px;background:#13254a;color:#FFC93A;font-size:14px;letter-spacing:.04em;text-align:center}
-  #cupDraw .cdRoad{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:0 16px 10px}
-  #cupDraw .cdRd{border:0;border-radius:12px;padding:6px 2px;background:#0f1e3d;color:#7f93bd;font:inherit;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;min-width:0}
+  #cupDraw .cdTop{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 8px}
+  #cupDraw .cdPlaque{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:60px;padding:0 18px 0 12px;background:center/100% 100% no-repeat}
+  #cupDraw .cdPlaque img{height:50px;margin-top:-10px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.5))}
+  #cupDraw .cdPlaque b{display:block;font-size:21px;letter-spacing:.04em;color:#FFE08A;text-shadow:0 2px 0 #3a1f05}
+  #cupDraw .cdPlaque small{display:block;font-size:11px;color:#f3dcb0;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #cupDraw .cdRoad{display:flex;gap:8px;margin:0 0 10px;padding:0 16px;overflow-x:auto;scrollbar-width:none}
+  #cupDraw .cdRoad::-webkit-scrollbar{display:none}
+  #cupDraw .cdRd{flex:0 0 118px;border:0;border-radius:14px;padding:7px 6px 8px;background:#0f1e3d;color:#7f93bd;font:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
   #cupDraw .cdRd small{font-size:10px;letter-spacing:.06em}
-  #cupDraw .cdRd b{font-size:16px;color:#cfd8ea}
-  #cupDraw .cdRd span{font-size:9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 3px}
-  #cupDraw .cdRd.win{background:#123c2a}#cupDraw .cdRd.win b{color:#7CF29A}
-  #cupDraw .cdRd.lose{background:#43161d}#cupDraw .cdRd.lose b{color:#FF8A8A}
-  #cupDraw .cdRd.next{box-shadow:inset 0 0 0 2px #FFC93A}#cupDraw .cdRd.next b{color:#FFC93A}
+  #cupDraw .cdRd b{font-size:22px;line-height:1.05;color:#cfd8ea}
+  #cupDraw .cdRd span{font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #cupDraw .cdRd.win{background:#123c2a}#cupDraw .cdRd.win b{color:#7CF29A}#cupDraw .cdRd.win span{color:#bfe9c8}
+  #cupDraw .cdRd.lose{background:#43161d}#cupDraw .cdRd.lose b{color:#FF8A8A}#cupDraw .cdRd.lose span{color:#f3c0c0}
+  #cupDraw .cdRd.next{box-shadow:inset 0 0 0 2px #FFC93A}#cupDraw .cdRd.next b{color:#FFC93A}#cupDraw .cdRd.next span{color:#fff}
   #cupDraw .cdTabs{display:flex;gap:4px;margin:0 16px;padding:4px;border-radius:14px;background:#0a1630}
   #cupDraw .cdTabs button{flex:1;border:0;border-radius:10px;padding:8px 0;background:none;color:#7f93bd;font:inherit;font-size:12px;letter-spacing:.04em;cursor:pointer}
   #cupDraw .cdTabs button.on{background:#FFC93A;color:#1a1200}
@@ -66070,9 +66083,8 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   #cupDraw .cdPage{flex:0 0 100%;scroll-snap-align:start;overflow-y:auto;padding:12px 16px calc(env(safe-area-inset-bottom) + 20px);box-sizing:border-box}
   #cupDraw .cdPin{margin-bottom:14px}
   #cupDraw .cdPin small,#cupDraw .cdAll{display:block;font-size:11px;letter-spacing:.1em;color:#7f93bd;margin:2px 2px 6px}
-  #cupDraw .cdPair{position:relative;display:flex;flex-direction:column;gap:6px;padding-right:58px;margin-bottom:14px}
-  #cupDraw .cdBr{position:absolute;right:40px;top:23px;bottom:23px;width:12px;border:2px solid #2c4374;border-left:0;border-radius:0 8px 8px 0}
-  #cupDraw .cdTo{position:absolute;right:0;top:50%;transform:translateY(-50%);width:40px;font-size:9px;line-height:1.2;color:#5f7096;text-align:center}
+  #cupDraw .cdPair{position:relative;display:flex;flex-direction:column;gap:6px;padding-right:22px;margin-bottom:14px}
+  #cupDraw .cdBr{position:absolute;right:6px;top:23px;bottom:23px;width:12px;border:2px solid #2c4374;border-left:0;border-radius:0 8px 8px 0}
   #cupDraw .cdM{border-radius:12px;background:#0f1e3d;border:1.5px solid #22386a;overflow:hidden}
   #cupDraw .cdM.mine{border-color:#FFC93A}
   #cupDraw .cdM.now{box-shadow:0 0 0 3px rgba(255,201,58,.3)}
@@ -66089,7 +66101,7 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   #cupDraw .cdR b i{font-style:normal;font-size:10px;margin-left:5px;color:#7fd0ff}
   #cupDraw .cdFinal{margin-top:10px}
   #cupDraw .cdWin{text-align:center;margin-top:22px}
-  #cupDraw .cdCup{display:block;font-size:64px;line-height:1}
+  #cupDraw .cdCup{display:block;height:150px;margin:0 auto;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
   #cupDraw .cdWin small{display:block;font-size:12px;color:#7f93bd;letter-spacing:.1em;margin-top:6px}
   #cupDraw .cdWin b{font-size:26px}#cupDraw .cdWin b.you{color:#FFC93A}
   #cupDraw .cdFull{border-radius:12px;overflow:auto;border:1.5px solid #22386a;cursor:zoom-in}
@@ -66204,7 +66216,7 @@ function paintLeagueStill(cv, idx) {
   try { if (live) { const a = live(cv); if (a && a.stop) a.stop(); } else L.drawArt(cv.getContext('2d'), 620, 360); } catch (e) {}
 }
 // Event poster key art (Diwali Figma 310:191; Pass = NOV 2026 trophy room, Figma 325:191 — REPAINT EVERY MONTH with that month's kit colour, see HANDOVER); keyed by event id without the year
-const EV_KEY_ART = { diwali: 'assets/ui/ui_741_2868bcf8.webp', pass: 'assets/ui/ui_742_6042454f.webp' };
+const EV_KEY_ART = { duel: 'assets/ui/ev_duels.webp', cup: 'assets/ui/ev_cup.webp', diwali: 'assets/ui/ui_741_2868bcf8.webp', pass: 'assets/ui/ui_742_6042454f.webp' };
 function renderCompeteV2() {
   // EVENTS v4 (Oct 30): a poster per event you swipe through (like the Leagues carousel, Clash Royale events, Brawl
   // Stars mode cards). Chips on top jump to any event and flag what needs doing; every poster leads with the goal,
@@ -66248,7 +66260,7 @@ function renderCompeteV2() {
       const nodes = R.slice(rk + 1, rk + 4).map((x, k) => ({ r: x.r || { medal: x.name[0] }, label: x.name, sub: `${x.at} TROPHIES`, next: k === 0 }));
       const recent = du.recent.length ? `<div class="duRecent">${du.recent.map(x => `<span class="${x.res}">${x.res === 'win' ? 'W' : x.res === 'tie' ? 'T' : 'L'} · ${x.flag} ${x.name} · ${x.me}–${x.them}</span>`).join('')}</div>` : '';
       const pick = T.length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${T.indexOf(li) ? '' : ' disabled'}>‹</button><b>${THEMED_LEAGUES[li].name}</b><button data-duel="next" aria-label="Higher table"${T.indexOf(li) < T.length - 1 ? '' : ' disabled'}>›</button></span>` : `<span class="duTbl"><b>${THEMED_LEAGUES[li].name}</b></span>`;
-      posters.push(poster({ k: 'duel', ico: 'tourney', col: '#E8463A', lg: li, timer: du.w + du.l + du.d ? `<b>${du.w}W ${du.l}L</b>${du.streak >= 2 ? ` · ${du.streak} IN A ROW` : ''}` : '<b>HEAD TO HEAD</b>', name: 'DUELS', tag: `${R[rk].name} RANK · ${du.trophies} TROPHIES`,
+      posters.push(poster({ k: 'duel', ico: 'tourney', col: '#E8463A', key: 'duel', lg: li, timer: du.w + du.l + du.d ? `<b>${du.w}W ${du.l}L</b>${du.streak >= 2 ? ` · ${du.streak} IN A ROW` : ''}` : '<b>HEAD TO HEAD</b>', name: 'DUELS', tag: `${R[rk].name} RANK · ${du.trophies} TROPHIES`,
         goal: `${pick}<div class="duPot">ENTRY ${duelEntry(li).toLocaleString()} COINS · WIN ${duelPot(li).toLocaleString()}</div>`,
         road: nodes.length ? track(nodes, fill) : '',
         rules: `Six balls each, the same six balls. After each of your balls you see what your rival did with it. Most runs wins the pot; level after six goes to sudden death, one ball each. A win is +${D.win} trophies (+${D.streakBonus} from ${D.streakAt} in a row), a loss −${D.lose}. Each new rank pays a bag once.${recent}`,
@@ -66256,14 +66268,14 @@ function renderCompeteV2() {
     { const C = S.cup, cs = cupState(), run = cupLive(), li = run ? run.li : duelTable(), E = cupEntry(li), at = run ? run.round : -1;
       todo.cup = !!run;
       const fmt = p => [p.e ? (E * p.e).toLocaleString() + ' COINS' : '', p.bag ? bagNm(p.bag) + ' BAG' : '', p.gems ? p.gems + ' GEMS' : ''].filter(Boolean).join(' + ');
-      const nodes = [[2, 'QUARTERS', C.prize[2], { coins: 1 }], [3, 'SEMIS', C.prize[3], { bag: 'silver' }], [4, 'FINAL', C.prize[4], { bag: 'gold' }], [5, 'WINNER', C.champion, { bag: 'gold', gems: 1 }]]
-        .map(([r, lbl, p, art]) => ({ r: art, label: lbl, sub: fmt(p).split(' + ')[0], done: at >= r, next: at >= 0 ? at + 1 === r || (at < 2 && r === 2) : r === 2 }));
+      const nodes = [[3, 'SEMIS', C.prize[3], { bag: 'silver' }], [4, 'FINAL', C.prize[4], { bag: 'gold' }], [5, 'WINNER', C.champion, { bag: 'gold', gems: 1 }]]
+        .map(([r, lbl, p, art]) => ({ r: art, label: lbl, sub: fmt(p).split(' + ')[0], done: at >= r, next: at >= 0 ? at + 1 === r || (at < 3 && r === 3) : r === 3 }));
       const path = run && run.path.length ? `<div class="duRecent">${run.path.map(x => `<span class="${x.res}">${C.rounds[x.round]} · ${x.name} · ${x.me}–${x.them}${x.sd ? ' (SD)' : ''}</span>`).join('')}</div>` : '';
-      posters.push(poster({ k: 'cup', ico: 'tourney', col: '#8A5CF6', lg: li, timer: run ? `<b>${C.rounds[run.round]}</b>` : `<b>${cs.wins ? cs.wins + ' CUP' + (cs.wins === 1 ? '' : 'S') + ' WON' : 'KNOCKOUT'}</b>`, name: 'FLICKY CUP', tag: `${THEMED_LEAGUES[li].name} · 32 PLAYERS · LOSE AND YOU'RE OUT`,
-        goal: run ? `${C.rounds[run.round]}<small class="duPot">NEXT: ${run.next || 'THE DRAW IS MADE'}</small>` : `${duelTables().length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${duelTables().indexOf(li) ? '' : ' disabled'}>‹</button><b>5 ROUNDS</b><button data-duel="next" aria-label="Higher table"${duelTables().indexOf(li) < duelTables().length - 1 ? '' : ' disabled'}>›</button></span>` : '5 ROUNDS'}<div class="duPot">ENTRY ${E.toLocaleString()} COINS</div>`,
-        road: track(nodes, at < 0 ? 0 : Math.min(100, at / 5 * 100)),
+      posters.push(poster({ k: 'cup', ico: 'tourney', col: '#8A5CF6', key: 'cup', lg: li, timer: run ? `<b>${C.rounds[run.round]}</b>` : `<b>${cs.wins ? cs.wins + ' CUP' + (cs.wins === 1 ? '' : 'S') + ' WON' : 'KNOCKOUT'}</b>`, name: 'FLICKY CUP', tag: `${THEMED_LEAGUES[li].name} · 32 PLAYERS · LOSE AND YOU'RE OUT`,
+        goal: run ? `${C.rounds[run.round]}<small class="duPot">NEXT: ${run.next || 'THE DRAW IS MADE'}</small><button class="duDraw" data-cupdraw>SEE THE DRAW ›</button>` : (cs.run ? `<button class="duDraw" data-cupdraw>LAST CUP'S DRAW ›</button>` : '') +  `${duelTables().length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${duelTables().indexOf(li) ? '' : ' disabled'}>‹</button><b>5 ROUNDS</b><button data-duel="next" aria-label="Higher table"${duelTables().indexOf(li) < duelTables().length - 1 ? '' : ' disabled'}>›</button></span>` : '5 ROUNDS'}<div class="duPot">ENTRY ${E.toLocaleString()} COINS</div>`,
+        road: track(nodes, at < 0 ? 0 : Math.min(100, Math.max(0, at - 2) / 3 * 100)),
         rules: `A 32-player draw, FA Cup style. Every round is a six-ball duel: win and you're in the next round's draw, lose and you're out. Prizes: quarter-finals ${fmt(C.prize[2])}, semi-finals ${fmt(C.prize[3])}, runner-up ${fmt(C.prize[4])}, winner ${fmt(C.champion)}.${path}`,
-        btn: (cs.run ? `<button class="evHow cdBtn" data-cupdraw>THE DRAW</button>` : '') + (run ? `<button class="gcBuy evGo" data-mode="cup">PLAY ${C.rounds[run.round]}</button>` : `<button class="gcBuy evGo" data-mode="cup">ENTER · ${E.toLocaleString()}<i class="hIco hi-coin"></i></button>`) })); }
+        btn: (run ? `<button class="gcBuy evGo" data-mode="cup">PLAY ${cupShort(run.round)}</button>` : `<button class="gcBuy evGo" data-mode="cup">ENTER · ${E.toLocaleString()}<i class="hIco hi-coin"></i></button>`) })); }
     posters.push(poster({ k: 'daily', ico: 'daily', col: '#2BB3A0', lg: d.leagueIdx, timer: `NEW IN <b>${fmtLeft(toMid)}</b>`, name: 'DAILY CHALLENGE', tag: `${sceneName(d.scene)} · SAME FOR EVERYONE`,
       goal: `NEED <em>${d.target}</em> OFF <em>${d.balls}</em> BALLS`,
       road: track([1, 2, 3].map(n => ({ r: n === 3 ? { bag: 'silver' } : { medal: 'win' }, label: `DAY ${n}`, sub: n === 3 ? 'SILVER BAG' : 'WIN', done: n <= st, next: n === st + 1 })), st / 2 * 100),
