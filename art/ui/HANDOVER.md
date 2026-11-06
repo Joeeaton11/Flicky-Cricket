@@ -896,3 +896,4 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - App icon: Flicky icon (art/flicky/flicky-icon-1024.png) is now the PWA/touch/fav icon; `resources/` holds icon.png, icon-foreground/background (Android adaptive) and splash for @capacitor/assets when the native projects are made.
 - League crests were never showing (crestSrc used new scene keys; files use old names) — now `CREST_FILES` by league index.
 - Size: 42 unused theme dirs (old ground versions, ICL redo) moved to art/archive_themes (not shipped); plates re-encoded webp q78, scoreboards/pause q92 + lossless alpha, result art q78 (visually identical) → assets 180 → 127 MB, www 202 → 141 MB.
+- Nov 6: app icon = idea 6B (Flicky smashing the stumps, floodlit night; Figma 536:192). art/icons/app_icon_1024.png (App Store), google_play_icon_512.png, resources/ for native generation, PWA icons + favicon updated.
