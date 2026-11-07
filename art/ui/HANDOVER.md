@@ -942,3 +942,4 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Cup draw: art moved to ::before (var --cupbg); league colour tints the default arena via a soft-light ::after; event art shows untinted.
 - Nov 7: removed the pinned 'YOUR MATCH' duplicate on round pages; your match is the first (bigger) card in the list, heading now '<ROUND> · N MATCHES'.
 - Nov 7: bolder gold brackets with a dot where each pair feeds the next round; '‹ prev / next ›' round buttons on every page (swipe still works); dropped the 'next opponent comes from' label (blue ring stays).
+- Nov 7: round pages are now a two-column tree — narrower match cards on the left, gold bracket, and a mini card on the right showing the next-round match each pair feeds (tap it to jump to that round).
