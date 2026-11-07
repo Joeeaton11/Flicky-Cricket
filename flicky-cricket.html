@@ -65596,7 +65596,7 @@ function duelState() { const s = seasonState(); s.duel = s.duel || { trophies: 0
   if (s.duel.day !== todayKey()) { s.duel.day = todayKey(); s.duel.today = 0; } return s.duel; }
 function duelRank(t) { const R = GAME_CONFIG.season.duel.ranks; let i = 0; R.forEach((r, k) => { if (t >= r.at) i = k; }); return i; }
 function duelTables() { const hi = Math.max(1, highestLeagueIdx()), out = []; for (let i = 1; i <= hi; i++) if (THEMED_LEAGUES[i] && THEMED_LEAGUES[i].entry) out.push(i); return out.length ? out : [1]; }
-function duelTable() { const d = duelState(), T = duelTables(); if (!T.includes(d.table)) d.table = T.includes(currentLeagueIdx()) ? currentLeagueIdx() : T[T.length - 1]; return d.table; }
+function duelTable() { const d = duelState(), T = duelTables(); if (!T.includes(d.table) || !duelOpen(d.table)) { const ok = T.filter(x => duelOpen(x) && x <= Math.max(1, currentLeagueIdx())); d.table = ok.length ? ok[ok.length - 1] : T[0]; } return d.table; }
 function duelEntry(li) { return duelFreeLeft() ? 0 : THEMED_LEAGUES[li].entry; }
 function duelFreeLeft() { const d = duelState(); return (d.freeDay === todayKey() ? 0 : GAME_CONFIG.season.duel.freePerDay); }
 function duelReq(li) { return Math.max(0, duelTables().indexOf(li)) * GAME_CONFIG.season.duel.tableStep; }   // trophies needed to sit at this table
@@ -65685,6 +65685,43 @@ function playDuel() {
   track('match_start', { mode: 'duel', table: li, entry });
   startDuelMatch(li, rival, { entry, pot: duelPot(li) });
 }
+// Nov 7 (Joe: "the table screen"): every duel table as a big swipe card — crest, prize, trophies, entry, locks — like a pool-hall table picker
+function duelTableList() { const hi = Math.max(1, highestLeagueIdx()), T = duelTables(), out = [];
+  for (let i = 1; i < THEMED_LEAGUES.length && out.length < T.length + 2; i++) { const L = THEMED_LEAGUES[i]; if (!L || !L.entry) continue;
+    out.push({ li: i, L, open: T.includes(i), reached: i <= hi }); }
+  return out; }
+function openDuelTables() {
+  let el = document.getElementById('duelTables');
+  if (!el) { el = document.createElement('div'); el.id = 'duelTables'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Duel tables'); document.body.appendChild(el); }
+  const D = GAME_CONFIG.season.duel, d = duelState(), cur = duelTable(), rk = duelRank(d.trophies), R = D.ranks, nx = R[rk + 1], list = duelTableList(), free = duelFreeLeft() > 0;
+  const card = t => { const { li, L } = t, lockLg = !t.reached, lockTr = t.reached && !duelOpen(li), easy = t.reached && !lockTr && duelTooEasy(li), bag = duelBag(li), crest = crestSrc(L);
+    const tag = lockLg ? '' : lockTr ? '' : li === cur ? '<span class="dtTag you">YOUR TABLE</span>' : easy ? '<span class="dtTag easy">TOO EASY · NO TROPHIES</span>' : '';
+    const btn = lockLg ? `<button class="gcBuy dtGo" disabled>PLAY ${L.name} TO UNLOCK</button>` : lockTr ? `<button class="gcBuy dtGo" disabled><i class="hIco hi-trophy"></i>${duelReq(li)} TO UNLOCK</button>`
+      : `<button class="gcBuy dtGo" data-dtplay="${li}">${free ? 'DUEL · FREE' : `DUEL · ${L.entry.toLocaleString()}<i class="hIco hi-coin"></i>`}</button>`;
+    return `<article class="dtCard${lockLg || lockTr ? ' locked' : ''}${li === cur ? ' cur' : ''}" data-dtli="${li}" style="--a:${L.accentColor || '#2457D6'};--b:${L.accentColor2 || '#0d1a36'}">
+      <div class="dtHero">${crest ? `<img class="dtCrest" alt="" src="${crest}">` : ''}${tag}${lockLg || lockTr ? '<img class="dtLock" alt="" src="assets/ui/pass_padlock.webp">' : ''}</div>
+      <div class="dtName"><b>${L.name}</b><small>TABLE ${list.indexOf(t) + 1}</small></div>
+      <div class="dtWin"><span class="dtLbl">WIN</span><div class="dtPrize"><img alt="" src="${REWARD_HEAP_ART.coins_m || REWARD_HEAP_ART.coins_s}"><b>${duelPot(li).toLocaleString()}</b></div><i>+</i><div class="dtPrize"><img alt="" src="${CHEST_IMG_SRC[bag] || ''}"><b>${bagNm(bag)}</b></div></div>
+      <div class="dtRow"><span><i class="hIco hi-trophy"></i>${easy ? '+0' : '+' + D.win} WIN</span><span><i class="hIco hi-trophy"></i>−${D.lose} LOSS</span><span><i class="hIco hi-coin"></i>${L.entry.toLocaleString()} ENTRY</span></div>
+      ${btn}</article>`; };
+  el.innerHTML = `<div class="dtTop"><button class="dtBack" data-dtclose aria-label="Back">‹</button><b>DUEL TABLES</b><span class="dtMe"><i class="hIco hi-trophy"></i>${d.trophies}<small>${R[rk].name}</small></span></div>
+    <div class="dtSub">${free ? '<em>1 FREE DUEL TODAY</em> · ' : ''}Bigger tables, bigger pots${nx ? ` · ${nx.name} RANK AT ${nx.at}` : ''}</div>
+    <div class="dtCar">${list.map(card).join('')}</div>
+    <div class="dtDots">${list.map(t => `<i data-dtdot="${t.li}"${t.li === cur ? ' class="on"' : ''}></i>`).join('')}</div>
+    <div class="dtFoot">Win <b>+${D.win}</b> trophies (+${D.streakBonus} on a ${D.streakAt}-win streak) · lose <b>−${D.lose}</b> · new tables open every ${D.tableStep} trophies</div>`;
+  el.classList.add('show'); try { playUiTap(); } catch (e) {}
+  const car = el.querySelector('.dtCar'), c0 = car.querySelector('.dtCard.cur');
+  requestAnimationFrame(() => { if (c0) car.scrollLeft = c0.offsetLeft - (car.clientWidth - c0.clientWidth) / 2; });
+  car.onscroll = () => { const mid = car.scrollLeft + car.clientWidth / 2; let best = null, bd = 1e9; car.querySelectorAll('.dtCard').forEach(c => { const dd = Math.abs(c.offsetLeft + c.clientWidth / 2 - mid); if (dd < bd) { bd = dd; best = c; } });
+    if (best) el.querySelectorAll('.dtDots i').forEach(i => i.classList.toggle('on', i.dataset.dtdot === best.dataset.dtli)); };
+}
+document.addEventListener('click', e => { const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+  if (t.closest('[data-dtables]')) { e.stopPropagation(); openDuelTables(); return; }
+  if (!t.closest('#duelTables')) return;
+  if (t.closest('[data-dtclose]')) { document.getElementById('duelTables').classList.remove('show'); renderCompete(); return; }
+  const go = t.closest('[data-dtplay]'); if (go) { duelState().table = +go.dataset.dtplay; SAVE.save(); document.getElementById('duelTables').classList.remove('show'); playMode('duel'); return; }
+  const dot = t.closest('[data-dtdot]'); if (dot) { const c = document.querySelector(`#duelTables .dtCard[data-dtli="${dot.dataset.dtdot}"]`), car = c && c.parentNode; if (c) car.scrollTo({ left: c.offsetLeft - (car.clientWidth - c.clientWidth) / 2, behavior: 'smooth' }); }
+}, true);
 const DUEL_WORD = { W: 'OUT!', 0: 'DOT BALL', 1: 'ONE', 2: 'TWO', 3: 'THREE', 4: 'FOUR', 6: 'SIX' };
 // after each of your balls: reveal the rival's ball for the same delivery, then carry on, go to sudden death, or finish
 function duelAfterBall(wicket) {
@@ -66269,6 +66306,36 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .duDraw{display:inline-block;margin-top:6px;border:0;border-radius:999px;padding:6px 14px;background:rgba(255,201,58,.16);color:#FFC93A;font:inherit;font-size:13px;letter-spacing:.05em;cursor:pointer}
   #cupDraw{position:fixed;inset:0;z-index:9000;background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--lg,#2457D6) 38%,#0d1a36) 0%,#0d1a36 55%,#071022 100%);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
   #cupDraw.show{display:flex}
+  #duelTables{position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;background:linear-gradient(rgba(7,16,34,.55),#071022 70%),url(assets/ui/ev_duels.webp) center top/cover}
+  #duelTables.show{display:flex}
+  #duelTables .hIco{display:inline-block;width:1.25em;height:1.25em;flex:none;vertical-align:-.25em}
+  #duelTables .dtTop{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 4px}
+  #duelTables .dtTop>b{flex:1;font-size:24px;letter-spacing:.03em;text-shadow:0 3px 0 #050a14}
+  #duelTables .dtBack{width:40px;height:40px;border-radius:50%;border:3px solid #050a14;background:#2a3e6e;color:#fff;font:inherit;font-size:26px;line-height:1;cursor:pointer}
+  #duelTables .dtMe{display:flex;align-items:center;gap:5px;background:rgba(5,10,20,.65);border:2px solid #FFC93A;border-radius:999px;padding:5px 12px;font-size:17px}
+  #duelTables .dtMe small{color:#FFC93A;font-size:12px;margin-left:3px}
+  #duelTables .dtSub{padding:2px 16px 0;font-size:13px;color:#cfd8ea;text-shadow:0 2px 0 #050a14}#duelTables .dtSub em{font-style:normal;color:#7CF29A}
+  #duelTables .dtCar{flex:1;display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:18px 11vw 10px;align-items:center;scrollbar-width:none}
+  #duelTables .dtCar::-webkit-scrollbar{display:none}
+  #duelTables .dtCard{flex:none;width:78vw;max-width:340px;scroll-snap-align:center;border-radius:26px;border:4px solid #050a14;background:linear-gradient(#16264d,#0b1630);box-shadow:0 0 0 3px var(--a) inset,0 14px 30px rgba(0,0,0,.55);overflow:hidden;display:flex;flex-direction:column;position:relative}
+  #duelTables .dtCard.cur{box-shadow:0 0 0 3px #FFC93A inset,0 0 26px rgba(255,201,58,.45),0 14px 30px rgba(0,0,0,.55)}
+  #duelTables .dtHero{height:min(34vh,250px);position:relative;display:grid;place-items:center;background:radial-gradient(70% 80% at 50% 45%,color-mix(in srgb,var(--a) 85%,#fff 15%),var(--b) 75%,#050a14);border-bottom:4px solid #050a14}
+  #duelTables .dtHero::after{content:"";position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 45%,rgba(255,255,255,.07) 0 8deg,transparent 8deg 18deg);pointer-events:none}
+  #duelTables .dtCrest{height:84%;max-width:84%;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5));position:relative;z-index:1}
+  #duelTables .dtLock{position:absolute;z-index:2;width:74px;right:12px;bottom:10px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.6))}
+  #duelTables .dtCard.locked .dtCrest{filter:grayscale(.85) brightness(.55)}
+  #duelTables .dtTag{position:absolute;z-index:2;top:10px;left:50%;transform:translateX(-50%);white-space:nowrap;border:3px solid #050a14;border-radius:999px;padding:4px 12px;font-size:13px;background:#FFC93A;color:#2a1600}
+  #duelTables .dtTag.easy{background:#7fd0ff;color:#06203a}
+  #duelTables .dtName{text-align:center;padding:10px 10px 2px}#duelTables .dtName b{display:block;font-size:26px;line-height:1.05;text-shadow:0 3px 0 #050a14}
+  #duelTables .dtName small{color:#8fa3cc;font-size:12px;letter-spacing:.1em}
+  #duelTables .dtWin{display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 12px 0;padding:8px;border-radius:16px;background:rgba(0,0,0,.3);position:relative}
+  #duelTables .dtLbl{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:11px;background:#E8463A;border:2px solid #050a14;border-radius:999px;padding:1px 10px}
+  #duelTables .dtPrize{display:flex;flex-direction:column;align-items:center}#duelTables .dtPrize img{height:58px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5))}
+  #duelTables .dtPrize b{font-size:18px;color:#FFC93A;text-shadow:0 2px 0 #050a14;margin-top:-4px}#duelTables .dtWin>i{font-style:normal;font-size:24px;color:#8fa3cc}
+  #duelTables .dtRow{display:flex;justify-content:space-around;padding:10px 6px 4px;font-size:12.5px;color:#cfd8ea}#duelTables .dtRow span{display:flex;align-items:center;gap:3px}
+  #duelTables .dtGo{margin:8px 14px 14px;font-size:19px;padding:12px 8px}#duelTables .dtGo:disabled{filter:grayscale(1);opacity:.75;font-size:15px}
+  #duelTables .dtDots{display:flex;justify-content:center;gap:7px;padding:2px 0 6px}#duelTables .dtDots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.25);cursor:pointer}#duelTables .dtDots i.on{background:#FFC93A;width:22px;border-radius:5px}
+  #duelTables .dtFoot{padding:4px 22px calc(env(safe-area-inset-bottom) + 14px);text-align:center;font-size:12px;color:#8fa3cc;line-height:1.35}#duelTables .dtFoot b{color:#fff}
   #cupDraw .cdTop{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 8px}
   #cupDraw .cdPlaque{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:60px;padding:0 18px 0 12px;background:center/100% 100% no-repeat}
   #cupDraw .cdPlaque img{height:50px;margin-top:-10px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.5))}
@@ -66471,7 +66538,7 @@ function renderCompeteV2() {
       const lo = R[rk].at, fill = nx ? (du.trophies - lo) / (nx.at - lo) * 50 : 100;
       const nodes = R.slice(rk + 1, rk + 4).map((x, k) => ({ r: x.r || { medal: x.name[0] }, label: x.name, sub: `${x.at} TROPHIES`, next: k === 0 }));
       const recent = du.recent.length ? `<div class="duRecent">${du.recent.map(x => `<span class="${x.res}">${x.res === 'win' ? 'W' : x.res === 'tie' ? 'T' : 'L'} · ${flagHtml(x.flag)} ${x.name} · ${x.me}–${x.them}</span>`).join('')}</div>` : '';
-      const pick = T.length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${T.indexOf(li) ? '' : ' disabled'}>‹</button><b>${THEMED_LEAGUES[li].name}</b><button data-duel="next" aria-label="Higher table"${T.indexOf(li) < T.length - 1 ? '' : ' disabled'}>›</button></span>` : `<span class="duTbl"><b>${THEMED_LEAGUES[li].name}</b></span>`;
+      const pick = `<span class="duTbl"><b>${THEMED_LEAGUES[li].name}</b></span><button class="duDraw" data-dtables>ALL TABLES ›</button>`;
       posters.push(poster({ k: 'duel', ico: 'duel', noBadge: true, col: '#E8463A', key: 'duel', lg: li, timer: du.w + du.l + du.d ? `<b>${du.w}W ${du.l}L</b>${du.streak >= 2 ? ` · ${du.streak} IN A ROW` : ''}` : '<b>HEAD TO HEAD</b>', name: 'DUELS', tag: `${R[rk].name} RANK · ${du.trophies} TROPHIES`,
         goal: `${pick}<div class="duPot">${duelEntry(li) ? `ENTRY ${duelEntry(li).toLocaleString()} COINS` : 'FREE DUEL TODAY'} · WIN ${duelPot(li).toLocaleString()} + ${bagNm(duelBag(li))} BAG</div>${lockNote}`,
         road: nodes.length ? track(nodes, fill) : '',
