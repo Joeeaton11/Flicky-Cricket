@@ -933,3 +933,10 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 ## Nov 7 — Dynamic Island check (duels-39a)
 - Simulated iPhone 15 Pro insets (59px top / 34px bottom) via art/ui/island_check.py (swaps env(safe-area-inset-*) for CSS vars and draws the island). Home, Events, Duel tables, Cup draw, versus card, in-game HUD all clear the island.
 - capacitor.config: ios.contentInset 'always' -> 'never' so the art runs full-bleed behind the island and env() insets do the spacing (with 'always' iOS also insets the page, risking a plain band at the top or double gaps). CONFIRM ON A REAL IPHONE / SIMULATOR.
+
+## Nov 7 — Scene art by league family + events (duels-39a)
+- LEAGUE_FAMILY (index -> family) and SCENE_ART {vs:{...}, cup:{...}}; sceneArt(kind, li) picks: active event theme (ev.id minus digits) -> league family -> default.
+- Files: assets/ui/bg/vs_street|vs_floodlit (also used by intl)|vs_coastal|vs_xmas|vs_default (Duels poster sky, mirrored so blue is your side) and cup_xmas. Figma 540:191-195.
+- To add a family: paint 1000x2048 (blue left / red right, gold crack centre, players stand in the middle 40%, dark bottom 25%), save as assets/ui/bg/vs_<name>.webp, add to SCENE_ART.vs. Cup event art follows cup_bg layout (trophy top, pillars both sides, calm centre).
+- Versus card restyle: scene art, glow spot under each player, blue/red nameplates, rank name + trophies chip, bigger VS with flash, pot drops in as a gold button.
+- Cup draw: art moved to ::before (var --cupbg); league colour tints the default arena via a soft-light ::after; event art shows untinted.

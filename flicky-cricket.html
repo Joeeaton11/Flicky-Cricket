@@ -65637,18 +65637,25 @@ function startDuelMatch(li, rival, extra) {
   closeAllScreens(); duelVersus(rival, extra || {}, () => startGame());
 }
 // Nov 6: a two-second face-off before the first ball (Golf Clash style versus card); tap to skip
+// Nov 7 (Joe: "should the background match the league?"): scene art by league family, events take over first
+const LEAGUE_FAMILY = [null, 'street', 'floodlit', 'coastal', 'fair', 'intl', 'intl', 'intl', 'intl', 'intl', 'intl', 'intl', 'intl', 'intl', 'pirate', 'intl', 'spooky', 'west', 'frozen', 'space', 'volcano', 'neon', 'jungle', 'medieval', 'steam', 'wizard', 'reef', 'ancient'];
+const SCENE_ART = { vs: { street: 'street', floodlit: 'floodlit', intl: 'floodlit', coastal: 'coastal', xmas: 'xmas' }, cup: { xmas: 'xmas' } };   // add a painted file to assets/ui/bg/<kind>_<name>.webp and list it here
+function eventTheme() { try { const ev = activeEvent(); return ev ? String(ev.id).replace(/\d+$/, '') : ''; } catch (e) { return ''; } }
+function sceneArt(kind, li) { const A = SCENE_ART[kind] || {}, th = eventTheme(), fam = LEAGUE_FAMILY[li] || '';
+  const k = (th && A[th]) || A[fam]; return k ? `assets/ui/bg/${kind}_${k}.webp` : (kind === 'vs' ? 'assets/ui/bg/vs_default.webp' : 'assets/ui/cup_bg.webp'); }
 function duelVersus(rival, extra, go) {
   let el = document.getElementById('duelVs'); if (!el) { el = document.createElement('div'); el.id = 'duelVs'; document.body.appendChild(el); }
   const me = curLook(), d = duelState(), C = GAME_CONFIG.season.cup;
   const head = extra.cup ? `FLICKY CUP · ${C.rounds[extra.cupRound]}` : `DUEL · ${THEMED_LEAGUES[window._activeLeagueIdx] ? THEMED_LEAGUES[window._activeLeagueIdx].name : ''}`;
   const prize = extra.cup ? '<span>WIN AND GO THROUGH</span>' : `<span>POT <i class="hIco hi-coin"></i>${(extra.pot || 0).toLocaleString()} + ${bagNm(duelBag(window._activeLeagueIdx || 1))} BAG</span>`;
   el.innerHTML = `<div class="vsHead">${head}</div>
-    <div class="vsSide me"><canvas width="10" height="10"></canvas><b>${(me.name || 'YOU').slice(0, 14)}</b><small>${flagHtml(me.flag)} · <i class="hIco hi-trophy"></i>${d.trophies}</small></div>
+    <div class="vsSide me"><canvas width="10" height="10"></canvas><b>${(me.name || 'YOU').slice(0, 14)}</b><small>${flagHtml(me.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(d.trophies)].name}</span> · <i class="hIco hi-trophy"></i>${d.trophies}</small></div>
     <div class="vsMid"><img alt="" src="assets/ui/icon_duel.webp"><span>VS</span></div>
-    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small></div>
-    <div class="vsFoot">${prize}<em>${GAME_CONFIG.season.duel.balls} BALLS EACH · SAME BALLS</em></div>`;
+    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(rival.trophies || 0)].name}</span> · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small></div>
+    <div class="vsFoot">${prize}<em>${GAME_CONFIG.season.duel.balls} BALLS EACH · SAME BALLS</em></div><i class="vsFlash"></i>`;
   const cv = el.querySelectorAll('canvas');
   try { paintPlayerTo(cv[0], me); paintPlayerTo(cv[1], Object.assign({}, me, { shirt: rival.shirt || 'maroon', g: rival.g || 'm', name: rival.name })); } catch (e) {}
+  el.style.backgroundImage = `linear-gradient(rgba(5,10,20,.15) 0%,rgba(5,10,20,0) 30%,rgba(5,10,20,.2) 62%,rgba(5,10,20,.85) 88%),url(${sceneArt('vs', window._activeLeagueIdx || 1)})`;
   el.className = 'show'; try { playTone({ freq: 160, duration: .25, volume: .2, type: 'triangle' }); haptic(40); } catch (e) {}
   let done = false; const fin = () => { if (done) return; done = true; el.className = 'out'; setTimeout(() => { el.className = ''; }, 300); go(); };
   el.onclick = fin; setTimeout(fin, 2300);
@@ -65843,6 +65850,7 @@ function openCupDraw(page) {
     return `<section class="cdPage">${pin}<div class="cdAll">ALL ${ms.length} MATCHES</div>${groups}</section>`;
   }).join('') + `<section class="cdPage"><div class="cdAll">THE WHOLE DRAW</div><div class="cdFull zoom" data-cdzoom></div><div class="cdHint">Drag to explore · tap to fit</div><button class="gcBuy evGo cdShare" data-cdshare>SHARE THE DRAW</button></section>`;
   el.style.setProperty('--lg', THEMED_LEAGUES[run.li].accentColor || '#2457D6');
+  { const art = sceneArt('cup', run.li); el.style.setProperty('--cupbg', `url(${art})`); el.style.setProperty('--lgo', /cup_bg\.webp$/.test(art) ? '.55' : '0'); }
   el.innerHTML = `<div class="cdTop"><button class="evBack" data-cdclose aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="cdPlaque"><img alt="" src="${CUP_TROPHY_SRC}"><div><b>FLICKY CUP</b><small>${THEMED_LEAGUES[run.li].name} · ${status}</small></div></div></div>
     <div class="cdRoad">${road}<button class="cdRd cup" data-cdpage="${C.rounds.length}"><img alt="" src="${CUP_TROPHY_SRC}"><small>THE DRAW</small></button></div>
     <div class="cdPages">${pages}</div>`;
@@ -66293,7 +66301,18 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .evSw b{background:#FFC93A;color:#1a1200}.evSw button{border:0;background:rgba(255,255,255,.1);color:#cfd8ea;cursor:pointer}
   .cupCab{display:flex;align-items:flex-end;justify-content:center;gap:4px;margin-top:6px}.cupCab img{height:34px}.cupCab span{font-size:12px;color:#FFC93A;margin-left:6px}
   #duelVs{position:fixed;inset:0;z-index:9500;display:none;grid-template-columns:1fr auto 1fr;grid-template-rows:auto 1fr auto;align-items:center;padding:calc(env(safe-area-inset-top) + 40px) 10px calc(env(safe-area-inset-bottom) + 50px);
-    background:linear-gradient(105deg,#b3202b 0%,#7a1018 48%,#0b1f55 52%,#1d4fc4 100%);color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
+    background:#0b1f55 center top/cover no-repeat;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
+  #duelVs .vsSide canvas{filter:drop-shadow(0 10px 8px rgba(0,0,0,.6))}
+  #duelVs .vsSide::after{content:"";display:block;width:84%;height:24px;margin-top:-30px;border-radius:50%;background:radial-gradient(rgba(255,226,140,.8),transparent 70%);order:1}
+  #duelVs .vsSide b{order:2;margin-top:6px;padding:6px 14px;border-radius:12px;border:3px solid #FFC93A;box-shadow:0 0 0 3px #050A14,0 6px 10px rgba(0,0,0,.5);font-size:18px}
+  #duelVs .vsSide.me b{background:linear-gradient(#3a7bff,#1846b8)}#duelVs .vsSide.them b{background:linear-gradient(#ff5a4a,#b81c1c)}
+  #duelVs .vsSide small{order:3;background:rgba(5,10,20,.72);border-radius:999px;padding:3px 10px}
+  #duelVs .vsSide small .rk{color:#FFC93A}
+  #duelVs .vsHead{justify-self:center;padding:7px 18px;border-radius:999px;background:rgba(5,10,20,.75);border:2px solid #FFC93A}
+  #duelVs .vsFoot span{padding:10px 20px;border-radius:16px;background:linear-gradient(#ffe08a,#ffb020);color:#2a1600;border:3px solid #050A14;box-shadow:0 6px 0 #8a5a00;font-size:22px;animation:vsDrop .5s .35s cubic-bezier(.3,1.5,.5,1) both}
+  @keyframes vsDrop{from{transform:translateY(-40px) scale(.6);opacity:0}}
+  #duelVs .vsFlash{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,rgba(255,240,200,.9),transparent 55%);pointer-events:none;animation:vsFlash .5s .12s ease-out both}
+  @keyframes vsFlash{from{opacity:0}30%{opacity:1}to{opacity:0}}
   #duelVs.show{display:grid;animation:vsIn .28s ease-out}#duelVs.out{display:grid;opacity:0;transition:opacity .28s}
   @keyframes vsIn{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:none}}
   #duelVs .vsHead{grid-column:1/-1;text-align:center;font-size:16px;letter-spacing:.1em;color:#FFE08A}
@@ -66304,14 +66323,17 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   #duelVs .vsSide b{font-size:20px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 3px 0 #050A14}
   #duelVs .vsSide small{font-size:13px;color:#e8eefc;display:flex;align-items:center;gap:3px}#duelVs .vsSide small .hIco{width:16px;height:16px}
   #duelVs .vsMid{display:flex;flex-direction:column;align-items:center}#duelVs .vsMid img{width:74px}
-  #duelVs .vsMid span{font-size:52px;color:#FFC93A;text-shadow:0 4px 0 #5a2a00;margin-top:-8px;animation:vsPop .5s cubic-bezier(.3,1.6,.5,1)}
+  #duelVs .vsMid span{font-size:72px;color:#FFC93A;-webkit-text-stroke:4px #050A14;paint-order:stroke fill;text-shadow:0 6px 0 #5a2a00,0 0 30px rgba(255,201,58,.8);margin-top:-8px;animation:vsPop .5s .12s cubic-bezier(.3,1.6,.5,1) both}
   @keyframes vsPop{from{transform:scale(0)}}
   #duelVs .vsFoot{grid-column:1/-1;text-align:center;font-size:20px;color:#FFE08A;display:flex;flex-direction:column;gap:4px;align-items:center}
   #duelVs .vsFoot span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}#duelVs .vsFoot .hIco{width:20px;height:20px;vertical-align:-3px}#duelVs .vsFoot em{font-style:normal;font-size:12px;color:#cfd8ea;letter-spacing:.08em}
   .xmIco.ev-duel{background:url(assets/ui/icon_duel.webp) center/contain no-repeat}
   .xmIco.ev-cup{background:url(assets/ui/icon_cup.webp) center/contain no-repeat}
   .duDraw{display:inline-block;margin-top:6px;border:0;border-radius:999px;padding:6px 14px;background:rgba(255,201,58,.16);color:#FFC93A;font:inherit;font-size:13px;letter-spacing:.05em;cursor:pointer}
-  #cupDraw{position:fixed;inset:0;z-index:9000;background:radial-gradient(90% 30% at 50% 102%,rgba(255,201,58,.12),transparent 70%),repeating-linear-gradient(135deg,rgba(255,255,255,.018) 0 2px,transparent 2px 22px),url(assets/ui/cup_bg.webp) center top/cover no-repeat,linear-gradient(#1a0f3d,#120a2e 60%,#0b0720);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
+  #cupDraw::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:var(--cupbg,url(assets/ui/cup_bg.webp)) center top/cover no-repeat}
+  #cupDraw::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(70% 28% at 50% 12%,var(--lg,transparent),transparent 75%),linear-gradient(90deg,var(--lg,transparent),transparent 18%,transparent 82%,var(--lg,transparent));mix-blend-mode:soft-light;opacity:var(--lgo,.55)}
+  #cupDraw>*{position:relative;z-index:1}
+  #cupDraw{position:fixed;inset:0;z-index:9000;background:radial-gradient(90% 30% at 50% 102%,rgba(255,201,58,.12),transparent 70%),linear-gradient(#1a0f3d,#120a2e 60%,#0b0720);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
   #cupDraw.show{display:flex}
   #duelTables{position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;background:linear-gradient(rgba(7,16,34,.55),#071022 70%),url(assets/ui/ev_duels.webp) center top/cover}
   #duelTables.show{display:flex}
