@@ -996,3 +996,7 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - track() also sends to Firebase Analytics (@capacitor-firebase/analytics 8.6) when the plugin is present; purchases logged as GA4 'purchase'. iOS plugin self-configures only if GoogleService-Info.plist is bundled; Android applies google-services only if google-services.json exists.
 - Tested with a mocked native bridge: consent+ATT shown, prices load, success grants after confirm, cancel/fail grant nothing, restore returns no_ads.
 - STILL TO DO with Joe's IDs: keys into MONEY_CONFIG; AdMob app IDs into Info.plist GADApplicationIdentifier + AndroidManifest; real ad unit IDs into ADMOB_CONFIG; google-services.json → android/app/, GoogleService-Info.plist → ios/App/App/ (add to Xcode target); SKAdNetworkItems in Info.plist.
+
+## Nov 7 — Release builds
+- Android: android.yml signs the AAB with the upload key when repo secrets ANDROID_KEYSTORE_B64 + ANDROID_KEYSTORE_PASSWORD exist (alias 'upload'); versionCode = run number. Joe holds the keystore + password (also enrol in Play App Signing so a lost upload key can be reset).
+- iOS: codemagic.yaml workflow 'ios-testflight' (push to branch release-ios, or start in Codemagic). Needs Codemagic App Store Connect API key integration named flicky_asc and APP_STORE_APPLE_ID env var.

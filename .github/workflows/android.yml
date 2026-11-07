@@ -2,7 +2,7 @@ name: Android build
 on:
   workflow_dispatch:
   push:
-    branches: [launch-38a, main]
+    branches: [main, money-43a]
     paths: ['android/**', 'www/**', 'capacitor.config.json', 'package.json', '.github/workflows/android.yml']
 jobs:
   build:
@@ -15,8 +15,15 @@ jobs:
         with: { distribution: temurin, java-version: 21 }
       - run: npm ci || npm install
       - run: npx cap sync android
-      - name: Build debug APK and release bundle (unsigned)
+      - name: Upload key (from repo secrets, if set)
+        env: { KS: '${{ secrets.ANDROID_KEYSTORE_B64 }}' }
+        run: |
+          if [ -n "$KS" ]; then echo "$KS" | base64 -d > $RUNNER_TEMP/upload.jks; echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/upload.jks" >> $GITHUB_ENV; echo "signed build"; else echo "no key secret: unsigned build"; fi
+      - name: Build debug APK and release bundle
         working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: '${{ secrets.ANDROID_KEYSTORE_PASSWORD }}'
+          VERSION_CODE: '${{ github.run_number }}'
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug bundleRelease --no-daemon
