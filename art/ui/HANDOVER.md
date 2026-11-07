@@ -940,3 +940,4 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - To add a family: paint 1000x2048 (blue left / red right, gold crack centre, players stand in the middle 40%, dark bottom 25%), save as assets/ui/bg/vs_<name>.webp, add to SCENE_ART.vs. Cup event art follows cup_bg layout (trophy top, pillars both sides, calm centre).
 - Versus card restyle: scene art, glow spot under each player, blue/red nameplates, rank name + trophies chip, bigger VS with flash, pot drops in as a gold button.
 - Cup draw: art moved to ::before (var --cupbg); league colour tints the default arena via a soft-light ::after; event art shows untinted.
+- Nov 7: removed the pinned 'YOUR MATCH' duplicate on round pages; your match is the first (bigger) card in the list, heading now '<ROUND> · N MATCHES'.
