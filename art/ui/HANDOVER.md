@@ -929,3 +929,7 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Final page: semi-finals, the final, prizes (winner / runner-up), and 'YOUR ROAD' chips.
 - Round pages: the match that feeds your next opponent is blue-ringed and labelled; the rest are dimmed.
 - Whole draw opens zoomed (drag to explore, tap to fit).
+
+## Nov 7 — Dynamic Island check (duels-39a)
+- Simulated iPhone 15 Pro insets (59px top / 34px bottom) via art/ui/island_check.py (swaps env(safe-area-inset-*) for CSS vars and draws the island). Home, Events, Duel tables, Cup draw, versus card, in-game HUD all clear the island.
+- capacitor.config: ios.contentInset 'always' -> 'never' so the art runs full-bleed behind the island and env() insets do the spacing (with 'always' iOS also insets the page, risking a plain band at the top or double gaps). CONFIRM ON A REAL IPHONE / SIMULATOR.
