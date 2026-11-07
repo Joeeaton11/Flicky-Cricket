@@ -957,3 +957,7 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - showDuelResult(ui): full-screen result over the league's versus art — spinning rays, big WON/LOST/TIED, blue v red score plates (winner glows), 'won by / X runs short / sudden death' line, reward tiles that pop in and count up (coins, bag, trophies), streak chip + rank-up bag, confetti on a win, pulsing DUEL AGAIN. Buttons forward to #netsAgain / #netsBack so all existing flow is kept. duelEnd now returns ui data.
 - duelSdBanner(n): big red 'SUDDEN DEATH' strip across the middle when scores are level (and 'STILL LEVEL · BALL n' each SD ball), with a sting.
 - Ghost ball: bigger ball, brighter trail, landing ring, 46/34px outcome word and a red rival-name tag instead of tiny 'RIVAL'.
+
+## Nov 7 — Live + island audit
+- main fast-forwarded to duels-39a (includes launch-38a) and www rebuilt; Pages deploy succeeded: https://joeeaton11.github.io/Flicky-Cricket/
+- art/ui/island_audit.py: opens 22 screens with iPhone 15 Pro insets (59 top / 34 bottom) and lists any text/button/icon inside the top 59px. Result: nothing on any screen (only the pause button's invisible tap area touches 58px; the pass list's false hits are scrolled-off rows under its header).
