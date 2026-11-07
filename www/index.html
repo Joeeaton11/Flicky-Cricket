@@ -4395,8 +4395,15 @@ window._trackLog = [];
 function track(name, data) {
   const ev = Object.assign({ t: Date.now() }, data || {});
   try { window._trackLog.push([name, ev]); if (window._trackLog.length > 200) window._trackLog.shift(); console.log('[track]', name, ev); } catch (e) {}
+  // Nov 7: same events go to Firebase Analytics in the app (names and keys trimmed to Firebase's rules, flat values only)
+  try { const FA = (typeof MONEY_CONFIG === 'undefined' || MONEY_CONFIG.analytics) && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FirebaseAnalytics;
+    if (FA && !window._analyticsOff) { const params = {}; Object.keys(data || {}).slice(0, 24).forEach(k => { const v = data[k]; if (v == null || typeof v === 'object') return;
+        params[String(k).replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 40)] = typeof v === 'boolean' ? (v ? 1 : 0) : typeof v === 'string' ? v.slice(0, 100) : v; });
+      FA.logEvent({ name: String(name).replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 40), params }).catch(() => {}); } } catch (e) {}
   return ev;
 }
+function analyticsPurchase(item, value) { try { const FA = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FirebaseAnalytics;
+  if (FA) FA.logEvent({ name: 'purchase', params: { currency: 'GBP', value, items: [{ item_id: item }] } }).catch(() => {}); } catch (e) {} }
 (function sessionStart() {
   const s = SAVE.section('match');
   if (!s.installedAt) s.installedAt = Date.now();
@@ -4984,6 +4991,63 @@ function hapticBig()     { haptic([40,20,40]); }
 function hapticSix()     { haptic([60,25,60,25,80]); }
 function hapticWicket()  { haptic([80,30,120]); }
 
+// ── MONEY SETUP (Nov 7) ── fill these in from the AdMob / RevenueCat / Firebase consoles; blank = that part stays off
+const MONEY_CONFIG = {
+  revenuecat: { ios: '', android: '' },          // PUBLIC SDK keys only (appl_… / goog_…), never the secret key
+  admobLive: false,                              // true once the real ad unit IDs below are in (test ads until then)
+  analytics: true,                               // Firebase Analytics (needs GoogleService-Info.plist / google-services.json in the native projects)
+};
+// every real-money product, by the ID it has in App Store Connect + Google Play (all consumable except no_ads)
+const STORE_PRODUCTS = {
+  gems_80: 0.99, gems_450: 4.99, gems_1000: 9.99, gems_2200: 19.99, gems_6000: 49.99,
+  starter_pack: 0.99, league_pack_299: 2.99, league_pack_499: 4.99, gem_jar: 2.99, no_ads: 2.99,
+  super_over_1: 1.99, super_over_2: 2.99, pass_premium: 4.99, pass_plus: 9.99, event_bundle: 4.99,
+};
+// the game's internal purchase names → the store product that pays for it
+function storeIdFor(productId, price) {
+  if (/^gems_\d+$/.test(productId)) return productId;
+  if (productId === 'offer_starter') return 'starter_pack';
+  if (productId === 'offer_league') return price >= 4.99 ? 'league_pack_499' : 'league_pack_299';
+  if (productId === 'deal_streak_3') return 'super_over_1';
+  if (productId === 'deal_streak_5') return 'super_over_2';
+  if (productId === 'no_ads_gems' || productId === 'remove_ads') return 'no_ads';
+  if (productId === 'gem_jar' || productId === 'pass_premium' || productId === 'pass_plus') return productId;
+  if (/^event_/.test(productId)) return 'event_bundle';
+  return null;
+}
+// RevenueCat wrapper: configure once, load localised prices, buy, restore. Inactive until a key is set (then buyRealMoney uses it).
+const FlickyStore = window.FlickyStore = {
+  ready: false, prices: {}, products: {},
+  plugin() { return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases || null; },
+  async init() {
+    const P = this.plugin(), key = MONEY_CONFIG.revenuecat[capPlatform() === 'ios' ? 'ios' : 'android'];
+    if (!P || !key) return;
+    try {
+      await P.configure({ apiKey: key });
+      const r = await P.getProducts({ productIdentifiers: Object.keys(STORE_PRODUCTS), type: 'inapp' });
+      (r.products || []).forEach(pr => { this.products[pr.identifier] = pr; this.prices[pr.identifier] = pr.priceString; });
+      this.ready = true;
+      const ci = await P.getCustomerInfo(); if (this.ownsNoAds(ci.customerInfo) && !adsRemoved) grantRemoveAds(true);
+      track('store_ready', { products: Object.keys(this.products).length });
+    } catch (e) { track('store_error', { where: 'init', msg: String(e && e.message || e).slice(0, 90) }); }
+  },
+  ownsNoAds(ci) { return !!(ci && (ci.nonSubscriptionTransactions || []).some(t => t.productIdentifier === 'no_ads')); },
+  async buy(storeId) {
+    const P = this.plugin(), pr = this.products[storeId];
+    if (!P || !pr) throw new Error('unavailable');
+    const r = await P.purchaseStoreProduct({ product: pr });
+    return r;
+  },
+  async restore() {
+    const P = this.plugin(); if (!P || !this.ready) return 0;
+    const r = await P.restorePurchases(); const ci = r.customerInfo || r;
+    if (this.ownsNoAds(ci)) { if (!adsRemoved) grantRemoveAds(); return 1; }
+    return 0;
+  },
+};
+// the price to show for a store product: the store's own local price when loaded, else the UK price
+function storePrice(storeId, gbp) { return FlickyStore.prices[storeId] || ('£' + Number(gbp).toFixed(2)); }
+
 // ── ADS & IAP ──
 // Replace these IDs with your real AdMob IDs before release.
 // Test IDs are safe to use during development.
@@ -5010,6 +5074,13 @@ let adsRemoved = SAVE.getItem('flickyAdsRemoved') === 'true';
 let gamesPlayedSinceAd = 0;
 const AD_FREQUENCY = 3; // show interstitial every N games
 
+// Nov 7: privacy before ads — Google's consent form (UK/EU, set up as a GDPR message in AdMob → Privacy & messaging),
+// then Apple's "Allow tracking?" prompt on iOS. Either answer is fine: ads still show, just not personalised.
+async function adConsent(AdMob) {
+  try { const info = await AdMob.requestConsentInfo();
+    if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') await AdMob.showConsentForm(); } catch (e) { track('consent_error', { msg: String(e && e.message || e).slice(0, 80) }); }
+  try { if (capPlatform() === 'ios') { const st = await AdMob.trackingAuthorizationStatus(); if (st && st.status === 'notDetermined') await AdMob.requestTrackingAuthorization(); } } catch (e) {}
+}
 // Initialise AdMob via Capacitor plugin (no-ops gracefully in browser)
 async function initAds() {
   if (adsRemoved) return;
@@ -5017,7 +5088,8 @@ async function initAds() {
     const AdMob = capAdMob();
     if (!AdMob) return;   // running in a browser
     const platform = capPlatform();
-    await AdMob.initialize({ testingDevices: [], initializeForTesting: false });
+    await adConsent(AdMob);
+    await AdMob.initialize({ testingDevices: [], initializeForTesting: !MONEY_CONFIG.admobLive });
     // Preload first interstitial
     await AdMob.prepareInterstitial({ adId: admobId('interstitialId') });
     window._admob = AdMob;
@@ -5043,30 +5115,15 @@ async function showInterstitialIfDue() {
   } catch(e) {}
 }
 
-async function purchaseRemoveAds() {
-  try {
-    const { InAppPurchase2 } = await import('@ionic-native/in-app-purchase-2');
-    // Full IAP flow handled via plugin — see docs
-    // On success:
-    grantRemoveAds();
-  } catch(e) {
-    // Browser fallback — just grant it (for testing)
-    if (location.hostname === 'localhost' || location.hostname === '') {
-      grantRemoveAds();
-    } else {
-      alert('Purchase unavailable. Please try again.');
-    }
-  }
-}
+function purchaseRemoveAds() { buyRealMoney('remove_ads', STORE_PRODUCTS.no_ads, () => { grantRemoveAds(true); return 'ADS REMOVED'; }); }
 
-function grantRemoveAds() {
+function grantRemoveAds(silent) {
   adsRemoved = true;
   SAVE.setItem('flickyAdsRemoved', 'true');
   removeAdsBtn.classList.add('hidden');
   const bundleBtn = document.getElementById('removeAdsGemBundleBtn');
   if (bundleBtn) bundleBtn.classList.add('hidden');
-  showMessage('ADS REMOVED! Thank you!', '#f4d03f', 2000);
-  hapticBig();
+  if (!silent) { showMessage('ADS REMOVED! Thank you!', '#f4d03f', 2000); hapticBig(); }
 }
 
 // Show Remove Ads button only if ads not already purchased
@@ -5100,36 +5157,9 @@ function grantGems(amount) {
   updateMenuHUD();
 }
 
-async function purchaseGemPack(pack) {
-  try {
-    const { InAppPurchase2 } = await import('@ionic-native/in-app-purchase-2');
-    // On success grant gems via plugin receipt validation
-    grantGems(pack.gems);
-  } catch(e) {
-    if (location.hostname === 'localhost' || location.hostname === '') {
-      grantGems(pack.gems);
-      showMessage('💎 +' + pack.gems + ' GEMS!', '#a855f7', 2000);
-    } else {
-      alert('Purchase unavailable. Please try again.');
-    }
-  }
-}
+function purchaseGemPack(pack) { buyRealMoney('gems_' + pack.gems, STORE_PRODUCTS['gems_' + pack.gems] || 0.99, () => { grantGems(pack.gems); return pack.gems + ' GEMS'; }); }
 
-async function purchaseRemoveAdsGemBundle() {
-  try {
-    const { InAppPurchase2 } = await import('@ionic-native/in-app-purchase-2');
-    grantRemoveAds();
-    grantGems(100);
-  } catch(e) {
-    if (location.hostname === 'localhost' || location.hostname === '') {
-      grantRemoveAds();
-      grantGems(100);
-      showMessage('ADS REMOVED + 💎 100 GEMS!', '#a855f7', 2500);
-    } else {
-      alert('Purchase unavailable. Please try again.');
-    }
-  }
-}
+function purchaseRemoveAdsGemBundle() { buyRealMoney('no_ads_gems', STORE_PRODUCTS.no_ads, () => { grantRemoveAds(true); grantGems(100); return 'ADS REMOVED + 100 GEMS'; }); }
 
 function getDailyAdWatches() {
   try {
@@ -5362,7 +5392,7 @@ if (removeAdsGemBundleBtn) {
 }
 
 // Init ads on load
-initAds();
+initAds(); FlickyStore.init();
 
 function setMuted(muted) {
   audioMuted = muted;
@@ -21250,16 +21280,27 @@ function shopState() { const s = SAVE.section('shop'); s.firstBuy = s.firstBuy |
 (function () { try { const q = new URLSearchParams(location.search).get('test'); if (q === '1') SAVE.setItem('flickyTestBuy', '1'); else if (q === '0') SAVE.removeItem('flickyTestBuy'); } catch (e) {} })();
 function testBuyOn() { try { return SAVE.getItem('flickyTestBuy') === '1'; } catch (e) { return false; } }
 function buyRealMoney(productId, price, grant) {
-  // NOTE for sprint 7: when the store plugin (IAP) is present this still grants straight away — it must wait for the
-  // store to confirm the payment (RevenueCat purchase promise) and only then call grant().
-  const local = location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '' || testBuyOn();
-  const IAP = window.Capacitor && window.Capacitor.Plugins && (window.Capacitor.Plugins.Purchases || window.Capacitor.Plugins.InAppPurchase);
-  if (!local && !IAP) { showMessage('Purchases arrive with the app', '#7fd0ff', 2000); return false; }
-  const label = grant();
-  SAVE.data.purchases.push({ id: productId, price, at: Date.now(), test: local }); SAVE.save();
-  track('purchase', { product: productId, price, currency: 'GBP', test: local });
-  if (label) showMessage('+ ' + label, '#FFC93A', 2400);
-  try { hapticBig(); playAchievementChime(); } catch (e) {}
+  // Nov 7: in the app the store must confirm the payment (RevenueCat) before anything is granted; in local testing / ?test=1 it grants straight away
+  const local = !window.Capacitor && (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '') || testBuyOn();
+  const finish = (test, paid) => {
+    const label = grant();
+    SAVE.data.purchases.push({ id: productId, store: storeIdFor(productId, price), price, at: Date.now(), test }); SAVE.save();
+    track('purchase', { product: productId, value: price, currency: 'GBP', test: test ? 1 : 0 });
+    if (paid) analyticsPurchase(storeIdFor(productId, price), price);
+    if (label) showMessage('+ ' + label, '#FFC93A', 2400);
+    try { hapticBig(); playAchievementChime(); } catch (e) {}
+    try { saveEquipmentState(); updateMenuHUD(); updateEquipTopBar(); } catch (e) {}
+    try { if (document.querySelector('.sh2')) openEquipTab('shop'); if (document.getElementById('passPanel').classList.contains('show')) renderPass(); if (document.getElementById('competePanel').classList.contains('show')) renderCompete(); } catch (e) {}
+  };
+  if (local) { finish(true, false); return true; }
+  const sid = storeIdFor(productId, price);
+  if (!FlickyStore.ready || !sid || !FlickyStore.products[sid]) { showMessage(FlickyStore.plugin() ? 'Store not available · try again soon' : 'Purchases arrive with the app', '#7fd0ff', 2200); return false; }
+  if (window._buying) return false; window._buying = true;
+  track('purchase_start', { product: productId, store: sid });
+  FlickyStore.buy(sid).then(() => { window._buying = false; finish(false, true); })
+    .catch(e => { window._buying = false; const cancelled = e && (e.userCancelled || /cancel/i.test(String(e.message || e.code || '')));
+      track(cancelled ? 'purchase_cancel' : 'purchase_fail', { product: productId, msg: String(e && (e.message || e.code) || '').slice(0, 80) });
+      if (!cancelled) showMessage('Purchase didn\'t go through · you weren\'t charged', '#ff6b6b', 2600); });
   return true;
 }
 // ---------- Gem Jar: fills as you hit boundaries in league matches, break it open for £2.99 ----------
@@ -21346,7 +21387,7 @@ function renderOfferPop(o) {
     <div class="of2Stage">${big}${mult >= 2 ? `<span class="of2Val"><b>×${mult}</b><small>VALUE</small></span>` : ''}${o.until ? `<span class="of2Time" data-until="${o.until}">ENDS IN ${fmtLeft(o.until - Date.now())}</span>` : ''}</div>
     <div class="of2Grid n${items.length}">${items.join('')}</div>
     ${mult >= 2 ? `<div class="of2Was">WORTH <s>£${worth.toFixed(2)}</s></div>` : ''}
-    <button id="ofBuy" class="of2Buy">£${o.price.toFixed(2)}</button>
+    <button id="ofBuy" class="of2Buy">${storePrice(storeIdFor('offer_' + o.id, o.price), o.price)}</button>
     <button id="ofNo" class="of2No">NOT NOW</button></div>`;
   const big2 = document.getElementById('of2Bag'); if (big2) drawChestArt(big2, c.bag, 1, false);
   el.querySelectorAll('.of2Mini').forEach(cv => drawChestArt(cv, cv.dataset.bag, 1, false));
@@ -21647,7 +21688,7 @@ function renderDealStreak() {
   const cells = D.steps.map((x, i) => { const done = i < st.step, cur = i === st.step;
     return `<div class="sbBall${done ? ' done' : ''}${cur ? ' cur' : ''}${done && window._dsFresh === i ? ' fresh' : ''}"${cur ? ` data-ds="${i}" role="button"` : ''}>
       <span class="no">${i + 1}</span><div class="it n${Object.keys(x.r).filter(k => k !== 'boosterCount').length}">${dsItems(x.r)}</div>
-      <span class="pr${x.free ? '' : ' paid'}">${x.free ? 'FREE' : '£' + x.price.toFixed(2)}</span>
+      <span class="pr${x.free ? '' : ' paid'}">${x.free ? 'FREE' : storePrice(x.price >= 2.99 ? 'super_over_2' : 'super_over_1', x.price)}</span>
       ${done ? `<b class="ink" style="color:${INK[i]}">${x.free ? '4' : '6'}</b>` : ''}${cur && x.free ? '<span class="fhw">FREE HIT!</span>' : ''}</div>`; }).join('');
   const nx = D.steps[Math.min(st.step, n - 1)];
   p.innerHTML = `<div class="c sbPage"><button class="x" id="dsClose" aria-label="Close">✕</button>
@@ -21657,7 +21698,7 @@ function renderDealStreak() {
       <div class="sbRow"><div class="sbOver"><div class="sbBw"><span class="lab">BOWLER</span><b class="hw">FLICKY</b><span class="lab">OVER 1</span></div><div class="sbBalls">${cells}</div>
           <div class="sbFig"><span class="lab">BALLS</span><b class="hw">${st.step}/${n}</b></div></div></div></div>
     <div class="sbFoot"><span class="lab">NOTES &amp; GENERAL REMARKS</span><span class="hw note">${st.step >= n ? 'Over complete — well bowled!' : st.step === n - 1 ? 'Last ball: the gold bag!' : 'Play every ball for the gold bag on ball 6.'}</span></div>
-    ${st.step < n ? `<button class="gcBuy sbGo${nx.free ? '' : ' paid'}" data-ds="${st.step}">BALL ${st.step + 1} · ${nx.free ? 'FREE' : '£' + nx.price.toFixed(2)}</button>` : ''}${testBuyOn() ? '<small class="sbTest">TEST MODE · purchases are free on this device</small>' : ''}</div>`;
+    ${st.step < n ? `<button class="gcBuy sbGo${nx.free ? '' : ' paid'}" data-ds="${st.step}">BALL ${st.step + 1} · ${nx.free ? 'FREE' : storePrice(nx.price >= 2.99 ? 'super_over_2' : 'super_over_1', nx.price)}</button>` : ''}${testBuyOn() ? '<small class="sbTest">TEST MODE · purchases are free on this device</small>' : ''}</div>`;
   p.classList.add('show');
   if (window._dsFresh != null) { const f = window._dsFresh; window._dsFresh = null; setTimeout(() => { try { soPenSound(); } catch (e) {} }, 120);
     const c = p.querySelector('.sbBall.fresh'); if (c) setTimeout(() => c.classList.remove('fresh'), 1600); }
@@ -21863,7 +21904,7 @@ function renderShopV2(container) {
     if (ds) { const D = GAME_CONFIG.shop.dealStreak, x = D.steps[ds.step];
       deal += wide({ attr: ' data-shelf="so"', tint: '#2a62d6', art: `<img class="soArt" alt="" src="${SO_CARD_ART}">`, timer: `ENDS IN <b>${fmtLeft(dsLeft())}</b>`, name: 'SUPER OVER',
         sub: `Ball ${ds.step + 1} of ${D.steps.length} · ${x.free ? 'FREE HIT waiting!' : 'play on to the free balls'}`, btn: x.free ? 'FREE HIT' : 'OPEN', btnAttr: ' data-act="dstreak"' }); }
-    if (off) deal += wide({ attr: ' data-shelf="offer"', tint: '#8a3df0', art: img(REWARD_HEAP_ART.gems_l), timer: `OFFER ENDS IN <b>${fmtLeft(off.until - Date.now())}</b>`, name: off.title, sub: off.label, btn: `£${off.price.toFixed(2)}`, btnAttr: ' data-act="offer"' });
+    if (off) deal += wide({ attr: ' data-shelf="offer"', tint: '#8a3df0', art: img(REWARD_HEAP_ART.gems_l), timer: `OFFER ENDS IN <b>${fmtLeft(off.until - Date.now())}</b>`, name: off.title, sub: off.label, btn: `${storePrice(storeIdFor('offer_' + off.id, off.price), off.price)}`, btnAttr: ' data-act="offer"' });
     if (featureOn('pass')) { const P = GAME_CONFIG.season.pass, t = passTier(), into = passState().xp - t * P.xpPerTier;
       deal += wide({ attr: ' data-shelf="pass"', tint: '#e8a21a', art: img(CHEST_IMG_SRC.gold), timer: `ENDS IN <b>${passDaysLeft()} DAY${passDaysLeft() === 1 ? '' : 'S'}</b>`, name: `FLICKY PASS · ${PASS_MONTH_NAMES[_nowDate().getMonth()]}`,
         mid: `<div class="gcBar"><i style="width:${t >= P.tiers ? 100 : Math.max(4, into / P.xpPerTier * 100)}%"></i><span>TIER ${t} / ${P.tiers}</span></div>`,
@@ -21888,7 +21929,7 @@ function renderShopV2(container) {
       btn: GAME_CONFIG.kit.boosterPack.gems + gem, btnAttr: ` data-boost="${id}"` })).join('')}</div>`;
   if (featureOn('jar')) deal += hd('GEM JAR', `+${J.perSix} A SIX · +${J.perFour} A FOUR`) + wide({ attr: ' data-shelf="jar"', tint: '#8a3df0', art: img(REWARD_HEAP_ART.gems_m), name: `${jar} / ${J.cap} GEMS INSIDE`,
     mid: `<div class="gcBar purple"><i style="width:${jar / J.cap * 100}%"></i><span>OPENS AT ${J.buyableFrom}</span></div>`, sub: 'Fills up as you hit boundaries in league matches',
-    btn: jar < J.buyableFrom ? `${J.buyableFrom - jar} TO GO` : `£${J.price.toFixed(2)}`, btnCls: jar < J.buyableFrom ? 'goal' : '', btnAttr: ' data-act="jar"' });
+    btn: jar < J.buyableFrom ? `${J.buyableFrom - jar} TO GO` : `${storePrice('gem_jar', J.price)}`, btnCls: jar < J.buyableFrom ? 'goal' : '', btnAttr: ' data-act="jar"' });
   // ---------- GEMS & COINS ----------
   const rate = p => p.gems / p.price, base = rate(O.gemPacks[0]);
   const best = O.gemPacks.reduce((bi, p, i, a) => rate(p) > rate(a[bi]) ? i : bi, 0);
@@ -21897,13 +21938,13 @@ function renderShopV2(container) {
   let cur = hd('GEMS') + `<div class="gcGrid" data-shelf="gems">${O.gemPacks.map((p, i) => { const first = O.firstBuyDoubled && !s.firstBuy['g' + i], bonus = Math.round((rate(p) / base - 1) * 100);
     return tile({ tint: '#7a3dd8', name: GN[i] || 'GEMS', art: img(REWARD_HEAP_ART['gems_' + gsize(i)]), qty: (first ? p.gems * 2 : p.gems).toLocaleString(),
       tag: p.tag || (i === best ? 'BEST VALUE' : ''), tagCls: !p.tag && i === best ? 'bv' : '', flag: first ? '×2 FIRST BUY' : bonus >= 5 ? `+${bonus}% MORE` : '',
-      btn: `£${p.price.toFixed(2)}`, attr: ` data-pack="${i}"` }); }).join('')}</div>`;
+      btn: `${storePrice('gems_' + p.gems, p.price)}`, attr: ` data-pack="${i}"` }); }).join('')}</div>`;
   const CP = [[30, 500, 's', 'HANDFUL OF COINS'], [150, 3000, 'm', 'POT OF COINS'], [500, 12000, 'l', 'HEAP OF COINS']], crate = c => c[1] / c[0];
   cur += hd('COINS') + `<div class="gcGrid" data-shelf="coins">${CP.map(c => { const bonus = Math.round((crate(c) / crate(CP[0]) - 1) * 100);
     return tile({ tint: '#d08a10', name: c[3], art: img(REWARD_HEAP_ART['coins_' + c[2]]), qty: c[1].toLocaleString(), flag: bonus >= 5 ? `+${bonus}% MORE` : '', btn: c[0] + gem, btnAttr: ` data-coins="${c[0]}:${c[1]}"` }); }).join('')}</div>`;
   // ---------- MORE ----------
   const more = [];
-  if (!adsRemoved) more.push(tile({ tint: '#2fa05a', name: 'NO ADS', art: '<i class="hIco hi-noads gcNoAdArt"></i>', qty: '+100' + gem, note: 'No ads, ever. Ads you choose still work.', btn: `£${O.offers.noAds.price.toFixed(2)}`, btnAttr: ' data-act="noads"' }));
+  if (!adsRemoved) more.push(tile({ tint: '#2fa05a', name: 'NO ADS', art: '<i class="hIco hi-noads gcNoAdArt"></i>', qty: '+100' + gem, note: 'No ads, ever. Ads you choose still work.', btn: `${storePrice('no_ads', O.offers.noAds.price)}`, btnAttr: ' data-act="noads"' }));
   more.push(tile({ tint: '#2f6fd0', name: 'FREE GEMS', art: img(REWARD_HEAP_ART.gems_s) + '<span class="gcPlay">▶</span>', qty: '+' + GEM_AD_REWARD, note: `Watch an ad · ${getDailyAdWatches()}/${GEM_AD_DAILY_MAX} today`, btn: 'FREE', btnAttr: ' data-act="ad"' }));
   if (!hasExtraChestSlot()) more.push(tile({ tint: '#b0662a', name: '5TH BAG SLOT', art: img(CHEST_IMG_SRC.bronze), note: 'Hold one extra bag', btn: GEM_EXTRA_SLOT_COST + gem, btnAttr: ' data-act="slot"' }));
   const moreHtml = hd('MORE') + `<div class="gcGrid" data-shelf="more">${more.join('')}</div><button class="gcOdds" data-act="odds">BAG ODDS · exactly what's in every bag ›</button>`;
@@ -22396,10 +22437,10 @@ function renderPassRoad(sh) {
     <div class="prLanes"><span>FREE</span><span class="pr">PREMIUM</span></div>
     <div class="prRoad"><div class="prStrip"></div><div class="prRows">${rows}</div></div>
     <div class="psCta prCta">${p.premium ? `<div class="psOn">${p.plus ? 'PASS+' : 'PREMIUM'} ACTIVE<small>+1 bag slot · bags open 10% faster${p.plus ? '' : ' · gold trim at tier 15 with Pass+'}</small></div>
-        ${p.plus ? '' : `<button class="gcBuy psPlus" data-buypass="plus">PASS+ · +10 TIERS · £${P.plus.toFixed(2)}</button>`}`
+        ${p.plus ? '' : `<button class="gcBuy psPlus" data-buypass="plus">PASS+ · +10 TIERS · ${storePrice('pass_plus', P.plus)}</button>`}`
       : `${earned ? `<div class="prLoss"><b>${earned} premium reward${earned === 1 ? ' is' : 's are'} waiting</b>${earnedGems ? ` · incl. <b>${earnedGems} gems</b>` : ''}</div>` : ''}
-        <button class="gcBuy psAct" data-buypass="prem"><small>ACTIVATE · WORTH ${worth.toLocaleString()} GEMS</small>FLICKY PASS · £${P.premium.toFixed(2)}</button>
-        <button class="psPlusLink" data-buypass="plus">or PASS+ · jump 10 tiers + gold trim · £${P.plus.toFixed(2)}</button>`}</div>`;
+        <button class="gcBuy psAct" data-buypass="prem"><small>ACTIVATE · WORTH ${worth.toLocaleString()} GEMS</small>FLICKY PASS · ${storePrice('pass_premium', P.premium)}</button>
+        <button class="psPlusLink" data-buypass="plus">or PASS+ · jump 10 tiers + gold trim · ${storePrice('pass_plus', P.plus)}</button>`}</div>`;
   { const pc = sh.querySelector('#psPlayer'); if (pc) paintPlayerTo(pc, Object.assign({}, curLook(), { shirt: 'pass' + passSeasonKey().replace('-', '') })); }
   const road = sh.querySelector('.prRoad');
   requestAnimationFrame(() => { const tg = sh.querySelector('.prT.can') ? sh.querySelector('.prT.can').closest('.prRow') : sh.querySelector('.prRow.cur') || sh.querySelector('.prRow[data-tier="1"]');
@@ -22455,9 +22496,9 @@ function renderPass() {
     <div class="psTrackWrap"><div class="psLabels"><span>FREE</span><span class="pr">PREMIUM</span></div>
       <div class="psTrack"><div class="psCols" style="--cw:${cw}px;--fill:${Math.min(fillPx, P.tiers * cw)}px">${cols.join('')}</div></div></div>
     <div class="psCta">${p.premium ? `<div class="psOn">${p.plus ? 'PASS+' : 'PREMIUM'} ACTIVE<small>+1 bag slot · bags open 10% faster${p.plus ? '' : ' · gold trim at tier 15 with Pass+'}</small></div>
-        ${p.plus ? '' : `<button class="gcBuy psPlus" data-buypass="plus">PASS+ · +10 TIERS · £${P.plus.toFixed(2)}</button>`}`
-      : `<button class="gcBuy psAct" data-buypass="prem"><small>ACTIVATE</small>FLICKY PASS · £${P.premium.toFixed(2)}${window._psValue && window.PASS_SHOW !== false ? `<span class="val">${window._psValue.g} GEMS + KIT + ${window._psValue.bags} BAGS</span>` : ''}</button>
-        <button class="psPlusLink" data-buypass="plus">or PASS+ · jump 10 tiers + gold trim · £${P.plus.toFixed(2)}</button>`}</div>`;
+        ${p.plus ? '' : `<button class="gcBuy psPlus" data-buypass="plus">PASS+ · +10 TIERS · ${storePrice('pass_plus', P.plus)}</button>`}`
+      : `<button class="gcBuy psAct" data-buypass="prem"><small>ACTIVATE</small>FLICKY PASS · ${storePrice('pass_premium', P.premium)}${window._psValue && window.PASS_SHOW !== false ? `<span class="val">${window._psValue.g} GEMS + KIT + ${window._psValue.bags} BAGS</span>` : ''}</button>
+        <button class="psPlusLink" data-buypass="plus">or PASS+ · jump 10 tiers + gold trim · ${storePrice('pass_plus', P.plus)}</button>`}</div>`;
   const tr = sh.querySelector('.psTrack');
   { const pc = sh.querySelector('#psPlayer'); if (pc) { const L = Object.assign({}, curLook(), { shirt: 'pass' + passSeasonKey().replace('-', '') }); paintPlayerTo(pc, L); } }
   requestAnimationFrame(() => { const can = sh.querySelector('.psTile.can'), c = (can && can.closest('.psCol')) || sh.querySelector('.psCol.cur') || sh.querySelector(`.psCol[data-tier="${P.tiers}"]`); if (c) tr.scrollLeft = Math.max(0, c.offsetLeft - 70); });
@@ -23575,7 +23616,7 @@ function renderCompete() {
       <div class="row"><span class="ln">${st.cur} ${ev.currency} · next reward at ${Math.min(nextAt, ev.track.length * ev.every)}</span>${can ? '<button data-ev="claim">CLAIM</button>' : ''}</div>
       <div class="cpBar"><i style="width:${Math.min(1, st.cur / (ev.track.length * ev.every)) * 100}%"></i></div>
       ${rules('event', `<small>Earn ${ev.currency} in league matches: ${ev.perMatch} a match, +${ev.perWin} a win, +${ev.perSix} a six. Final reward: the exclusive ${ev.kit ? ev.kit.name + ' kit' : 'kit'}.</small>
-        ${st.bundle ? '' : `<div class="row"><small>${ev.name} BUNDLE: ${ev.bundle.diyas} ${ev.currency} + ${bagNm(ev.bundle.bag)} BAG + ${ev.bundle.gems} GEMS</small><button data-ev="bundle" style="background:linear-gradient(#5fe07a,#22a046);color:#04310f">£${ev.bundle.price.toFixed(2)}</button></div>`}`)}</div>`; }
+        ${st.bundle ? '' : `<div class="row"><small>${ev.name} BUNDLE: ${ev.bundle.diyas} ${ev.currency} + ${bagNm(ev.bundle.bag)} BAG + ${ev.bundle.gems} GEMS</small><button data-ev="bundle" style="background:linear-gradient(#5fe07a,#22a046);color:#04310f">${storePrice('event_bundle', ev.bundle.price)}</button></div>`}`)}</div>`; }
   else if (nx) { const days = Math.max(0, Math.ceil((new Date(nx.start + 'T00:00:00') - _nowDate()) / 864e5));
     tiles = `<div class="cpTiles">${seasonTile}<div class="cpCard cpTile cpEvent"><div class="hd"><span>${nx.name}${I('soon')}</span></div><small>STARTS IN ${days} DAYS</small>
       ${rules('soon', `A ${Math.round((new Date(nx.end) - new Date(nx.start)) / 864e5) + 1}-day event with its own rewards and an exclusive kit.`)}</div></div>`; }
@@ -23700,7 +23741,7 @@ function renderCompeteV2() {
       posters.push(poster({ k: 'event', ico: 'event', noBadge: true, col: '#F28C1C', key: String(ev.id).replace(/\d+$/, ''), lg: cur(), timer: `ENDS IN <b>${left} DAYS</b>`, name: ev.name, tag: `EXCLUSIVE ${ev.kit ? ev.kit.name.toUpperCase() + ' ' : ''}KIT AT THE END`,
         goal: `${ev.icon ? `<img class="evCurI" alt="" src="${ev.icon}">` : ''}<em>${st.cur}</em> ${ev.currency}${ev.shop ? `<button class="duDraw" data-evshop>EVENT SHOP · ${eventBal(ev)} TO SPEND ›</button>` : ''}`, road: track(nodes, Math.min(100, (st.cur - st.claimed * ev.every) / ev.every * 50)),
         rules: `Earn ${ev.currency} in league matches and duels: ${ev.perMatch} a match, +${ev.perWin} a win, +${ev.perSix} a six. The track counts everything you earn; spending in the event shop doesn't set it back.`,
-        btn: can ? '<button class="gcBuy evGo claim" data-ev="claim">CLAIM</button>' : st.bundle ? '<button class="gcBuy evGo goal" disabled>PLAY LEAGUE MATCHES</button>' : `<button class="gcBuy evGo" data-ev="bundle">BUNDLE · £${ev.bundle.price.toFixed(2)}</button>` })); }
+        btn: can ? '<button class="gcBuy evGo claim" data-ev="claim">CLAIM</button>' : st.bundle ? '<button class="gcBuy evGo goal" disabled>PLAY LEAGUE MATCHES</button>' : `<button class="gcBuy evGo" data-ev="bundle">BUNDLE · ${storePrice('event_bundle', ev.bundle.price)}</button>` })); }
     else if (nx) { const days = Math.max(0, Math.ceil((new Date(nx.start + 'T00:00:00') - now) / 864e5));
       posters.push(poster({ k: 'event', ico: 'event', col: '#F28C1C', key: String(nx.id).replace(/\d+$/, ''), big: bag((nx.bundle && nx.bundle.bag) || 'gold', 'evBigArt'), timer: `STARTS IN <b>${days} DAYS</b>`, name: nx.name, tag: `${Math.round((new Date(nx.end) - new Date(nx.start)) / 864e5) + 1}-DAY EVENT`,
         goal: 'COMING SOON', road: track([{ r: { coins: 1 }, label: 'COINS', sub: '' }, { r: { bag: 'gold' }, label: 'BAGS', sub: '' }, { r: { cos: 1 }, label: 'EXCLUSIVE KIT', sub: '' }], 0),

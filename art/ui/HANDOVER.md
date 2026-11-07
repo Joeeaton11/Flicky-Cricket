@@ -988,3 +988,11 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Nov 7: SAL redone (Figma 547:191-192): low sandstone plinth, new gold/green cup with protea lid and springbok-horn handles (no rainbow). NZCL scene redone with a carved koru/fern plinth inlaid with paua blue-green (547:193).
 - Nov 7: Knight's + Wizard's scenes repainted without the two background pitches (547:194-195); Brass trophy re-keyed from a green-screen version with a clear amber dome (547:196) — the purple came from the magenta key showing through the glass; NZ scene repainted with a small low carved plinth (547:197).
 - Nov 7 (Joe preferred the first Knight's/Wizard's art): restored the original scenes with both sets of stumps and pitch strips painted out by hand (grass cloned from the same rows); original effect lists restored.
+
+## Nov 7 — Money layer (money-43a), off until keys are in
+- MONEY_CONFIG (top of ADS & IAP): revenuecat public keys, admobLive, analytics. STORE_PRODUCTS = the 15 store product IDs + UK prices; storeIdFor() maps the game's internal purchase names to them.
+- FlickyStore (RevenueCat, @revenuecat/purchases-capacitor 14.1): configure → getProducts (local prices) → restores no_ads. buyRealMoney now WAITS for the store before granting; cancel/fail grant nothing; one purchase at a time. Local/?test=1 still grants instantly. storePrice() shows the store's local price on every buy button.
+- adConsent(): Google UMP consent form (if required) then iOS ATT prompt, before AdMob.initialize. initializeForTesting until admobLive.
+- track() also sends to Firebase Analytics (@capacitor-firebase/analytics 8.6) when the plugin is present; purchases logged as GA4 'purchase'. iOS plugin self-configures only if GoogleService-Info.plist is bundled; Android applies google-services only if google-services.json exists.
+- Tested with a mocked native bridge: consent+ATT shown, prices load, success grants after confirm, cancel/fail grant nothing, restore returns no_ads.
+- STILL TO DO with Joe's IDs: keys into MONEY_CONFIG; AdMob app IDs into Info.plist GADApplicationIdentifier + AndroidManifest; real ad unit IDs into ADMOB_CONFIG; google-services.json → android/app/, GoogleService-Info.plist → ios/App/App/ (add to Xcode target); SKAdNetworkItems in Info.plist.
