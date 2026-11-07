@@ -921,3 +921,11 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 ## Nov 7 — Cup draw restyle (duels-39a)
 - #cupDraw gets painted background assets/ui/cup_bg.webp (Figma 538:191: purple/gold cup-final stadium, trophy on plinth, fades to dark) plus faint diagonal texture.
 - Glassy purple match cards, gold section ribbons, pulsing gold 'next' match, gold tabs, trophy 'WINNER' at the end of the road strip; the strip now keeps your first rounds in view. Whole-draw canvas recoloured purple to match.
+
+## Nov 7 — Cup draw pass 2 (duels-39a)
+- New background (Figma 539:191): arena with the trophy on a plinth up top, banner-and-torch pillars down both sides, a dark pitch in the middle for the cards.
+- Round strip IS the tab bar now (tabs row removed); last card 'THE DRAW' opens the whole draw. Active card outlined; strip follows swipes.
+- Purple/gold CSS plaque replaces the wooden one (CUP_PLAQUE_SRC no longer used here).
+- Final page: semi-finals, the final, prizes (winner / runner-up), and 'YOUR ROAD' chips.
+- Round pages: the match that feeds your next opponent is blue-ringed and labelled; the rest are dimmed.
+- Whole draw opens zoomed (drag to explore, tap to fit).

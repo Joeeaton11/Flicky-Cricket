@@ -65821,31 +65821,38 @@ function openCupDraw(page) {
   if (!el) { el = document.createElement('div'); el.id = 'cupDraw'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Cup draw'); document.body.appendChild(el); }
   const last = run.path.length ? run.path[run.path.length - 1] : null, cur = run.out || run.champ ? (last ? last.round : 0) : run.round;
   const status = run.champ ? 'CUP WINNERS!' : run.out ? `OUT IN THE ${C.rounds[last.round]}` : `IN THE ${C.rounds[run.round]}`;
-  const card = (m, big) => { const done = m.w != null, mine = m.a === 0 || m.b === 0;
+  const E = cupEntry(run.li), fmtP = p => p ? [p.e ? (E * p.e).toLocaleString() + ' COINS' : '', p.bag ? bagNm(p.bag) + ' BAG' : '', p.gems ? p.gems + ' GEMS' : ''].filter(Boolean).join(' + ') : '';
+  const alive = r => !run.path.some(x => x.round < r && x.res !== 'win') && !(run.out && last && last.round < r);
+  const card = (m, big, cls) => { const done = m.w != null, mine = m.a === 0 || m.b === 0;
     const row = (i, sc) => `<div class="cdR${done ? (m.w === i ? ' w' : ' l') : ''}${i === 0 ? ' you' : ''}"><em>${i == null ? '' : i === 0 ? '★' : flagHtml(cupFlag(run, i))}</em><span>${nm(i)}</span><b>${sc == null ? (done ? '' : i == null ? '' : '–') : sc}${done && m.w === i && m.sd ? '<i>SD</i>' : ''}</b></div>`;
-    return `<div class="cdM${mine ? ' mine' : ''}${big ? ' big' : ''}${mine && !done && !run.out && !run.champ ? ' now' : ''}">${row(m.a, m.sa)}${row(m.b, m.sb)}</div>`; };
+    return `<div class="cdM${mine ? ' mine' : ''}${big ? ' big' : ''}${cls ? ' ' + cls : ''}${mine && !done && !run.out && !run.champ ? ' now' : ''}">${row(m.a, m.sa)}${row(m.b, m.sb)}</div>`; };
   const road = C.rounds.map((rn, r) => { const pl = run.path.find(x => x.round === r), m = R[r][0];
     const st = pl ? pl.res : (!run.out && !run.champ && r === run.round) ? 'next' : 'future';
     const who = pl ? (pl.res === 'win' ? 'beat ' : 'lost to ') + nm(m.b) : st === 'next' ? 'vs ' + nm(m.b) : run.out || run.champ ? '' : 'to come';
     return `<button class="cdRd ${st}" data-cdpage="${r}"><small>${C.rounds[r]}</small><b>${pl ? `${pl.me}–${pl.them}${pl.sd ? '*' : ''}` : st === 'next' ? 'NEXT' : '–'}</b><span>${who}</span></button>`; }).join('');
   const pages = R.map((ms, r) => {
     const pin = ms[0].a === 0 && (run.path.some(x => x.round === r) || (!run.out && !run.champ && r === run.round)) ? `<div class="cdPin"><small>YOUR MATCH</small>${card(ms[0], true)}</div>` : '';
-    if (r === R.length - 1) { const f = ms[0];
-      return `<section class="cdPage">${pin}<div class="cdFinal">${card(f, true)}<div class="cdWin"><img class="cdCup" alt="" src="${CUP_TROPHY_SRC}"><small>WINNER</small><b class="${f.w === 0 ? 'you' : ''}">${f.w == null ? 'TO BE DECIDED' : nm(f.w)}</b></div></div></section>`; }
-    let groups = ''; for (let k = 0; k < ms.length; k += 2) groups += `<div class="cdPair">${card(ms[k])}${card(ms[k + 1])}<i class="cdBr"></i></div>`;
+    if (r === R.length - 1) { const f = ms[0], sf = R[r - 1];
+      const myRoad = run.path.length ? `<div class="cdAll">YOUR ROAD</div><div class="cdMyRoad">${run.path.map(x => `<span class="${x.res}"><small>${cupShort(x.round)}</small><b>${x.me}–${x.them}${x.sd ? '*' : ''}</b></span>`).join('')}${run.champ ? '' : `<span class="${run.out ? 'gone' : 'todo'}"><small>${run.out ? 'OUT' : cupShort(run.round)}</small><b>${run.out ? '✕' : '?'}</b></span>`}</div>` : '';
+      return `<section class="cdPage">${run.champ || (pin && f.a === 0) ? '' : `<div class="cdAll">THE SEMI-FINALS</div><div class="cdSemis">${card(sf[0], false, sf[0].a === 0 || sf[0].b === 0 ? '' : 'side')}${card(sf[1], false, 'side')}</div>`}
+        <div class="cdAll">THE FINAL</div><div class="cdFinal">${card(f, true)}<div class="cdWin"><img class="cdCup" alt="" src="${CUP_TROPHY_SRC}"><small>WINNER</small><b class="${f.w === 0 ? 'you' : ''}">${f.w == null ? 'TO BE DECIDED' : nm(f.w)}</b>
+        <div class="cdPrizes"><span><small>WINNER</small>${fmtP(C.champion)}</span><span><small>RUNNER-UP</small>${fmtP(C.prize[4])}</span></div></div></div>${myRoad}</section>`; }
+    const feed = alive(r) && ms[0].a === 0 && r < R.length - 1;
+    let groups = ''; for (let k = 0; k < ms.length; k += 2) { const c0 = k === 0 ? '' : 'dim', c1 = k === 0 && feed ? 'feed' : k === 0 ? '' : 'dim';
+      groups += `<div class="cdPair">${card(ms[k], false, c0)}${k === 0 && feed ? '<em class="cdFeedTag">YOUR NEXT OPPONENT COMES FROM ↓</em>' : ''}${card(ms[k + 1], false, c1)}<i class="cdBr"></i></div>`; }
     return `<section class="cdPage">${pin}<div class="cdAll">ALL ${ms.length} MATCHES</div>${groups}</section>`;
-  }).join('') + `<section class="cdPage"><div class="cdAll">THE WHOLE DRAW</div><div class="cdFull" data-cdzoom></div><button class="gcBuy evGo cdShare" data-cdshare>SHARE THE DRAW</button></section>`;
+  }).join('') + `<section class="cdPage"><div class="cdAll">THE WHOLE DRAW</div><div class="cdFull zoom" data-cdzoom></div><div class="cdHint">Drag to explore · tap to fit</div><button class="gcBuy evGo cdShare" data-cdshare>SHARE THE DRAW</button></section>`;
   el.style.setProperty('--lg', THEMED_LEAGUES[run.li].accentColor || '#2457D6');
-  el.innerHTML = `<div class="cdTop"><button class="evBack" data-cdclose aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="cdPlaque" style="background-image:url(${CUP_PLAQUE_SRC})"><img alt="" src="${CUP_TROPHY_SRC}"><div><b>FLICKY CUP</b><small>${THEMED_LEAGUES[run.li].name} · ${status}</small></div></div></div>
-    <div class="cdRoad">${road}<div class="cdRd cup"><img alt="" src="${CUP_TROPHY_SRC}"><small>WINNER</small></div></div>
-    <div class="cdTabs">${C.rounds.map((_, r) => `<button data-cdpage="${r}">${cupShort(r)}</button>`).join('')}<button data-cdpage="5">DRAW</button></div>
+  el.innerHTML = `<div class="cdTop"><button class="evBack" data-cdclose aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="cdPlaque"><img alt="" src="${CUP_TROPHY_SRC}"><div><b>FLICKY CUP</b><small>${THEMED_LEAGUES[run.li].name} · ${status}</small></div></div></div>
+    <div class="cdRoad">${road}<button class="cdRd cup" data-cdpage="${C.rounds.length}"><img alt="" src="${CUP_TROPHY_SRC}"><small>THE DRAW</small></button></div>
     <div class="cdPages">${pages}</div>`;
   el.querySelector('.cdFull').appendChild(cupDrawCanvas(run, R));
   el.classList.add('show');
-  const box = el.querySelector('.cdPages'), tabs = [...el.querySelectorAll('.cdTabs button')];
-  const sync = () => { const i = Math.round(box.scrollLeft / Math.max(1, box.clientWidth)); tabs.forEach((b, j) => b.classList.toggle('on', j === i)); };
+  const box = el.querySelector('.cdPages'), rd = el.querySelector('.cdRoad'), tabs = [...rd.children];
+  let lastI = -1; const sync = () => { const i = Math.round(box.scrollLeft / Math.max(1, box.clientWidth)); if (i === lastI) return; lastI = i; tabs.forEach((b, j) => b.classList.toggle('on', j === i));
+    const b = tabs[i]; if (b && (b.offsetLeft < rd.scrollLeft || b.offsetLeft + b.offsetWidth > rd.scrollLeft + rd.clientWidth)) rd.scrollTo({ left: b.offsetLeft - rd.clientWidth / 2 + b.offsetWidth / 2, behavior: 'smooth' }); };
   box.addEventListener('scroll', sync, { passive: true });
-  requestAnimationFrame(() => { box.scrollLeft = (page != null ? page : cur) * box.clientWidth; sync(); const rd = el.querySelector('.cdRoad'), b = rd.children[cur]; if (b) rd.scrollLeft = Math.max(0, b.offsetLeft + b.offsetWidth + 40 - rd.clientWidth); });
+  requestAnimationFrame(() => { box.scrollLeft = (page != null ? page : cur) * box.clientWidth; const b = rd.children[cur]; if (b) rd.scrollLeft = Math.max(0, b.offsetLeft + b.offsetWidth + 40 - rd.clientWidth); sync(); });
 }
 document.addEventListener('click', e => {
   const t = e.target && e.target.closest ? e.target : null; if (!t) return;
@@ -66304,7 +66311,7 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .xmIco.ev-duel{background:url(assets/ui/icon_duel.webp) center/contain no-repeat}
   .xmIco.ev-cup{background:url(assets/ui/icon_cup.webp) center/contain no-repeat}
   .duDraw{display:inline-block;margin-top:6px;border:0;border-radius:999px;padding:6px 14px;background:rgba(255,201,58,.16);color:#FFC93A;font:inherit;font-size:13px;letter-spacing:.05em;cursor:pointer}
-  #cupDraw{position:fixed;inset:0;z-index:9000;background:radial-gradient(90% 30% at 50% 102%,rgba(255,201,58,.12),transparent 70%),repeating-linear-gradient(135deg,rgba(255,255,255,.018) 0 2px,transparent 2px 22px),url(assets/ui/cup_bg.webp) center top/100% auto no-repeat,linear-gradient(#1a0f3d,#120a2e 60%,#0b0720);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
+  #cupDraw{position:fixed;inset:0;z-index:9000;background:radial-gradient(90% 30% at 50% 102%,rgba(255,201,58,.12),transparent 70%),repeating-linear-gradient(135deg,rgba(255,255,255,.018) 0 2px,transparent 2px 22px),url(assets/ui/cup_bg.webp) center top/cover no-repeat,linear-gradient(#1a0f3d,#120a2e 60%,#0b0720);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
   #cupDraw.show{display:flex}
   #duelTables{position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;background:linear-gradient(rgba(7,16,34,.55),#071022 70%),url(assets/ui/ev_duels.webp) center top/cover}
   #duelTables.show{display:flex}
@@ -66337,11 +66344,20 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   #duelTables .dtDots{display:flex;justify-content:center;gap:7px;padding:2px 0 6px}#duelTables .dtDots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.25);cursor:pointer}#duelTables .dtDots i.on{background:#FFC93A;width:22px;border-radius:5px}
   #duelTables .dtFoot{padding:4px 22px calc(env(safe-area-inset-bottom) + 14px);text-align:center;font-size:12px;color:#8fa3cc;line-height:1.35}#duelTables .dtFoot b{color:#fff}
   #cupDraw .cdTop{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 8px}
-  #cupDraw .cdPlaque{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:60px;padding:0 18px 0 12px;background:center/100% 100% no-repeat}
+  #cupDraw .cdPlaque{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:54px;padding:0 16px 0 10px;border-radius:16px;border:3px solid #FFC93A;background:linear-gradient(#7a4ad8,#3d1f8f 60%,#2a1468);box-shadow:inset 0 3px 0 rgba(255,255,255,.25),inset 0 -4px 0 rgba(0,0,0,.25),0 0 0 3px #1a0a3a,0 6px 14px rgba(0,0,0,.45)}
   #cupDraw .cdPlaque img{height:50px;margin-top:-10px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.5))}
-  #cupDraw .cdPlaque b{display:block;font-size:21px;letter-spacing:.04em;color:#FFE08A;text-shadow:0 2px 0 #3a1f05}
-  #cupDraw .cdPlaque small{display:block;font-size:11px;color:#f3dcb0;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #cupDraw .cdRoad{display:flex;gap:8px;margin:0 0 10px;padding:0 16px;overflow-x:auto;scrollbar-width:none}
+  #cupDraw .cdPlaque b{display:block;font-size:21px;letter-spacing:.04em;color:#FFE08A;text-shadow:0 2px 0 #1a0a3a}
+  #cupDraw .cdPlaque small{display:block;font-size:11px;color:#e3d6ff;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #cupDraw .cdRoad{display:flex;gap:8px;margin:0 0 6px;padding:4px 16px 8px;overflow-x:auto;scrollbar-width:none}
+  #cupDraw .cdRd.on{transform:translateY(-2px);outline:3px solid #fff;outline-offset:1px}#cupDraw .cdRd.cup.on{outline:0}#cupDraw .cdRd.cup.on small{color:#fff;text-decoration:underline 2px #FFC93A;text-underline-offset:3px}
+  #cupDraw .cdM.dim{opacity:.72}#cupDraw .cdM.side{opacity:.9}
+  #cupDraw .cdM.feed{border-color:#7fd0ff;box-shadow:0 0 12px rgba(127,208,255,.35)}
+  #cupDraw .cdFeedTag{font-style:normal;font-size:10.5px;letter-spacing:.08em;color:#7fd0ff;margin:-2px 0 -2px 6px}
+  #cupDraw .cdSemis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}#cupDraw .cdSemis .cdR{font-size:13px;padding:0 8px;gap:5px}
+  #cupDraw .cdPrizes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 4px}#cupDraw .cdPrizes span{border-radius:12px;padding:8px;background:rgba(18,12,46,.75);border:2px solid rgba(255,201,58,.35);font-size:13px;color:#FFE08A}#cupDraw .cdPrizes small{display:block;color:#cbbcf2;font-size:10px;letter-spacing:.1em;margin-bottom:2px}
+  #cupDraw .cdMyRoad{display:flex;gap:6px;flex-wrap:wrap}#cupDraw .cdMyRoad span{flex:1;min-width:58px;text-align:center;border-radius:12px;padding:6px 4px;background:rgba(18,12,46,.75);border:2px solid rgba(255,255,255,.12)}#cupDraw .cdMyRoad small{display:block;font-size:10px;color:#cbbcf2}#cupDraw .cdMyRoad b{font-size:17px}
+  #cupDraw .cdMyRoad .win{border-color:rgba(124,242,154,.55)}#cupDraw .cdMyRoad .win b{color:#7CF29A}#cupDraw .cdMyRoad .lose b,#cupDraw .cdMyRoad .gone b{color:#FF8A8A}#cupDraw .cdMyRoad .todo{border-color:#FFC93A}#cupDraw .cdMyRoad .todo b{color:#FFC93A}
+  #cupDraw .cdHint{text-align:center;font-size:11px;color:#cbbcf2;margin-top:6px}#cupDraw .cdFull.zoom{max-height:58vh}
   #cupDraw .cdRoad::-webkit-scrollbar{display:none}
   #cupDraw .cdRd{flex:0 0 100px;border:2px solid rgba(255,201,58,.18);border-radius:14px;padding:7px 6px 8px;background:rgba(18,12,46,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 10px rgba(0,0,0,.35);color:#7f93bd;font:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
   #cupDraw .cdRd small{font-size:10px;letter-spacing:.06em}
@@ -66375,8 +66391,8 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   #cupDraw .cdR b{font-size:1.1em}
   #cupDraw .cdR b i{font-style:normal;font-size:10px;margin-left:5px;color:#7fd0ff}
   #cupDraw .cdFinal{margin-top:10px}
-  #cupDraw .cdWin{text-align:center;margin-top:22px}
-  #cupDraw .cdCup{display:block;height:150px;margin:0 auto;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
+  #cupDraw .cdWin{text-align:center;margin-top:14px}
+  #cupDraw .cdCup{display:block;height:120px;margin:0 auto;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
   #cupDraw .cdWin small{display:block;font-size:12px;color:#7f93bd;letter-spacing:.1em;margin-top:6px}
   #cupDraw .cdWin b{font-size:26px}#cupDraw .cdWin b.you{color:#FFC93A}
   #cupDraw .cdFull{border-radius:12px;overflow:auto;border:2px solid rgba(255,201,58,.35);cursor:zoom-in}
