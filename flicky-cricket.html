@@ -65821,6 +65821,11 @@ function shareCupDraw() {
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: 'Flicky Cup', text: run.champ ? 'I won the Flicky Cup!' : 'My Flicky Cup run' }).catch(() => {});
     else { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = 'flicky-cup.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); } }, 'image/png');
 }
+const CUP_THEME = {   // Nov 7: cup draw colours follow the event (art + colours are both per-event jobs — see art/ui/EVENT_ART_CHECKLIST.md)
+  default: { A: '#7a4ad8', B: '#3d1f8f', C: '#2a1468', M1: 'rgba(42,30,96,.88)', M2: 'rgba(22,15,58,.92)', Y1: 'rgba(90,60,150,.92)', Y2: 'rgba(40,24,90,.94)', G: 'rgba(10,6,30,.8)', L: '#cbbcf2' },
+  xmas: { A: '#e0404c', B: '#9a1f2b', C: '#5c0f18', M1: 'rgba(112,24,34,.88)', M2: 'rgba(56,10,18,.92)', Y1: 'rgba(160,36,48,.92)', Y2: 'rgba(92,16,26,.94)', G: 'rgba(30,6,10,.8)', L: '#f2c9cc' },
+  halloween: { A: '#ff8a1f', B: '#a3480a', C: '#3a1606', M1: 'rgba(60,30,14,.9)', M2: 'rgba(24,12,8,.94)', Y1: 'rgba(120,56,16,.92)', Y2: 'rgba(60,26,8,.94)', G: 'rgba(14,8,4,.82)', L: '#f5cfa8' },
+  diwali: { A: '#e83aa0', B: '#8f1a62', C: '#4a0c34', M1: 'rgba(100,22,72,.88)', M2: 'rgba(50,10,36,.92)', Y1: 'rgba(150,34,104,.92)', Y2: 'rgba(84,16,58,.94)', G: 'rgba(28,6,20,.8)', L: '#f5c6e3' } };
 function openCupDraw(page) {
   const cs = cupState(), run = cs.run; if (!run) return;
   const C = GAME_CONFIG.season.cup, R = cupBracket(run), nm = i => i == null ? 'TBD' : i === 0 ? 'YOU' : run.names[i];
@@ -65832,30 +65837,34 @@ function openCupDraw(page) {
   const mini = m => `<div class="cdMini${m.a === 0 || m.b === 0 ? ' mine' : ''}">${[[m.a, m.sa], [m.b, m.sb]].map(([i, sc]) => `<div class="${m.w != null ? (m.w === i ? 'w' : 'l') : ''}${i === 0 ? ' you' : ''}"><span>${nm(i)}</span><b>${sc == null ? '' : sc}</b></div>`).join('')}</div>`;
   const alive = r => !run.path.some(x => x.round < r && x.res !== 'win') && !(run.out && last && last.round < r);
   const card = (m, big, cls) => { const done = m.w != null, mine = m.a === 0 || m.b === 0;
-    const row = (i, sc) => `<div class="cdR${done ? (m.w === i ? ' w' : ' l') : ''}${i === 0 ? ' you' : ''}"><em>${i == null ? '' : i === 0 ? '★' : flagHtml(cupFlag(run, i))}</em><span>${nm(i)}</span><b>${sc == null ? (done ? '' : i == null ? '' : '–') : sc}${done && m.w === i && m.sd ? '<i>SD</i>' : ''}</b></div>`;
-    return `<div class="cdM${mine ? ' mine' : ''}${big ? ' big' : ''}${cls ? ' ' + cls : ''}${mine && !done && !run.out && !run.champ ? ' now' : ''}">${row(m.a, m.sa)}${row(m.b, m.sb)}</div>`; };
+    const row = (i, sc, k) => `<div class="cdR${done ? (m.w === i ? ' w' : ' l') : ''}${i === 0 ? ' you' : ''}${i == null ? ' tbd' : ''}"><em>${i == null ? '' : i === 0 ? '★' : flagHtml(cupFlag(run, i))}</em><span>${i == null && m._l ? m._l[k] : nm(i)}</span><b>${sc == null ? (done ? '' : i == null ? '' : '–') : sc}${done && m.w === i && m.sd ? '<i>SD</i>' : ''}</b></div>`;
+    return `<div class="cdM${mine ? ' mine' : ''}${big ? ' big' : ''}${cls ? ' ' + cls : ''}${mine && !done && !run.out && !run.champ ? ' now' : ''}">${row(m.a, m.sa, 0)}${row(m.b, m.sb, 1)}</div>`; };
   const road = C.rounds.map((rn, r) => { const pl = run.path.find(x => x.round === r);
     const st = pl ? pl.res : (!run.out && !run.champ && r === run.round) ? 'next' : 'future';
     return `<button class="cdDot ${st}" data-cdpage="${r}"><i>${pl ? (pl.res === 'win' ? '✓' : '✕') : ''}</i><small>${cupShort(r)}</small></button>`; }).join('');
+  // Nov 7 (Joe): a real wallchart — every round column shares one vertical scroll and each card sits level with the bracket that feeds it
+  const U = 84, TOP = 66, HT = TOP + U * R[0].length + 30, cy = (r, j) => TOP + U * (1 << r) * j + U * (1 << r) / 2;
+  const arrive = !run.out && !run.champ && last && last.res === 'win' && run.round > (run.seen == null ? -1 : run.seen) ? run.round : -1;
   const pages = R.map((ms, r) => {
-    const pin = ms[0].a === 0 && (run.path.some(x => x.round === r) || (!run.out && !run.champ && r === run.round)) ? `<div class="cdPin"><small>YOUR MATCH</small>${card(ms[0], true)}</div>` : '';
-    if (r === R.length - 1) { const f = ms[0], sf = R[r - 1];
-      const myRoad = run.path.length ? `<div class="cdAll">YOUR ROAD</div><div class="cdMyRoad">${run.path.map(x => `<span class="${x.res}"><small>${cupShort(x.round)}</small><b>${x.me}–${x.them}${x.sd ? '*' : ''}</b></span>`).join('')}${run.champ ? '' : `<span class="${run.out ? 'gone' : 'todo'}"><small>${run.out ? 'OUT' : cupShort(run.round)}</small><b>${run.out ? '✕' : '?'}</b></span>`}</div>` : '';
-      return `<section class="cdPage">${run.champ || (pin && f.a === 0) ? '' : `<div class="cdAll">THE SEMI-FINALS</div><div class="cdSemis">${card(sf[0], false, sf[0].a === 0 || sf[0].b === 0 ? '' : 'side')}${card(sf[1], false, 'side')}</div>`}
-        <div class="cdAll">THE FINAL</div><div class="cdFinal">${card(f, true)}<div class="cdWin"><img class="cdCup" alt="" src="${CUP_TROPHY_SRC}"><small>WINNER</small><b class="${f.w === 0 ? 'you' : ''}">${f.w == null ? 'TO BE DECIDED' : nm(f.w)}</b>
-        <div class="cdPrizes"><span><small>WINNER</small>${fmtP(C.champion)}</span><span><small>RUNNER-UP</small>${fmtP(C.prize[4])}</span></div></div></div>${myRoad}</section>`; }
-    const feed = alive(r) && ms[0].a === 0 && r < R.length - 1;
-    let groups = ''; for (let k = 0; k < ms.length; k += 2) { const c0 = '', c1 = '';
-      const nx = R[r + 1] && R[r + 1][k / 2];
-      groups += `<div class="cdPair2"><div class="cdL">${card(ms[k], false, c0)}${card(ms[k + 1], false, c1)}</div><i class="cdBr"></i><div class="cdN"></div></div>`; }
-    const nav = `<div class="cdNav">${r > 0 ? `<button data-cdpage="${r - 1}">‹ ${cupShort(r - 1)}</button>` : '<i></i>'}<b>${C.rounds[r]}<small>${ms.length} MATCHES</small></b><button data-cdpage="${r + 1}">${cupShort(r + 1)} ›</button></div>`;
-    return `<section class="cdPage">${nav}${groups}</section>`;
-  }).join('') + `<section class="cdPage"><div class="cdAll">THE WHOLE DRAW</div><div class="cdFull zoom" data-cdzoom></div><div class="cdHint">Drag to explore · tap to fit</div><button class="gcBuy evGo cdShare" data-cdshare>SHARE THE DRAW</button></section>`;
+    const fin = r === R.length - 1, nav = `<div class="cdNav"><b>${C.rounds[r]}<small>${fin ? 'WINNER TAKES THE CUP' : ms.length + ' MATCHES'}</small></b></div>`;
+    let body = '';
+    ms.forEach((m, j) => { const lbl = fin ? ['SEMI 1 WINNER', 'SEMI 2 WINNER'] : null;
+      const html = card(fin && m.a == null && m.b == null ? Object.assign({}, m, { _l: lbl }) : m, fin, j === 0 && r === arrive ? 'arrive' : '');
+      body += `<div class="cdSlot" style="top:${cy(r, j) - (fin ? 46 : 36)}px">${html}</div>`;
+      if (!fin && j % 2 === 0) body += `<i class="cdBr2${j === 0 && ms[0].w === 0 ? ' you' : ''}" style="top:${cy(r, j)}px;height:${U * (1 << r)}px"></i>`; });
+    if (fin) { const myRoad = run.path.length ? `<div class="cdAll">YOUR ROAD</div><div class="cdMyRoad">${run.path.map(x => `<span class="${x.res}"><small>${cupShort(x.round)}</small><b>${x.me}–${x.them}${x.sd ? '*' : ''}</b></span>`).join('')}${run.champ ? '' : `<span class="${run.out ? 'gone' : 'todo'}"><small>${run.out ? 'OUT' : cupShort(run.round)}</small><b>${run.out ? '✕' : '?'}</b></span>`}</div>` : '';
+      const f = ms[0];
+      body += `<div class="cdSlot cdCupTop" style="top:${cy(r, 0) - 300}px"><img class="cdCup" alt="" src="${CUP_TROPHY_SRC}"><small>WINNER</small><b class="${f.w === 0 ? 'you' : ''}">${f.w == null ? 'TO BE DECIDED' : nm(f.w)}</b></div>
+        <div class="cdSlot" style="top:${cy(r, 0) + 62}px"><div class="cdPrizes"><span><small>WINNER</small>${fmtP(C.champion)}</span><span><small>RUNNER-UP</small>${fmtP(C.prize[4])}</span></div>${myRoad}</div>`; }
+    return `<section class="cdPage${fin ? ' fin' : ''}" style="height:${HT}px">${nav}${body}</section>`;
+  }).join('') + `<section class="cdPage full" style="height:${HT}px"><div class="cdStick"><div class="cdAll">THE WHOLE DRAW</div><div class="cdFull zoom" data-cdzoom></div><div class="cdHint">Drag to explore · tap to fit</div><button class="gcBuy evGo cdShare" data-cdshare>SHARE THE DRAW</button></div></section>`;
+  if (arrive >= 0) { run.seen = arrive; SAVE.save(); }
+  { const T = CUP_THEME[eventTheme()] || CUP_THEME.default; Object.entries(T).forEach(([k, v]) => el.style.setProperty('--cd' + k, v)); }
   el.style.setProperty('--lg', THEMED_LEAGUES[run.li].accentColor || '#2457D6');
   { const art = sceneArt('cup', run.li); el.style.setProperty('--cupbg', `url(${art})`); el.style.setProperty('--lgo', /cup_bg\.webp$/.test(art) ? '.55' : '0'); }
   el.innerHTML = `<div class="cdTop"><button class="evBack" data-cdclose aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="cdPlaque"><img alt="" src="${CUP_TROPHY_SRC}"><div><b>FLICKY CUP</b><small>${THEMED_LEAGUES[run.li].name} · ${status}</small></div></div></div>
     <div class="cdRoad cdProg">${road}<button class="cdDot cup" data-cdpage="${C.rounds.length}"><img alt="" src="${CUP_TROPHY_SRC}"><small>DRAW</small></button></div>
-    <div class="cdPages">${pages}</div>`;
+    <div class="cdPages">${pages}</div>${arrive >= 0 ? `<div class="cdThrough">THROUGH TO THE ${C.rounds[arrive]}!</div>` : ''}`;
   el.querySelector('.cdFull').appendChild(cupDrawCanvas(run, R));
   el.classList.add('show');
   const box = el.querySelector('.cdPages'), rd = el.querySelector('.cdRoad'), tabs = [...rd.children];
@@ -66337,6 +66346,25 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   #cupDraw>*{position:relative;z-index:1}
   #cupDraw{position:fixed;inset:0;z-index:9000;background:radial-gradient(90% 30% at 50% 102%,rgba(255,201,58,.12),transparent 70%),linear-gradient(#1a0f3d,#120a2e 60%,#0b0720);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
   #cupDraw.show{display:flex}
+  #cupDraw .cdPages{overflow:auto !important;align-items:flex-start;overscroll-behavior:contain}
+  #cupDraw .cdPage{position:relative;overflow:visible !important;padding:0 0 0 16px !important;flex:0 0 86% !important}
+  #cupDraw .cdPage.full{flex-basis:100% !important;padding-right:16px !important}
+  #cupDraw .cdPage .cdNav{position:sticky;top:0;z-index:3;margin:8px 0 0 0;padding:7px 6px;justify-content:center}
+  #cupDraw .cdPage .cdNav b{flex:1}
+  #cupDraw .cdSlot{position:absolute;left:16px;right:42px}
+  #cupDraw .cdPage.fin .cdSlot{right:16px}
+  #cupDraw .cdBr2{position:absolute;right:26px;width:16px;border:4px solid #FFC93A;border-left:0;border-radius:0 9px 9px 0;filter:drop-shadow(0 0 1.5px #1a0a3a) drop-shadow(0 0 1.5px #1a0a3a);opacity:.85}
+  #cupDraw .cdBr2::after{content:"";position:absolute;left:100%;top:50%;width:42px;height:4px;margin-top:-2px;background:#FFC93A}
+  #cupDraw .cdBr2.you{opacity:1;filter:drop-shadow(0 0 1.5px #1a0a3a) drop-shadow(0 0 8px rgba(255,201,58,.8))}
+  #cupDraw .cdR.tbd span{color:var(--cdL);font-size:.85em;letter-spacing:.06em}
+  #cupDraw .cdCupTop{text-align:center}#cupDraw .cdCupTop .cdCup{height:180px;margin:0 auto;display:block;filter:drop-shadow(0 0 24px rgba(255,201,58,.6)) drop-shadow(0 10px 10px rgba(0,0,0,.5));animation:cdFloat 3s ease-in-out infinite}
+  @keyframes cdFloat{50%{transform:translateY(-6px)}}
+  #cupDraw .cdCupTop small{display:block;font-size:12px;color:var(--cdL);letter-spacing:.12em;margin-top:6px}#cupDraw .cdCupTop b{font-size:26px}#cupDraw .cdCupTop b.you{color:#FFC93A}
+  #cupDraw .cdStick{position:sticky;top:8px}
+  #cupDraw .cdM.arrive{animation:cdArrive 1.1s cubic-bezier(.2,1.3,.4,1) both,cdPulse2 1.6s 1.1s ease-in-out infinite}
+  @keyframes cdArrive{0%{transform:translateX(-120%);opacity:0;box-shadow:0 0 0 rgba(255,201,58,0)}60%{opacity:1;box-shadow:0 0 34px rgba(255,201,58,.95)}100%{transform:none}}
+  #cupDraw .cdThrough{position:absolute;left:50%;top:40%;z-index:5;transform:translate(-50%,-50%);white-space:nowrap;padding:12px 22px;border-radius:18px;font-size:24px;color:#2a1600;background:linear-gradient(#FFE08A,#FFB020);border:4px solid #1a0a3a;box-shadow:0 8px 0 #8a5a00,0 0 40px rgba(255,201,58,.7);pointer-events:none;animation:cdThru 2.4s .3s ease-out both}
+  @keyframes cdThru{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}25%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-80%)}}
   #duelTables{position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;background:linear-gradient(rgba(7,16,34,.55),#071022 70%),url(assets/ui/ev_duels.webp) center top/cover}
   #duelTables.show{display:flex}
   #duelTables .hIco{display:inline-block;width:1.25em;height:1.25em;flex:none;vertical-align:-.25em}
@@ -66368,7 +66396,7 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   #duelTables .dtDots{display:flex;justify-content:center;gap:7px;padding:2px 0 6px}#duelTables .dtDots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.25);cursor:pointer}#duelTables .dtDots i.on{background:#FFC93A;width:22px;border-radius:5px}
   #duelTables .dtFoot{padding:4px 22px calc(env(safe-area-inset-bottom) + 14px);text-align:center;font-size:12px;color:#8fa3cc;line-height:1.35}#duelTables .dtFoot b{color:#fff}
   #cupDraw .cdTop{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 8px}
-  #cupDraw .cdPlaque{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:54px;padding:0 16px 0 10px;border-radius:16px;border:3px solid #FFC93A;background:linear-gradient(#7a4ad8,#3d1f8f 60%,#2a1468);box-shadow:inset 0 3px 0 rgba(255,255,255,.25),inset 0 -4px 0 rgba(0,0,0,.25),0 0 0 3px #1a0a3a,0 6px 14px rgba(0,0,0,.45)}
+  #cupDraw .cdPlaque{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:54px;padding:0 16px 0 10px;border-radius:16px;border:3px solid #FFC93A;background:linear-gradient(var(--cdA,#7a4ad8),var(--cdB,#3d1f8f) 60%,var(--cdC,#2a1468));box-shadow:inset 0 3px 0 rgba(255,255,255,.25),inset 0 -4px 0 rgba(0,0,0,.25),0 0 0 3px #1a0a3a,0 6px 14px rgba(0,0,0,.45)}
   #cupDraw .cdPlaque img{height:50px;margin-top:-10px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.5))}
   #cupDraw .cdPlaque b{display:block;font-size:21px;letter-spacing:.04em;color:#FFE08A;text-shadow:0 2px 0 #1a0a3a}
   #cupDraw .cdPlaque small{display:block;font-size:11px;color:#e3d6ff;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -66403,10 +66431,10 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   #cupDraw .cdN{position:relative;padding-left:8px}
   #cupDraw .cdTag{display:block;padding:7px 8px;border-radius:999px;background:rgba(18,12,46,.85);border:2px solid rgba(255,201,58,.5);font-size:12.5px;color:#fff;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #cupDraw .cdTag.you{border-color:#FFC93A;color:#FFC93A;box-shadow:0 0 10px rgba(255,201,58,.5)}#cupDraw .cdTag.tbd{color:#cbbcf2;border-color:rgba(255,255,255,.25)}
-  #cupDraw .cdProg{display:flex;align-items:flex-start;justify-content:space-between;gap:0;margin:0 16px 8px;padding:8px 6px 7px;position:relative;overflow:visible;border-radius:16px;background:rgba(10,6,30,.8);border:2px solid rgba(255,201,58,.3);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  #cupDraw .cdProg{display:flex;align-items:flex-start;justify-content:space-between;gap:0;margin:0 16px 8px;padding:8px 6px 7px;position:relative;overflow:visible;border-radius:16px;background:var(--cdG);border:2px solid rgba(255,201,58,.3);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
   #cupDraw .cdProg::before{content:"";position:absolute;left:32px;right:32px;top:21px;height:4px;z-index:0;border-radius:2px;background:rgba(255,255,255,.18)}
   #cupDraw .cdDot{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;padding:0;font:inherit;color:#cbbcf2;cursor:pointer;width:52px}
-  #cupDraw .cdDot i{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;font-style:normal;font-size:15px;background:#2a1d5c;border:3px solid #4a3a8a;color:#fff}
+  #cupDraw .cdDot i{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;font-style:normal;font-size:15px;background:var(--cdC);border:3px solid var(--cdB);color:#fff}
   #cupDraw .cdDot small{font-size:11px;letter-spacing:.06em}
   #cupDraw .cdDot.win i{background:#1f8a4c;border-color:#7CF29A}#cupDraw .cdDot.lose i{background:#8a1f2b;border-color:#FF8A8A}
   #cupDraw .cdDot.next i{background:#FFC93A;border-color:#fff;box-shadow:0 0 14px rgba(255,201,58,.8);animation:cdPulse 1.6s ease-in-out infinite}#cupDraw .cdDot.next small{color:#FFC93A}
@@ -66418,13 +66446,13 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   #cupDraw .cdMini span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#cupDraw .cdMini .you span{color:#FFC93A}
   #cupDraw .cdMini .w{color:#fff}#cupDraw .cdMini .w b{color:#7CF29A}#cupDraw .cdMini .l{color:#7a6fa8}#cupDraw .cdMini .l span{text-decoration:line-through}
   #cupDraw .cdBr::after{content:"";position:absolute;right:-12px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:#FFC93A;box-shadow:0 0 8px #FFC93A}
-  #cupDraw .cdNav{display:flex;align-items:center;gap:6px;margin:0 0 12px;padding:6px;border-radius:16px;background:rgba(10,6,30,.72);border:2px solid rgba(255,201,58,.2)}#cupDraw .cdNav b small{display:block;font-size:10px;color:#cbbcf2;letter-spacing:.12em}#cupDraw .cdNav b{flex:1;text-align:center;font-size:15px;letter-spacing:.1em;color:#FFE08A;text-shadow:0 2px 0 #1a0f3d}
+  #cupDraw .cdNav{display:flex;align-items:center;gap:6px;margin:0 0 12px;padding:6px;border-radius:16px;background:var(--cdG);border:2px solid rgba(255,201,58,.2)}#cupDraw .cdNav b small{display:block;font-size:10px;color:#cbbcf2;letter-spacing:.12em}#cupDraw .cdNav b{flex:1;text-align:center;font-size:15px;letter-spacing:.1em;color:#FFE08A;text-shadow:0 2px 0 #1a0f3d}
   #cupDraw .cdNav button,#cupDraw .cdNav i{flex:0 0 74px}#cupDraw .cdNav button{border:2px solid rgba(255,201,58,.45);border-radius:999px;padding:5px 0;background:rgba(18,12,46,.8);color:#FFC93A;font:inherit;font-size:12px;cursor:pointer}
   #cupDraw .cdPin small,#cupDraw .cdAll{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.12em;color:#FFE08A;margin:4px 2px 8px;text-shadow:0 2px 0 #1a0f3d}#cupDraw .cdPin small::after,#cupDraw .cdAll::after{content:"";flex:1;height:2px;background:linear-gradient(90deg,rgba(255,201,58,.5),transparent)}
   #cupDraw .cdPair{position:relative;display:flex;flex-direction:column;gap:6px;padding-right:30px;margin-bottom:16px}
   #cupDraw .cdBr{position:absolute;right:8px;top:23px;bottom:23px;width:16px;border:4px solid #FFC93A;filter:drop-shadow(0 0 1.5px #1a0a3a) drop-shadow(0 0 1.5px #1a0a3a) drop-shadow(0 0 6px rgba(255,201,58,.45));border-left:0;border-radius:0 8px 8px 0}
-  #cupDraw .cdM{border-radius:12px;background:linear-gradient(rgba(42,30,96,.86),rgba(22,15,58,.9));border:2px solid rgba(160,130,255,.22);overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,.35)}
-  #cupDraw .cdM.mine{border-color:#FFC93A;background:linear-gradient(rgba(90,60,150,.9),rgba(40,24,90,.92))}
+  #cupDraw .cdM{border-radius:12px;background:linear-gradient(var(--cdM1),var(--cdM2));border:2px solid rgba(160,130,255,.22);overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+  #cupDraw .cdM.mine{border-color:#FFC93A;background:linear-gradient(var(--cdY1),var(--cdY2))}
   #cupDraw .cdM.now{box-shadow:0 0 18px rgba(255,201,58,.5);animation:cdPulse2 1.6s ease-in-out infinite}@keyframes cdPulse2{50%{box-shadow:0 0 6px rgba(255,201,58,.2)}}
   #cupDraw .cdR{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;font-size:15px;letter-spacing:.02em;color:#cfd8ea}
   #cupDraw .cdM.big .cdR{height:44px;font-size:18px}

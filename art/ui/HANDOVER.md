@@ -945,3 +945,10 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Nov 7: round pages are now a two-column tree — narrower match cards on the left, gold bracket, and a mini card on the right showing the next-round match each pair feeds (tap it to jump to that round).
 - Nov 7 (Joe: too busy): round cards replaced by a slim progress bar (dots ✓/✕, gold pulsing next, trophy = whole draw); right column is now a name tag of who came through each bracket ('?' if unplayed); single highlight (gold = you), no blue ring/dimming/strike-through; nav row and progress bar on dark glass.
 - Nov 7: dropped the right-hand result tags; each bracket runs out to the right edge and round pages are 86% wide so the next round peeks in (swipe cue). Page maths now uses page width, not screen width.
+
+## Nov 7 — Cup draw as a wallchart (duels-39a)
+- All round columns share ONE vertical scroll; each card sits level with the bracket that feeds it (U=84px per first-round match; cy(r,j)). Brackets carry a stub across into the next column, so swiping reads like a wallchart. Round titles are sticky.
+- ‹ › buttons removed (dots + swipe + peek). Final column: big floating trophy, 'SEMI 1/2 WINNER' instead of TBD, prizes + your road.
+- Going through: first open after a win slides your card into the new round with a gold flash + 'THROUGH TO THE …!' banner (run.seen).
+- CUP_THEME colour sets per event (default purple, xmas red, halloween orange, diwali pink) drive banner, cards, dots and glass.
+- New art/ui/EVENT_ART_CHECKLIST.md — every event needs its versus bg, cup draw bg and colours on top of posters/shop.
