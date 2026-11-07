@@ -22079,11 +22079,11 @@ const LEAGUE_LIVE_ART = {
 // Nov 7 (Joe: "redo the league postcards… with some animations"): painted Clash-style postcards (Figma 541:191-198)
 // with light animation on top — a shine across the trophy, sparkles, and each league's own touch (kites, gulls, floodlights…)
 const PAINTED_LEAGUE = {
-  "GULLY CUP":       { img: 'assets/ui/leagues/lg_1.webp', cup: [.36, .2, .28, .34], fx: ['kites', 'petals'] },
+  "GULLY CUP":       { img: 'assets/ui/leagues/lg_1_bg.webp', trophy: 'assets/ui/leagues/lg_1_cup.webp', stand: [.5, .625, .44], fx: ['petals'] },
   "FLOODLIT SERIES": { img: 'assets/ui/leagues/lg_2.webp', cup: [.37, .3, .26, .4], fx: ['beams', 'stars'], beams: [[.11, .14], [.89, .14], [.28, .33], [.72, .33]] },
   "COASTAL CUP":     { img: 'assets/ui/leagues/lg_3.webp', cup: [.35, .1, .3, .45], fx: ['gulls', 'sea'], sea: [.47, .62] },
   "FAIRGROUND CUP":  { img: 'assets/ui/leagues/lg_4.webp', cup: [.36, .1, .28, .66], fx: ['bulbs', 'dust'] },
-  "ECL":             { img: 'assets/ui/leagues/lg_5.webp', cup: [.36, .17, .28, .55], fx: ['dust', 'gulls'] },
+  "ECL":             { img: 'assets/ui/leagues/lg_5_bg.webp', trophy: 'assets/ui/leagues/lg_5_cup.webp', stand: [.5, .635, .46], fx: ['dust', 'gulls'] },
   "ACL":             { img: 'assets/ui/leagues/lg_6.webp', cup: [.38, .07, .24, .62], fx: ['sea', 'sun'], sea: [.6, .76], sun: [.81, .07] },
   "DESERT LEAGUE":   { img: 'assets/ui/leagues/lg_7.webp', cup: [.34, .07, .32, .78], fx: ['sand', 'dust'] },
   "LCL":             { img: 'assets/ui/leagues/lg_8.webp', cup: [.4, .04, .2, .75], fx: ['kites', 'sea'], sea: [.55, .68] },
@@ -22091,10 +22091,28 @@ const PAINTED_LEAGUE = {
 function makePaintedLeagueArt(P) {
   return function (cvs) {
     const W = 1240, H = 710; cvs.width = W; cvs.height = H; const ctx = cvs.getContext('2d');
-    let running = false, t0 = 0, el = 0; const im = new Image(); im.src = P.img;
+    let running = false, t0 = 0, el = 0; const im = new Image(); im.src = P.img; const tr = P.trophy ? Object.assign(new Image(), { src: P.trophy }) : null;
+    const off = document.createElement('canvas'), oc = off.getContext('2d');
     const R = (n => { let a = n; return () => (a = (a * 9301 + 49297) % 233280) / 233280; })(P.img.length * 977);
     const parts = Array.from({ length: 26 }, () => ({ x: R(), y: R(), s: .4 + R() * .8, p: R() * 6.28, v: .3 + R() * .7 }));
-    const [cx, cy, cw, ch] = P.cup.map((v, i) => v * (i % 2 ? H : W));
+    let [cx, cy, cw, ch] = P.cup ? P.cup.map((v, i) => v * (i % 2 ? H : W)) : [0, 0, 1, 1];
+    // Nov 7: a trophy on its own layer floats over its plinth, turns all the way round every few seconds, and catches the light
+    function trophy(t) {
+      if (!tr || !tr.complete || !tr.naturalWidth) return;
+      const [sx, sy, sh] = P.stand, th = sh * H, tw = th * tr.naturalWidth / tr.naturalHeight, bob = Math.sin(t * 1.6) * 7, lift = 10 + bob;
+      const spinT = t % 7, turn = spinT < .9 ? spinT / .9 : 0, ang = turn * Math.PI * 2, sxk = Math.cos(ang);
+      cx = sx * W - tw / 2; cy = sy * H - th - lift; cw = tw; ch = th;
+      // contact shadow on the plinth + warm glow behind
+      ctx.save(); ctx.globalAlpha = .35 - bob * .012; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(sx * W, sy * H + 2, tw * .32 * (1 - bob * .01), 9, 0, 0, 7); ctx.fill(); ctx.restore();
+      const gl = ctx.createRadialGradient(sx * W, cy + th * .45, 10, sx * W, cy + th * .45, th * .75); gl.addColorStop(0, `rgba(255,226,140,${.42 + .12 * Math.sin(t * 2)})`); gl.addColorStop(1, 'rgba(255,226,140,0)');
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = gl; ctx.fillRect(sx * W - th, cy - th * .3, th * 2, th * 1.6); ctx.restore();
+      // the cup itself, squashed sideways as it turns, with a shine clipped to its own shape
+      off.width = Math.ceil(tw); off.height = Math.ceil(th); oc.clearRect(0, 0, off.width, off.height); oc.globalCompositeOperation = 'source-over'; oc.drawImage(tr, 0, 0, tw, th);
+      const sw = (t % 3.5) / 1.1; oc.globalCompositeOperation = 'source-atop';
+      if (sw < 1) { const x = -tw * .4 + tw * 1.8 * sw, g = oc.createLinearGradient(x - tw * .12, 0, x + tw * .12, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, 'rgba(255,252,230,.65)'); g.addColorStop(1, 'rgba(255,255,255,0)'); oc.save(); oc.translate(x, th / 2); oc.rotate(.35); oc.fillStyle = g; oc.fillRect(-tw * .14, -th, tw * .28, th * 2); oc.restore(); }
+      if (turn) { oc.fillStyle = `rgba(255,240,200,${.25 * Math.abs(Math.sin(ang))})`; oc.fillRect(0, 0, tw, th); }
+      ctx.save(); ctx.translate(sx * W, 0); ctx.scale(Math.max(.06, Math.abs(sxk)) * (sxk < 0 ? -1 : 1), 1); ctx.drawImage(off, -tw / 2, cy); ctx.restore();
+    }
     function frame(ms) {
       const t = ms / 1000; ctx.clearRect(0, 0, W, H);
       if (im.complete && im.naturalWidth) { const k = Math.max(W / im.naturalWidth, H / im.naturalHeight); ctx.drawImage(im, (W - im.naturalWidth * k) / 2, (H - im.naturalHeight * k) / 2, im.naturalWidth * k, im.naturalHeight * k); }
@@ -22112,14 +22130,14 @@ function makePaintedLeagueArt(P) {
       if (fx.includes('kites')) [[.18, .1, '#ff4fa0', '#ffd400'], [.82, .16, '#2bb5ff', '#ff5a3a']].forEach(([kx, ky, c1, c2], i) => { const x = kx * W + Math.sin(t * .6 + i * 2) * 30, y = ky * H + Math.sin(t * 1.1 + i) * 14, r = Math.sin(t * .9 + i) * .25, s = 26; ctx.globalAlpha = 1; ctx.save(); ctx.translate(x, y); ctx.rotate(r); ctx.fillStyle = c1; ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s * .75, 0); ctx.lineTo(0, s * 1.1); ctx.lineTo(-s * .75, 0); ctx.closePath(); ctx.fill(); ctx.fillStyle = c2; ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s * .75, 0); ctx.lineTo(0, 0); ctx.closePath(); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, s * 1.1); for (let k = 1; k < 6; k++) ctx.lineTo(Math.sin(t * 3 + k) * 6, s * 1.1 + k * 12); ctx.stroke(); ctx.restore(); });
       if (fx.includes('gulls')) [0, 1].forEach(i => { const p = ((t * .05 + i * .5) % 1), x = (-.1 + p * 1.2) * W, y = (.12 + i * .08) * H + Math.sin(t * 1.4 + i) * 10, f = Math.sin(t * 6 + i) * 6; ctx.globalAlpha = 1; ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x - 18, y - f); ctx.quadraticCurveTo(x - 8, y - 8 - f, x, y); ctx.quadraticCurveTo(x + 8, y - 8 - f, x + 18, y - f); ctx.stroke(); });
       // the trophy: a shine sweeping across it every few seconds, and sparkles
-      ctx.globalAlpha = 1; const sw = (t % 4.2) / 1.1;
+      ctx.globalAlpha = 1; if (tr) trophy(t); const sw = tr ? 9 : (t % 4.2) / 1.1;
       if (sw < 1) { ctx.save(); ctx.beginPath(); ctx.rect(cx, cy, cw, ch); ctx.clip(); ctx.globalCompositeOperation = 'lighter'; const x = cx - cw * .4 + (cw * 1.8) * sw; const g = ctx.createLinearGradient(x - 40, 0, x + 40, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, 'rgba(255,250,220,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.translate(x, cy + ch / 2); ctx.rotate(.35); ctx.fillRect(-40, -ch, 80, ch * 2); ctx.restore(); }
       [[.2, .25, 0], [.78, .4, 1.3], [.5, .08, 2.6]].forEach(([fx2, fy2, ph]) => { const a = Math.max(0, Math.sin(t * 2.2 + ph)); if (a < .2) return; const x = cx + cw * fx2, y = cy + ch * fy2, r = 6 + 12 * a; ctx.globalAlpha = a; ctx.fillStyle = '#fffbe6'; ctx.beginPath(); for (let k = 0; k < 8; k++) { const rr = k % 2 ? r * .22 : r, an = k * Math.PI / 4 + t; ctx.lineTo(x + Math.cos(an) * rr, y + Math.sin(an) * rr); } ctx.closePath(); ctx.fill(); });
       ctx.restore();
       const g = ctx.createLinearGradient(0, H * .78, 0, H); g.addColorStop(0, 'rgba(8,8,18,0)'); g.addColorStop(1, 'rgba(8,8,18,.92)'); ctx.fillStyle = g; ctx.fillRect(0, H * .78, W, H * .22);
     }
     const loop = ms => { if (!running) return; el = ms - t0; frame(el); requestAnimationFrame(loop); };
-    frame(0); im.onload = () => frame(el);
+    frame(0); im.onload = () => frame(el); if (tr) tr.onload = () => frame(el);
     return { start() { if (running) return; if (typeof reduceMotion !== 'undefined' && reduceMotion) { frame(0); return; } running = true; t0 = performance.now() - el; requestAnimationFrame(loop); }, stop() { running = false; } };
   };
 }
