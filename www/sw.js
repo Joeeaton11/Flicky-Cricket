@@ -1,23 +1,20 @@
-// Flicky Cricket service worker — cache-first for assets, network-first for HTML
-const CACHE = 'flicky-v3';
-const PRECACHE = ['./', './manifest.json'];
-
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)));
-  self.skipWaiting();
-});
+// Flicky Cricket service worker (v4, Nov 7): network-first for the page so updates always show,
+// cache-first for art/sounds so grounds load instantly on the second visit
+const CACHE = 'flicky-v4';
+self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
   self.clients.claim();
 });
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-      if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
-      return res;
-    }))
-  );
+  const r = e.request; if (r.method !== 'GET') return;
+  const page = r.mode === 'navigate' || /\.html?(\?|$)|\/$/.test(new URL(r.url).pathname);
+  if (page) {
+    e.respondWith(fetch(r).then(res => { const c = res.clone(); caches.open(CACHE).then(x => x.put(r, c)); return res; }).catch(() => caches.match(r)));
+    return;
+  }
+  e.respondWith(caches.match(r).then(hit => hit || fetch(r).then(res => {
+    if (res.ok) { const c = res.clone(); caches.open(CACHE).then(x => x.put(r, c)); }
+    return res;
+  })));
 });

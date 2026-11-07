@@ -961,3 +961,9 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 ## Nov 7 — Live + island audit
 - main fast-forwarded to duels-39a (includes launch-38a) and www rebuilt; Pages deploy succeeded: https://joeeaton11.github.io/Flicky-Cricket/
 - art/ui/island_audit.py: opens 22 screens with iPhone 15 Pro insets (59 top / 34 bottom) and lists any text/button/icon inside the top 59px. Result: nothing on any screen (only the pause button's invisible tap area touches 58px; the pass list's false hits are scrolled-off rows under its header).
+
+## Nov 7 — Web demo fixes (Joe's phone test)
+- Ground half-drawn on first play: every <img> src is tracked (window._imgPending); sceneReady() holds the match intro behind a 'getting the ground ready' card (crest, ground name, progress bar) until the art has arrived (max 15s). Startup kicks off ~730 images, so a fast tap on PLAY used to beat them.
+- Service worker v4 (www/sw.js): page is network-first (new deploys always show), art cache-first (instant second visit). Old v3 cached the page forever.
+- Green strips in Safari: page background + theme-color now navy #0b1630 (was pitch green). Add to Home Screen for true full screen.
+- Result screen on tall phones: header art/player grow with the screen (clamp(312px, 100vh-365px, 540px)), bigger reward tiles, more spacing — no big empty gap above the buttons.
