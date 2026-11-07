@@ -65596,7 +65596,7 @@ function duelState() { const s = seasonState(); s.duel = s.duel || { trophies: 0
   if (s.duel.day !== todayKey()) { s.duel.day = todayKey(); s.duel.today = 0; } return s.duel; }
 function duelRank(t) { const R = GAME_CONFIG.season.duel.ranks; let i = 0; R.forEach((r, k) => { if (t >= r.at) i = k; }); return i; }
 function duelTables() { const hi = Math.max(1, highestLeagueIdx()), out = []; for (let i = 1; i <= hi; i++) if (THEMED_LEAGUES[i] && THEMED_LEAGUES[i].entry) out.push(i); return out.length ? out : [1]; }
-function duelTable() { const d = duelState(), T = duelTables(); if (!T.includes(d.table)) d.table = T.includes(currentLeagueIdx()) ? currentLeagueIdx() : T[T.length - 1]; return d.table; }
+function duelTable() { const d = duelState(), T = duelTables(); if (!T.includes(d.table) || !duelOpen(d.table)) { const ok = T.filter(x => duelOpen(x) && x <= Math.max(1, currentLeagueIdx())); d.table = ok.length ? ok[ok.length - 1] : T[0]; } return d.table; }
 function duelEntry(li) { return duelFreeLeft() ? 0 : THEMED_LEAGUES[li].entry; }
 function duelFreeLeft() { const d = duelState(); return (d.freeDay === todayKey() ? 0 : GAME_CONFIG.season.duel.freePerDay); }
 function duelReq(li) { return Math.max(0, duelTables().indexOf(li)) * GAME_CONFIG.season.duel.tableStep; }   // trophies needed to sit at this table
@@ -65637,18 +65637,25 @@ function startDuelMatch(li, rival, extra) {
   closeAllScreens(); duelVersus(rival, extra || {}, () => startGame());
 }
 // Nov 6: a two-second face-off before the first ball (Golf Clash style versus card); tap to skip
+// Nov 7 (Joe: "should the background match the league?"): scene art by league family, events take over first
+const LEAGUE_FAMILY = [null, 'street', 'floodlit', 'coastal', 'fair', 'intl', 'intl', 'intl', 'intl', 'intl', 'intl', 'intl', 'intl', 'intl', 'pirate', 'intl', 'spooky', 'west', 'frozen', 'space', 'volcano', 'neon', 'jungle', 'medieval', 'steam', 'wizard', 'reef', 'ancient'];
+const SCENE_ART = { vs: { street: 'street', floodlit: 'floodlit', intl: 'floodlit', coastal: 'coastal', xmas: 'xmas' }, cup: { xmas: 'xmas' } };   // add a painted file to assets/ui/bg/<kind>_<name>.webp and list it here
+function eventTheme() { try { const ev = activeEvent(); return ev ? String(ev.id).replace(/\d+$/, '') : ''; } catch (e) { return ''; } }
+function sceneArt(kind, li) { const A = SCENE_ART[kind] || {}, th = eventTheme(), fam = LEAGUE_FAMILY[li] || '';
+  const k = (th && A[th]) || A[fam]; return k ? `assets/ui/bg/${kind}_${k}.webp` : (kind === 'vs' ? 'assets/ui/bg/vs_default.webp' : 'assets/ui/cup_bg.webp'); }
 function duelVersus(rival, extra, go) {
   let el = document.getElementById('duelVs'); if (!el) { el = document.createElement('div'); el.id = 'duelVs'; document.body.appendChild(el); }
   const me = curLook(), d = duelState(), C = GAME_CONFIG.season.cup;
   const head = extra.cup ? `FLICKY CUP · ${C.rounds[extra.cupRound]}` : `DUEL · ${THEMED_LEAGUES[window._activeLeagueIdx] ? THEMED_LEAGUES[window._activeLeagueIdx].name : ''}`;
   const prize = extra.cup ? '<span>WIN AND GO THROUGH</span>' : `<span>POT <i class="hIco hi-coin"></i>${(extra.pot || 0).toLocaleString()} + ${bagNm(duelBag(window._activeLeagueIdx || 1))} BAG</span>`;
   el.innerHTML = `<div class="vsHead">${head}</div>
-    <div class="vsSide me"><canvas width="10" height="10"></canvas><b>${(me.name || 'YOU').slice(0, 14)}</b><small>${flagHtml(me.flag)} · <i class="hIco hi-trophy"></i>${d.trophies}</small></div>
+    <div class="vsSide me"><canvas width="10" height="10"></canvas><b>${(me.name || 'YOU').slice(0, 14)}</b><small>${flagHtml(me.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(d.trophies)].name}</span> · <i class="hIco hi-trophy"></i>${d.trophies}</small></div>
     <div class="vsMid"><img alt="" src="assets/ui/icon_duel.webp"><span>VS</span></div>
-    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small></div>
-    <div class="vsFoot">${prize}<em>${GAME_CONFIG.season.duel.balls} BALLS EACH · SAME BALLS</em></div>`;
+    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(rival.trophies || 0)].name}</span> · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small></div>
+    <div class="vsFoot">${prize}<em>${GAME_CONFIG.season.duel.balls} BALLS EACH · SAME BALLS</em></div><i class="vsFlash"></i>`;
   const cv = el.querySelectorAll('canvas');
   try { paintPlayerTo(cv[0], me); paintPlayerTo(cv[1], Object.assign({}, me, { shirt: rival.shirt || 'maroon', g: rival.g || 'm', name: rival.name })); } catch (e) {}
+  el.style.backgroundImage = `linear-gradient(rgba(5,10,20,.15) 0%,rgba(5,10,20,0) 30%,rgba(5,10,20,.2) 62%,rgba(5,10,20,.85) 88%),url(${sceneArt('vs', window._activeLeagueIdx || 1)})`;
   el.className = 'show'; try { playTone({ freq: 160, duration: .25, volume: .2, type: 'triangle' }); haptic(40); } catch (e) {}
   let done = false; const fin = () => { if (done) return; done = true; el.className = 'out'; setTimeout(() => { el.className = ''; }, 300); go(); };
   el.onclick = fin; setTimeout(fin, 2300);
@@ -65663,16 +65670,18 @@ function drawDuelGhost() {
   const ox = wk ? W / 2 + (g.j - 0.5) * 20 : sx, oy = wk ? sy - H * 0.22 : sy;
   const p = Math.min(1, t / (o === 6 ? 1.0 : 0.8)), e = 1 - Math.pow(1 - p, 2.2), x = ox + (ex - ox) * e, y = oy + (ey - oy) * e;
   const lift = o === 6 ? Math.sin(Math.PI * e) * H * 0.07 : 0, al = t < 1.25 ? 1 : Math.max(0, 1 - (t - 1.25) / 0.45);
-  ctx.save(); ctx.globalAlpha = al * 0.55; ctx.strokeStyle = '#8fd0ff'; ctx.lineWidth = 3; ctx.setLineDash([6, 7]);
+  ctx.save(); ctx.globalAlpha = al * 0.8; ctx.strokeStyle = '#8fd0ff'; ctx.lineWidth = 4; ctx.setLineDash([6, 7]);
   ctx.beginPath(); for (let i = 0; i <= 20; i++) { const q = e * i / 20, qx = ox + (ex - ox) * q, qy = oy + (ey - oy) * q - (o === 6 ? Math.sin(Math.PI * q) * H * 0.07 : 0); i ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy); } ctx.stroke(); ctx.setLineDash([]);
-  const br = 10 + lift / H * 70; ctx.globalAlpha = al; ctx.fillStyle = 'rgba(143,208,255,.95)'; ctx.shadowColor = '#4aa8ff'; ctx.shadowBlur = 14;
+  const br = 14 + lift / H * 80; ctx.globalAlpha = al; ctx.fillStyle = 'rgba(143,208,255,.95)'; ctx.shadowColor = '#4aa8ff'; ctx.shadowBlur = 14;
   ctx.beginPath(); ctx.arc(x, y - lift, br, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, y, br * 0.9, br * 0.4, 0, 0, 7); ctx.fill();
   if (p >= 1) { const word = wk ? 'OUT' : o === 0 ? 'DOT' : String(o), big = o === 4 || o === 6 || wk;
-    ctx.globalAlpha = al; ctx.font = `${big ? 34 : 24}px 'Lilita One','Arial Black',Arial,sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#050A14';
+    { const pr = Math.min(1, (t - (o === 6 ? 1.0 : 0.8)) / 0.5); if (pr < 1) { ctx.globalAlpha = al * (1 - pr); ctx.strokeStyle = '#8fd0ff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(ex, ey, 14 + pr * 40, (14 + pr * 40) * 0.45, 0, 0, 7); ctx.stroke(); } }
+    ctx.globalAlpha = al; ctx.font = `${big ? 46 : 34}px 'Lilita One','Arial Black',Arial,sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#050A14';
     const ty = Math.max(H * 0.24, Math.min(H * 0.9, ey - 18)), tx = Math.max(40, Math.min(W - 40, ex));
     ctx.strokeText(word, tx, ty); ctx.fillStyle = wk ? '#7CF29A' : big ? '#FF6A4A' : '#8fd0ff'; ctx.fillText(word, tx, ty);
-    ctx.font = "12px 'Lilita One','Arial Black',Arial,sans-serif"; ctx.lineWidth = 4; ctx.strokeText('RIVAL', tx, ty - (big ? 30 : 22)); ctx.fillStyle = '#fff'; ctx.fillText('RIVAL', tx, ty - (big ? 30 : 22)); }
+    { const rn = (window.chase && window.chase.rival && window.chase.rival.name || 'RIVAL').toUpperCase(); ctx.font = "16px 'Lilita One','Arial Black',Arial,sans-serif"; const tw = ctx.measureText(rn).width + 18, yy = ty - (big ? 42 : 32);
+      ctx.fillStyle = 'rgba(184,28,28,.92)'; ctx.beginPath(); ctx.roundRect(tx - tw / 2, yy - 15, tw, 21, 10); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#050A14'; ctx.stroke(); ctx.fillStyle = '#fff'; ctx.fillText(rn, tx, yy + 1); } }
   ctx.restore();
 }
 function playDuel() {
@@ -65685,6 +65694,43 @@ function playDuel() {
   track('match_start', { mode: 'duel', table: li, entry });
   startDuelMatch(li, rival, { entry, pot: duelPot(li) });
 }
+// Nov 7 (Joe: "the table screen"): every duel table as a big swipe card — crest, prize, trophies, entry, locks — like a pool-hall table picker
+function duelTableList() { const hi = Math.max(1, highestLeagueIdx()), T = duelTables(), out = [];
+  for (let i = 1; i < THEMED_LEAGUES.length && out.length < T.length + 2; i++) { const L = THEMED_LEAGUES[i]; if (!L || !L.entry) continue;
+    out.push({ li: i, L, open: T.includes(i), reached: i <= hi }); }
+  return out; }
+function openDuelTables() {
+  let el = document.getElementById('duelTables');
+  if (!el) { el = document.createElement('div'); el.id = 'duelTables'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Duel tables'); document.body.appendChild(el); }
+  const D = GAME_CONFIG.season.duel, d = duelState(), cur = duelTable(), rk = duelRank(d.trophies), R = D.ranks, nx = R[rk + 1], list = duelTableList(), free = duelFreeLeft() > 0;
+  const card = t => { const { li, L } = t, lockLg = !t.reached, lockTr = t.reached && !duelOpen(li), easy = t.reached && !lockTr && duelTooEasy(li), bag = duelBag(li), crest = crestSrc(L);
+    const tag = lockLg ? '' : lockTr ? '' : li === cur ? '<span class="dtTag you">YOUR TABLE</span>' : easy ? '<span class="dtTag easy">TOO EASY · NO TROPHIES</span>' : '';
+    const btn = lockLg ? `<button class="gcBuy dtGo" disabled>PLAY ${L.name} TO UNLOCK</button>` : lockTr ? `<button class="gcBuy dtGo" disabled><i class="hIco hi-trophy"></i>${duelReq(li)} TO UNLOCK</button>`
+      : `<button class="gcBuy dtGo" data-dtplay="${li}">${free ? 'DUEL · FREE' : `DUEL · ${L.entry.toLocaleString()}<i class="hIco hi-coin"></i>`}</button>`;
+    return `<article class="dtCard${lockLg || lockTr ? ' locked' : ''}${li === cur ? ' cur' : ''}" data-dtli="${li}" style="--a:${L.accentColor || '#2457D6'};--b:${L.accentColor2 || '#0d1a36'}">
+      <div class="dtHero">${crest ? `<img class="dtCrest" alt="" src="${crest}">` : ''}${tag}${lockLg || lockTr ? '<img class="dtLock" alt="" src="assets/ui/pass_padlock.webp">' : ''}</div>
+      <div class="dtName"><b>${L.name}</b><small>TABLE ${list.indexOf(t) + 1}</small></div>
+      <div class="dtWin"><span class="dtLbl">WIN</span><div class="dtPrize"><img alt="" src="${REWARD_HEAP_ART.coins_m || REWARD_HEAP_ART.coins_s}"><b>${duelPot(li).toLocaleString()}</b></div><i>+</i><div class="dtPrize"><img alt="" src="${CHEST_IMG_SRC[bag] || ''}"><b>${bagNm(bag)}</b></div></div>
+      <div class="dtRow"><span><i class="hIco hi-trophy"></i>${easy ? '+0' : '+' + D.win} WIN</span><span><i class="hIco hi-trophy"></i>−${D.lose} LOSS</span><span><i class="hIco hi-coin"></i>${L.entry.toLocaleString()} ENTRY</span></div>
+      ${btn}</article>`; };
+  el.innerHTML = `<div class="dtTop"><button class="dtBack" data-dtclose aria-label="Back">‹</button><b>DUEL TABLES</b><span class="dtMe"><i class="hIco hi-trophy"></i>${d.trophies}<small>${R[rk].name}</small></span></div>
+    <div class="dtSub">${free ? '<em>1 FREE DUEL TODAY</em> · ' : ''}Bigger tables, bigger pots${nx ? ` · ${nx.name} RANK AT ${nx.at}` : ''}</div>
+    <div class="dtCar">${list.map(card).join('')}</div>
+    <div class="dtDots">${list.map(t => `<i data-dtdot="${t.li}"${t.li === cur ? ' class="on"' : ''}></i>`).join('')}</div>
+    <div class="dtFoot">Win <b>+${D.win}</b> trophies (+${D.streakBonus} on a ${D.streakAt}-win streak) · lose <b>−${D.lose}</b> · new tables open every ${D.tableStep} trophies</div>`;
+  el.classList.add('show'); try { playUiTap(); } catch (e) {}
+  const car = el.querySelector('.dtCar'), c0 = car.querySelector('.dtCard.cur');
+  requestAnimationFrame(() => { if (c0) car.scrollLeft = c0.offsetLeft - (car.clientWidth - c0.clientWidth) / 2; });
+  car.onscroll = () => { const mid = car.scrollLeft + car.clientWidth / 2; let best = null, bd = 1e9; car.querySelectorAll('.dtCard').forEach(c => { const dd = Math.abs(c.offsetLeft + c.clientWidth / 2 - mid); if (dd < bd) { bd = dd; best = c; } });
+    if (best) el.querySelectorAll('.dtDots i').forEach(i => i.classList.toggle('on', i.dataset.dtdot === best.dataset.dtli)); };
+}
+document.addEventListener('click', e => { const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+  if (t.closest('[data-dtables]')) { e.stopPropagation(); openDuelTables(); return; }
+  if (!t.closest('#duelTables')) return;
+  if (t.closest('[data-dtclose]')) { document.getElementById('duelTables').classList.remove('show'); renderCompete(); return; }
+  const go = t.closest('[data-dtplay]'); if (go) { duelState().table = +go.dataset.dtplay; SAVE.save(); document.getElementById('duelTables').classList.remove('show'); playMode('duel'); return; }
+  const dot = t.closest('[data-dtdot]'); if (dot) { const c = document.querySelector(`#duelTables .dtCard[data-dtli="${dot.dataset.dtdot}"]`), car = c && c.parentNode; if (c) car.scrollTo({ left: c.offsetLeft - (car.clientWidth - c.clientWidth) / 2, behavior: 'smooth' }); }
+}, true);
 const DUEL_WORD = { W: 'OUT!', 0: 'DOT BALL', 1: 'ONE', 2: 'TWO', 3: 'THREE', 4: 'FOUR', 6: 'SIX' };
 // after each of your balls: reveal the rival's ball for the same delivery, then carry on, go to sudden death, or finish
 function duelAfterBall(wicket) {
@@ -65704,12 +65750,45 @@ function duelAfterBall(wicket) {
     else { c.sd++; c.balls++; if (c.wkLost >= c.wickets) c.wkLost = c.wickets - 1; }
   }
   const lead = c.sd && !end ? 'LEVEL · SUDDEN DEATH' : null;
+  if (lead) setTimeout(() => duelSdBanner(c.sd), 1500);
   if (theirs === 'W' || typeof theirs === 'number') duelGhost(theirs, rv.seed + ':' + c.used + ':' + c.sd);
   showMoment('duel', { theirs, name: rv.name, flag: rv.flag, me: runs, them: c.rv, lead });
   window._momentHold = 1500;
   if (end) { state = 'result'; setTimeout(() => endGame(), 1900); return true; }
   if (wicket) setTimeout(chaseNewBatter, 2300);
   return false;
+}
+// Nov 7: a proper duel result — payout moment on a win, a quick way back in on a loss
+function showDuelResult(u) {
+  let el = document.getElementById('duelRes'); if (!el) { el = document.createElement('div'); el.id = 'duelRes'; document.body.appendChild(el); }
+  const me = curLook(), D = GAME_CONFIG.season.duel, win = u.res === 'win', lose = u.res === 'lose', short = u.them - u.me;
+  const sub = win ? (u.sd ? 'Won in sudden death!' : `Won by ${u.me - u.them} run${u.me - u.them === 1 ? '' : 's'}`) : lose ? (u.sd ? 'Beaten in sudden death' : `${short} run${short === 1 ? '' : 's'} short — so close!`) : 'All square — entry back';
+  const tile = (img, val, lbl, cls) => `<div class="drTile ${cls || ''}">${img}<b data-count="${val}">${val}</b><small>${lbl}</small></div>`;
+  const tiles = [];
+  if (u.coins) tiles.push(tile(`<img alt="" src="${REWARD_HEAP_ART.coins_m || REWARD_HEAP_ART.coins_s}">`, u.coins, u.res === 'tie' ? 'ENTRY BACK' : 'COINS', 'coin'));
+  if (u.bag) tiles.push(tile(`<img alt="" src="${CHEST_IMG_SRC[u.bag] || ''}">`, bagNm(u.bag), 'BAG', 'bag'));
+  tiles.push(tile('<i class="hIco hi-trophy"></i>', (u.tg > 0 ? '+' : '') + u.tg, `${u.troph} TROPHIES`, u.tg < 0 ? 'neg' : 'tro'));
+  el.className = 'show ' + u.res;
+  el.style.backgroundImage = `linear-gradient(rgba(5,10,20,.55),rgba(5,10,20,.92) 70%),url(${sceneArt('vs', u.li || 1)})`;
+  el.innerHTML = `<div class="drRays"></div>${win ? '<div class="drConf">' + Array.from({ length: 28 }, (_, i) => `<i style="left:${(i * 37) % 100}%;animation-delay:${(i % 7) * .18}s;background:${['#FFC93A', '#7CF29A', '#7fd0ff', '#ff6a8a'][i % 4]}"></i>`).join('') + '</div>' : ''}
+    <div class="drTitle">${win ? 'DUEL WON!' : lose ? 'DUEL LOST' : 'DUEL TIED'}</div>
+    <div class="drScore"><div class="drP me"><b>${(me.name || 'YOU').slice(0, 12)}</b><span>${u.me}<small>-${u.myWk}</small></span></div><em>v</em><div class="drP them"><b>${flagHtml(u.rv.flag)} ${u.rv.name}</b><span>${u.them}<small>-${u.rvWk}</small></span></div></div>
+    <div class="drSub">${sub}</div>
+    <div class="drRew">${tiles.join('')}</div>
+    ${win && u.streak >= 2 ? `<div class="drStreak">🔥 ${u.streak} IN A ROW${u.streak >= D.streakAt ? ` · +${D.streakBonus} BONUS` : ` · ${D.streakAt - u.streak} MORE FOR +${D.streakBonus}`}</div>` : ''}
+    ${u.easy ? '<div class="drNote">Too easy here — move up a table for trophies</div>' : ''}${(u.ranks || []).map(t => `<div class="drStreak">${t}</div>`).join('')}
+    ${lose ? '<div class="drNote">Every duel is fresh balls — get straight back in</div>' : ''}
+    <button class="gcBuy drAgain">${u.again}</button><button class="drBack">BACK</button>`;
+  el.querySelectorAll('[data-count]').forEach(b => { const v = parseInt(String(b.dataset.count).replace(/[^\d-]/g, ''), 10); if (!isFinite(v) || Math.abs(v) < 2 || isNaN(+b.dataset.count.replace('+', ''))) return;
+    const pre = b.dataset.count[0] === '+' ? '+' : '', t0 = performance.now() + 450, step = t => { const k = Math.max(0, Math.min(1, (t - t0) / 900)); b.textContent = pre + Math.round(v * (1 - Math.pow(1 - k, 3))).toLocaleString(); if (k < 1) requestAnimationFrame(step); }; b.textContent = pre + '0'; requestAnimationFrame(step); });
+  try { if (win) { playTone({ freq: 660, duration: .18, volume: .2 }); setTimeout(() => playTone({ freq: 880, duration: .25, volume: .2 }), 160); haptic(60); } } catch (e) {}
+  el.querySelector('.drAgain').onclick = () => { el.className = ''; document.getElementById('netsAgain').click(); };
+  el.querySelector('.drBack').onclick = () => { el.className = ''; document.getElementById('netsBack').click(); };
+}
+function duelSdBanner(n) {
+  let el = document.getElementById('duelSd'); if (!el) { el = document.createElement('div'); el.id = 'duelSd'; document.body.appendChild(el); }
+  el.innerHTML = `<b>SUDDEN DEATH</b><small>${n > 1 ? 'STILL LEVEL · BALL ' + n : 'LEVEL! ONE BALL EACH · MOST RUNS WINS'}</small>`;
+  el.className = ''; void el.offsetWidth; el.className = 'show'; try { playTone({ freq: 220, duration: .35, volume: .22, type: 'sawtooth' }); haptic(80); } catch (e) {}
 }
 function duelResult(c) { return c.sdRes ? (c.sdRes === 'me' ? 'win' : 'lose') : c.sd ? 'tie' : runs > c.rv ? 'win' : runs < c.rv ? 'lose' : 'tie'; }
 function duelEnd(c) {
@@ -65731,7 +65810,8 @@ function duelEnd(c) {
   const bits = []; if (coins) bits.push(`+${coins.toLocaleString()} COINS${res === 'tie' ? ' (ENTRY BACK)' : ''}`); if (tg) bits.push(`${tg > 0 ? '+' : ''}${tg} DUEL TROPHIES`);
   if (bag) bits.push(bag); if (res === 'win' && easy) bits.push('NO TROPHIES AT THIS TABLE — MOVE UP');
   if (res === 'win' && d.streak >= 2) bits.push(`${d.streak} IN A ROW`);
-  return { res, title: res === 'win' ? 'DUEL WON!' : res === 'tie' ? 'DUEL TIED' : 'DUEL LOST', line, extra: bits.concat(paid).join(' · ') || `${d.trophies} DUEL TROPHIES`, again: duelEntry(duelTable()) ? `DUEL AGAIN <i class="hIco hi-coin"></i>${duelEntry(duelTable()).toLocaleString()}` : 'DUEL AGAIN · FREE' };
+  const ui = { res, me, them: c.rv, myWk: Math.min(c.wkLost, c.wickets), rvWk: c.rvWk, rv: { name: rv.name, flag: rv.flag }, coins, tg, troph: d.trophies, bag: res === 'win' ? duelBag(c.leagueIdx) : null, streak: d.streak, sd: !!c.sd, li: c.leagueIdx, easy: res === 'win' && easy, ranks: paid };
+  return { ui, res, title: res === 'win' ? 'DUEL WON!' : res === 'tie' ? 'DUEL TIED' : 'DUEL LOST', line, extra: bits.concat(paid).join(' · ') || `${d.trophies} DUEL TROPHIES`, again: duelEntry(duelTable()) ? `DUEL AGAIN <i class="hIco hi-coin"></i>${duelEntry(duelTable()).toLocaleString()}` : 'DUEL AGAIN · FREE' };
 }
 // ---------- the draw (v2, Nov 6): round tabs you swipe, your match pinned, "your road", and a two-sided full-draw card ----------
 const CUP_TROPHY_SRC = 'assets/ui/cup_trophy.webp', CUP_PLAQUE_SRC = 'assets/ui/cup_plaque.webp';
@@ -65741,14 +65821,14 @@ function cupShort(r) { return ['LAST 32', 'LAST 16', 'QF', 'SF', 'FINAL'][r]; }
 function cupDrawCanvas(run, R) {   // two-sided World Cup style chart, made to be screenshotted and shared
   const C = GAME_CONFIG.season.cup, W = 1800, H = 1060, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
   const F = px => `${px}px 'Lilita One','Arial Black',Arial,sans-serif`, nm = i => i == null ? 'TBD' : i === 0 ? 'YOU' : run.names[i];
-  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#13254a'); bg.addColorStop(1, '#071022'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#2a1a5e'); bg.addColorStop(1, '#120a2e'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
   g.textAlign = 'center'; g.fillStyle = '#FFC93A'; g.font = F(46); g.fillText('FLICKY CUP', W / 2, 62);
   g.fillStyle = '#B4C2DD'; g.font = F(22); g.fillText(`${THEMED_LEAGUES[run.li].name.toUpperCase()} · 32 PLAYERS`, W / 2, 96);
   const TOP = 140, BOT = H - 30, colW = W / 9, bw = colW - 26, bh = 50;
   const box = (x, y, m, hi) => {
-    g.fillStyle = '#0f1e3d'; g.strokeStyle = hi ? '#FFC93A' : '#22386a'; g.lineWidth = hi ? 4 : 2; g.beginPath(); g.roundRect(x, y, bw, bh, 9); g.fill(); g.stroke();
+    g.fillStyle = '#24185a'; g.strokeStyle = hi ? '#FFC93A' : '#4a3a8a'; g.lineWidth = hi ? 4 : 2; g.beginPath(); g.roundRect(x, y, bw, bh, 9); g.fill(); g.stroke();
     [[m.a, m.sa], [m.b, m.sb]].forEach(([i, sc], k) => { const done = m.w != null, win = done && m.w === i, yy = y + 20 + k * 24;
-      g.textAlign = 'left'; g.font = F(17); g.fillStyle = i === 0 ? '#FFC93A' : !done ? '#cfd8ea' : win ? '#fff' : '#5f7096';
+      g.textAlign = 'left'; g.font = F(17); g.fillStyle = i === 0 ? '#FFC93A' : !done ? '#cfd8ea' : win ? '#fff' : '#8a7fb8';
       let t = nm(i); while (g.measureText(t).width > bw - 46 && t.length > 3) t = t.slice(0, -1); g.fillText(t, x + 9, yy);
       if (done && !win) { const tw = g.measureText(t).width; g.fillRect(x + 9, yy - 6, tw, 2); }
       g.textAlign = 'right'; g.fillText(sc == null ? '' : String(sc) + (win && m.sd ? '*' : ''), x + bw - 9, yy); });
@@ -65758,7 +65838,7 @@ function cupDrawCanvas(run, R) {   // two-sided World Cup style chart, made to b
     const n = 8 >> r, x = side ? W - (r + 1) * colW + 13 : r * colW + 13;
     for (let k = 0; k < n; k++) { const m = R[r][side * n + k], y = ys(r, k), mine = m.a === 0 || m.b === 0;
       const nx = side ? x - colW : x + colW, ny = r < 3 ? ys(r + 1, Math.floor(k / 2)) : TOP + (BOT - TOP) / 2 - bh / 2;
-      g.strokeStyle = mine && m.w === 0 ? '#FFC93A' : '#2c4374'; g.lineWidth = mine && m.w === 0 ? 4 : 2; g.beginPath();
+      g.strokeStyle = mine && m.w === 0 ? '#FFC93A' : '#6a5aa0'; g.lineWidth = mine && m.w === 0 ? 4 : 2; g.beginPath();
       const ex = side ? x : x + bw, mx = side ? x - 13 : x + bw + 13, tx = r < 3 ? (side ? nx + bw : nx) : (side ? W / 2 + bw / 2 : W / 2 - bw / 2);
       g.moveTo(ex, y + bh / 2); g.lineTo(mx, y + bh / 2); g.lineTo(mx, ny + bh / 2); g.lineTo(tx, ny + bh / 2); g.stroke();
       box(x, y, m, mine); }
@@ -65768,7 +65848,7 @@ function cupDrawCanvas(run, R) {   // two-sided World Cup style chart, made to b
   if (CUP_TROPHY_IMG.complete && CUP_TROPHY_IMG.naturalWidth) { const th = 190, tw = th * CUP_TROPHY_IMG.naturalWidth / CUP_TROPHY_IMG.naturalHeight; g.drawImage(CUP_TROPHY_IMG, W / 2 - tw / 2, fy - 40 - th, tw, th); } else { g.font = F(64); g.fillText('🏆', W / 2, fy - 90); }
   g.font = F(18); g.fillText('WINNER', W / 2, fy + bh + 36);
   g.font = F(30); g.fillStyle = fm.w === 0 ? '#FFC93A' : '#fff'; g.fillText(fm.w == null ? '?' : nm(fm.w), W / 2, fy + bh + 72);
-  g.font = F(16); g.fillStyle = '#5f7096'; g.fillText('* won in sudden death', W / 2, BOT + 14);
+  g.font = F(16); g.fillStyle = '#8a7fb8'; g.fillText('* won in sudden death', W / 2, BOT + 14);
   return cv;
 }
 function shareCupDraw() {
@@ -65777,6 +65857,11 @@ function shareCupDraw() {
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: 'Flicky Cup', text: run.champ ? 'I won the Flicky Cup!' : 'My Flicky Cup run' }).catch(() => {});
     else { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = 'flicky-cup.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); } }, 'image/png');
 }
+const CUP_THEME = {   // Nov 7: cup draw colours follow the event (art + colours are both per-event jobs — see art/ui/EVENT_ART_CHECKLIST.md)
+  default: { A: '#7a4ad8', B: '#3d1f8f', C: '#2a1468', M1: 'rgba(42,30,96,.88)', M2: 'rgba(22,15,58,.92)', Y1: 'rgba(90,60,150,.92)', Y2: 'rgba(40,24,90,.94)', G: 'rgba(10,6,30,.8)', L: '#cbbcf2' },
+  xmas: { A: '#e0404c', B: '#9a1f2b', C: '#5c0f18', M1: 'rgba(112,24,34,.88)', M2: 'rgba(56,10,18,.92)', Y1: 'rgba(160,36,48,.92)', Y2: 'rgba(92,16,26,.94)', G: 'rgba(30,6,10,.8)', L: '#f2c9cc' },
+  halloween: { A: '#ff8a1f', B: '#a3480a', C: '#3a1606', M1: 'rgba(60,30,14,.9)', M2: 'rgba(24,12,8,.94)', Y1: 'rgba(120,56,16,.92)', Y2: 'rgba(60,26,8,.94)', G: 'rgba(14,8,4,.82)', L: '#f5cfa8' },
+  diwali: { A: '#e83aa0', B: '#8f1a62', C: '#4a0c34', M1: 'rgba(100,22,72,.88)', M2: 'rgba(50,10,36,.92)', Y1: 'rgba(150,34,104,.92)', Y2: 'rgba(84,16,58,.94)', G: 'rgba(28,6,20,.8)', L: '#f5c6e3' } };
 function openCupDraw(page) {
   const cs = cupState(), run = cs.run; if (!run) return;
   const C = GAME_CONFIG.season.cup, R = cupBracket(run), nm = i => i == null ? 'TBD' : i === 0 ? 'YOU' : run.names[i];
@@ -65784,37 +65869,51 @@ function openCupDraw(page) {
   if (!el) { el = document.createElement('div'); el.id = 'cupDraw'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Cup draw'); document.body.appendChild(el); }
   const last = run.path.length ? run.path[run.path.length - 1] : null, cur = run.out || run.champ ? (last ? last.round : 0) : run.round;
   const status = run.champ ? 'CUP WINNERS!' : run.out ? `OUT IN THE ${C.rounds[last.round]}` : `IN THE ${C.rounds[run.round]}`;
-  const card = (m, big) => { const done = m.w != null, mine = m.a === 0 || m.b === 0;
-    const row = (i, sc) => `<div class="cdR${done ? (m.w === i ? ' w' : ' l') : ''}${i === 0 ? ' you' : ''}"><em>${i == null ? '' : i === 0 ? '★' : flagHtml(cupFlag(run, i))}</em><span>${nm(i)}</span><b>${sc == null ? (done ? '' : i == null ? '' : '–') : sc}${done && m.w === i && m.sd ? '<i>SD</i>' : ''}</b></div>`;
-    return `<div class="cdM${mine ? ' mine' : ''}${big ? ' big' : ''}${mine && !done && !run.out && !run.champ ? ' now' : ''}">${row(m.a, m.sa)}${row(m.b, m.sb)}</div>`; };
-  const road = C.rounds.map((rn, r) => { const pl = run.path.find(x => x.round === r), m = R[r][0];
+  const E = cupEntry(run.li), fmtP = p => p ? [p.e ? (E * p.e).toLocaleString() + ' COINS' : '', p.bag ? bagNm(p.bag) + ' BAG' : '', p.gems ? p.gems + ' GEMS' : ''].filter(Boolean).join(' + ') : '';
+  const mini = m => `<div class="cdMini${m.a === 0 || m.b === 0 ? ' mine' : ''}">${[[m.a, m.sa], [m.b, m.sb]].map(([i, sc]) => `<div class="${m.w != null ? (m.w === i ? 'w' : 'l') : ''}${i === 0 ? ' you' : ''}"><span>${nm(i)}</span><b>${sc == null ? '' : sc}</b></div>`).join('')}</div>`;
+  const alive = r => !run.path.some(x => x.round < r && x.res !== 'win') && !(run.out && last && last.round < r);
+  const card = (m, big, cls) => { const done = m.w != null, mine = m.a === 0 || m.b === 0;
+    const row = (i, sc, k) => `<div class="cdR${done ? (m.w === i ? ' w' : ' l') : ''}${i === 0 ? ' you' : ''}${i == null ? ' tbd' : ''}"><em>${i == null ? '' : i === 0 ? '★' : flagHtml(cupFlag(run, i))}</em><span>${i == null && m._l ? m._l[k] : nm(i)}</span><b>${sc == null ? (done ? '' : i == null ? '' : '–') : sc}${done && m.w === i && m.sd ? '<i>SD</i>' : ''}</b></div>`;
+    return `<div class="cdM${mine ? ' mine' : ''}${big ? ' big' : ''}${cls ? ' ' + cls : ''}${mine && !done && !run.out && !run.champ ? ' now' : ''}">${row(m.a, m.sa, 0)}${row(m.b, m.sb, 1)}</div>`; };
+  const road = C.rounds.map((rn, r) => { const pl = run.path.find(x => x.round === r);
     const st = pl ? pl.res : (!run.out && !run.champ && r === run.round) ? 'next' : 'future';
-    const who = pl ? (pl.res === 'win' ? 'beat ' : 'lost to ') + nm(m.b) : st === 'next' ? 'vs ' + nm(m.b) : run.out || run.champ ? '' : 'to come';
-    return `<button class="cdRd ${st}" data-cdpage="${r}"><small>${C.rounds[r]}</small><b>${pl ? `${pl.me}–${pl.them}${pl.sd ? '*' : ''}` : st === 'next' ? 'NEXT' : '–'}</b><span>${who}</span></button>`; }).join('');
+    return `<button class="cdDot ${st}" data-cdpage="${r}"><i>${pl ? (pl.res === 'win' ? '✓' : '✕') : ''}</i><small>${cupShort(r)}</small></button>`; }).join('');
+  // Nov 7 (Joe): a real wallchart — every round column shares one vertical scroll and each card sits level with the bracket that feeds it
+  const U = 84, TOP = 66, HT = TOP + U * R[0].length + 30, cy = (r, j) => TOP + U * (1 << r) * j + U * (1 << r) / 2;
+  const arrive = !run.out && !run.champ && last && last.res === 'win' && run.round > (run.seen == null ? -1 : run.seen) ? run.round : -1;
   const pages = R.map((ms, r) => {
-    const pin = ms[0].a === 0 && (run.path.some(x => x.round === r) || (!run.out && !run.champ && r === run.round)) ? `<div class="cdPin"><small>YOUR MATCH</small>${card(ms[0], true)}</div>` : '';
-    if (r === R.length - 1) { const f = ms[0];
-      return `<section class="cdPage">${pin}<div class="cdFinal">${card(f, true)}<div class="cdWin"><img class="cdCup" alt="" src="${CUP_TROPHY_SRC}"><small>WINNER</small><b class="${f.w === 0 ? 'you' : ''}">${f.w == null ? 'TO BE DECIDED' : nm(f.w)}</b></div></div></section>`; }
-    let groups = ''; for (let k = 0; k < ms.length; k += 2) groups += `<div class="cdPair">${card(ms[k])}${card(ms[k + 1])}<i class="cdBr"></i></div>`;
-    return `<section class="cdPage">${pin}<div class="cdAll">ALL ${ms.length} MATCHES</div>${groups}</section>`;
-  }).join('') + `<section class="cdPage"><div class="cdAll">THE WHOLE DRAW</div><div class="cdFull" data-cdzoom></div><button class="gcBuy evGo cdShare" data-cdshare>SHARE THE DRAW</button></section>`;
+    const fin = r === R.length - 1, nav = `<div class="cdNav"><b>${C.rounds[r]}<small>${fin ? 'WINNER TAKES THE CUP' : ms.length + ' MATCHES'}</small></b></div>`;
+    let body = '';
+    ms.forEach((m, j) => { const lbl = fin ? ['SEMI 1 WINNER', 'SEMI 2 WINNER'] : null;
+      const html = card(fin && m.a == null && m.b == null ? Object.assign({}, m, { _l: lbl }) : m, fin, j === 0 && r === arrive ? 'arrive' : '');
+      body += `<div class="cdSlot" style="top:${cy(r, j) - (fin ? 46 : 36)}px">${html}</div>`;
+      if (!fin && j % 2 === 0) body += `<i class="cdBr2${j === 0 && ms[0].w === 0 ? ' you' : ''}" style="top:${cy(r, j)}px;height:${U * (1 << r)}px"></i>`; });
+    if (fin) { const myRoad = run.path.length ? `<div class="cdAll">YOUR ROAD</div><div class="cdMyRoad">${run.path.map(x => `<span class="${x.res}"><small>${cupShort(x.round)}</small><b>${x.me}–${x.them}${x.sd ? '*' : ''}</b></span>`).join('')}${run.champ ? '' : `<span class="${run.out ? 'gone' : 'todo'}"><small>${run.out ? 'OUT' : cupShort(run.round)}</small><b>${run.out ? '✕' : '?'}</b></span>`}</div>` : '';
+      const f = ms[0];
+      body += `<div class="cdSlot cdCupTop" style="top:${cy(r, 0) - 300}px"><img class="cdCup" alt="" src="${CUP_TROPHY_SRC}"><small>WINNER</small><b class="${f.w === 0 ? 'you' : ''}">${f.w == null ? 'TO BE DECIDED' : nm(f.w)}</b></div>
+        <div class="cdSlot" style="top:${cy(r, 0) + 62}px"><div class="cdPrizes"><span><small>WINNER</small>${fmtP(C.champion)}</span><span><small>RUNNER-UP</small>${fmtP(C.prize[4])}</span></div>${myRoad}</div>`; }
+    return `<section class="cdPage${fin ? ' fin' : ''}" style="height:${HT}px">${nav}${body}</section>`;
+  }).join('') + `<section class="cdPage full" style="height:${HT}px"><div class="cdStick"><div class="cdAll">THE WHOLE DRAW</div><div class="cdFull zoom" data-cdzoom></div><div class="cdHint">Drag to explore · tap to fit</div><button class="gcBuy evGo cdShare" data-cdshare>SHARE THE DRAW</button></div></section>`;
+  if (arrive >= 0) { run.seen = arrive; SAVE.save(); }
+  { const T = CUP_THEME[eventTheme()] || CUP_THEME.default; Object.entries(T).forEach(([k, v]) => el.style.setProperty('--cd' + k, v)); }
   el.style.setProperty('--lg', THEMED_LEAGUES[run.li].accentColor || '#2457D6');
-  el.innerHTML = `<div class="cdTop"><button class="evBack" data-cdclose aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="cdPlaque" style="background-image:url(${CUP_PLAQUE_SRC})"><img alt="" src="${CUP_TROPHY_SRC}"><div><b>FLICKY CUP</b><small>${THEMED_LEAGUES[run.li].name} · ${status}</small></div></div></div>
-    <div class="cdRoad">${road}</div>
-    <div class="cdTabs">${C.rounds.map((_, r) => `<button data-cdpage="${r}">${cupShort(r)}</button>`).join('')}<button data-cdpage="5">DRAW</button></div>
-    <div class="cdPages">${pages}</div>`;
+  { const art = sceneArt('cup', run.li); el.style.setProperty('--cupbg', `url(${art})`); el.style.setProperty('--lgo', /cup_bg\.webp$/.test(art) ? '.55' : '0'); }
+  el.innerHTML = `<div class="cdTop"><button class="evBack" data-cdclose aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="cdPlaque"><img alt="" src="${CUP_TROPHY_SRC}"><div><b>FLICKY CUP</b><small>${THEMED_LEAGUES[run.li].name} · ${status}</small></div></div></div>
+    <div class="cdRoad cdProg">${road}<button class="cdDot cup" data-cdpage="${C.rounds.length}"><img alt="" src="${CUP_TROPHY_SRC}"><small>DRAW</small></button></div>
+    <div class="cdPages">${pages}</div>${arrive >= 0 ? `<div class="cdThrough">THROUGH TO THE ${C.rounds[arrive]}!</div>` : ''}`;
   el.querySelector('.cdFull').appendChild(cupDrawCanvas(run, R));
   el.classList.add('show');
-  const box = el.querySelector('.cdPages'), tabs = [...el.querySelectorAll('.cdTabs button')];
-  const sync = () => { const i = Math.round(box.scrollLeft / Math.max(1, box.clientWidth)); tabs.forEach((b, j) => b.classList.toggle('on', j === i)); };
+  const box = el.querySelector('.cdPages'), rd = el.querySelector('.cdRoad'), tabs = [...rd.children];
+  let lastI = -1; const sync = () => { const i = Math.round(box.scrollLeft / Math.max(1, box.children[0].offsetWidth)); if (i === lastI) return; lastI = i; tabs.forEach((b, j) => b.classList.toggle('on', j === i));
+    const b = tabs[i]; if (b && (b.offsetLeft < rd.scrollLeft || b.offsetLeft + b.offsetWidth > rd.scrollLeft + rd.clientWidth)) rd.scrollTo({ left: b.offsetLeft - rd.clientWidth / 2 + b.offsetWidth / 2, behavior: 'smooth' }); };
   box.addEventListener('scroll', sync, { passive: true });
-  requestAnimationFrame(() => { box.scrollLeft = (page != null ? page : cur) * box.clientWidth; sync(); const rd = el.querySelector('.cdRoad'), b = rd.children[cur]; if (b) rd.scrollLeft = b.offsetLeft - rd.clientWidth / 2 + b.offsetWidth / 2; });
+  requestAnimationFrame(() => { box.scrollLeft = (page != null ? page : cur) * box.children[0].offsetWidth; const b = rd.children[cur]; if (b) rd.scrollLeft = Math.max(0, b.offsetLeft + b.offsetWidth + 40 - rd.clientWidth); sync(); });
 }
 document.addEventListener('click', e => {
   const t = e.target && e.target.closest ? e.target : null; if (!t) return;
   if (t.closest('[data-cupdraw]')) { e.stopImmediatePropagation(); openCupDraw(); try { playUiTap(); } catch (err) {} return; }
   if (t.closest('[data-cdclose]')) { document.getElementById('cupDraw').classList.remove('show'); try { playUiTap(); } catch (err) {} return; }
-  const pg = t.closest('[data-cdpage]'); if (pg) { const box = document.querySelector('#cupDraw .cdPages'); box.scrollTo({ left: +pg.dataset.cdpage * box.clientWidth, behavior: 'smooth' }); try { playUiTap(); } catch (err) {} return; }
+  const pg = t.closest('[data-cdpage]'); if (pg) { const box = document.querySelector('#cupDraw .cdPages'); box.scrollTo({ left: +pg.dataset.cdpage * box.children[0].offsetWidth, behavior: 'smooth' }); try { playUiTap(); } catch (err) {} return; }
   if (t.closest('[data-cdshare]')) { shareCupDraw(); return; }
   if (t.closest('[data-cdzoom]')) { t.closest('[data-cdzoom]').classList.toggle('zoom'); }
 }, true);
@@ -65955,7 +66054,7 @@ function modeEnd() {
     BACKEND.submit(c.board, runs); const st = tourneyStats(c.leagueIdx), rk = BACKEND.rank(c.board, st.mean, st.sd);
     title = 'TOURNAMENT'; line = `${runs} runs · your best ${rk.best} · rank #${rk.rank} of ${rk.of}`; extra = `Ends in ${passDaysLeftWeek()} day${passDaysLeftWeek() === 1 ? '' : 's'} · top 1% gold bag + 200 gems`;
   } else if (c.mode === 'duel') {
-    const r = duelEnd(c); title = r.title; line = r.line; extra = r.extra; c._duelRes = r.res; c._duelAgain = r.again; if (r.cup) c.mode = 'cup';
+    const r = duelEnd(c); title = r.title; line = r.line; extra = r.extra; c._duelRes = r.res; c._duelAgain = r.again; if (r.cup) c.mode = 'cup'; else if (r.ui) window._duelUi = Object.assign(r.ui, { again: r.again });
   } else if (c.mode === 'endless') {
     BACKEND.submit(c.board, runs); const st = endlessStats(), rk = BACKEND.rank(c.board, st.mean, st.sd);
     const ms = GAME_CONFIG.season.endless.milestones.filter(m => runs >= m), s = seasonState(); s.endlessBadges = s.endlessBadges || {};
@@ -65975,6 +66074,7 @@ function modeEnd() {
   document.querySelector('#netsEnd .card > span:nth-of-type(4)').textContent = extra || (c.mode === 'challenge' ? 'A new challenge every day.' : 'Scores reset every Monday.');
   window._netsAgainMode = c.mode;
   document.getElementById('netsEnd').classList.add('show');
+  if (window._duelUi) { const u = window._duelUi; window._duelUi = null; showDuelResult(u); }
 }
 function passDaysLeftWeek() { const d = _nowDate(); return 7 - ((d.getDay() + 6) % 7); }
 
@@ -66249,7 +66349,18 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   .evSw b{background:#FFC93A;color:#1a1200}.evSw button{border:0;background:rgba(255,255,255,.1);color:#cfd8ea;cursor:pointer}
   .cupCab{display:flex;align-items:flex-end;justify-content:center;gap:4px;margin-top:6px}.cupCab img{height:34px}.cupCab span{font-size:12px;color:#FFC93A;margin-left:6px}
   #duelVs{position:fixed;inset:0;z-index:9500;display:none;grid-template-columns:1fr auto 1fr;grid-template-rows:auto 1fr auto;align-items:center;padding:calc(env(safe-area-inset-top) + 40px) 10px calc(env(safe-area-inset-bottom) + 50px);
-    background:linear-gradient(105deg,#b3202b 0%,#7a1018 48%,#0b1f55 52%,#1d4fc4 100%);color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
+    background:#0b1f55 center top/cover no-repeat;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
+  #duelVs .vsSide canvas{filter:drop-shadow(0 10px 8px rgba(0,0,0,.6))}
+  #duelVs .vsSide::after{content:"";display:block;width:84%;height:24px;margin-top:-30px;border-radius:50%;background:radial-gradient(rgba(255,226,140,.8),transparent 70%);order:1}
+  #duelVs .vsSide b{order:2;margin-top:6px;padding:6px 14px;border-radius:12px;border:3px solid #FFC93A;box-shadow:0 0 0 3px #050A14,0 6px 10px rgba(0,0,0,.5);font-size:18px}
+  #duelVs .vsSide.me b{background:linear-gradient(#3a7bff,#1846b8)}#duelVs .vsSide.them b{background:linear-gradient(#ff5a4a,#b81c1c)}
+  #duelVs .vsSide small{order:3;background:rgba(5,10,20,.72);border-radius:999px;padding:3px 10px}
+  #duelVs .vsSide small .rk{color:#FFC93A}
+  #duelVs .vsHead{justify-self:center;padding:7px 18px;border-radius:999px;background:rgba(5,10,20,.75);border:2px solid #FFC93A}
+  #duelVs .vsFoot span{padding:10px 20px;border-radius:16px;background:linear-gradient(#ffe08a,#ffb020);color:#2a1600;border:3px solid #050A14;box-shadow:0 6px 0 #8a5a00;font-size:22px;animation:vsDrop .5s .35s cubic-bezier(.3,1.5,.5,1) both}
+  @keyframes vsDrop{from{transform:translateY(-40px) scale(.6);opacity:0}}
+  #duelVs .vsFlash{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,rgba(255,240,200,.9),transparent 55%);pointer-events:none;animation:vsFlash .5s .12s ease-out both}
+  @keyframes vsFlash{from{opacity:0}30%{opacity:1}to{opacity:0}}
   #duelVs.show{display:grid;animation:vsIn .28s ease-out}#duelVs.out{display:grid;opacity:0;transition:opacity .28s}
   @keyframes vsIn{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:none}}
   #duelVs .vsHead{grid-column:1/-1;text-align:center;font-size:16px;letter-spacing:.1em;color:#FFE08A}
@@ -66260,59 +66371,177 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   #duelVs .vsSide b{font-size:20px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 3px 0 #050A14}
   #duelVs .vsSide small{font-size:13px;color:#e8eefc;display:flex;align-items:center;gap:3px}#duelVs .vsSide small .hIco{width:16px;height:16px}
   #duelVs .vsMid{display:flex;flex-direction:column;align-items:center}#duelVs .vsMid img{width:74px}
-  #duelVs .vsMid span{font-size:52px;color:#FFC93A;text-shadow:0 4px 0 #5a2a00;margin-top:-8px;animation:vsPop .5s cubic-bezier(.3,1.6,.5,1)}
+  #duelVs .vsMid span{font-size:72px;color:#FFC93A;-webkit-text-stroke:4px #050A14;paint-order:stroke fill;text-shadow:0 6px 0 #5a2a00,0 0 30px rgba(255,201,58,.8);margin-top:-8px;animation:vsPop .5s .12s cubic-bezier(.3,1.6,.5,1) both}
   @keyframes vsPop{from{transform:scale(0)}}
   #duelVs .vsFoot{grid-column:1/-1;text-align:center;font-size:20px;color:#FFE08A;display:flex;flex-direction:column;gap:4px;align-items:center}
   #duelVs .vsFoot span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}#duelVs .vsFoot .hIco{width:20px;height:20px;vertical-align:-3px}#duelVs .vsFoot em{font-style:normal;font-size:12px;color:#cfd8ea;letter-spacing:.08em}
   .xmIco.ev-duel{background:url(assets/ui/icon_duel.webp) center/contain no-repeat}
   .xmIco.ev-cup{background:url(assets/ui/icon_cup.webp) center/contain no-repeat}
   .duDraw{display:inline-block;margin-top:6px;border:0;border-radius:999px;padding:6px 14px;background:rgba(255,201,58,.16);color:#FFC93A;font:inherit;font-size:13px;letter-spacing:.05em;cursor:pointer}
-  #cupDraw{position:fixed;inset:0;z-index:9000;background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--lg,#2457D6) 38%,#0d1a36) 0%,#0d1a36 55%,#071022 100%);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
+  #cupDraw::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:var(--cupbg,url(assets/ui/cup_bg.webp)) center top/cover no-repeat}
+  #cupDraw::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(70% 28% at 50% 12%,var(--lg,transparent),transparent 75%),linear-gradient(90deg,var(--lg,transparent),transparent 18%,transparent 82%,var(--lg,transparent));mix-blend-mode:soft-light;opacity:var(--lgo,.55)}
+  #cupDraw>*{position:relative;z-index:1}
+  #cupDraw{position:fixed;inset:0;z-index:9000;background:radial-gradient(90% 30% at 50% 102%,rgba(255,201,58,.12),transparent 70%),linear-gradient(#1a0f3d,#120a2e 60%,#0b0720);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
   #cupDraw.show{display:flex}
+  #duelRes{position:fixed;inset:0;z-index:9600;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:calc(env(safe-area-inset-top) + 30px) 18px calc(env(safe-area-inset-bottom) + 24px);background:#071022 center/cover;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;text-align:center;overflow:hidden}
+  #duelRes.show{display:flex;animation:vsIn .3s ease-out}
+  #duelRes .drRays{position:absolute;left:50%;top:22%;width:900px;height:900px;margin:-450px 0 0 -450px;background:repeating-conic-gradient(rgba(255,214,90,.16) 0 9deg,transparent 9deg 22deg);border-radius:50%;-webkit-mask:radial-gradient(closest-side,#000 30%,transparent);mask:radial-gradient(closest-side,#000 30%,transparent);animation:drSpin 18s linear infinite;pointer-events:none}
+  #duelRes.lose .drRays{background:repeating-conic-gradient(rgba(255,90,90,.08) 0 9deg,transparent 9deg 22deg)}
+  @keyframes drSpin{to{transform:rotate(360deg)}}
+  #duelRes>*{position:relative}
+  #duelRes .drTitle{font-size:52px;line-height:1;color:#FFC93A;-webkit-text-stroke:5px #050A14;paint-order:stroke fill;text-shadow:0 7px 0 #5a2a00,0 0 30px rgba(255,201,58,.6);animation:vsPop .55s cubic-bezier(.3,1.6,.5,1) both}
+  #duelRes.lose .drTitle{color:#ff6b6b;text-shadow:0 7px 0 #4a0b12}#duelRes.tie .drTitle{color:#7fd0ff;text-shadow:0 7px 0 #0b2a4a}
+  #duelRes .drScore{display:flex;align-items:center;gap:10px;width:100%;max-width:380px}
+  #duelRes .drP{flex:1;min-width:0;border-radius:16px;padding:8px 6px;border:3px solid #050A14;box-shadow:0 5px 0 rgba(0,0,0,.4)}
+  #duelRes .drP.me{background:linear-gradient(#3a7bff,#1846b8)}#duelRes .drP.them{background:linear-gradient(#ff5a4a,#b81c1c)}
+  #duelRes .drP b{display:flex;justify-content:center;align-items:center;gap:4px;font-size:15px;white-space:nowrap;overflow:hidden}#duelRes .drP b img.flg{height:15px}
+  #duelRes .drP span{display:block;font-size:40px;line-height:1.05;text-shadow:0 3px 0 rgba(0,0,0,.4)}#duelRes .drP span small{font-size:20px;opacity:.8}
+  #duelRes.win .drP.me,#duelRes.lose .drP.them{box-shadow:0 0 0 3px #FFC93A,0 0 22px rgba(255,201,58,.7)}
+  #duelRes .drScore em{font-style:normal;font-size:22px;color:#cfd8ea}
+  #duelRes .drSub{font-size:18px;color:#fff;text-shadow:0 2px 0 #050A14}
+  #duelRes .drRew{display:flex;gap:10px;justify-content:center;margin-top:4px}
+  #duelRes .drTile{width:104px;border-radius:16px;padding:8px 4px 10px;background:rgba(5,10,20,.7);border:2px solid rgba(255,201,58,.45);display:flex;flex-direction:column;align-items:center;animation:drIn .5s cubic-bezier(.3,1.5,.5,1) both}
+  #duelRes .drTile:nth-child(2){animation-delay:.15s}#duelRes .drTile:nth-child(3){animation-delay:.3s}
+  @keyframes drIn{from{transform:translateY(30px) scale(.6);opacity:0}}
+  #duelRes .drTile img{height:56px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5))}#duelRes .drTile .hIco{width:50px;height:50px;margin:3px 0}
+  #duelRes .drTile b{font-size:22px;color:#FFC93A;margin-top:2px}#duelRes .drTile.bag b{font-size:16px}#duelRes .drTile.neg{border-color:rgba(255,107,107,.5)}#duelRes .drTile.neg b{color:#ff6b6b}
+  #duelRes .drTile small{font-size:10.5px;color:#cfd8ea;letter-spacing:.06em}
+  #duelRes .drStreak{padding:6px 14px;border-radius:999px;background:linear-gradient(#ff8a3a,#d0461a);border:2px solid #050A14;font-size:14px}
+  #duelRes .drNote{font-size:13px;color:#cfd8ea}
+  #duelRes .drAgain{margin-top:10px;width:min(330px,90%);font-size:24px;padding:14px 10px;animation:drPulse 1.4s 1.2s ease-in-out infinite}@keyframes drPulse{50%{transform:scale(1.04)}}
+  #duelRes .drBack{border:0;background:none;color:#B4C2DD;font:inherit;font-size:15px;padding:8px 20px;cursor:pointer}
+  #duelRes .drConf{position:absolute;inset:0;pointer-events:none}#duelRes .drConf i{position:absolute;top:-20px;width:9px;height:14px;border-radius:2px;animation:drFall 2.6s linear infinite}
+  @keyframes drFall{to{transform:translateY(110vh) rotate(540deg)}}
+  #duelSd{position:fixed;left:0;right:0;top:38%;z-index:9400;display:none;flex-direction:column;align-items:center;pointer-events:none;font-family:'Lilita One','Arial Black',Arial,sans-serif;padding:14px 0;background:linear-gradient(90deg,transparent,rgba(120,10,20,.92) 15%,rgba(120,10,20,.92) 85%,transparent);border-top:3px solid #FFC93A;border-bottom:3px solid #FFC93A}
+  #duelSd.show{display:flex;animation:sdIn 2.2s ease-out both}
+  #duelSd b{font-size:46px;color:#fff;-webkit-text-stroke:4px #050A14;paint-order:stroke fill;text-shadow:0 5px 0 #3a0008,0 0 24px rgba(255,80,80,.9);letter-spacing:.03em}
+  #duelSd small{font-size:14px;color:#FFE08A;letter-spacing:.08em}
+  @keyframes sdIn{0%{opacity:0;transform:scaleX(.2)}12%{opacity:1;transform:scaleX(1.06)}20%{transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-20px)}}
+  #cupDraw .cdPages{overflow:auto !important;align-items:flex-start;overscroll-behavior:contain}
+  #cupDraw .cdPage{position:relative;overflow:visible !important;padding:0 0 0 16px !important;flex:0 0 86% !important}
+  #cupDraw .cdPage.full{flex-basis:100% !important;padding-right:16px !important}
+  #cupDraw .cdPage .cdNav{position:sticky;top:0;z-index:3;margin:8px 0 0 0;padding:7px 6px;justify-content:center}
+  #cupDraw .cdPage .cdNav b{flex:1}
+  #cupDraw .cdSlot{position:absolute;left:16px;right:42px}
+  #cupDraw .cdPage.fin .cdSlot{right:16px}
+  #cupDraw .cdBr2{position:absolute;right:26px;width:16px;border:4px solid #FFC93A;border-left:0;border-radius:0 9px 9px 0;filter:drop-shadow(0 0 1.5px #1a0a3a) drop-shadow(0 0 1.5px #1a0a3a);opacity:.85}
+  #cupDraw .cdBr2::after{content:"";position:absolute;left:100%;top:50%;width:42px;height:4px;margin-top:-2px;background:#FFC93A}
+  #cupDraw .cdBr2.you{opacity:1;filter:drop-shadow(0 0 1.5px #1a0a3a) drop-shadow(0 0 8px rgba(255,201,58,.8))}
+  #cupDraw .cdR.tbd span{color:var(--cdL);font-size:.85em;letter-spacing:.06em}
+  #cupDraw .cdCupTop{text-align:center}#cupDraw .cdCupTop .cdCup{height:180px;margin:0 auto;display:block;filter:drop-shadow(0 0 24px rgba(255,201,58,.6)) drop-shadow(0 10px 10px rgba(0,0,0,.5));animation:cdFloat 3s ease-in-out infinite}
+  @keyframes cdFloat{50%{transform:translateY(-6px)}}
+  #cupDraw .cdCupTop small{display:block;font-size:12px;color:var(--cdL);letter-spacing:.12em;margin-top:6px}#cupDraw .cdCupTop b{font-size:26px}#cupDraw .cdCupTop b.you{color:#FFC93A}
+  #cupDraw .cdStick{position:sticky;top:8px}
+  #cupDraw .cdM.arrive{animation:cdArrive 1.1s cubic-bezier(.2,1.3,.4,1) both,cdPulse2 1.6s 1.1s ease-in-out infinite}
+  @keyframes cdArrive{0%{transform:translateX(-120%);opacity:0;box-shadow:0 0 0 rgba(255,201,58,0)}60%{opacity:1;box-shadow:0 0 34px rgba(255,201,58,.95)}100%{transform:none}}
+  #cupDraw .cdThrough{position:absolute;left:50%;top:40%;z-index:5;transform:translate(-50%,-50%);white-space:nowrap;padding:12px 22px;border-radius:18px;font-size:24px;color:#2a1600;background:linear-gradient(#FFE08A,#FFB020);border:4px solid #1a0a3a;box-shadow:0 8px 0 #8a5a00,0 0 40px rgba(255,201,58,.7);pointer-events:none;animation:cdThru 2.4s .3s ease-out both}
+  @keyframes cdThru{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}25%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-80%)}}
+  #duelTables{position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;background:linear-gradient(rgba(7,16,34,.55),#071022 70%),url(assets/ui/ev_duels.webp) center top/cover}
+  #duelTables.show{display:flex}
+  #duelTables .hIco{display:inline-block;width:1.25em;height:1.25em;flex:none;vertical-align:-.25em}
+  #duelTables .dtTop{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 4px}
+  #duelTables .dtTop>b{flex:1;font-size:24px;letter-spacing:.03em;text-shadow:0 3px 0 #050a14}
+  #duelTables .dtBack{width:40px;height:40px;border-radius:50%;border:3px solid #050a14;background:#2a3e6e;color:#fff;font:inherit;font-size:26px;line-height:1;cursor:pointer}
+  #duelTables .dtMe{display:flex;align-items:center;gap:5px;background:rgba(5,10,20,.65);border:2px solid #FFC93A;border-radius:999px;padding:5px 12px;font-size:17px}
+  #duelTables .dtMe small{color:#FFC93A;font-size:12px;margin-left:3px}
+  #duelTables .dtSub{padding:2px 16px 0;font-size:13px;color:#cfd8ea;text-shadow:0 2px 0 #050a14}#duelTables .dtSub em{font-style:normal;color:#7CF29A}
+  #duelTables .dtCar{flex:1;display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:18px 11vw 10px;align-items:center;scrollbar-width:none}
+  #duelTables .dtCar::-webkit-scrollbar{display:none}
+  #duelTables .dtCard{flex:none;width:78vw;max-width:340px;scroll-snap-align:center;border-radius:26px;border:4px solid #050a14;background:linear-gradient(#16264d,#0b1630);box-shadow:0 0 0 3px var(--a) inset,0 14px 30px rgba(0,0,0,.55);overflow:hidden;display:flex;flex-direction:column;position:relative}
+  #duelTables .dtCard.cur{box-shadow:0 0 0 3px #FFC93A inset,0 0 26px rgba(255,201,58,.45),0 14px 30px rgba(0,0,0,.55)}
+  #duelTables .dtHero{height:min(34vh,250px);position:relative;display:grid;place-items:center;background:radial-gradient(70% 80% at 50% 45%,color-mix(in srgb,var(--a) 85%,#fff 15%),var(--b) 75%,#050a14);border-bottom:4px solid #050a14}
+  #duelTables .dtHero::after{content:"";position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 50% 45%,rgba(255,255,255,.07) 0 8deg,transparent 8deg 18deg);pointer-events:none}
+  #duelTables .dtCrest{height:84%;max-width:84%;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5));position:relative;z-index:1}
+  #duelTables .dtLock{position:absolute;z-index:2;width:74px;right:12px;bottom:10px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.6))}
+  #duelTables .dtCard.locked .dtCrest{filter:grayscale(.85) brightness(.55)}
+  #duelTables .dtTag{position:absolute;z-index:2;top:10px;left:50%;transform:translateX(-50%);white-space:nowrap;border:3px solid #050a14;border-radius:999px;padding:4px 12px;font-size:13px;background:#FFC93A;color:#2a1600}
+  #duelTables .dtTag.easy{background:#7fd0ff;color:#06203a}
+  #duelTables .dtName{text-align:center;padding:10px 10px 2px}#duelTables .dtName b{display:block;font-size:26px;line-height:1.05;text-shadow:0 3px 0 #050a14}
+  #duelTables .dtName small{color:#8fa3cc;font-size:12px;letter-spacing:.1em}
+  #duelTables .dtWin{display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 12px 0;padding:8px;border-radius:16px;background:rgba(0,0,0,.3);position:relative}
+  #duelTables .dtLbl{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:11px;background:#E8463A;border:2px solid #050a14;border-radius:999px;padding:1px 10px}
+  #duelTables .dtPrize{display:flex;flex-direction:column;align-items:center}#duelTables .dtPrize img{height:58px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5))}
+  #duelTables .dtPrize b{font-size:18px;color:#FFC93A;text-shadow:0 2px 0 #050a14;margin-top:-4px}#duelTables .dtWin>i{font-style:normal;font-size:24px;color:#8fa3cc}
+  #duelTables .dtRow{display:flex;justify-content:space-around;padding:10px 6px 4px;font-size:12.5px;color:#cfd8ea}#duelTables .dtRow span{display:flex;align-items:center;gap:3px}
+  #duelTables .dtGo{margin:8px 14px 14px;font-size:19px;padding:12px 8px}#duelTables .dtGo:disabled{filter:grayscale(1);opacity:.75;font-size:15px}
+  #duelTables .dtDots{display:flex;justify-content:center;gap:7px;padding:2px 0 6px}#duelTables .dtDots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.25);cursor:pointer}#duelTables .dtDots i.on{background:#FFC93A;width:22px;border-radius:5px}
+  #duelTables .dtFoot{padding:4px 22px calc(env(safe-area-inset-bottom) + 14px);text-align:center;font-size:12px;color:#8fa3cc;line-height:1.35}#duelTables .dtFoot b{color:#fff}
   #cupDraw .cdTop{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 8px}
-  #cupDraw .cdPlaque{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:60px;padding:0 18px 0 12px;background:center/100% 100% no-repeat}
+  #cupDraw .cdPlaque{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:54px;padding:0 16px 0 10px;border-radius:16px;border:3px solid #FFC93A;background:linear-gradient(var(--cdA,#7a4ad8),var(--cdB,#3d1f8f) 60%,var(--cdC,#2a1468));box-shadow:inset 0 3px 0 rgba(255,255,255,.25),inset 0 -4px 0 rgba(0,0,0,.25),0 0 0 3px #1a0a3a,0 6px 14px rgba(0,0,0,.45)}
   #cupDraw .cdPlaque img{height:50px;margin-top:-10px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.5))}
-  #cupDraw .cdPlaque b{display:block;font-size:21px;letter-spacing:.04em;color:#FFE08A;text-shadow:0 2px 0 #3a1f05}
-  #cupDraw .cdPlaque small{display:block;font-size:11px;color:#f3dcb0;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #cupDraw .cdRoad{display:flex;gap:8px;margin:0 0 10px;padding:0 16px;overflow-x:auto;scrollbar-width:none}
+  #cupDraw .cdPlaque b{display:block;font-size:21px;letter-spacing:.04em;color:#FFE08A;text-shadow:0 2px 0 #1a0a3a}
+  #cupDraw .cdPlaque small{display:block;font-size:11px;color:#e3d6ff;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #cupDraw .cdRoad{display:flex;gap:8px;margin:0 0 6px;padding:4px 16px 8px;overflow-x:auto;scrollbar-width:none}
+  #cupDraw .cdRd.on{transform:translateY(-2px);outline:3px solid #fff;outline-offset:1px}#cupDraw .cdRd.cup.on{outline:0}#cupDraw .cdRd.cup.on small{color:#fff;text-decoration:underline 2px #FFC93A;text-underline-offset:3px}
+  #cupDraw .cdM.dim{opacity:.72}#cupDraw .cdM.side{opacity:.9}
+  #cupDraw .cdM.feed{border-color:#7fd0ff;box-shadow:0 0 12px rgba(127,208,255,.35)}
+  #cupDraw .cdFeedTag{font-style:normal;font-size:10.5px;letter-spacing:.08em;color:#7fd0ff;margin:-2px 0 -2px 6px}
+  #cupDraw .cdSemis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}#cupDraw .cdSemis .cdR{font-size:13px;padding:0 8px;gap:5px}
+  #cupDraw .cdPrizes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 4px}#cupDraw .cdPrizes span{border-radius:12px;padding:8px;background:rgba(18,12,46,.75);border:2px solid rgba(255,201,58,.35);font-size:13px;color:#FFE08A}#cupDraw .cdPrizes small{display:block;color:#cbbcf2;font-size:10px;letter-spacing:.1em;margin-bottom:2px}
+  #cupDraw .cdMyRoad{display:flex;gap:6px;flex-wrap:wrap}#cupDraw .cdMyRoad span{flex:1;min-width:58px;text-align:center;border-radius:12px;padding:6px 4px;background:rgba(18,12,46,.75);border:2px solid rgba(255,255,255,.12)}#cupDraw .cdMyRoad small{display:block;font-size:10px;color:#cbbcf2}#cupDraw .cdMyRoad b{font-size:17px}
+  #cupDraw .cdMyRoad .win{border-color:rgba(124,242,154,.55)}#cupDraw .cdMyRoad .win b{color:#7CF29A}#cupDraw .cdMyRoad .lose b,#cupDraw .cdMyRoad .gone b{color:#FF8A8A}#cupDraw .cdMyRoad .todo{border-color:#FFC93A}#cupDraw .cdMyRoad .todo b{color:#FFC93A}
+  #cupDraw .cdHint{text-align:center;font-size:11px;color:#cbbcf2;margin-top:6px}#cupDraw .cdFull.zoom{max-height:58vh}
   #cupDraw .cdRoad::-webkit-scrollbar{display:none}
-  #cupDraw .cdRd{flex:0 0 118px;border:0;border-radius:14px;padding:7px 6px 8px;background:#0f1e3d;color:#7f93bd;font:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+  #cupDraw .cdRd{flex:0 0 100px;border:2px solid rgba(255,201,58,.18);border-radius:14px;padding:7px 6px 8px;background:rgba(18,12,46,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 10px rgba(0,0,0,.35);color:#7f93bd;font:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
   #cupDraw .cdRd small{font-size:10px;letter-spacing:.06em}
   #cupDraw .cdRd b{font-size:22px;line-height:1.05;color:#cfd8ea}
   #cupDraw .cdRd span{font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #cupDraw .cdRd.win{background:#123c2a}#cupDraw .cdRd.win b{color:#7CF29A}#cupDraw .cdRd.win span{color:#bfe9c8}
-  #cupDraw .cdRd.lose{background:#43161d}#cupDraw .cdRd.lose b{color:#FF8A8A}#cupDraw .cdRd.lose span{color:#f3c0c0}
-  #cupDraw .cdRd.next{box-shadow:inset 0 0 0 2px #FFC93A}#cupDraw .cdRd.next b{color:#FFC93A}#cupDraw .cdRd.next span{color:#fff}
-  #cupDraw .cdTabs{display:flex;gap:4px;margin:0 16px;padding:4px;border-radius:14px;background:#0a1630}
+  #cupDraw .cdRd.win{background:linear-gradient(rgba(30,110,70,.85),rgba(14,60,40,.85));border-color:rgba(124,242,154,.45)}#cupDraw .cdRd.win b{color:#7CF29A}#cupDraw .cdRd.win span{color:#bfe9c8}
+  #cupDraw .cdRd.lose{background:linear-gradient(rgba(120,30,40,.85),rgba(67,22,29,.85));border-color:rgba(255,138,138,.4)}#cupDraw .cdRd.lose b{color:#FF8A8A}#cupDraw .cdRd.lose span{color:#f3c0c0}
+  #cupDraw .cdRd.next{border-color:#FFC93A;box-shadow:0 0 16px rgba(255,201,58,.55);animation:cdPulse 1.6s ease-in-out infinite}@keyframes cdPulse{50%{box-shadow:0 0 4px rgba(255,201,58,.2)}}#cupDraw .cdRd.cup{background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;flex-basis:70px;justify-content:center}#cupDraw .cdRd.cup img{height:52px;filter:drop-shadow(0 0 10px rgba(255,201,58,.7))}#cupDraw .cdRd.cup small{color:#FFE08A}#cupDraw .cdRd.next b{color:#FFC93A}#cupDraw .cdRd.next span{color:#fff}
+  #cupDraw .cdTabs{display:flex;gap:4px;margin:0 16px;padding:4px;border-radius:14px;background:rgba(10,6,30,.75);border:2px solid rgba(255,201,58,.2);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
   #cupDraw .cdTabs button{flex:1;border:0;border-radius:10px;padding:8px 0;background:none;color:#7f93bd;font:inherit;font-size:12px;letter-spacing:.04em;cursor:pointer}
-  #cupDraw .cdTabs button.on{background:#FFC93A;color:#1a1200}
+  #cupDraw .cdTabs button.on{background:linear-gradient(#FFE08A,#FFB020);color:#2a1600;box-shadow:0 2px 0 #8a5a00}
   #cupDraw .cdPages{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none}
   #cupDraw .cdPages::-webkit-scrollbar{display:none}
-  #cupDraw .cdPage{flex:0 0 100%;scroll-snap-align:start;overflow-y:auto;padding:12px 16px calc(env(safe-area-inset-bottom) + 20px);box-sizing:border-box}
+  #cupDraw .cdPage{flex:0 0 86%;scroll-snap-align:start;scroll-margin-left:0;overflow-y:auto;padding:12px 0 calc(env(safe-area-inset-bottom) + 20px) 16px;box-sizing:border-box}#cupDraw .cdPage:last-child,#cupDraw .cdPage.full{flex-basis:100%;padding-right:16px}#cupDraw .cdPages{padding-right:0}
   #cupDraw .cdPin{margin-bottom:14px}
-  #cupDraw .cdPin small,#cupDraw .cdAll{display:block;font-size:11px;letter-spacing:.1em;color:#7f93bd;margin:2px 2px 6px}
-  #cupDraw .cdPair{position:relative;display:flex;flex-direction:column;gap:6px;padding-right:22px;margin-bottom:14px}
-  #cupDraw .cdBr{position:absolute;right:6px;top:23px;bottom:23px;width:12px;border:2px solid #2c4374;border-left:0;border-radius:0 8px 8px 0}
-  #cupDraw .cdM{border-radius:12px;background:#0f1e3d;border:1.5px solid #22386a;overflow:hidden}
-  #cupDraw .cdM.mine{border-color:#FFC93A}
-  #cupDraw .cdM.now{box-shadow:0 0 0 3px rgba(255,201,58,.3)}
+  #cupDraw .cdPair2{display:grid;grid-template-columns:minmax(0,1fr) 16px 26px;align-items:center;margin-bottom:16px}
+  #cupDraw .cdL{display:flex;flex-direction:column;gap:6px;min-width:0}
+  #cupDraw .cdPair2 .cdBr{position:static;align-self:stretch;margin:34px 0;width:auto}#cupDraw .cdPair2 .cdBr::after{display:none}
+  #cupDraw .cdN{position:relative;padding-left:8px}
+  #cupDraw .cdTag{display:block;padding:7px 8px;border-radius:999px;background:rgba(18,12,46,.85);border:2px solid rgba(255,201,58,.5);font-size:12.5px;color:#fff;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #cupDraw .cdTag.you{border-color:#FFC93A;color:#FFC93A;box-shadow:0 0 10px rgba(255,201,58,.5)}#cupDraw .cdTag.tbd{color:#cbbcf2;border-color:rgba(255,255,255,.25)}
+  #cupDraw .cdProg{display:flex;align-items:flex-start;justify-content:space-between;gap:0;margin:0 16px 8px;padding:8px 6px 7px;position:relative;overflow:visible;border-radius:16px;background:var(--cdG);border:2px solid rgba(255,201,58,.3);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  #cupDraw .cdProg::before{content:"";position:absolute;left:32px;right:32px;top:21px;height:4px;z-index:0;border-radius:2px;background:rgba(255,255,255,.18)}
+  #cupDraw .cdDot{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;padding:0;font:inherit;color:#cbbcf2;cursor:pointer;width:52px}
+  #cupDraw .cdDot i{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;font-style:normal;font-size:15px;background:var(--cdC);border:3px solid var(--cdB);color:#fff}
+  #cupDraw .cdDot small{font-size:11px;letter-spacing:.06em}
+  #cupDraw .cdDot.win i{background:#1f8a4c;border-color:#7CF29A}#cupDraw .cdDot.lose i{background:#8a1f2b;border-color:#FF8A8A}
+  #cupDraw .cdDot.next i{background:#FFC93A;border-color:#fff;box-shadow:0 0 14px rgba(255,201,58,.8);animation:cdPulse 1.6s ease-in-out infinite}#cupDraw .cdDot.next small{color:#FFC93A}
+  #cupDraw .cdDot.cup img{height:34px;margin-top:-4px;filter:drop-shadow(0 0 8px rgba(255,201,58,.7))}
+  #cupDraw .cdDot.on small{color:#fff;text-decoration:underline 2px #FFC93A;text-underline-offset:4px}#cupDraw .cdDot.on i{transform:scale(1.12)}#cupDraw .cdN{height:4px;padding:0}#cupDraw .cdN::before{content:"";position:absolute;left:0;right:0;top:50%;height:4px;margin-top:-2px;background:#FFC93A;box-shadow:0 0 0 1.5px #1a0a3a}
+  #cupDraw .cdMini{border-radius:10px;background:linear-gradient(rgba(42,30,96,.92),rgba(22,15,58,.95));border:2px solid rgba(255,201,58,.5);overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,.4)}
+  #cupDraw .cdMini.mine{border-color:#FFC93A;box-shadow:0 0 12px rgba(255,201,58,.5)}
+  #cupDraw .cdMini div{display:flex;align-items:center;gap:4px;height:27px;padding:0 7px;font-size:12px;color:#cfd8ea}#cupDraw .cdMini div + div{border-top:1px solid rgba(255,255,255,.08)}
+  #cupDraw .cdMini span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#cupDraw .cdMini .you span{color:#FFC93A}
+  #cupDraw .cdMini .w{color:#fff}#cupDraw .cdMini .w b{color:#7CF29A}#cupDraw .cdMini .l{color:#7a6fa8}#cupDraw .cdMini .l span{text-decoration:line-through}
+  #cupDraw .cdBr::after{content:"";position:absolute;right:-12px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:#FFC93A;box-shadow:0 0 8px #FFC93A}
+  #cupDraw .cdNav{display:flex;align-items:center;gap:6px;margin:0 0 12px;padding:6px;border-radius:16px;background:var(--cdG);border:2px solid rgba(255,201,58,.2)}#cupDraw .cdNav b small{display:block;font-size:10px;color:#cbbcf2;letter-spacing:.12em}#cupDraw .cdNav b{flex:1;text-align:center;font-size:15px;letter-spacing:.1em;color:#FFE08A;text-shadow:0 2px 0 #1a0f3d}
+  #cupDraw .cdNav button,#cupDraw .cdNav i{flex:0 0 74px}#cupDraw .cdNav button{border:2px solid rgba(255,201,58,.45);border-radius:999px;padding:5px 0;background:rgba(18,12,46,.8);color:#FFC93A;font:inherit;font-size:12px;cursor:pointer}
+  #cupDraw .cdPin small,#cupDraw .cdAll{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.12em;color:#FFE08A;margin:4px 2px 8px;text-shadow:0 2px 0 #1a0f3d}#cupDraw .cdPin small::after,#cupDraw .cdAll::after{content:"";flex:1;height:2px;background:linear-gradient(90deg,rgba(255,201,58,.5),transparent)}
+  #cupDraw .cdPair{position:relative;display:flex;flex-direction:column;gap:6px;padding-right:30px;margin-bottom:16px}
+  #cupDraw .cdBr{position:absolute;right:8px;top:23px;bottom:23px;width:16px;border:4px solid #FFC93A;filter:drop-shadow(0 0 1.5px #1a0a3a) drop-shadow(0 0 1.5px #1a0a3a) drop-shadow(0 0 6px rgba(255,201,58,.45));border-left:0;border-radius:0 8px 8px 0}
+  #cupDraw .cdM{border-radius:12px;background:linear-gradient(var(--cdM1),var(--cdM2));border:2px solid rgba(160,130,255,.22);overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+  #cupDraw .cdM.mine{border-color:#FFC93A;background:linear-gradient(var(--cdY1),var(--cdY2))}
+  #cupDraw .cdM.now{box-shadow:0 0 18px rgba(255,201,58,.5);animation:cdPulse2 1.6s ease-in-out infinite}@keyframes cdPulse2{50%{box-shadow:0 0 6px rgba(255,201,58,.2)}}
   #cupDraw .cdR{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;font-size:15px;letter-spacing:.02em;color:#cfd8ea}
   #cupDraw .cdM.big .cdR{height:44px;font-size:18px}
-  #cupDraw .cdR + .cdR{border-top:1px solid #1b2e57}
+  #cupDraw .cdR + .cdR{border-top:1px solid rgba(255,255,255,.08)}
   #cupDraw .cdR em{font-style:normal;width:20px;text-align:center;color:#FFC93A}
   #cupDraw .cdR span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #cupDraw .cdR.w{color:#fff}
-  #cupDraw .cdR.l{color:#56678d}
-  #cupDraw .cdR.l span{text-decoration:line-through}
+  #cupDraw .cdR.w{color:#fff}#cupDraw .cdR.w b{color:#fff}
+  #cupDraw .cdR.l{color:#7a6fa8}
+  #cupDraw .cdR.l span{text-decoration:none}#cupDraw .cdR.l b{color:#6f6798}
   #cupDraw .cdR.you span{color:#FFC93A}
   #cupDraw .cdR b{font-size:1.1em}
   #cupDraw .cdR b i{font-style:normal;font-size:10px;margin-left:5px;color:#7fd0ff}
   #cupDraw .cdFinal{margin-top:10px}
-  #cupDraw .cdWin{text-align:center;margin-top:22px}
-  #cupDraw .cdCup{display:block;height:150px;margin:0 auto;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
+  #cupDraw .cdWin{text-align:center;margin-top:14px}
+  #cupDraw .cdCup{display:block;height:120px;margin:0 auto;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
   #cupDraw .cdWin small{display:block;font-size:12px;color:#7f93bd;letter-spacing:.1em;margin-top:6px}
   #cupDraw .cdWin b{font-size:26px}#cupDraw .cdWin b.you{color:#FFC93A}
-  #cupDraw .cdFull{border-radius:12px;overflow:auto;border:1.5px solid #22386a;cursor:zoom-in}
+  #cupDraw .cdFull{border-radius:12px;overflow:auto;border:2px solid rgba(255,201,58,.35);cursor:zoom-in}
   #cupDraw .cdFull canvas{display:block;width:100%;height:auto}
   #cupDraw .cdFull.zoom{cursor:zoom-out}#cupDraw .cdFull.zoom canvas{width:260%}
   #cupDraw .cdShare{display:block;margin:14px auto 0}
@@ -66471,7 +66700,7 @@ function renderCompeteV2() {
       const lo = R[rk].at, fill = nx ? (du.trophies - lo) / (nx.at - lo) * 50 : 100;
       const nodes = R.slice(rk + 1, rk + 4).map((x, k) => ({ r: x.r || { medal: x.name[0] }, label: x.name, sub: `${x.at} TROPHIES`, next: k === 0 }));
       const recent = du.recent.length ? `<div class="duRecent">${du.recent.map(x => `<span class="${x.res}">${x.res === 'win' ? 'W' : x.res === 'tie' ? 'T' : 'L'} · ${flagHtml(x.flag)} ${x.name} · ${x.me}–${x.them}</span>`).join('')}</div>` : '';
-      const pick = T.length > 1 ? `<span class="duTbl"><button data-duel="prev" aria-label="Lower table"${T.indexOf(li) ? '' : ' disabled'}>‹</button><b>${THEMED_LEAGUES[li].name}</b><button data-duel="next" aria-label="Higher table"${T.indexOf(li) < T.length - 1 ? '' : ' disabled'}>›</button></span>` : `<span class="duTbl"><b>${THEMED_LEAGUES[li].name}</b></span>`;
+      const pick = `<span class="duTbl"><b>${THEMED_LEAGUES[li].name}</b></span><button class="duDraw" data-dtables>ALL TABLES ›</button>`;
       posters.push(poster({ k: 'duel', ico: 'duel', noBadge: true, col: '#E8463A', key: 'duel', lg: li, timer: du.w + du.l + du.d ? `<b>${du.w}W ${du.l}L</b>${du.streak >= 2 ? ` · ${du.streak} IN A ROW` : ''}` : '<b>HEAD TO HEAD</b>', name: 'DUELS', tag: `${R[rk].name} RANK · ${du.trophies} TROPHIES`,
         goal: `${pick}<div class="duPot">${duelEntry(li) ? `ENTRY ${duelEntry(li).toLocaleString()} COINS` : 'FREE DUEL TODAY'} · WIN ${duelPot(li).toLocaleString()} + ${bagNm(duelBag(li))} BAG</div>${lockNote}`,
         road: nodes.length ? track(nodes, fill) : '',
