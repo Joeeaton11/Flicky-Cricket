@@ -917,3 +917,7 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 ## Nov 7 — Duel tables screen (duels-39a)
 - New full-screen #duelTables (openDuelTables): swipe cards per table — crest hero in league colours, pot coins + bag, trophies win/loss, entry, YOUR TABLE / TOO EASY tags, padlock for trophy- or league-locked tables (shows the next 2 leagues as teasers). Opened from 'ALL TABLES ›' on the Duels card (replaces the ‹ › arrows).
 - duelTable() now defaults to the highest table you've unlocked by trophies, not a locked one.
+
+## Nov 7 — Cup draw restyle (duels-39a)
+- #cupDraw gets painted background assets/ui/cup_bg.webp (Figma 538:191: purple/gold cup-final stadium, trophy on plinth, fades to dark) plus faint diagonal texture.
+- Glassy purple match cards, gold section ribbons, pulsing gold 'next' match, gold tabs, trophy 'WINNER' at the end of the road strip; the strip now keeps your first rounds in view. Whole-draw canvas recoloured purple to match.
