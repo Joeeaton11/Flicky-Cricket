@@ -1,0 +1,39 @@
+# iOS cloud build (no Mac needed). Setup: codemagic.io > add this repo >
+# Teams > Integrations > App Store Connect API key named "flicky-asc".
+workflows:
+  ios-release:
+    name: iOS release (TestFlight)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: flicky-asc
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.flickycricket.app
+      vars:
+        APP_STORE_APPLE_ID: 0000000000  # Apple ID number from App Store Connect > App Information
+      node: 22
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Build web + sync
+        script: |
+          npm ci || npm install
+          npm run build
+          npx cap sync ios
+      - name: Signing
+        script: xcode-project use-profiles
+      - name: Build number
+        script: |
+          cd ios/App
+          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0) + 1))
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

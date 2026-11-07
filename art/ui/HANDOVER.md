@@ -961,3 +961,12 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 ## Nov 7 — Live + island audit
 - main fast-forwarded to duels-39a (includes launch-38a) and www rebuilt; Pages deploy succeeded: https://joeeaton11.github.io/Flicky-Cricket/
 - art/ui/island_audit.py: opens 22 screens with iPhone 15 Pro insets (59 top / 34 bottom) and lists any text/button/icon inside the top 59px. Result: nothing on any screen (only the pause button's invisible tap area touches 58px; the pass list's false hits are scrolled-off rows under its header).
+
+## Launch setup (7 Nov, branch wip/launch-setup)
+- App builds hide all £ purchases until `GAME_CONFIG.app.iapEnabled = true` AND a RevenueCat/IAP plugin is installed. Web unchanged. Native can no longer get free purchases.
+- Ads: UMP consent form → iOS ATT prompt → AdMob init. Settings shows PRIVACY CHOICES when Google requires it. Still on Google TEST ids — swap in ADMOB_CONFIG, AndroidManifest and Info.plist.
+- iOS: PrivacyInfo.xcprivacy added to the Xcode project; SKAdNetworkItems (Google) in Info.plist; version 1.0.0.
+- Android: version 1.0.0, versionCode = GitHub run number. android.yml signs the release AAB when secrets ANDROID_KEYSTORE_BASE64 + ANDROID_KEYSTORE_PASSWORD are set (alias "upload"). Keystore was given to Joe — not in the repo.
+- iOS cloud build: codemagic.yaml (needs App Store Connect API key integration "flicky-asc" and APP_STORE_APPLE_ID).
+- Removed www/equipment-cards.html test page.
+- Still to do: legal pages (needs company name + support email), real AdMob ids, RevenueCat, store listing in consoles.
