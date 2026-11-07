@@ -65670,16 +65670,18 @@ function drawDuelGhost() {
   const ox = wk ? W / 2 + (g.j - 0.5) * 20 : sx, oy = wk ? sy - H * 0.22 : sy;
   const p = Math.min(1, t / (o === 6 ? 1.0 : 0.8)), e = 1 - Math.pow(1 - p, 2.2), x = ox + (ex - ox) * e, y = oy + (ey - oy) * e;
   const lift = o === 6 ? Math.sin(Math.PI * e) * H * 0.07 : 0, al = t < 1.25 ? 1 : Math.max(0, 1 - (t - 1.25) / 0.45);
-  ctx.save(); ctx.globalAlpha = al * 0.55; ctx.strokeStyle = '#8fd0ff'; ctx.lineWidth = 3; ctx.setLineDash([6, 7]);
+  ctx.save(); ctx.globalAlpha = al * 0.8; ctx.strokeStyle = '#8fd0ff'; ctx.lineWidth = 4; ctx.setLineDash([6, 7]);
   ctx.beginPath(); for (let i = 0; i <= 20; i++) { const q = e * i / 20, qx = ox + (ex - ox) * q, qy = oy + (ey - oy) * q - (o === 6 ? Math.sin(Math.PI * q) * H * 0.07 : 0); i ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy); } ctx.stroke(); ctx.setLineDash([]);
-  const br = 10 + lift / H * 70; ctx.globalAlpha = al; ctx.fillStyle = 'rgba(143,208,255,.95)'; ctx.shadowColor = '#4aa8ff'; ctx.shadowBlur = 14;
+  const br = 14 + lift / H * 80; ctx.globalAlpha = al; ctx.fillStyle = 'rgba(143,208,255,.95)'; ctx.shadowColor = '#4aa8ff'; ctx.shadowBlur = 14;
   ctx.beginPath(); ctx.arc(x, y - lift, br, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, y, br * 0.9, br * 0.4, 0, 0, 7); ctx.fill();
   if (p >= 1) { const word = wk ? 'OUT' : o === 0 ? 'DOT' : String(o), big = o === 4 || o === 6 || wk;
-    ctx.globalAlpha = al; ctx.font = `${big ? 34 : 24}px 'Lilita One','Arial Black',Arial,sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#050A14';
+    { const pr = Math.min(1, (t - (o === 6 ? 1.0 : 0.8)) / 0.5); if (pr < 1) { ctx.globalAlpha = al * (1 - pr); ctx.strokeStyle = '#8fd0ff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(ex, ey, 14 + pr * 40, (14 + pr * 40) * 0.45, 0, 0, 7); ctx.stroke(); } }
+    ctx.globalAlpha = al; ctx.font = `${big ? 46 : 34}px 'Lilita One','Arial Black',Arial,sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = '#050A14';
     const ty = Math.max(H * 0.24, Math.min(H * 0.9, ey - 18)), tx = Math.max(40, Math.min(W - 40, ex));
     ctx.strokeText(word, tx, ty); ctx.fillStyle = wk ? '#7CF29A' : big ? '#FF6A4A' : '#8fd0ff'; ctx.fillText(word, tx, ty);
-    ctx.font = "12px 'Lilita One','Arial Black',Arial,sans-serif"; ctx.lineWidth = 4; ctx.strokeText('RIVAL', tx, ty - (big ? 30 : 22)); ctx.fillStyle = '#fff'; ctx.fillText('RIVAL', tx, ty - (big ? 30 : 22)); }
+    { const rn = (window.chase && window.chase.rival && window.chase.rival.name || 'RIVAL').toUpperCase(); ctx.font = "16px 'Lilita One','Arial Black',Arial,sans-serif"; const tw = ctx.measureText(rn).width + 18, yy = ty - (big ? 42 : 32);
+      ctx.fillStyle = 'rgba(184,28,28,.92)'; ctx.beginPath(); ctx.roundRect(tx - tw / 2, yy - 15, tw, 21, 10); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#050A14'; ctx.stroke(); ctx.fillStyle = '#fff'; ctx.fillText(rn, tx, yy + 1); } }
   ctx.restore();
 }
 function playDuel() {
@@ -65748,12 +65750,45 @@ function duelAfterBall(wicket) {
     else { c.sd++; c.balls++; if (c.wkLost >= c.wickets) c.wkLost = c.wickets - 1; }
   }
   const lead = c.sd && !end ? 'LEVEL · SUDDEN DEATH' : null;
+  if (lead) setTimeout(() => duelSdBanner(c.sd), 1500);
   if (theirs === 'W' || typeof theirs === 'number') duelGhost(theirs, rv.seed + ':' + c.used + ':' + c.sd);
   showMoment('duel', { theirs, name: rv.name, flag: rv.flag, me: runs, them: c.rv, lead });
   window._momentHold = 1500;
   if (end) { state = 'result'; setTimeout(() => endGame(), 1900); return true; }
   if (wicket) setTimeout(chaseNewBatter, 2300);
   return false;
+}
+// Nov 7: a proper duel result — payout moment on a win, a quick way back in on a loss
+function showDuelResult(u) {
+  let el = document.getElementById('duelRes'); if (!el) { el = document.createElement('div'); el.id = 'duelRes'; document.body.appendChild(el); }
+  const me = curLook(), D = GAME_CONFIG.season.duel, win = u.res === 'win', lose = u.res === 'lose', short = u.them - u.me;
+  const sub = win ? (u.sd ? 'Won in sudden death!' : `Won by ${u.me - u.them} run${u.me - u.them === 1 ? '' : 's'}`) : lose ? (u.sd ? 'Beaten in sudden death' : `${short} run${short === 1 ? '' : 's'} short — so close!`) : 'All square — entry back';
+  const tile = (img, val, lbl, cls) => `<div class="drTile ${cls || ''}">${img}<b data-count="${val}">${val}</b><small>${lbl}</small></div>`;
+  const tiles = [];
+  if (u.coins) tiles.push(tile(`<img alt="" src="${REWARD_HEAP_ART.coins_m || REWARD_HEAP_ART.coins_s}">`, u.coins, u.res === 'tie' ? 'ENTRY BACK' : 'COINS', 'coin'));
+  if (u.bag) tiles.push(tile(`<img alt="" src="${CHEST_IMG_SRC[u.bag] || ''}">`, bagNm(u.bag), 'BAG', 'bag'));
+  tiles.push(tile('<i class="hIco hi-trophy"></i>', (u.tg > 0 ? '+' : '') + u.tg, `${u.troph} TROPHIES`, u.tg < 0 ? 'neg' : 'tro'));
+  el.className = 'show ' + u.res;
+  el.style.backgroundImage = `linear-gradient(rgba(5,10,20,.55),rgba(5,10,20,.92) 70%),url(${sceneArt('vs', u.li || 1)})`;
+  el.innerHTML = `<div class="drRays"></div>${win ? '<div class="drConf">' + Array.from({ length: 28 }, (_, i) => `<i style="left:${(i * 37) % 100}%;animation-delay:${(i % 7) * .18}s;background:${['#FFC93A', '#7CF29A', '#7fd0ff', '#ff6a8a'][i % 4]}"></i>`).join('') + '</div>' : ''}
+    <div class="drTitle">${win ? 'DUEL WON!' : lose ? 'DUEL LOST' : 'DUEL TIED'}</div>
+    <div class="drScore"><div class="drP me"><b>${(me.name || 'YOU').slice(0, 12)}</b><span>${u.me}<small>-${u.myWk}</small></span></div><em>v</em><div class="drP them"><b>${flagHtml(u.rv.flag)} ${u.rv.name}</b><span>${u.them}<small>-${u.rvWk}</small></span></div></div>
+    <div class="drSub">${sub}</div>
+    <div class="drRew">${tiles.join('')}</div>
+    ${win && u.streak >= 2 ? `<div class="drStreak">🔥 ${u.streak} IN A ROW${u.streak >= D.streakAt ? ` · +${D.streakBonus} BONUS` : ` · ${D.streakAt - u.streak} MORE FOR +${D.streakBonus}`}</div>` : ''}
+    ${u.easy ? '<div class="drNote">Too easy here — move up a table for trophies</div>' : ''}${(u.ranks || []).map(t => `<div class="drStreak">${t}</div>`).join('')}
+    ${lose ? '<div class="drNote">Every duel is fresh balls — get straight back in</div>' : ''}
+    <button class="gcBuy drAgain">${u.again}</button><button class="drBack">BACK</button>`;
+  el.querySelectorAll('[data-count]').forEach(b => { const v = parseInt(String(b.dataset.count).replace(/[^\d-]/g, ''), 10); if (!isFinite(v) || Math.abs(v) < 2 || isNaN(+b.dataset.count.replace('+', ''))) return;
+    const pre = b.dataset.count[0] === '+' ? '+' : '', t0 = performance.now() + 450, step = t => { const k = Math.max(0, Math.min(1, (t - t0) / 900)); b.textContent = pre + Math.round(v * (1 - Math.pow(1 - k, 3))).toLocaleString(); if (k < 1) requestAnimationFrame(step); }; b.textContent = pre + '0'; requestAnimationFrame(step); });
+  try { if (win) { playTone({ freq: 660, duration: .18, volume: .2 }); setTimeout(() => playTone({ freq: 880, duration: .25, volume: .2 }), 160); haptic(60); } } catch (e) {}
+  el.querySelector('.drAgain').onclick = () => { el.className = ''; document.getElementById('netsAgain').click(); };
+  el.querySelector('.drBack').onclick = () => { el.className = ''; document.getElementById('netsBack').click(); };
+}
+function duelSdBanner(n) {
+  let el = document.getElementById('duelSd'); if (!el) { el = document.createElement('div'); el.id = 'duelSd'; document.body.appendChild(el); }
+  el.innerHTML = `<b>SUDDEN DEATH</b><small>${n > 1 ? 'STILL LEVEL · BALL ' + n : 'LEVEL! ONE BALL EACH · MOST RUNS WINS'}</small>`;
+  el.className = ''; void el.offsetWidth; el.className = 'show'; try { playTone({ freq: 220, duration: .35, volume: .22, type: 'sawtooth' }); haptic(80); } catch (e) {}
 }
 function duelResult(c) { return c.sdRes ? (c.sdRes === 'me' ? 'win' : 'lose') : c.sd ? 'tie' : runs > c.rv ? 'win' : runs < c.rv ? 'lose' : 'tie'; }
 function duelEnd(c) {
@@ -65775,7 +65810,8 @@ function duelEnd(c) {
   const bits = []; if (coins) bits.push(`+${coins.toLocaleString()} COINS${res === 'tie' ? ' (ENTRY BACK)' : ''}`); if (tg) bits.push(`${tg > 0 ? '+' : ''}${tg} DUEL TROPHIES`);
   if (bag) bits.push(bag); if (res === 'win' && easy) bits.push('NO TROPHIES AT THIS TABLE — MOVE UP');
   if (res === 'win' && d.streak >= 2) bits.push(`${d.streak} IN A ROW`);
-  return { res, title: res === 'win' ? 'DUEL WON!' : res === 'tie' ? 'DUEL TIED' : 'DUEL LOST', line, extra: bits.concat(paid).join(' · ') || `${d.trophies} DUEL TROPHIES`, again: duelEntry(duelTable()) ? `DUEL AGAIN <i class="hIco hi-coin"></i>${duelEntry(duelTable()).toLocaleString()}` : 'DUEL AGAIN · FREE' };
+  const ui = { res, me, them: c.rv, myWk: Math.min(c.wkLost, c.wickets), rvWk: c.rvWk, rv: { name: rv.name, flag: rv.flag }, coins, tg, troph: d.trophies, bag: res === 'win' ? duelBag(c.leagueIdx) : null, streak: d.streak, sd: !!c.sd, li: c.leagueIdx, easy: res === 'win' && easy, ranks: paid };
+  return { ui, res, title: res === 'win' ? 'DUEL WON!' : res === 'tie' ? 'DUEL TIED' : 'DUEL LOST', line, extra: bits.concat(paid).join(' · ') || `${d.trophies} DUEL TROPHIES`, again: duelEntry(duelTable()) ? `DUEL AGAIN <i class="hIco hi-coin"></i>${duelEntry(duelTable()).toLocaleString()}` : 'DUEL AGAIN · FREE' };
 }
 // ---------- the draw (v2, Nov 6): round tabs you swipe, your match pinned, "your road", and a two-sided full-draw card ----------
 const CUP_TROPHY_SRC = 'assets/ui/cup_trophy.webp', CUP_PLAQUE_SRC = 'assets/ui/cup_plaque.webp';
@@ -66018,7 +66054,7 @@ function modeEnd() {
     BACKEND.submit(c.board, runs); const st = tourneyStats(c.leagueIdx), rk = BACKEND.rank(c.board, st.mean, st.sd);
     title = 'TOURNAMENT'; line = `${runs} runs · your best ${rk.best} · rank #${rk.rank} of ${rk.of}`; extra = `Ends in ${passDaysLeftWeek()} day${passDaysLeftWeek() === 1 ? '' : 's'} · top 1% gold bag + 200 gems`;
   } else if (c.mode === 'duel') {
-    const r = duelEnd(c); title = r.title; line = r.line; extra = r.extra; c._duelRes = r.res; c._duelAgain = r.again; if (r.cup) c.mode = 'cup';
+    const r = duelEnd(c); title = r.title; line = r.line; extra = r.extra; c._duelRes = r.res; c._duelAgain = r.again; if (r.cup) c.mode = 'cup'; else if (r.ui) window._duelUi = Object.assign(r.ui, { again: r.again });
   } else if (c.mode === 'endless') {
     BACKEND.submit(c.board, runs); const st = endlessStats(), rk = BACKEND.rank(c.board, st.mean, st.sd);
     const ms = GAME_CONFIG.season.endless.milestones.filter(m => runs >= m), s = seasonState(); s.endlessBadges = s.endlessBadges || {};
@@ -66038,6 +66074,7 @@ function modeEnd() {
   document.querySelector('#netsEnd .card > span:nth-of-type(4)').textContent = extra || (c.mode === 'challenge' ? 'A new challenge every day.' : 'Scores reset every Monday.');
   window._netsAgainMode = c.mode;
   document.getElementById('netsEnd').classList.add('show');
+  if (window._duelUi) { const u = window._duelUi; window._duelUi = null; showDuelResult(u); }
 }
 function passDaysLeftWeek() { const d = _nowDate(); return 7 - ((d.getDay() + 6) % 7); }
 
@@ -66346,6 +66383,40 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   #cupDraw>*{position:relative;z-index:1}
   #cupDraw{position:fixed;inset:0;z-index:9000;background:radial-gradient(90% 30% at 50% 102%,rgba(255,201,58,.12),transparent 70%),linear-gradient(#1a0f3d,#120a2e 60%,#0b0720);color:#fff;display:none;flex-direction:column;font-family:'Lilita One','Arial Black',Arial,sans-serif}
   #cupDraw.show{display:flex}
+  #duelRes{position:fixed;inset:0;z-index:9600;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:calc(env(safe-area-inset-top) + 30px) 18px calc(env(safe-area-inset-bottom) + 24px);background:#071022 center/cover;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;text-align:center;overflow:hidden}
+  #duelRes.show{display:flex;animation:vsIn .3s ease-out}
+  #duelRes .drRays{position:absolute;left:50%;top:22%;width:900px;height:900px;margin:-450px 0 0 -450px;background:repeating-conic-gradient(rgba(255,214,90,.16) 0 9deg,transparent 9deg 22deg);border-radius:50%;-webkit-mask:radial-gradient(closest-side,#000 30%,transparent);mask:radial-gradient(closest-side,#000 30%,transparent);animation:drSpin 18s linear infinite;pointer-events:none}
+  #duelRes.lose .drRays{background:repeating-conic-gradient(rgba(255,90,90,.08) 0 9deg,transparent 9deg 22deg)}
+  @keyframes drSpin{to{transform:rotate(360deg)}}
+  #duelRes>*{position:relative}
+  #duelRes .drTitle{font-size:52px;line-height:1;color:#FFC93A;-webkit-text-stroke:5px #050A14;paint-order:stroke fill;text-shadow:0 7px 0 #5a2a00,0 0 30px rgba(255,201,58,.6);animation:vsPop .55s cubic-bezier(.3,1.6,.5,1) both}
+  #duelRes.lose .drTitle{color:#ff6b6b;text-shadow:0 7px 0 #4a0b12}#duelRes.tie .drTitle{color:#7fd0ff;text-shadow:0 7px 0 #0b2a4a}
+  #duelRes .drScore{display:flex;align-items:center;gap:10px;width:100%;max-width:380px}
+  #duelRes .drP{flex:1;min-width:0;border-radius:16px;padding:8px 6px;border:3px solid #050A14;box-shadow:0 5px 0 rgba(0,0,0,.4)}
+  #duelRes .drP.me{background:linear-gradient(#3a7bff,#1846b8)}#duelRes .drP.them{background:linear-gradient(#ff5a4a,#b81c1c)}
+  #duelRes .drP b{display:flex;justify-content:center;align-items:center;gap:4px;font-size:15px;white-space:nowrap;overflow:hidden}#duelRes .drP b img.flg{height:15px}
+  #duelRes .drP span{display:block;font-size:40px;line-height:1.05;text-shadow:0 3px 0 rgba(0,0,0,.4)}#duelRes .drP span small{font-size:20px;opacity:.8}
+  #duelRes.win .drP.me,#duelRes.lose .drP.them{box-shadow:0 0 0 3px #FFC93A,0 0 22px rgba(255,201,58,.7)}
+  #duelRes .drScore em{font-style:normal;font-size:22px;color:#cfd8ea}
+  #duelRes .drSub{font-size:18px;color:#fff;text-shadow:0 2px 0 #050A14}
+  #duelRes .drRew{display:flex;gap:10px;justify-content:center;margin-top:4px}
+  #duelRes .drTile{width:104px;border-radius:16px;padding:8px 4px 10px;background:rgba(5,10,20,.7);border:2px solid rgba(255,201,58,.45);display:flex;flex-direction:column;align-items:center;animation:drIn .5s cubic-bezier(.3,1.5,.5,1) both}
+  #duelRes .drTile:nth-child(2){animation-delay:.15s}#duelRes .drTile:nth-child(3){animation-delay:.3s}
+  @keyframes drIn{from{transform:translateY(30px) scale(.6);opacity:0}}
+  #duelRes .drTile img{height:56px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5))}#duelRes .drTile .hIco{width:50px;height:50px;margin:3px 0}
+  #duelRes .drTile b{font-size:22px;color:#FFC93A;margin-top:2px}#duelRes .drTile.bag b{font-size:16px}#duelRes .drTile.neg{border-color:rgba(255,107,107,.5)}#duelRes .drTile.neg b{color:#ff6b6b}
+  #duelRes .drTile small{font-size:10.5px;color:#cfd8ea;letter-spacing:.06em}
+  #duelRes .drStreak{padding:6px 14px;border-radius:999px;background:linear-gradient(#ff8a3a,#d0461a);border:2px solid #050A14;font-size:14px}
+  #duelRes .drNote{font-size:13px;color:#cfd8ea}
+  #duelRes .drAgain{margin-top:10px;width:min(330px,90%);font-size:24px;padding:14px 10px;animation:drPulse 1.4s 1.2s ease-in-out infinite}@keyframes drPulse{50%{transform:scale(1.04)}}
+  #duelRes .drBack{border:0;background:none;color:#B4C2DD;font:inherit;font-size:15px;padding:8px 20px;cursor:pointer}
+  #duelRes .drConf{position:absolute;inset:0;pointer-events:none}#duelRes .drConf i{position:absolute;top:-20px;width:9px;height:14px;border-radius:2px;animation:drFall 2.6s linear infinite}
+  @keyframes drFall{to{transform:translateY(110vh) rotate(540deg)}}
+  #duelSd{position:fixed;left:0;right:0;top:38%;z-index:9400;display:none;flex-direction:column;align-items:center;pointer-events:none;font-family:'Lilita One','Arial Black',Arial,sans-serif;padding:14px 0;background:linear-gradient(90deg,transparent,rgba(120,10,20,.92) 15%,rgba(120,10,20,.92) 85%,transparent);border-top:3px solid #FFC93A;border-bottom:3px solid #FFC93A}
+  #duelSd.show{display:flex;animation:sdIn 2.2s ease-out both}
+  #duelSd b{font-size:46px;color:#fff;-webkit-text-stroke:4px #050A14;paint-order:stroke fill;text-shadow:0 5px 0 #3a0008,0 0 24px rgba(255,80,80,.9);letter-spacing:.03em}
+  #duelSd small{font-size:14px;color:#FFE08A;letter-spacing:.08em}
+  @keyframes sdIn{0%{opacity:0;transform:scaleX(.2)}12%{opacity:1;transform:scaleX(1.06)}20%{transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-20px)}}
   #cupDraw .cdPages{overflow:auto !important;align-items:flex-start;overscroll-behavior:contain}
   #cupDraw .cdPage{position:relative;overflow:visible !important;padding:0 0 0 16px !important;flex:0 0 86% !important}
   #cupDraw .cdPage.full{flex-basis:100% !important;padding-right:16px !important}

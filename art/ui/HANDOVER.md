@@ -952,3 +952,8 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Going through: first open after a win slides your card into the new round with a gold flash + 'THROUGH TO THE …!' banner (run.seen).
 - CUP_THEME colour sets per event (default purple, xmas red, halloween orange, diwali pink) drive banner, cards, dots and glass.
 - New art/ui/EVENT_ART_CHECKLIST.md — every event needs its versus bg, cup draw bg and colours on top of posters/shop.
+
+## Nov 7 — Duel fixes (duels-39a)
+- showDuelResult(ui): full-screen result over the league's versus art — spinning rays, big WON/LOST/TIED, blue v red score plates (winner glows), 'won by / X runs short / sudden death' line, reward tiles that pop in and count up (coins, bag, trophies), streak chip + rank-up bag, confetti on a win, pulsing DUEL AGAIN. Buttons forward to #netsAgain / #netsBack so all existing flow is kept. duelEnd now returns ui data.
+- duelSdBanner(n): big red 'SUDDEN DEATH' strip across the middle when scores are level (and 'STILL LEVEL · BALL n' each SD ball), with a sting.
+- Ghost ball: bigger ball, brighter trail, landing ring, 46/34px outcome word and a red rival-name tag instead of tiny 'RIVAL'.
