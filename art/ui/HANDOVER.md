@@ -941,3 +941,4 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Versus card restyle: scene art, glow spot under each player, blue/red nameplates, rank name + trophies chip, bigger VS with flash, pot drops in as a gold button.
 - Cup draw: art moved to ::before (var --cupbg); league colour tints the default arena via a soft-light ::after; event art shows untinted.
 - Nov 7: removed the pinned 'YOUR MATCH' duplicate on round pages; your match is the first (bigger) card in the list, heading now '<ROUND> · N MATCHES'.
+- Nov 7: bolder gold brackets with a dot where each pair feeds the next round; '‹ prev / next ›' round buttons on every page (swipe still works); dropped the 'next opponent comes from' label (blue ring stays).
