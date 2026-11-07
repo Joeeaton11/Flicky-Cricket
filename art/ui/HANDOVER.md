@@ -967,3 +967,4 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Service worker v4 (www/sw.js): page is network-first (new deploys always show), art cache-first (instant second visit). Old v3 cached the page forever.
 - Green strips in Safari: page background + theme-color now navy #0b1630 (was pitch green). Add to Home Screen for true full screen.
 - Result screen on tall phones: header art/player grow with the screen (clamp(312px, 100vh-365px, 540px)), bigger reward tiles, more spacing — no big empty gap above the buttons.
+- Nov 7: match intro (NEED x OFF y) now uses each ground's own painted scoreboard digits (assets/themes/<dir>/d0-9.webp) for the big number, and NEED / OFF n BALLS / pills take fill, outline and 3D colours sampled from that ground's painted FOUR! word (INTRO_THEME, 130 grounds). Dark fills get a lit top. Grounds without painted art keep the standard look.
