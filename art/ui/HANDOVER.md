@@ -968,3 +968,11 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Green strips in Safari: page background + theme-color now navy #0b1630 (was pitch green). Add to Home Screen for true full screen.
 - Result screen on tall phones: header art/player grow with the screen (clamp(312px, 100vh-365px, 540px)), bigger reward tiles, more spacing — no big empty gap above the buttons.
 - Nov 7: match intro (NEED x OFF y) now uses each ground's own painted scoreboard digits (assets/themes/<dir>/d0-9.webp) for the big number, and NEED / OFF n BALLS / pills take fill, outline and 3D colours sampled from that ground's painted FOUR! word (INTRO_THEME, 130 grounds). Dark fills get a lit top. Grounds without painted art keep the standard look.
+
+## Nov 7 — Cleanup (cleanup-40a)
+- Coverage run (every league ground played, every screen opened) → 47 old hand-drawn ground painters never ran; replaced with empty stubs (call sites untouched). makeLeagueArt_* are NOT dead (live league-card art) — kept.
+- Removed 7 fonts only those old grounds used (Pirata One, Orbitron, Creepster, Mountains of Christmas, Special Elite, Boogaloo, Bebas Neue).
+- Archived: pirate + t20 pilot grounds (art/archive_themes/*_pilot), guide_9x16.png, 727 unreferenced ui_NNN_hash.webp extracts (art/archive_ui/ — their pictures already live inline in the page).
+- Nets / no-league play now pick from your current league's painted grounds (leagueGround()), never the old random scenes; starting scene is the Gully.
+- Result: page 15.2 → 13.4 MB, app web folder 142 → 131 MB. 0 page errors across all 128 grounds; island audit clean.
+- Left in place: the Gully player sprite masks (5.8 MB inline, all used) — could become files later to speed up the web demo's first load.
