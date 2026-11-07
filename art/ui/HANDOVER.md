@@ -976,3 +976,8 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 - Nets / no-league play now pick from your current league's painted grounds (leagueGround()), never the old random scenes; starting scene is the Gully.
 - Result: page 15.2 → 13.4 MB, app web folder 142 → 131 MB. 0 page errors across all 128 grounds; island audit clean.
 - Left in place: the Gully player sprite masks (5.8 MB inline, all used) — could become files later to speed up the web demo's first load.
+
+## Nov 7 — Painted league postcards (leagues-41a)
+- First 8 leagues (Gully → LCL) now use painted Clash-style postcards: assets/ui/leagues/lg_1..8.webp (Figma 541:191-198), each with its league trophy centre stage.
+- makePaintedLeagueArt(PAINTED_LEAGUE[name]) plugs into LEAGUE_LIVE_ART (same start/stop API, 1240x710 canvas): shine sweeping over the trophy, twinkling sparkles, plus per-league effects — kites, marigold petals, floodlight pulses, stars, gulls, sea glints, fairground bulbs, gold dust, blowing sand, sun glow. Trophy box per card in PAINTED_LEAGUE.cup.
+- The 8 old hand-drawn makeLeagueArt_* painters are stubbed (−550 KB). Leagues 9-27 still use the old cards — next batches: add lg_N.webp + a PAINTED_LEAGUE entry.
