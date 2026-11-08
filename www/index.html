@@ -19209,12 +19209,15 @@ try { updateStreakDisplay(); } catch(e) {}
   SAVE.setItem('flickyWelcomeOpen', '1');
 })();
 function maybeWelcomeBag() {
-  // Nov 8 (Joe: bowled before he knew): a brand-new player is sent straight into a match, so the welcome bag waits until they're back on Home
-  if (SAVE.getItem('flickyWelcomeOpen') !== '1' || !onHomeOnly() || (career.matchesPlayed || 0) < 1) return false;
-  SAVE.removeItem('flickyWelcomeOpen');
-  setTimeout(() => { try { if (!onHomeOnly()) { SAVE.setItem('flickyWelcomeOpen', '1'); return; } const rewards = openChestRewards('wooden'); saveEquipmentState(); saveCareerStats();
-    showChestOpenAnimation('wooden', rewards, () => { try { updateMenuHUD(); } catch (e) {} }); } catch (e) {} }, 500);
-  return true;
+  // Nov 8 (Joe: "the bag opened by itself"): the welcome bag no longer pops open — after the first match it goes in a
+  // free bag slot ready to open, and the player opens it themselves from Bags
+  if (SAVE.getItem('flickyWelcomeOpen') !== '1' || (career.matchesPlayed || 0) < 1) return false;
+  try { const i = chestSlots.indexOf(null); if (i < 0) return false;
+    chestSlots[i] = { type: 'wooden', openingStarted: Date.now() - 864e5, welcome: true }; saveChestSlots(); SAVE.removeItem('flickyWelcomeOpen');
+    try { updateMenuHUD(); } catch (e) {}
+    if (onHomeOnly()) setTimeout(() => { try { showMessage('FREE WELCOME BAG · OPEN IT IN BAGS', '#FFC93A', 2600); } catch (e) {} }, 600);
+  } catch (e) {}
+  return false;
 }
 // existing players with an unopened welcome bag still in a locker keep it as is
 
