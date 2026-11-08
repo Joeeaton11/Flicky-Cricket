@@ -12285,6 +12285,7 @@ function doFlick(swipe) {
   // downward, for behind-the-wicket shots) counts as a valid flick attempt
   const swipeDist = Math.hypot(swipe.dx, swipe.dy);
   const power = Math.min(swipeDist / swipe.dt, 3);
+  if (swipeDist < 20 && tutorialActive) { _showTimingFlash('SWIPE UP!', '#FFC93A'); return; }   // the guided first ball: a tap just shows how
   if (swipeDist < 20) {
     // too small to register as a flick - show feedback then bowl out
     _showTimingFlash('MISSED!', '#ff6b6b');
@@ -13667,6 +13668,8 @@ function updateBall() {
   if (!ball.active || ball.hitAnim) return;
   if (state === 'ready' && gullyPaintedPeople()) return;   // Gully: the ball stays in the bowler's hand until the release
   if (state === 'ballcoming' || state === 'ready') {
+    // Nov 8 (Joe: bowled before he knew what was happening): the guided first ball waits at the hitting spot until the player swipes
+    if (tutorialActive && state === 'ballcoming' && ball.z >= ball.zoneCenter) { ball.z = ball.zoneCenter; tutorialPrompt = 'SWIPE UP NOW!'; return; }
     ball.z += ballSpeed;
     if (ball.z >= ball.zoneCenter + 0.23 && state === 'ballcoming') {
       // missed the flick window entirely
@@ -19202,9 +19205,10 @@ try { updateStreakDisplay(); } catch(e) {}
   SAVE.setItem('flickyWelcomeOpen', '1');
 })();
 function maybeWelcomeBag() {
-  if (SAVE.getItem('flickyWelcomeOpen') !== '1' || !onHomeOnly()) return false;
+  // Nov 8 (Joe: bowled before he knew): a brand-new player is sent straight into a match, so the welcome bag waits until they're back on Home
+  if (SAVE.getItem('flickyWelcomeOpen') !== '1' || !onHomeOnly() || (career.matchesPlayed || 0) < 1) return false;
   SAVE.removeItem('flickyWelcomeOpen');
-  setTimeout(() => { try { const rewards = openChestRewards('wooden'); saveEquipmentState(); saveCareerStats();
+  setTimeout(() => { try { if (!onHomeOnly()) { SAVE.setItem('flickyWelcomeOpen', '1'); return; } const rewards = openChestRewards('wooden'); saveEquipmentState(); saveCareerStats();
     showChestOpenAnimation('wooden', rewards, () => { try { updateMenuHUD(); } catch (e) {} }); } catch (e) {} }, 500);
   return true;
 }
