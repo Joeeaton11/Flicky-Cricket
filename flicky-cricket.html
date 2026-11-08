@@ -11579,7 +11579,7 @@ function bagConfirm(cost, question, onYes, opts) {
   ov.innerHTML = '<div class="bagConfirmCard bc2" role="dialog" aria-label="Confirm gem spend" style="--tc:' + tc + '">' +
     (opts.bag ? '<div class="bc2Stage"><canvas width="240" height="180"></canvas>' + (opts.left ? '<span class="bc2Left">' + opts.left + ' LEFT</span>' : '') + '</div>' : '') +
     '<div class="bagConfirmQ">' + question + '</div>' +
-    '<div class="bagConfirmBtns"><button class="bcNo">CANCEL</button><button class="bcYes"><span>' + (opts.yes || 'SPEND') + '</span><i class="hIco hi-gem"></i>' + cost + '</button></div></div>';
+    '<div class="bagConfirmBtns"><button class="bcNo">' + (opts.no || 'CANCEL') + '</button><button class="bcYes"><span>' + (opts.yes || 'SPEND') + '</span>' + (opts.noCost ? '' : '<i class="hIco hi-gem"></i>' + cost) + '</button></div></div>';
   if (opts.bag) drawChestArt(ov.querySelector('canvas'), opts.bag, 1, false);
   const close = () => ov.classList.remove('show');
   ov.onclick = e => { if (e.target === ov) close(); };
@@ -20387,12 +20387,12 @@ function showMoment(kind, d) {
       ms = 1300; window._introShort = true; window._hudFadeAt = performance.now() + ms + 100;
     } else if (c.mode === 'duel' && c.rival) {   // Nov 6: duels are a six-ball shootout, no target
       html = `<div class="mmS"><span class="msL">${c.cup ? GAME_CONFIG.season.cup.rounds[c.cupRound] : 'DUEL'} · ${c.rival.flag} ${c.rival.name}</span><span class="msNeed">HEAD TO HEAD</span><b class="msN">${c.balls}</b><span class="msO">BALLS EACH</span>
-        <span class="msWin">${c.cup ? 'WIN AND GO THROUGH' : `WIN THE POT <i class="hIco hi-coin"></i>${(c.pot || 0).toLocaleString()}`}</span></div>`;
+        <span class="msWin">${c.friend ? `BEAT ${c.rival.name}'S ${duelTotal(c.rival.log, c.balls, c.wickets).runs}` : c.cup ? 'WIN AND GO THROUGH' : `WIN THE POT <i class="hIco hi-coin"></i>${(c.pot || 0).toLocaleString()}`}</span></div>`;
       ms = 1500; window._introShort = true; window._hudFadeAt = performance.now() + ms + 100;
     } else if ((window.INTRO_STYLE || 'slam') === 'slam' && c.mode !== 'tourney' && c.target) {   // Oct 30: one big number over the field, short
       const bag = !c.mode || c.mode === 'league' ? (lg.winChest && CHEST_TYPES[lg.winChest]) : null;
       html = `<div class="mmS"><span class="msL">${c.mode === 'challenge' ? 'DAILY CHALLENGE' : c.mode === 'duel' && c.rival ? `DUEL · ${c.rival.flag} ${c.rival.name} MADE ${c.rival.runs}` : (lg.name || '')}</span><span class="msNeed">NEED</span><b class="msN">${c.target}</b><span class="msO">OFF ${c.balls} BALLS</span>
-        ${c.mode === 'duel' ? `<span class="msWin">WIN THE POT <i class="hIco hi-coin"></i>${(c.pot || 0).toLocaleString()}</span>` : ''}${bag ? `<span class="msWin">WIN${lg.winCoins ? ` <i class="hIco hi-coin"></i>${lg.winCoins}` : ''} · <b style="color:${bag.color}">${bag.name} BAG</b></span>` : ''}</div>`;
+        ${c.mode === 'duel' && c.friend ? `<span class="msWin">FRIEND CHALLENGE</span>` : c.mode === 'duel' ? `<span class="msWin">WIN THE POT <i class="hIco hi-coin"></i>${(c.pot || 0).toLocaleString()}</span>` : ''}${bag ? `<span class="msWin">WIN${lg.winCoins ? ` <i class="hIco hi-coin"></i>${lg.winCoins}` : ''} · <b style="color:${bag.color}">${bag.name} BAG</b></span>` : ''}</div>`;
       ms = 1300; window._introShort = true; window._hudFadeAt = performance.now() + ms + 100;
     } else if ((window.INTRO_STYLE || 'slam') === 'v2' && c.mode !== 'tourney' && c.target) {   // Oct 30: TV-style chase graphic
       const bag = !c.mode || c.mode === 'league' ? (lg.winChest && CHEST_TYPES[lg.winChest]) : null, sk = (() => { try { const n = streakState().current, nx = streakTier(n + 1); return n >= 2 ? { n, m: nx.coinMult } : null; } catch (e) { return null; } })();
@@ -22788,6 +22788,8 @@ function duelEnd(c) {
   { const ev = activeEvent(); if (ev) eventAdd(ev.perMatch + (res === 'win' ? ev.perWin : 0) + c.log.filter(x => x === 6).length * ev.perSix); }
   const line = `You ${me}-${Math.min(c.wkLost, c.wickets)} · ${rv.name} ${c.rv}-${c.rvWk}${c.sd ? ' · SUDDEN DEATH' : ''}`;
   if (c.cup) return cupAfterDuel(c, res, line);
+  if (c.friend) return friendAfterDuel(c, res, line);
+  try { const me2 = curLook(); window._lastChallenge = { li: c.leagueIdx, n: (me2.name || 'PLAYER').slice(0, 14), f: me2.flag || '', sh: me2.shirt || '', g: me2.g || 'm', s: rv.seed, l: c.log.slice(0, D.balls), r: me }; } catch (e) {}
   let coins = 0, tg = 0;
   const easy = duelTooEasy(c.leagueIdx); let bag = '';
   if (res === 'win') { d.w++; d.streak++; d.ls = 0; d.bestStreak = Math.max(d.bestStreak, d.streak); coins = c.pot; tg = easy ? 0 : D.win + (d.streak >= D.streakAt ? D.streakBonus : 0); bag = grantReward({ bag: duelBag(c.leagueIdx) }); }
@@ -23995,6 +23997,91 @@ function renderSettings() {
   wrap('updateDailyStreak', (streak) => { if (typeof streakBonusAwarded !== 'undefined' && streakBonusAwarded > 0) track('daily_claim', { day: streak, reward: streakBonusAwarded + ' coins' }); });
 })();
 
+</script>
+<script>
+// ═══ Challenge a friend (Nov 8, layout review): after a duel, share a link to your innings; your friend faces the
+// SAME balls and chases your score. No coins or trophies change hands. Links open flickycricket.com/play.
+function friendAfterDuel(c, res, line) {
+  track('friend_duel_end', { res, me: runs, them: c.rv });
+  const msg = res === 'win' ? `YOU BEAT ${c.rival.name}!` : res === 'tie' ? `ALL SQUARE WITH ${c.rival.name}` : `${c.rival.name} WINS THIS ONE`;
+  return { res, title: res === 'win' ? 'CHALLENGE WON!' : res === 'tie' ? 'CHALLENGE TIED' : 'CHALLENGE LOST', line, extra: msg + ' · FRIEND CHALLENGE, NO TROPHIES', again: '' };
+}
+const FlickyChallenge = window.FlickyChallenge = {
+  enc(o) { return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); },
+  dec(t) { try { t = t.replace(/-/g, '+').replace(/_/g, '/'); return JSON.parse(decodeURIComponent(escape(atob(t)))); } catch (e) { return null; } },
+  url(ch) { return 'https://flickycricket.com/play/?ch=' + this.enc(ch); },
+  async share() {
+    const ch = window._lastChallenge; if (!ch) return;
+    const lg = THEMED_LEAGUES[ch.li], u = this.url(ch), text = `I scored ${ch.r} in a Flicky Cricket duel at the ${lg ? lg.name : 'ground'}. Same balls, your turn: can you beat me?`;
+    track('friend_challenge_share', { runs: ch.r, li: ch.li });
+    try { if (navigator.share) { await navigator.share({ title: 'Flicky Cricket challenge', text, url: u }); return; } } catch (e) { return; }
+    try { await navigator.clipboard.writeText(text + ' ' + u); showMessage('CHALLENGE LINK COPIED', '#22c55e', 1800); } catch (e) { showMessage('COULDN\'T COPY THE LINK', '#ff6b6b', 1800); }
+  },
+  accept(ch) {
+    const D = GAME_CONFIG.season.duel, li = Math.max(1, Math.min(THEMED_LEAGUES.length - 1, ch.li | 0));
+    const rival = { name: String(ch.n || 'FRIEND').slice(0, 14).toUpperCase(), flag: ch.f || '', log: (ch.l || []).slice(0, D.balls), sd: [], seed: String(ch.s || 'friend'), trophies: 0, shirt: ch.sh || 'red', g: ch.g === 'f' ? 'f' : 'm' };
+    while (rival.log.length < D.balls) rival.log.push(0);
+    track('friend_challenge_accept', { li, them: ch.r });
+    startDuelMatch(li, rival, { friend: true, pot: 0, entry: 0 });
+  },
+};
+// the challenge button on the duel result
+{ const _sdr = window.showDuelResult; if (typeof _sdr === 'function') window.showDuelResult = function (u) { const r = _sdr.apply(this, arguments);
+    try { const el = document.getElementById('duelRes'), back = el && el.querySelector('.drBack'); if (back && window._lastChallenge && !el.querySelector('.drFriend')) { const b = document.createElement('button'); b.className = 'drBack drFriend'; b.textContent = 'CHALLENGE A FRIEND'; b.style.cssText = 'color:#FFC93A'; b.addEventListener('click', e => { e.stopPropagation(); FlickyChallenge.share(); }); back.before(b); } } catch (e) {}
+    return r; }; }
+// opening a challenge link
+(function () { const q = new URLSearchParams(location.search).get('ch'); if (!q) return; const ch = FlickyChallenge.dec(q); if (!ch) return;
+  window._offerShownThisSession = true; window._dailyPopShown = true;   // a challenge link opens straight to the challenge, no shop pop-ups
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  const lg = THEMED_LEAGUES[ch.li | 0];
+  setTimeout(() => { try { bagConfirm(0, `<b style="color:#FFC93A">${String(ch.n || 'A FRIEND').toUpperCase()}</b> scored <b>${ch.r | 0}</b> in a duel at the ${lg ? lg.name : 'ground'}. Same balls, your turn. Can you beat them?`, () => FlickyChallenge.accept(ch), { yes: 'ACCEPT', no: 'LATER', noCost: true }); } catch (e) {} }, 5200);
+})();
+
+// ═══ Inbox (Nov 8, layout review): one place for news, event starts and gifts. Messages live in INBOX_MESSAGES
+// (later: fetched from the website so they can change without an update); a gift is claimed once.
+const INBOX_MESSAGES = [
+  { id: 'welcome-2', from: '2026-11-01', title: 'WELCOME TO FLICKY CRICKET 2.0', body: 'A whole new game: 27 leagues, duels, the Flicky Cup and festive events. Thanks for playing!', gift: { coins: 250 } },
+  { id: 'xmas-cup-2026', from: '2026-12-12', to: '2027-01-05', title: 'THE CHRISTMAS CUP IS ON', body: 'Snowy grounds, festive kit and a Christmas trophy. Find it in Events.' },
+];
+const FlickyInbox = window.FlickyInbox = {
+  state() { const s = SAVE.section('inbox'); s.read = s.read || []; s.claimed = s.claimed || []; return s; },
+  live() { const d = typeof _nowDate === 'function' ? _nowDate() : new Date(), p2 = n => String(n).padStart(2, '0'), now = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; return INBOX_MESSAGES.filter(m => (!m.from || m.from <= now) && (!m.to || now <= m.to)); },
+  unread() { const st = this.state(); return this.live().filter(m => !st.read.includes(m.id) || (m.gift && !st.claimed.includes(m.id))).length; },
+  render() {
+    let el = document.getElementById('inboxPanel'); if (!el) { el = document.createElement('div'); el.id = 'inboxPanel'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Inbox'); document.body.appendChild(el);
+      el.addEventListener('click', e => { if (e.target === el || e.target.closest('.ibClose')) { el.classList.remove('show'); this.badge(); return; }
+        const g = e.target.closest('[data-ibclaim]'); if (g) { const m = INBOX_MESSAGES.find(x => x.id === g.dataset.ibclaim), st = this.state(); if (m && m.gift && !st.claimed.includes(m.id)) { st.claimed.push(m.id); SAVE.save(); const l = grantReward(m.gift); showMessage('+ ' + l, '#FFC93A', 2000); try { updateMenuHUD(); } catch (err) {} this.render(); } } }); }
+    const st = this.state(), list = this.live().slice().reverse();
+    el.innerHTML = `<div class="ibCard"><div class="ibTop"><b>INBOX</b><button class="ibClose" aria-label="Close">✕</button></div>${list.length ? list.map(m => `<div class="ibMsg${st.read.includes(m.id) ? '' : ' new'}"><b>${m.title}</b><p>${m.body}</p>${m.gift ? (st.claimed.includes(m.id) ? '<span class="ibDone">CLAIMED ✓</span>' : `<button class="gcBuy" data-ibclaim="${m.id}">CLAIM GIFT</button>`) : ''}</div>`).join('') : '<p class="ibEmpty">No messages yet.</p>'}</div>`;
+    list.forEach(m => { if (!st.read.includes(m.id)) st.read.push(m.id); }); SAVE.save();
+    el.classList.add('show');
+  },
+  badge() { const b = document.getElementById('inboxBadge'); if (!b) return; const n = this.unread(); b.textContent = n; b.style.display = n ? '' : 'none'; },
+};
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `
+  #inboxBtn{position:absolute;z-index:3;width:46px;height:46px;border-radius:50%;border:3px solid #050A14;background:linear-gradient(#3a4a6a,#1d2a44);box-shadow:0 3px 0 #050A14;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  #inboxBtn svg{width:26px;height:26px}
+  #inboxBadge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:10px;background:#e8463a;border:2px solid #050A14;color:#fff;font:12px 'Lilita One','Arial Black',Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:0 3px;box-sizing:border-box}
+  #inboxPanel{position:fixed;inset:0;z-index:330;display:none;background:rgba(5,10,20,.7);align-items:center;justify-content:center;font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #inboxPanel.show{display:flex}
+  .ibCard{width:min(380px,calc(100% - 32px));max-height:80%;overflow:auto;border-radius:20px;border:3px solid #050A14;background:linear-gradient(#1c3260,#0e1c38);padding:14px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px}
+  .ibTop{display:flex;justify-content:space-between;align-items:center;font-size:22px;letter-spacing:.08em}
+  .ibClose{width:36px;height:36px;border-radius:50%;border:2px solid #050A14;background:#14203a;color:#fff;font-size:16px;cursor:pointer}
+  .ibMsg{border-radius:14px;background:#14203a;border:2px solid #050A14;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+  .ibMsg.new{box-shadow:0 0 0 2px #FFC93A inset}
+  .ibMsg b{font-size:16px;font-weight:400;color:#FFC93A}.ibMsg p{margin:0;font:14px/1.4 system-ui,Arial,sans-serif;color:#dbe4f5}
+  .ibMsg .gcBuy{height:36px;align-self:flex-start;padding:0 16px}.ibDone{font-size:13px;color:#4fd46a}.ibEmpty{font:14px system-ui;color:#B4C2DD}`;
+  document.head.appendChild(css);
+  const home = document.getElementById('overlay'); if (!home) return;
+  const b = document.createElement('button'); b.id = 'inboxBtn'; b.setAttribute('aria-label', 'Inbox');
+  b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v12H3z" fill="#E8EEF8" stroke="#050A14" stroke-width="1.4" stroke-linejoin="round"/><path d="M3 6l9 7 9-7" fill="none" stroke="#050A14" stroke-width="1.4" stroke-linejoin="round"/></svg><span id="inboxBadge"></span>';
+  home.appendChild(b); b.addEventListener('click', () => { try { playUiTap(); hapticTap(); } catch (e) {} FlickyInbox.render(); });
+  const place = () => { const ref = document.getElementById('todayBtn'); if (!ref) { b.style.left = '12px'; b.style.top = '40%'; return; } const r = ref.getBoundingClientRect(), hr = home.getBoundingClientRect(); b.style.left = (r.left - hr.left + (r.width - 46) / 2) + 'px'; b.style.top = (r.top - hr.top - 58) + 'px'; };
+  setTimeout(() => { place(); FlickyInbox.badge(); }, 900); window.addEventListener('resize', place);
+  const _uh = window.updateMenuHUD; if (typeof _uh === 'function') window.updateMenuHUD = function () { const r = _uh.apply(this, arguments); try { FlickyInbox.badge(); place(); } catch (e) {} return r; };
+})();
 </script>
 </body>
 </html>
