@@ -24071,5 +24071,71 @@ function renderSettings() {
   setNavActive('home');
 })();
 </script>
+<script>
+// ═══ Play button v2 (Nov 8, layout review): ONE Play button + a mode picker (League · Duel · Cup · Daily · Nets),
+// like Clash Royale's 2025 Game Mode Switcher. The separate DUEL button and EVENTS bubble go; Events has its own tab.
+(function modePicker() {
+  const row = document.getElementById('homePlayRow'), start = document.getElementById('startBtn'), card = document.getElementById('homeLeagueCard'); if (!row || !start || !card) return;
+  const css = document.createElement('style');
+  css.textContent = `
+  #homeDuelBtn,#competeBtn{display:none !important}
+  #modeChips{display:flex;gap:6px;justify-content:center;width:100%;order:-1}
+  #modeChips button{flex:1;max-width:76px;height:32px;border-radius:12px;border:3px solid #050A14;background:linear-gradient(#24365c,#14203a);color:#c9d6f0;font:13px 'Lilita One','Arial Black',Arial,sans-serif;letter-spacing:.04em;cursor:pointer;box-shadow:0 3px 0 #050A14;padding:0}
+  #modeChips button.on{background:linear-gradient(#ffd75a,#f0a21a);color:#3a2300}
+  #modeChips button.lock{opacity:.55}
+  #modeCard{display:none;position:relative;width:100%;height:68px;border-radius:16px;border:3px solid #050A14;overflow:hidden;background:#14203a center/cover;box-shadow:0 4px 0 #050A14;text-align:left;cursor:pointer;padding:0;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif}
+  #modeCard::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,10,20,.85) 30%,rgba(5,10,20,.2))}
+  #modeCard b{position:absolute;left:14px;top:9px;font-size:21px;font-weight:400;letter-spacing:.03em;text-shadow:0 2px 0 #000}
+  #modeCard small{position:absolute;left:14px;bottom:9px;font-size:12px;color:#FFC93A;letter-spacing:.04em;max-width:78%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #homePlayRow.mode #homeLeagueCard{display:none}
+  #homePlayRow.mode #modeCard{display:block}
+  #startBtn small.modeCost{display:block;font-size:15px;letter-spacing:.04em;margin-top:-6px;opacity:.9}`;
+  document.head.appendChild(css);
+  const MODES = [
+    { k: 'league', label: 'LEAGUE' },
+    { k: 'duel', label: 'DUEL', pk: 'duel', art: 'assets/ui/ev_duels.webp' },
+    { k: 'cup', label: 'CUP', pk: 'cup', art: 'assets/ui/ev_cup.webp' },
+    { k: 'challenge', label: 'DAILY', pk: 'daily', art: 'assets/ui/ev_weekly.webp' },
+    { k: 'nets', label: 'NETS' }];
+  const chips = document.createElement('div'); chips.id = 'modeChips';
+  chips.innerHTML = MODES.map(m => `<button data-pm="${m.k}">${m.label}</button>`).join('');
+  const mc = document.createElement('button'); mc.id = 'modeCard'; mc.innerHTML = '<b></b><small></small>';
+  row.insertBefore(chips, row.firstChild); row.insertBefore(mc, card);
+  let cur = 'league'; try { cur = localStorage.getItem('flickyPlayMode') || 'league'; } catch (e) {}
+  const poster = pk => { const cpn = document.getElementById('competePanel'); if (!(cpn && cpn.classList.contains('show'))) { try { renderCompete(); } catch (e) {} } return document.querySelector(`#competePanel article[data-pk="${pk}"]`); };
+  const label = start.querySelector('span');
+  const paint = () => {
+    const m = MODES.find(x => x.k === cur) || MODES[0];
+    chips.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.pm === cur));
+    row.classList.toggle('mode', cur !== 'league');
+    start.querySelector('small.modeCost') && start.querySelector('small.modeCost').remove();
+    if (cur === 'league') { label.textContent = 'PLAY'; return; }
+    if (cur === 'nets') { mc.style.backgroundImage = ''; mc.querySelector('b').textContent = 'NETS'; mc.querySelector('small').textContent = 'FREE PRACTICE · NO ENTRY · NO REWARDS'; label.textContent = 'PLAY'; return; }
+    const ps = poster(m.pk);
+    chips.querySelectorAll('button').forEach(b => { const mm = MODES.find(x => x.k === b.dataset.pm); b.classList.toggle('lock', !!(mm.pk && !document.querySelector(`#competePanel article[data-pk="${mm.pk}"]`))); });
+    mc.style.backgroundImage = `url(${m.art})`;
+    mc.querySelector('b').textContent = ps ? (ps.querySelector('.evName b') || {}).textContent || m.label : m.label;
+    const words = el => { if (!el) return ''; const out = []; const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const t = n.nodeValue.replace(/\s+/g, ' ').trim(); if (t && !/^ALL TABLES/.test(t)) out.push(t); } return out.join(' ').replace(/ ›/g, ''); };
+    mc.querySelector('small').textContent = ps ? words(ps.querySelector('.evGoal')) : 'UNLOCKS AFTER 8 MATCHES';
+    const go = ps && ps.querySelector('.evGo'); label.textContent = 'PLAY';
+    if (go) { const c = go.textContent.split('·')[1]; if (c) { const sm = document.createElement('small'); sm.className = 'modeCost'; sm.textContent = c.trim(); label.after(sm); } }
+  };
+  window.refreshModePicker = paint;
+  chips.addEventListener('click', e => { const b = e.target.closest('[data-pm]'); if (!b) return; e.stopPropagation(); try { playUiTap(); hapticTap(); } catch (err) {}
+    cur = b.dataset.pm; try { localStorage.setItem('flickyPlayMode', cur); } catch (err) {} paint(); });
+  mc.addEventListener('click', e => { e.stopPropagation(); if (cur === 'nets') return; document.getElementById('eventsNavBtn').click(); });
+  // PLAY runs the chosen mode; League keeps the original button behaviour
+  start.addEventListener('click', e => {
+    if (cur === 'league') return;
+    e.stopImmediatePropagation(); e.preventDefault(); try { playUiTap(); hapticTap(); } catch (err) {}
+    if (cur === 'nets') { playNets(); return; }
+    const m = MODES.find(x => x.k === cur), ps = poster(m.pk);
+    if (!ps) { showMessage('UNLOCKS AFTER 8 MATCHES', '#FFC93A', 1800); return; }
+    const go = ps.querySelector('.evGo'); if (go) go.click(); else playMode(cur);
+  }, true);
+  const _uh = window.updateMenuHUD; if (typeof _uh === 'function') window.updateMenuHUD = function () { const r = _uh.apply(this, arguments); try { paint(); } catch (e) {} return r; };
+  paint();
+})();
+</script>
 </body>
 </html>
