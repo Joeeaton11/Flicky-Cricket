@@ -23996,5 +23996,80 @@ function renderSettings() {
 })();
 
 </script>
+<script>
+// ═══ Nav v5 (Nov 8, layout review): Shop · Locker · PLAY · Events · Bags. PLAY is Home, Events gets a tab,
+// Player + Kit become the Locker (KIT | LOOK switch), Stats + Settings live in the Profile (your name on Home).
+(function navV5() {
+  const nav = document.getElementById('bottomNav'); if (!nav) return;
+  const css = document.createElement('style');
+  css.textContent = `
+  #bottomNav{grid-template-columns:1fr 1fr 1.25fr 1fr 1fr !important}
+  #playerNavBtn,#statsBtn{display:none !important}
+  #navBackBtn{display:none !important}
+  .navBtn.navPlay .navTile{height:62px;max-width:86px;border-radius:20px;margin-top:-12px;border:3px solid #050A14;background:linear-gradient(#ffd75a,#f19a12);box-shadow:0 4px 0 #8a4a00,0 0 0 2px rgba(255,201,58,.35)}
+  .navBtn.navPlay.active .navTile{box-shadow:0 4px 0 #8a4a00,0 0 18px rgba(255,201,58,.75)}
+  .navBtn.navPlay svg{width:30px;height:30px;margin:auto;filter:drop-shadow(0 2px 0 rgba(0,0,0,.35))}
+  .navBtn.navPlay{color:#FFC93A}
+  .navEvIco{background-image:url(assets/ui/icon_cup.webp)}
+  #bottomNav.navTop{z-index:320 !important}
+  #competePanel.withNav .sheet{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px)) !important}
+  #competePanel.withNav .evBack{visibility:hidden}
+  .lockSw{display:inline-flex;gap:4px;padding:3px;border-radius:14px;background:#050A14;vertical-align:middle}
+  .lockSw button{font:inherit;font-size:16px;letter-spacing:.06em;color:#9fb0d0;background:none;border:0;border-radius:11px;padding:5px 14px;cursor:pointer}
+  .lockSw button.on{color:#3a2300;background:linear-gradient(#ffd75a,#f0a21a);text-shadow:none}
+  #homeProfileBtn{position:absolute;z-index:3;width:46px;height:46px;padding:0;border-radius:50%;border:3px solid #050A14;background:linear-gradient(#2f4a7c,#14203a);cursor:pointer;box-shadow:0 3px 0 #050A14;overflow:hidden}
+  #homeProfileBtn canvas{width:100%;height:100%;display:block}
+  #homeProfileBtn span{display:none}
+  #settingsBtn{display:none !important}
+  #profileCog{flex:none;width:36px;height:36px;border-radius:50%;border:3px solid #050A14;background:linear-gradient(#3a4a6a,#1d2a44);display:flex;align-items:center;justify-content:center;cursor:pointer;margin-left:6px}
+  #profileCog svg{width:20px;height:20px}`;
+  document.head.appendChild(css);
+  const shop = document.getElementById('shopNavBtn'), kit = document.getElementById('customiseBtn'), bags = document.getElementById('chestsMenuBtn');
+  const mk = (id, tab, label, inner, cls) => { const b = document.createElement('button'); b.id = id; b.className = 'navBtn' + (cls ? ' ' + cls : ''); b.dataset.tab = tab; b.innerHTML = `<span class="navTile">${inner}</span>${label}`; return b; };
+  const play = mk('homeNavBtn', 'home', 'PLAY', '<svg viewBox="0 0 30 32" aria-hidden="true"><path d="M7 4 L26 16 L7 28 Z" fill="#fff" stroke="#A04E00" stroke-width="3" stroke-linejoin="round"/></svg>', 'navPlay');
+  const ev = mk('eventsNavBtn', 'events', 'EVENTS', '<i class="bIcon navEvIco"></i><span id="navEvBadge" class="menuNavBadge"></span>');
+  kit.lastChild.textContent = 'LOCKER';
+  [shop, kit, play, ev, bags].forEach(b => nav.appendChild(b));
+  ['playerNavBtn', 'statsBtn', 'leagueBtn'].forEach(id => { const b = document.getElementById(id); if (b) nav.appendChild(b); });
+  const cp = () => document.getElementById('competePanel');
+  const closeOverlays = () => { const c = cp(); if (c) c.classList.remove('show', 'withNav'); nav.classList.remove('navTop');
+    const st = document.getElementById('settingsPanel'); if (st) st.classList.remove('show'); try { homeShop.classList.add('hidden'); } catch (e) {} };
+  // any tab closes Events / Settings first
+  nav.addEventListener('click', e => { if (e.target.closest('.navBtn') && !e.target.closest('#eventsNavBtn')) closeOverlays(); }, true);
+  window.goHomeTab = () => { closeOverlays(); closeAllScreens(); overlay.classList.remove('hidden'); try { updateMenuHUD(); } catch (e) {} showNav(''); setNavActive('home'); };
+  play.addEventListener('click', () => { try { hapticTap(); playUiTap(); } catch (e) {} goHomeTab(); });
+  ev.addEventListener('click', () => { try { hapticTap(); playUiTap(); } catch (e) {}
+    closeOverlays(); closeAllScreens(); overlay.classList.remove('hidden');
+    try { payWeeklyBoards(); renderCompete(); } catch (e) {}
+    const c = cp(); if (c) c.classList.add('show', 'withNav'); nav.classList.add('navTop'); showNav('events'); });
+  // Home itself counts as the PLAY tab
+  const _show = window.showNav; window.showNav = function (tab) { _show(tab); if (!tab) setNavActive('home'); };
+  // the events panel closed some other way (its own buttons) → the bar drops back under it
+  document.addEventListener('click', () => setTimeout(() => { const c = cp(); if (c && !c.classList.contains('show') && nav.classList.contains('navTop')) { nav.classList.remove('navTop'); c.classList.remove('withNav'); if (!overlay.classList.contains('hidden')) setNavActive('home'); } }, 0));
+  // Locker: KIT | LOOK switch in both headers
+  const sw = on => `<span class="lockSw"><button data-lock="kit" class="${on === 'kit' ? 'on' : ''}">KIT</button><button data-lock="look" class="${on === 'look' ? 'on' : ''}">LOOK</button></span>`;
+  const paint = () => { const t = document.getElementById('equipTitle'); if (t && typeof currentEquipTab !== 'undefined' && !['chests', 'shop'].includes(currentEquipTab) && !t.querySelector('.lockSw')) t.innerHTML = sw('kit');
+    const pt = document.getElementById('plTitle'), ps = document.getElementById('playerScreen'); if (pt && ps && !ps.classList.contains('create') && !ps.classList.contains('hidden') && !pt.querySelector('.lockSw')) pt.innerHTML = sw('look'); };
+  const _oet = window.openEquipTab; if (typeof _oet === 'function') window.openEquipTab = function (t) { const r = _oet.apply(this, arguments); paint(); return r; };
+  const _ops = window.openPlayerScreen; if (typeof _ops === 'function') window.openPlayerScreen = function (m) { const r = _ops.apply(this, arguments); if ((m || 'edit') !== 'create') { paint(); showNav('kit'); } return r; };
+  document.addEventListener('click', e => { const b = e.target.closest('[data-lock]'); if (!b) return; e.stopPropagation();
+    if (b.dataset.lock === 'look') openPlayerScreen('edit'); else kit.click(); }, true);
+  // Profile: your name on Home opens Stats (renamed PROFILE) with the Settings cog in its header
+  const home = document.getElementById('overlay');
+  if (home) { const pb = document.createElement('button'); pb.id = 'homeProfileBtn'; pb.setAttribute('aria-label', 'Profile and settings');
+    pb.innerHTML = '<canvas width="60" height="60"></canvas><span id="homeProfileName">PLAYER</span>'; home.appendChild(pb);
+    const sb = document.getElementById('settingsBtn'); const place = () => { if (!sb) return; const cs = getComputedStyle(sb); pb.style.left = cs.left; pb.style.top = cs.top; };
+    place(); setTimeout(place, 800);
+    const face = () => { try { const src = document.getElementById('playerNavIco'), c = pb.querySelector('canvas'); if (src && c) { const g = c.getContext('2d'); g.clearRect(0, 0, 60, 60); g.drawImage(src, 0, 0, 60, 60); }
+      const L = typeof curLook === 'function' ? curLook() : null; document.getElementById('homeProfileName').textContent = L ? `${L.flag || ''} ${(L.name || 'PLAYER')}`.trim() : 'PLAYER'; } catch (e) {} };
+    face(); setInterval(() => { if (!home.classList.contains('hidden')) face(); }, 1500);
+    pb.addEventListener('click', () => { try { hapticTap(); playUiTap(); } catch (e) {} document.getElementById('statsBtn').click(); setNavActive(''); }); }
+  const stT = document.getElementById('statsTitle'); if (stT) stT.textContent = 'PROFILE';
+  const stH = document.getElementById('statsTopBar'); if (stH) { const cog = document.createElement('button'); cog.id = 'profileCog'; cog.setAttribute('aria-label', 'Settings');
+    cog.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#E8EEF8" stroke="#050A14" stroke-width="1.4" d="M10.3 2h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9L2 13.7v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8z"/><circle cx="12" cy="12" r="3.4" fill="#1d2a44" stroke="#050A14" stroke-width="1.4"/></svg>';
+    stH.appendChild(cog); cog.addEventListener('click', () => { const sb = document.getElementById('settingsBtn'); if (sb) sb.click(); }); }
+  setNavActive('home');
+})();
+</script>
 </body>
 </html>
