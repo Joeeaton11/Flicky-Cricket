@@ -11579,7 +11579,7 @@ function bagConfirm(cost, question, onYes, opts) {
   ov.innerHTML = '<div class="bagConfirmCard bc2" role="dialog" aria-label="Confirm gem spend" style="--tc:' + tc + '">' +
     (opts.bag ? '<div class="bc2Stage"><canvas width="240" height="180"></canvas>' + (opts.left ? '<span class="bc2Left">' + opts.left + ' LEFT</span>' : '') + '</div>' : '') +
     '<div class="bagConfirmQ">' + question + '</div>' +
-    '<div class="bagConfirmBtns"><button class="bcNo">CANCEL</button><button class="bcYes"><span>' + (opts.yes || 'SPEND') + '</span><i class="hIco hi-gem"></i>' + cost + '</button></div></div>';
+    '<div class="bagConfirmBtns"><button class="bcNo">' + (opts.no || 'CANCEL') + '</button><button class="bcYes"><span>' + (opts.yes || 'SPEND') + '</span>' + (opts.noCost ? '' : '<i class="hIco hi-gem"></i>' + cost) + '</button></div></div>';
   if (opts.bag) drawChestArt(ov.querySelector('canvas'), opts.bag, 1, false);
   const close = () => ov.classList.remove('show');
   ov.onclick = e => { if (e.target === ov) close(); };
@@ -23902,6 +23902,7 @@ function renderSettings() {
       ${tg('haptics', SAVE.getItem('flickyHapticsOff') !== 'true', 'VIBRATION')}
       ${tg('notify', notifyOn(), 'NOTIFICATIONS', 'Bag ready and daily rewards · never more than 2 a day')}
     </div>
+    ${(window.FlickyCloud && FlickyCloud.cfg().on && FlickyCloud.plugin()) ? `<div class="stCard"><div class="stRow"><div class="setLbl"><i class="stIco sti-playerid"></i><div><b>${capPlatform() === 'ios' ? 'GAME CENTER' : 'PLAY GAMES'}</b><small>${FlickyCloud.signedIn ? 'Signed in · progress saved to your account' + (FlickyCloud.player && FlickyCloud.player.displayName ? ' as ' + FlickyCloud.player.displayName : '') : 'Sign in to keep your progress on a new phone'}</small></div></div>${FlickyCloud.signedIn ? '<button class="stId" data-st="boards">BOARDS</button>' : '<button class="stId" data-st="cloudin">SIGN IN</button>'}</div></div>` : ''}
     <div class="stCard">
       ${link('tutorial', 'REPLAY TUTORIAL', true)}
       ${link('restore', 'RESTORE PURCHASES', true)}
@@ -23969,6 +23970,8 @@ function renderSettings() {
     else if (act === 'tutorial') replayTutorial();
     else if (act === 'restore') restorePurchases();
     else if (act === 'privacy' || act === 'terms') { const u = act === 'privacy' ? A.privacyUrl : A.termsUrl; if (u) window.open(u, '_blank', 'noopener'); else showMessage('COMING WITH THE APP', '#FFC93A', 1800); }
+    else if (act === 'cloudin') { try { FlickyCloud.signIn(); } catch (err) {} }
+    else if (act === 'boards') { try { FlickyCloud.boards(); } catch (err) {} }
     else if (act === 'adprivacy') { try { const AM = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob; if (AM) AM.showPrivacyOptionsForm(); } catch (err) {} }
     else if (act === 'support' && A.supportUrl) window.open(A.supportUrl, '_blank', 'noopener');
     else if (act === 'support') { if (A.supportEmail) location.href = `mailto:${A.supportEmail}?subject=${encodeURIComponent('Flicky Cricket help · ' + playerId())}`; else showMessage('COMING WITH THE APP', '#FFC93A', 1800); }
@@ -23995,6 +23998,63 @@ function renderSettings() {
   wrap('updateDailyStreak', (streak) => { if (typeof streakBonusAwarded !== 'undefined' && streakBonusAwarded > 0) track('daily_claim', { day: streak, reward: streakBonusAwarded + ' coins' }); });
 })();
 
+</script>
+<script>
+// ═══ Cloud save + Game Center / Google Play Games (Nov 8, layout review) ═══
+// Progress used to live only on the phone. Signed in to Game Center (iPhone) or Play Games (Android), the whole save
+// is copied to the player's account after every match and when the app goes to the background, and brought back
+// on a new phone or a reinstall. Leaderboard ids come from App Store Connect / Play Console (empty = not set up yet).
+const GAME_SERVICES = {
+  ios: { on: true, boards: { duel: '', weekly: '' } },
+  android: { on: false, boards: { duel: '', weekly: '' } },   // on once the Play Games project id is in AndroidManifest.xml
+  snapshot: 'flicky-main',
+};
+const FlickyCloud = window.FlickyCloud = {
+  ready: false, signedIn: false, player: null, lastSave: 0,
+  plat() { return capPlatform() === 'ios' ? 'ios' : 'android'; },
+  plugin() { return window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() && window.Capacitor.Plugins && window.Capacitor.Plugins.PlayGames || null; },
+  cfg() { return GAME_SERVICES[this.plat()] || {}; },
+  async init() {
+    const P = this.plugin(); if (!P || !this.cfg().on) return;
+    try { await P.initialize(); this.ready = true;
+      const r = await P.signIn({ silent: true }); this.signedIn = !!(r && r.signedIn);
+      if (this.signedIn) { await this.afterSignIn(); }
+      track('cloud_ready', { signedIn: this.signedIn });
+    } catch (e) { track('cloud_error', { where: 'init', msg: String(e && e.message || e).slice(0, 80) }); }
+  },
+  async signIn() {
+    const P = this.plugin(); if (!P || !this.ready) { showMessage('SIGN-IN WORKS IN THE APP VERSION', '#FFC93A', 2000); return; }
+    try { const r = await P.signIn({ silent: false }); this.signedIn = !!(r && r.signedIn); if (this.signedIn) await this.afterSignIn(); try { renderSettings(); } catch (e) {} }
+    catch (e) { showMessage('SIGN-IN DIDN\'T WORK · TRY AGAIN', '#ff6b6b', 2000); }
+  },
+  async afterSignIn() {
+    const P = this.plugin();
+    try { this.player = await P.getPlayer(); } catch (e) {}
+    // bring back a cloud save that has more progress than this phone (new phone, reinstall)
+    try { const { snapshot } = await P.loadSnapshot({ name: GAME_SERVICES.snapshot });
+      if (snapshot && snapshot.data) { const cloud = JSON.parse(snapshot.data), here = this.progress(SAVE.data), there = this.progress(cloud);
+        if (there > here) {
+          if (here <= 1) { SAVE.import(snapshot.data); showMessage('PROGRESS RESTORED FROM YOUR ACCOUNT', '#22c55e', 2200); setTimeout(() => location.reload(), 1600); return; }
+          bagConfirm(0, `Your account has a save with more progress (${there} matches). Load it? This phone's progress will be replaced.`, () => { SAVE.import(snapshot.data); location.reload(); }, { yes: 'LOAD IT', no: 'KEEP THIS ONE', noCost: true });
+          return;
+        } } } catch (e) { track('cloud_error', { where: 'load', msg: String(e && e.message || e).slice(0, 80) }); }
+    this.save(true);
+  },
+  progress(d) { try { const kv = (d && d.kv) || {}; const c = JSON.parse(kv.flickyCareer || kv.flickyCareerStats || '{}'); return (c.matchesPlayed || 0); } catch (e) { return 0; } },
+  async save(force) {
+    const P = this.plugin(); if (!P || !this.signedIn) return;
+    if (!force && Date.now() - this.lastSave < 20000) return;
+    this.lastSave = Date.now();
+    try { await P.saveSnapshot({ name: GAME_SERVICES.snapshot, data: SAVE.export(), description: 'Flicky Cricket progress' }); }
+    catch (e) { track('cloud_error', { where: 'save', msg: String(e && e.message || e).slice(0, 80) }); }
+  },
+  submit(board, score) { const P = this.plugin(), id = (this.cfg().boards || {})[board]; if (!P || !this.signedIn || !id) return; P.submitScore({ leaderboardId: id, score: Math.round(score) }).catch(() => {}); },
+  boards() { const P = this.plugin(); if (!P || !this.signedIn) { this.signIn(); return; } P.showAllLeaderboards().catch(() => {}); },
+};
+// iOS asks "Allow tracking?" first (Game Center's welcome banner would hide it), so cloud starts after the ads consent
+setTimeout(() => { try { FlickyCloud.init(); } catch (e) {} }, 4000);
+document.addEventListener('visibilitychange', () => { if (document.hidden) try { FlickyCloud.save(true); } catch (e) {} });
+{ const _eg = window.endGame; if (typeof _eg === 'function') window.endGame = function () { const r = _eg.apply(this, arguments); setTimeout(() => { try { FlickyCloud.save(); } catch (e) {} }, 3000); return r; }; }
 </script>
 </body>
 </html>
