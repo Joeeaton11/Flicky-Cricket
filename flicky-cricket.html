@@ -24166,5 +24166,56 @@ function renderSettings() {
   document.head.appendChild(css);
 })();
 </script>
+<script>
+// ═══ Leagues road (Nov 8, layout review): one vertical road in three tiers instead of a 27-card carousel with dots.
+// Your league is open with its full animated postcard; every other league is a slim row with a postcard thumbnail.
+(function leaguesRoad() {
+  const css = document.createElement('style');
+  css.textContent = `
+  #leagueDotsRow{display:none !important}
+  #leagueCardsTrack.road{flex-direction:column;align-items:center;overflow-y:auto !important;overflow-x:hidden !important;scroll-snap-type:none !important;padding:8px 12px 24px !important;gap:10px !important;justify-content:flex-start}
+  .road .leagueCard{transform:none !important;opacity:1 !important;flex:none;width:100% !important;max-width:406px !important;scroll-snap-align:none}
+  .road .leagueCard[data-idx="0"]{display:none !important}
+  .road .leagueCard.lgMini{display:grid;grid-template-columns:118px 1fr;align-items:stretch;border-radius:16px;cursor:pointer}
+  .road .lgMini .lgArt{height:76px !important;overflow:hidden;border-bottom:0 !important;border-right:3px solid #050A14}
+  .road .lgMini .lgArt canvas{height:100% !important;width:100% !important;object-fit:cover}
+  .road .lgMini .lgChip,.road .lgMini .lgStarChip,.road .lgMini .lgInfo{display:none}
+  .road .lgMini .leagueCardInfo{padding:8px 10px !important;gap:6px !important;justify-content:center}
+  .road .lgMini .leagueCardInfo > :not(:first-child):not(.leaguePlayBtn){display:none !important}
+  .road .lgMini .leagueCardName{font-size:17px !important}
+  .road .lgMini .leaguePlayBtn{height:30px !important;min-height:0 !important;font-size:13px !important;padding:0 8px !important}
+  .road .lgMini .leagueLockOverlay{display:none}
+  .road .lgMini.lgLocked .lgArt{filter:grayscale(.7) brightness(.6)}
+  .road .lgMini.lgFar{opacity:.62 !important}
+  .road .lgOpen{box-shadow:0 6px 0 rgba(0,0,0,.55),0 0 26px var(--lgGlow,rgba(91,139,255,.45)) !important}
+  .road .lgTier{width:100%;max-width:406px;display:flex;align-items:center;gap:8px;font-size:15px;letter-spacing:.12em;color:#FFC93A;text-shadow:0 2px 0 #000;margin:8px 0 0}
+  .road .lgTier::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,rgba(255,201,58,.6),rgba(255,201,58,0))}
+  .road .lgTier small{font-size:11px;color:#B4C2DD;letter-spacing:.06em}`;
+  document.head.appendChild(css);
+  const TIERS = [{ from: 1, name: 'STREET', sub: 'GULLY TO FAIRGROUND' }, { from: 5, name: 'WORLD', sub: 'THE CRICKET NATIONS' }, { from: 16, name: 'LEGENDS', sub: 'MYTHS, MAGIC & MAYHEM' }];
+  let open = null;
+  const apply = (track, scroll) => {
+    const hi = highestLeagueIdx();
+    track.querySelectorAll('.leagueCard').forEach(c => { const i = +c.dataset.idx, isOpen = i === open;
+      c.classList.toggle('lgOpen', isOpen); c.classList.toggle('lgMini', !isOpen); c.classList.toggle('lc-active', isOpen); c.classList.toggle('lgFar', i > hi + 2); });
+    window.__leagueActiveIdx = open; try { syncLeagueArt(open); } catch (e) {}
+    if (scroll) requestAnimationFrame(() => { const c = track.querySelector(`.leagueCard[data-idx="${open}"]`); if (c) track.scrollTop = Math.max(0, c.offsetTop - track.offsetTop - 70); });
+  };
+  const _r = window.renderLeagueScreen; if (typeof _r !== 'function') return;
+  window.renderLeagueScreen = function () {
+    const r = _r.apply(this, arguments);
+    const track = document.getElementById('leagueCardsTrack'); if (!track) return r;
+    if (track._lgScroll) { track.removeEventListener('scroll', track._lgScroll); track._lgScroll = null; }
+    track.classList.add('road');
+    TIERS.forEach(t => { const c = track.querySelector(`.leagueCard[data-idx="${t.from}"]`); if (c) { const h = document.createElement('div'); h.className = 'lgTier'; h.innerHTML = `${t.name} <small>${t.sub}</small>`; track.insertBefore(h, c); } });
+    if (open == null || open > highestLeagueIdx() + 27) open = selectedLeagueIdx();
+    if (!track._roadTap) { track._roadTap = true;
+      track.addEventListener('click', e => { if (e.target.closest('button')) return; const c = e.target.closest('.leagueCard.lgMini'); if (!c) return;
+        open = +c.dataset.idx; try { playUiTap(); } catch (err) {} apply(track, false); requestAnimationFrame(() => c.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }); }
+    apply(track, true);
+    return r;
+  };
+})();
+</script>
 </body>
 </html>
