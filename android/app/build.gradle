@@ -7,7 +7,7 @@ android {
         applicationId "com.flickycricket.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        versionCode ((System.getenv("VERSION_CODE") ?: "1") as int)   // CI passes the run number so every upload is higher
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -16,8 +16,16 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        // Nov 7: upload key comes from CI secrets (ANDROID_KEYSTORE_B64 / ANDROID_KEYSTORE_PASSWORD); without them the bundle is unsigned
+        upload {
+            def ks = System.getenv("ANDROID_KEYSTORE_FILE")
+            if (ks) { storeFile file(ks); storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD"); keyAlias "upload"; keyPassword System.getenv("ANDROID_KEYSTORE_PASSWORD") }
+        }
+    }
     buildTypes {
         release {
+            if (System.getenv("ANDROID_KEYSTORE_FILE")) signingConfig signingConfigs.upload
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

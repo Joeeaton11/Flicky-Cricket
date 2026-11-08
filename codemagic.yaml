@@ -1,0 +1,39 @@
+# Codemagic: builds the iPhone app in the cloud (no Mac needed) and sends it to TestFlight.
+# One-time setup in codemagic.io: add this GitHub repo, then Teams → Integrations → App Store Connect API key
+# (name it "flicky_asc"). Codemagic creates the signing certificate and profile itself.
+workflows:
+  ios-testflight:
+    name: iOS → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: flicky_asc
+    environment:
+      xcode: latest
+      node: 22
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: net.lightwood.FlickyCricket
+    triggering:
+      events: [push]
+      branch_patterns: [{ pattern: 'release-ios', include: true }]
+    scripts:
+      - name: Install and sync web build
+        script: |
+          npm ci || npm install
+          npm run build
+          npx cap sync ios
+      - name: Signing
+        script: xcode-project use-profiles
+      - name: Build number
+        script: |
+          cd ios/App
+          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0) + 1))
+      - name: Build IPA
+        script: xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
