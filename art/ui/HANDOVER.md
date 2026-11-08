@@ -1000,3 +1000,4 @@ Sprites rebaked (`bowlframes.py` → `bowlbake.py`), `b3_*` block replaced. Game
 ## Nov 7 — Release builds
 - Android: android.yml signs the AAB with the upload key when repo secrets ANDROID_KEYSTORE_B64 + ANDROID_KEYSTORE_PASSWORD exist (alias 'upload'); versionCode = run number. Joe holds the keystore + password (also enrol in Play App Signing so a lost upload key can be reset).
 - iOS: codemagic.yaml workflow 'ios-testflight' (push to branch release-ios, or start in Codemagic). Needs Codemagic App Store Connect API key integration named flicky_asc and APP_STORE_APPLE_ID env var.
+- Nov 8: iOS reuses the existing live App Store record (Apple ID 1090760276, bundle net.lightwood.FlickyCricket, ~18k impressions/mo) — pbxproj bundle ID + MARKETING_VERSION 2.0, codemagic bundle_identifier updated. Android stays com.flickycricket.app. RevenueCat App Store app must use net.lightwood.FlickyCricket.
