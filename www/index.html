@@ -13525,6 +13525,12 @@ function showResultScreen(d) {
     $('r2BagSub').textContent = d.beatTarget ? 'LOCKERS FULL' : 'WIN FOR A BAG';
     bag.classList.add('off');
   }
+  // Nov 8 (layout review): a loss with nothing won shows your best and a tip, not a row of zeros
+  if (lg && !d.beatTarget && !d.earnedChestType && !d.trophyDelta) {
+    const TIPS = ['SWIPE LONGER FOR POWER', 'TIME IT AS IT REACHES YOU', 'SOFT SWIPES FIND GAPS', 'SAVE ENERGY FOR THE END', 'WATCH THE LINE, THEN SWING'];
+    tv.textContent = d.target != null ? String(Math.max(0, d.target - (d.runs || 0))) : '—'; ts.textContent = 'RUNS SHORT';
+    bag.classList.remove('off'); $('r2BagVal').textContent = 'TIP'; $('r2BagSub').textContent = TIPS[(career.matchesPlayed || 0) % TIPS.length];
+  }
   const road = $('r2Road');
   road.style.display = lg ? '' : 'none';
   const unlockIdx = window._newLeagueUnlocked; window._newLeagueUnlocked = null;
@@ -21919,6 +21925,11 @@ function renderShopV2(container) {
       <button class="gcBuy${o.btnCls ? ' ' + o.btnCls : ''}"${o.btnAttr || ''}>${o.btn}</button></div></div>`;
   // ---------- DEALS ----------
   let deal = '';
+  // Nov 8 (layout review): the free daily gift leads the shop
+  try { const gr = giftReady(), g = GAME_CONFIG.daily.giftRotation[giftIndex(0)] || {}, gl = g.coins ? g.coins + ' COINS' : g.gems ? g.gems + ' GEMS' : g.bag ? 'A FREE BAG' : 'A BOOSTER';
+    const mid = new Date(); mid.setHours(24, 0, 0, 0); const left = Math.max(0, mid - Date.now()), hh = Math.floor(left / 36e5), mm = Math.floor(left % 36e5 / 6e4);
+    deal += wide({ attr: ' data-shelf="gift"', tint: '#22c55e', art: `<img alt="" style="width:100%;height:100%;object-fit:contain;padding:10px;box-sizing:border-box" src="${g.gems ? REWARD_HEAP_ART.gems_s : g.bag && typeof CHEST_IMG_SRC !== 'undefined' ? CHEST_IMG_SRC[g.bag] : REWARD_HEAP_ART.coins_s}">`, name: 'FREE DAILY GIFT', sub: gr ? `Today: ${gl}` : `Next gift in ${hh}h ${mm}m`,
+      btn: gr ? 'CLAIM' : 'CLAIMED', btnCls: gr ? '' : 'goal', btnAttr: gr ? ' data-act="gift"' : ' disabled' }); } catch (e) {}
   const ds = dsActive();
   if (off || featureOn('pass') || ds) {
     deal += hd('FEATURED');
@@ -21969,8 +21980,8 @@ function renderShopV2(container) {
   more.push(tile({ tint: '#2f6fd0', name: 'FREE GEMS', art: img(REWARD_HEAP_ART.gems_s) + '<span class="gcPlay">▶</span>', qty: '+' + GEM_AD_REWARD, note: `Watch an ad · ${getDailyAdWatches()}/${GEM_AD_DAILY_MAX} today`, btn: 'FREE', btnAttr: ' data-act="ad"' }));
   if (!hasExtraChestSlot()) more.push(tile({ tint: '#b0662a', name: '5TH BAG SLOT', art: img(CHEST_IMG_SRC.bronze), note: 'Hold one extra bag', btn: GEM_EXTRA_SLOT_COST + gem, btnAttr: ' data-act="slot"' }));
   const moreHtml = hd('MORE') + `<div class="gcGrid" data-shelf="more">${more.join('')}</div><button class="gcOdds" data-act="odds">BAG ODDS · exactly what's in every bag ›</button>`;
-  const tabs = `<div class="shTabs gc"><span class="shInd"></span>${[['deals', 'DEALS'], ['gems', 'GEMS & COINS'], ['more', 'MORE']].map(([k, l]) => `<button data-shoptab="${k}">${l}</button>`).join('')}</div>`;
-  container.innerHTML = `<div class="sh2 sh3 bgA">${tabs}<section class="gcSec" data-sec="deals" id="shSec-deals">${deal}</section><section class="gcSec" data-sec="gems" id="shSec-gems">${cur}</section><section class="gcSec" data-sec="more" id="shSec-more">${moreHtml}</section></div>`;
+  const tabs = `<div class="shTabs gc"><span class="shInd"></span>${[['deals', 'DEALS'], ['gems', 'GEMS & COINS']].map(([k, l]) => `<button data-shoptab="${k}">${l}</button>`).join('')}</div>`;
+  container.innerHTML = `<div class="sh2 sh3 bgA">${tabs}<section class="gcSec" data-sec="deals" id="shSec-deals">${deal}</section><section class="gcSec" data-sec="gems" id="shSec-gems">${cur}${moreHtml}</section></div>`;
   // scroll-spy: the highlight slides to whichever section is under the pinned tab bar
   const cont = container;
   cont._shCur = null;
@@ -22403,7 +22414,8 @@ function passClaimable() { const p = passState(), t = passTier(); let n = 0; for
 function updateEventsBadge() { const b = document.getElementById('evBadge'); if (!b) return; let n = 0;
   try { if (featureOn('pass')) n += passClaimable(); } catch (e) {}
   try { const ev = activeEvent(); if (ev && featureOn('compete')) { const st = eventState(ev); if (st.claimed < ev.track.length && st.cur >= (st.claimed + 1) * ev.every) n++; } } catch (e) {}
-  b.textContent = n; b.classList.toggle('show', n > 0); }
+  b.textContent = n; b.classList.toggle('show', n > 0);
+  const nb = document.getElementById('navEvBadge'); if (nb) { nb.textContent = n; nb.classList.toggle('show', n > 0); } }
 function updatePassBtn() { try { updateEventsBadge(); } catch (e) {} const b = document.getElementById('passBtn'); if (!b) return; b.style.display = featureOn('pass') ? '' : 'none'; const t = document.getElementById('passBtnTier'); if (t) { const c = passClaimable(); t.textContent = c ? `${c} TO CLAIM` : `TIER ${passTier()}`; } }
 // Art pass (Oct 31): kit rewards show your own player wearing that kit (chest-up crop), drawn from the same
 // recoloured player art as the Pass showcase, so every month's / event's kit matches without new art.
@@ -24135,6 +24147,23 @@ function renderSettings() {
   }, true);
   const _uh = window.updateMenuHUD; if (typeof _uh === 'function') window.updateMenuHUD = function () { const r = _uh.apply(this, arguments); try { paint(); } catch (e) {} return r; };
   paint();
+})();
+</script>
+<script>
+// ═══ Events v5 (Nov 8, layout review): one scrolling list of event cards (live ones first) instead of chips + a
+// swipe carousel + dots. The Flicky Pass moves to a bar on Home (it stays in the Shop too).
+(function eventsList() {
+  const css = document.createElement('style');
+  css.textContent = `
+  #competePanel .evChips,#competePanel .evPips{display:none !important}
+  #competePanel .evCarousel{flex-direction:column;overflow:visible !important;scroll-snap-type:none;gap:18px}
+  #competePanel .evPoster{flex:none;padding:0}
+  #competePanel .evPoster[data-pk="pass"]{display:none}
+  #competePanel.fs .evHero,#competePanel .evHero{height:150px !important}
+  #competePanel .evName b{font-size:26px !important}
+  #competePanel .sheet{overflow-y:auto !important}
+  #competePanel .sh3{overflow:visible !important}`;
+  document.head.appendChild(css);
 })();
 </script>
 </body>
