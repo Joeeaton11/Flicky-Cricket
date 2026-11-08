@@ -5016,7 +5016,7 @@ function storeIdFor(productId, price) {
   return null;
 }
 // RevenueCat wrapper: configure once, load localised prices, buy, restore. Inactive until a key is set (then buyRealMoney uses it).
-// where a store's product ID differs from ours (App Store IDs can't be edited once made)
+// alternative spellings to also look up in a store (App Store IDs can't be edited once made); whichever exists is used
 const STORE_ID_ALIAS = { ios: { gems_2200: 'Gems_2200' }, android: {} };
 const platId = id => (STORE_ID_ALIAS[capPlatform() === 'ios' ? 'ios' : 'android'] || {})[id] || id;
 const FlickyStore = window.FlickyStore = {
@@ -5027,8 +5027,8 @@ const FlickyStore = window.FlickyStore = {
     if (!P || !key) return;
     try {
       await P.configure({ apiKey: key });
-      const ids = Object.keys(STORE_PRODUCTS), back = {}; ids.forEach(id => back[platId(id)] = id);
-      const r = await P.getProducts({ productIdentifiers: ids.map(platId), type: 'inapp' });
+      const ids = Object.keys(STORE_PRODUCTS), back = {}; ids.forEach(id => { back[id] = id; back[platId(id)] = id; });
+      const r = await P.getProducts({ productIdentifiers: Object.keys(back), type: 'inapp' });
       (r.products || []).forEach(pr => { const id = back[pr.identifier] || pr.identifier; this.products[id] = pr; this.prices[id] = pr.priceString; });
       this.ready = true;
       const ci = await P.getCustomerInfo(); if (this.ownsNoAds(ci.customerInfo) && !adsRemoved) grantRemoveAds(true);
