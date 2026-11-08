@@ -3982,7 +3982,7 @@ window._imgPending = new Set(); window._imgSeen = 0;
           <span class="lcGo" aria-hidden="true">›</span><span class="lcRoad"><i class="hIco hi-trophy"></i><span class="lcTrack"><span class="lcFill" id="homeRoadFill"></span><span id="homeRoadTxt">0 / 8</span></span></span>
         </span>
       </button>
-      <div id="homePlayBtns"><button id="startBtn"><svg viewBox="0 0 30 32" aria-hidden="true"><path d="M5 3 L27 16 L5 29 Z" fill="#fff" stroke="#A04E00" stroke-width="3" stroke-linejoin="round"/></svg><span>PLAY</span></button><button id="homeDuelBtn" hidden aria-label="Duels and the Flicky Cup"><img alt="" src="assets/ui/icon_duel_badge.webp"><span>DUEL</span></button></div>
+      <div id="homePlayBtns"><button id="startBtn"><svg viewBox="0 0 30 32" aria-hidden="true"><path d="M5 3 L27 16 L5 29 Z" fill="#fff" stroke="#A04E00" stroke-width="3" stroke-linejoin="round"/></svg><span>PLAY</span></button><button id="homeDuelBtn" hidden aria-label="Duels and the Flicky Cup"><img alt="" src="assets/ui/icon_duel.webp"><span>DUEL</span></button></div>
     </div>
     <div id="nextOpponentDisplay" class="srOnly"></div>
   </div>
@@ -4372,7 +4372,7 @@ const GAME_CONFIG = {
   // phone notifications (app build only): never more than 2 a day, nothing between 9 pm and 9 am (moved to 9 am)
   notify: { maxPerDay: 2, quietFrom: 21, quietTo: 9, reminderHour: 18, lapsedDays: [2, 5], eventStartHour: 10 },
   // settings screen links: fill in before release (empty = "coming with the app")
-  app: { version: '0.9.0', privacyUrl: '', termsUrl: '', supportEmail: '' },
+  app: { version: '2.0', privacyUrl: 'https://flickycricket.com/privacy.html', termsUrl: 'https://flickycricket.com/terms.html', supportUrl: 'https://flickycricket.com/support.html', supportEmail: 'support@flickycricket.com' },
 };
 function _deepMerge(into, from) {
   for (const k in from) {
@@ -5083,7 +5083,9 @@ const AD_FREQUENCY = 3; // show interstitial every N games
 // then Apple's "Allow tracking?" prompt on iOS. Either answer is fine: ads still show, just not personalised.
 async function adConsent(AdMob) {
   try { const info = await AdMob.requestConsentInfo();
-    if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') await AdMob.showConsentForm(); } catch (e) { track('consent_error', { msg: String(e && e.message || e).slice(0, 80) }); }
+    if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') await AdMob.showConsentForm();
+    // Nov 8: UK/EU players must be able to change their ad choices later (Settings → Privacy choices)
+    try { const again = await AdMob.requestConsentInfo(); window._privacyOptions = !!(again && again.privacyOptionsRequirementStatus === 'REQUIRED'); } catch (e) {} } catch (e) { track('consent_error', { msg: String(e && e.message || e).slice(0, 80) }); }
   try { if (capPlatform() === 'ios') { const st = await AdMob.trackingAuthorizationStatus(); if (st && st.status === 'notDetermined') await AdMob.requestTrackingAuthorization(); } } catch (e) {}
 }
 // Initialise AdMob via Capacitor plugin (no-ops gracefully in browser)
@@ -20222,8 +20224,9 @@ function chaseWicket(kind) {
     setTimeout(() => endGame(), 2000); return; }
   if (c.used >= c.balls) { setTimeout(() => { if (!extraOverOffer()) endGame(); }, 2000); return; }
   const left = c.wickets - c.wkLost;
-  setTimeout(() => showMoment('wicket', { left, need: chaseNeed(), balls: chaseBallsLeft(), nets: c.mode === 'nets' }), 1250);   // after the OUT word
-  setTimeout(chaseNewBatter, 2900);
+  // Nov 8 (review): the OUT word gets the screen to itself, then the wicket card replaces it (they used to stack)
+  setTimeout(() => { if (window.chase !== c) return; popText = null; try { if (_fxBigEl) { _fxBigEl.remove(); _fxBigEl = null; } } catch (e) {} showMoment('wicket', { left, need: chaseNeed(), balls: chaseBallsLeft(), nets: c.mode === 'nets' }); }, 1650);
+  setTimeout(chaseNewBatter, 3200);
 }
 function chaseNewBatter() {
   if (!window.chase || state === 'menu') return;
@@ -20415,7 +20418,7 @@ function showMoment(kind, d) {
           : `<${tg} class="${c}"${at} data-t="${tx}">${tx}<`); }
   } else if (kind === 'wicket') {
     html = d.nets ? '' : `<div class="mmCard" style="margin-top:20px"><span style="font-size:30px">${d.left} WICKET${d.left === 1 ? '' : 'S'} LEFT</span><span class="mmSub" style="font-size:24px">NEED ${d.need} OFF ${d.balls}</span></div>`;
-    ms = 1700;
+    ms = 1450;
   } else if (kind === 'won') {
     html = `<span class="mmBig" style="font-size:68px;color:#FFC93A">WON!</span><div class="mmCard"><span style="font-size:17px">${d.spare > 0 ? `WITH ${d.spare} BALL${d.spare === 1 ? '' : 'S'} TO SPARE` : 'OFF THE LAST BALL!'}</span></div>`;
     ms = 2100;
@@ -23891,7 +23894,7 @@ function replayTutorial() {
 function renderSettings() {
   const A = GAME_CONFIG.app, sh = document.querySelector('#settingsPanel .sheet');
   const tg = (key, on, label, sub) => `<div class="stRow"><div class="setLbl"><i class="stIco sti-${key}"></i><div><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</div></div><button class="stTog${on ? ' on' : ''}" data-tog="${key}" role="switch" aria-checked="${on}" aria-label="${label}"><i></i></button></div>`;
-  const link = (act, label, ok) => `<button class="stLink" data-st="${act}"><span class="setLbl"><i class="stIco sti-${act}"></i>${label}</span><span${ok ? '' : ' class="soon"'}>${ok ? '›' : 'SOON'}</span></button>`;
+  const link = (act, label, ok) => `<button class="stLink" data-st="${act}"><span class="setLbl"><i class="stIco sti-${act === 'adprivacy' ? 'privacy' : act}"></i>${label}</span><span${ok ? '' : ' class="soon"'}>${ok ? '›' : 'SOON'}</span></button>`;
   document.getElementById('settingsPanel').classList.add('fs');
   sh.innerHTML = `<div class="evTop"><button class="evBack" data-st="close" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b>SETTINGS</b></div>
     <div class="stCard">
@@ -23906,7 +23909,8 @@ function renderSettings() {
     <div class="stCard">
       ${link('privacy', 'PRIVACY POLICY', !!A.privacyUrl)}
       ${link('terms', 'TERMS OF SERVICE', !!A.termsUrl)}
-      ${link('support', 'CONTACT SUPPORT', !!A.supportEmail)}
+      ${link('support', 'CONTACT SUPPORT', !!(A.supportUrl || A.supportEmail))}
+      ${window._privacyOptions ? link('adprivacy', 'PRIVACY CHOICES', true) : ''}
       <div class="stRow"><div class="setLbl"><i class="stIco sti-playerid"></i><div><b>PLAYER ID</b><small>Quote this if you contact support</small></div></div><button class="stId" data-st="copyid">${playerId()}</button></div>
     </div>
     <button class="stReset" data-st="reset"><i class="stIco sti-reset" style="width:26px;height:26px;margin-right:8px"></i>RESET ALL PROGRESS</button>
@@ -23965,6 +23969,8 @@ function renderSettings() {
     else if (act === 'tutorial') replayTutorial();
     else if (act === 'restore') restorePurchases();
     else if (act === 'privacy' || act === 'terms') { const u = act === 'privacy' ? A.privacyUrl : A.termsUrl; if (u) window.open(u, '_blank', 'noopener'); else showMessage('COMING WITH THE APP', '#FFC93A', 1800); }
+    else if (act === 'adprivacy') { try { const AM = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob; if (AM) AM.showPrivacyOptionsForm(); } catch (err) {} }
+    else if (act === 'support' && A.supportUrl) window.open(A.supportUrl, '_blank', 'noopener');
     else if (act === 'support') { if (A.supportEmail) location.href = `mailto:${A.supportEmail}?subject=${encodeURIComponent('Flicky Cricket help · ' + playerId())}`; else showMessage('COMING WITH THE APP', '#FFC93A', 1800); }
     else if (act === 'copyid') { try { navigator.clipboard.writeText(playerId()); } catch (err) {} showMessage('PLAYER ID COPIED', '#22c55e', 1500); }
     else if (act === 'reset') {
