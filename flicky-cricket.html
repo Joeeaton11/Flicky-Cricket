@@ -5016,6 +5016,9 @@ function storeIdFor(productId, price) {
   return null;
 }
 // RevenueCat wrapper: configure once, load localised prices, buy, restore. Inactive until a key is set (then buyRealMoney uses it).
+// where a store's product ID differs from ours (App Store IDs can't be edited once made)
+const STORE_ID_ALIAS = { ios: { gems_2200: 'Gems_2200' }, android: {} };
+const platId = id => (STORE_ID_ALIAS[capPlatform() === 'ios' ? 'ios' : 'android'] || {})[id] || id;
 const FlickyStore = window.FlickyStore = {
   ready: false, prices: {}, products: {},
   plugin() { return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases || null; },
@@ -5024,8 +5027,9 @@ const FlickyStore = window.FlickyStore = {
     if (!P || !key) return;
     try {
       await P.configure({ apiKey: key });
-      const r = await P.getProducts({ productIdentifiers: Object.keys(STORE_PRODUCTS), type: 'inapp' });
-      (r.products || []).forEach(pr => { this.products[pr.identifier] = pr; this.prices[pr.identifier] = pr.priceString; });
+      const ids = Object.keys(STORE_PRODUCTS), back = {}; ids.forEach(id => back[platId(id)] = id);
+      const r = await P.getProducts({ productIdentifiers: ids.map(platId), type: 'inapp' });
+      (r.products || []).forEach(pr => { const id = back[pr.identifier] || pr.identifier; this.products[id] = pr; this.prices[id] = pr.priceString; });
       this.ready = true;
       const ci = await P.getCustomerInfo(); if (this.ownsNoAds(ci.customerInfo) && !adsRemoved) grantRemoveAds(true);
       track('store_ready', { products: Object.keys(this.products).length });
