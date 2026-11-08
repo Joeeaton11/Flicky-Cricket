@@ -5830,7 +5830,7 @@ function openChestRewards(typeName) {
       continue;
     }
     itemCards[picked.id] = (itemCards[picked.id] || 0) + 1;
-    rewards.cards.push({ id: picked.id, rarity: picked.rarity });
+    rewards.cards.push({ id: picked.id, rarity: picked.rarity, isNew: !itemLevels[picked.id] && !rewards.cards.some(x => x.id === picked.id) });
     // unlock item immediately on first card received, at its rarity's start level
     if (!itemLevels[picked.id]) {
       itemLevels[picked.id] = kitStartLevel(picked);
@@ -5842,7 +5842,7 @@ function openChestRewards(typeName) {
     if (next && Math.random() < GAME_CONFIG.kit.luckyNextTier) {
       const pool = []; EQUIP_SLOTS.forEach(sl => EQUIPMENT[sl].forEach(it => { if (it.rarity === next && !it.gemOnly) pool.push(it); }));
       const it = pool[Math.floor(Math.random() * pool.length)];
-      if (it) { itemCards[it.id] = (itemCards[it.id] || 0) + 1; if (!itemLevels[it.id]) itemLevels[it.id] = 1; rewards.cards.push({ id: it.id, rarity: it.rarity, lucky: true });
+      if (it) { const fresh = !itemLevels[it.id]; itemCards[it.id] = (itemCards[it.id] || 0) + 1; if (!itemLevels[it.id]) itemLevels[it.id] = 1; rewards.cards.push({ id: it.id, rarity: it.rarity, lucky: true, isNew: fresh });
         rewards.lucky = it.id; track('lucky_card', { item: it.id, rarity: next });
         setTimeout(() => showMessage('LUCKY! A ' + next.toUpperCase() + ' CARD!', '#FFC93A', 2600), 600); }
     } }
@@ -7834,11 +7834,16 @@ function updateFielders() {
       return;
     }
     if (!f.chasing && !f._busy && f.name !== 'keeper' && walkIn) {
-      if (!f._wiT) { const dx = W / 2 - f.baseX, dy = PITCH_BOTTOM() - f.baseY, L = Math.hypot(dx, dy) || 1, st = Math.min(11, L * 0.07) * (W / 390);
-        f._wiT = { x: f.baseX + dx / L * st, y: f.baseY + dy / L * st }; }
+      // Nov 8 (Joe: "too clean cut, all the same pace, same time"): each fielder walks in his own way every ball —
+      // a different start, pace, distance and line; a few barely move; everyone eases in and slows to a stop
+      if (!f._wiT) { const dx = W / 2 - f.baseX, dy = PITCH_BOTTOM() - f.baseY, L = Math.hypot(dx, dy) || 1, R = Math.random;
+        const lazy = R() < 0.18, st = Math.min(11, L * 0.07) * (W / 390) * (lazy ? 0.15 + R() * 0.25 : 0.55 + R() * 0.95), a = Math.atan2(dy, dx) + (R() - 0.5) * 0.55;
+        f._wiT = { x: f.baseX + Math.cos(a) * st, y: f.baseY + Math.sin(a) * st, d0: st, at: now + 60 + R() * (lazy ? 900 : 520), sp: (0.15 + R() * 0.15) * (W / 390), cad: 0.09 + R() * 0.06 }; }
       const dx = f._wiT.x - f.x, dy = f._wiT.y - f.y, d = Math.hypot(dx, dy);
-      if (d > 0.6 && state !== 'hit') { const sp = Math.min(d, 0.22 * (W / 390)); f.x += dx / d * sp; f.y += dy / d * sp; f.stridePhase = (f.stridePhase || 0) + 0.12; }
-      else if (d <= 0.6 || !f.stridePhase || state === 'hit') { if (d <= 0.6) { f.x = f._wiT.x; f.y = f._wiT.y; } f.stridePhase = 0; }
+      if (now < f._wiT.at && state !== 'hit') { f.stridePhase = 0; return; }
+      if (d > 0.4 && state !== 'hit') { const pr = Math.max(0, Math.min(1, 1 - d / Math.max(0.01, f._wiT.d0))), ease = 0.35 + Math.sin(Math.PI * Math.min(0.98, pr + 0.08)) * 0.9;
+        const sp = Math.min(d, f._wiT.sp * ease); f.x += dx / d * sp; f.y += dy / d * sp; f.stridePhase = (f.stridePhase || 0) + f._wiT.cad * (0.6 + ease * 0.5); }
+      else if (d <= 0.4 || !f.stridePhase || state === 'hit') { if (d <= 0.4) { f.x = f._wiT.x; f.y = f._wiT.y; } f.stridePhase = 0; }
       return;
     }
     if (f.chasing && f.target && window._gField && window._gField.f === f && now < window._gField.holdUntil) { f.stridePhase = 0; return; }   // reacting
@@ -7863,8 +7868,11 @@ function updateFielders() {
       const dyb = f.baseY - f.y;
       const db = Math.hypot(dxb, dyb);
       if (db > 1) {
+        // Nov 8: each one turns back in his own time and at his own pace
+        if (!f._wb) f._wb = { at: now + Math.random() * 700, k: 0.75 + Math.random() * 0.5 };
+        if (now < f._wb.at) { f.stridePhase = 0; return; }
         // walk at a fixed pixel speed (slower than sprint), with gentle lerp finish
-        const walkSpeed = f.speed * 60 * 1.8;
+        const walkSpeed = f.speed * 60 * 1.8 * f._wb.k * (db < 12 ? 0.45 + db / 22 : 1);
         const step = Math.min(walkSpeed, db);
         f.x += (dxb / db) * step;
         f.y += (dyb / db) * step;
@@ -7872,7 +7880,7 @@ function updateFielders() {
         f.stridePhase += 0.14; // slower stride cadence for walking
       } else {
         f.x = f.baseX; f.y = f.baseY;
-        f.stridePhase = 0;
+        f.stridePhase = 0; f._wb = null;
       }
     }
   });
@@ -24195,7 +24203,16 @@ function renderSettings() {
   .road .lgOpen{box-shadow:0 6px 0 rgba(0,0,0,.55),0 0 26px var(--lgGlow,rgba(91,139,255,.45)) !important}
   .road .lgTier{width:100%;max-width:406px;display:flex;align-items:center;gap:8px;font-size:15px;letter-spacing:.12em;color:#FFC93A;text-shadow:0 2px 0 #000;margin:8px 0 0}
   .road .lgTier::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,rgba(255,201,58,.6),rgba(255,201,58,0))}
-  .road .lgTier small{font-size:11px;color:#B4C2DD;letter-spacing:.06em}`;
+  .road .lgTier small{font-size:11px;color:#B4C2DD;letter-spacing:.06em}
+  .road .lgOpen .lgArt{height:170px !important;overflow:hidden}
+  .road .lgOpen .lgArt canvas{height:100% !important;object-fit:cover}
+  .road::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:6px;margin-left:-3px;background:repeating-linear-gradient(#FFC93A 0 10px,transparent 10px 20px);opacity:.25;pointer-events:none}
+  #leagueCardsTrack.road{position:relative}
+  #roadMore{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(92px + max(env(safe-area-inset-bottom,0px),8px));z-index:5;display:flex;align-items:center;gap:6px;height:34px;padding:0 16px;border-radius:17px;border:3px solid #050A14;background:linear-gradient(#ffd75a,#f0a21a);color:#3a2300;font:15px 'Lilita One','Arial Black',Arial,sans-serif;letter-spacing:.05em;box-shadow:0 4px 0 #050A14,0 0 22px rgba(255,201,58,.45);cursor:pointer;transition:opacity .25s;animation:roadBob 1.6s ease-in-out infinite}
+  #roadMore.off{opacity:0;pointer-events:none}
+  #roadMore b{font-size:18px}
+  @keyframes roadBob{50%{transform:translate(-50%,5px)}}
+  #leagueScreen::after{content:'';position:absolute;left:0;right:0;bottom:calc(84px + max(env(safe-area-inset-bottom,0px),8px));height:70px;background:linear-gradient(rgba(1,22,44,0),#01162C);pointer-events:none;z-index:4}`;
   document.head.appendChild(css);
   const TIERS = [{ from: 1, name: 'STREET', sub: 'GULLY TO FAIRGROUND' }, { from: 5, name: 'WORLD', sub: 'THE CRICKET NATIONS' }, { from: 16, name: 'LEGENDS', sub: 'MYTHS, MAGIC & MAYHEM' }];
   let open = null;
@@ -24218,6 +24235,13 @@ function renderSettings() {
       track.addEventListener('click', e => { if (e.target.closest('button')) return; const c = e.target.closest('.leagueCard.lgMini'); if (!c) return;
         open = +c.dataset.idx; try { playUiTap(); } catch (err) {} apply(track, false); requestAnimationFrame(() => c.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }); }
     apply(track, true);
+    // a pill shows how many leagues are still below, so the road obviously keeps going
+    let more = document.getElementById('roadMore'); if (!more) { more = document.createElement('button'); more.id = 'roadMore'; document.getElementById('leagueScreen').appendChild(more);
+      more.addEventListener('click', () => { const t = document.getElementById('leagueCardsTrack'); t.scrollBy({ top: t.clientHeight * 0.8, behavior: 'smooth' }); }); }
+    const upd = () => { const tb = track.getBoundingClientRect().bottom - 60; const below = [...track.querySelectorAll('.leagueCard')].filter(c => +c.dataset.idx > 0 && c.getBoundingClientRect().top > tb).length;
+      more.innerHTML = `<b>↓</b> ${below} MORE LEAGUE${below === 1 ? '' : 'S'}`; more.classList.toggle('off', below === 0); };
+    if (!track._roadMore) { track._roadMore = true; track.addEventListener('scroll', () => requestAnimationFrame(upd), { passive: true }); }
+    setTimeout(upd, 120); setTimeout(upd, 600);
     return r;
   };
 })();
@@ -24360,6 +24384,51 @@ const FlickyInbox = window.FlickyInbox = {
   const place = () => { const ref = document.getElementById('todayBtn'); if (!ref) { b.style.left = '12px'; b.style.top = '40%'; return; } const r = ref.getBoundingClientRect(), hr = home.getBoundingClientRect(); b.style.left = (r.left - hr.left + (r.width - 46) / 2) + 'px'; b.style.top = (r.top - hr.top - 58) + 'px'; };
   setTimeout(() => { place(); FlickyInbox.badge(); }, 900); window.addEventListener('resize', place);
   const _uh = window.updateMenuHUD; if (typeof _uh === 'function') window.updateMenuHUD = function () { const r = _uh.apply(this, arguments); try { FlickyInbox.badge(); place(); } catch (e) {} return r; };
+})();
+</script>
+<script>
+// ═══ New kit moment (Nov 8, Joe: "a new piece of kit should feel more special"): the first card of an item you've
+// never had stops the bag for its own reveal: rays in its rarity colour, the kit big, "NEW BAT!", a fanfare.
+(function newKitMoment() {
+  const css = document.createElement('style');
+  css.textContent = `
+  #nkWow{position:fixed;inset:0;z-index:9500;display:none;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(circle at 50% 45%,rgba(20,30,60,.82),rgba(2,6,16,.96) 70%);font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff;overflow:hidden;cursor:pointer}
+  #nkWow.show{display:flex;animation:nkIn .25s ease-out}
+  #nkWow .nkRays{position:absolute;left:50%;top:44%;width:1200px;height:1200px;margin:-600px 0 0 -600px;background:repeating-conic-gradient(from 0deg,var(--rc) 0 8deg,transparent 8deg 22deg);opacity:.35;-webkit-mask:radial-gradient(circle,#000 0,transparent 55%);mask:radial-gradient(circle,#000 0,transparent 55%);animation:nkSpin 14s linear infinite}
+  #nkWow .nkGlow{position:absolute;left:50%;top:44%;width:340px;height:340px;margin:-170px 0 0 -170px;border-radius:50%;background:radial-gradient(circle,var(--rc),transparent 65%);opacity:.55;animation:nkPulse 1.6s ease-in-out infinite}
+  #nkWow .nkNew{position:relative;font-size:22px;letter-spacing:.2em;color:#3a2300;background:linear-gradient(#ffe27a,#f4a30a);border:3px solid #050A14;border-radius:14px;padding:4px 18px;box-shadow:0 4px 0 #050A14;animation:nkDrop .5s cubic-bezier(.3,1.6,.5,1) both}
+  #nkWow .nkArt{position:relative;width:min(62vw,260px);height:min(62vw,260px);margin:14px 0 6px;filter:drop-shadow(0 14px 16px rgba(0,0,0,.6));animation:nkPop .7s cubic-bezier(.3,1.6,.5,1) .15s both,nkFloat 2.4s ease-in-out .9s infinite}
+  #nkWow .nkArt i{display:block;width:100%;height:100%;background-size:contain !important;background-position:center !important;background-repeat:no-repeat !important}
+  #nkWow .nkSlot{position:relative;font-size:46px;line-height:1;letter-spacing:.03em;-webkit-text-stroke:3px #050A14;paint-order:stroke fill;text-shadow:0 5px 0 rgba(0,0,0,.4);animation:nkDrop .5s cubic-bezier(.3,1.6,.5,1) .35s both}
+  #nkWow .nkName{position:relative;font-size:26px;color:var(--rc);-webkit-text-stroke:2px #050A14;paint-order:stroke fill;margin-top:4px;animation:nkDrop .5s cubic-bezier(.3,1.6,.5,1) .45s both}
+  #nkWow .nkRar{position:relative;font-size:14px;letter-spacing:.18em;color:#dbe4f5;margin-top:6px}
+  #nkWow .nkGo{position:relative;margin-top:26px;height:54px;padding:0 34px;border-radius:16px;border:3px solid #050A14;background:linear-gradient(#7CF29A,#1fae4b);color:#fff;font:22px 'Lilita One','Arial Black',Arial,sans-serif;-webkit-text-stroke:1.5px #0a3a18;paint-order:stroke fill;box-shadow:0 5px 0 #0a3a18;cursor:pointer;animation:nkDrop .45s ease-out .8s both}
+  #nkWow .nkConf i{position:absolute;top:-20px;width:9px;height:14px;border-radius:2px;animation:nkFall 2.6s linear forwards}
+  @keyframes nkIn{from{opacity:0}}@keyframes nkSpin{to{transform:rotate(360deg)}}@keyframes nkPulse{50%{transform:scale(1.15);opacity:.75}}
+  @keyframes nkDrop{from{opacity:0;transform:translateY(-24px) scale(.8)}}@keyframes nkPop{from{opacity:0;transform:scale(.2) rotate(-12deg)}}
+  @keyframes nkFloat{50%{transform:translateY(-8px)}}@keyframes nkFall{to{transform:translateY(110vh) rotate(540deg)}}`;
+  document.head.appendChild(css);
+  const _fc = window.fcShowItem; if (typeof _fc !== 'function') return;
+  window.fcShowItem = function (c, count) {
+    const r = _fc.apply(this, arguments);
+    if (c && c.isNew) { _revealBusy = true; setTimeout(() => showNewKit(c), 650); }
+    return r;
+  };
+  window.showNewKit = function (c) {
+    let el = document.getElementById('nkWow'); if (!el) { el = document.createElement('div'); el.id = 'nkWow'; document.body.appendChild(el); }
+    const ref = EQUIP_SLOTS.map(sl => EQUIPMENT[sl].find(x => x.id === c.id)).find(Boolean), slot = _slotForItem(c.id) || 'kit', rc = rarityColor(c.rarity);
+    const word = { bat: 'NEW BAT!', gloves: 'NEW GLOVES!', pads: 'NEW PADS!', helmet: 'NEW HELMET!', shoes: 'NEW SHOES!' }[slot] || 'NEW KIT!';
+    el.style.setProperty('--rc', rc);
+    el.innerHTML = `<div class="nkRays"></div><div class="nkGlow"></div><div class="nkConf">${Array.from({ length: 26 }, (_, i) => `<i style="left:${(i * 41) % 100}%;background:${[rc, '#FFC93A', '#fff', '#7fd0ff'][i % 4]};animation-delay:${(i % 9) * .12}s"></i>`).join('')}</div>
+      <div class="nkNew">NEW ITEM</div><div class="nkArt">${(typeof EQUIP_ART !== 'undefined' && EQUIP_ART[c.id]) ? `<i class="ka-${c.id}"></i>` : ''}</div>
+      <div class="nkSlot">${word}</div><div class="nkName">${kbEsc(ref ? ref.name : c.id)}</div><div class="nkRar">${c.rarity.toUpperCase()}${c.lucky ? ' · LUCKY FIND' : ''}</div>
+      <button class="nkGo">AWESOME!</button>`;
+    el.classList.add('show');
+    try { playAchievementChime(); } catch (e) {} try { playCrowdCheer(true); } catch (e) {} try { hapticBig(); } catch (e) {}
+    try { track('kit_new_item', { id: c.id, rarity: c.rarity, slot }); } catch (e) {}
+    const close = e => { if (e) { e.stopPropagation(); e.preventDefault(); } el.classList.remove('show'); el.onclick = null; setTimeout(() => { _revealBusy = false; }, 120); };
+    setTimeout(() => { el.onclick = close; }, 700);
+  };
 })();
 </script>
 </body>
