@@ -22,12 +22,12 @@ def evcard(src,title,sub,tag,wf,ang,crop=(0,0.04,1,0.96)):
     return O.rotate(ang,Image.BICUBIC,expand=True)
 tall=H/W>2.1
 im=scene('bg/b1.png'); top=head(im,'NEW EVENTS','EVERY FEW WEEKS','Themed cups, exclusive kit and prizes.')
-wf=0.84 if tall else 0.72
-cards=[('evart/summer.png','SUMMER CUP','Village green prizes',None,0.53,0.86,3),
-       ('evart/diwali.png','DIWALI CUP','Firework sixes',None,0.47,0.695,-3),
-       ('evart/halloween.png','HALLOWEEN CUP','Spooky kit and grounds',None,0.53,0.53,3),
-       ('evart/xmas.png','CHRISTMAS CUP','Win the Christmas jumper kit','EVENT',0.47,0.365,-3)]
-if not tall: cards=[(a,b,c,d,e,{0.86:0.84,0.695:0.68,0.53:0.52,0.365:0.355}[f],g) for a,b,c,d,e,f,g in cards]
+wf=0.66 if tall else 0.57
+ys=[0.345,0.525,0.705,0.885] if tall else [0.35,0.525,0.70,0.875]
+cards=[('evart4/summer.png','SUMMER CUP','Village green prizes',None,0.60,ys[3],4),
+       ('evart4/diwali.png','DIWALI CUP','Firework sixes',None,0.40,ys[2],-4),
+       ('evart4/halloween.png','HALLOWEEN CUP','Spooky kit and grounds',None,0.60,ys[1],4),
+       ('evart4/xmas.png','CHRISTMAS CUP','Win the Christmas jumper kit','EVENT',0.40,ys[0],-4)]
 for src,t,s_,tag,cx,cy,ang in cards:
     C=evcard(src,t,s_,tag,wf,ang); drop(im,C,int(W*cx-C.width/2),int(H*cy-C.height/2),blur=int(26*K),off=(0,int(20*K)),a=0.6)
-im.convert('RGB').save(f'{OUT}/07_ev.png'); print('ok')
+im.convert('RGB').save(f'{OUT}/07_t4.png'); print('ok')
