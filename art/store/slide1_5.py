@@ -15,11 +15,11 @@ gpill(im,'2-MINUTE MATCHES',W/2,H*(0.955 if H/W>2.1 else 0.952),0.042,True)
 im.convert('RGB').save(f'{OUT}/01_pill.png')
 
 # ── slide 5 challenge
-im=stadium(); top=head(im,'CHALLENGE','YOUR MATES','Same 12 balls. Who scores more?')
+im=scene('bg3/sta2.png',True); top=head(im,'CHALLENGE','YOUR MATES','Same 12 balls. Who scores more?')
 Bb=bubble('SAM','Beat my 31 off 12 balls. Go on, I dare you.','flickycricket.com/play',0.80,3)
 y1=top+int(H*0.03); drop(im,Bb,int(W*0.06),y1,blur=int(22*K),off=(0,int(16*K)),a=0.5)
 CH=Image.open('ch_in.png').convert('RGB')
-dlg=rounded(crop(CH,0.127,0.409,0.878,0.578),0.84,48,-2)
+dlg=rounded(crop(CH,0.1295,0.4085,0.8705,0.5915),0.84,62,-2)
 y2=y1+Bb.height+int(H*0.018)
 P=phone('bc_ta_scg.png',(0,0,1,0.70),W*0.56,H).rotate(3,Image.BICUBIC,expand=True)
 y3=y2+dlg.height-int(H*0.01)
