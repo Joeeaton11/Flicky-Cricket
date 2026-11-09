@@ -21313,7 +21313,8 @@ function shopState() { const s = SAVE.section('shop'); s.firstBuy = s.firstBuy |
 // Test purchases (Oct 30, Joe): open the game with ?test=1 to grant purchases free (remembered on this device;
 // ?test=0 turns it off). Lets the paid steps (Super Over, Pass, packs) be tested on the live web build.
 (function () { try { const q = new URLSearchParams(location.search).get('test'); if (q === '1') SAVE.setItem('flickyTestBuy', '1'); else if (q === '0') SAVE.removeItem('flickyTestBuy'); } catch (e) {} })();
-function testBuyOn() { try { return SAVE.getItem('flickyTestBuy') === '1'; } catch (e) { return false; } }
+function testBuyOn() { try { if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return false;   // store builds: never free
+  return SAVE.getItem('flickyTestBuy') === '1'; } catch (e) { return false; } }
 function buyRealMoney(productId, price, grant) {
   // Nov 7: in the app the store must confirm the payment (RevenueCat) before anything is granted; in local testing / ?test=1 it grants straight away
   const local = !window.Capacitor && (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '') || testBuyOn();
@@ -23799,7 +23800,7 @@ function renderCompeteV2() {
   sh.innerHTML = `<div class="evTop"><button class="evBack" id="competeClose" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b>EVENTS</b>
       <span class="lgPill"><i class="hIco hi-coin"></i><span>${career.coins.toLocaleString()}</span></span><span class="lgPill"><i class="hIco hi-gem"></i><span>${gems.toLocaleString()}</span></span></div>
     <div class="sh3 bgA evV4">${chips}<div class="evCarousel">${posters.join('') || ''}</div><div class="evPips">${keys.map(() => '<i></i>').join('')}</div>
-    ${on ? '' : `<div class="evLocked">Challenges & tournaments unlock after 8 matches <b>${Math.min(8, career.matchesPlayed || 0)} / 8</b></div>`}${seasonStrip}</div>`;
+    ${on ? '' : `<div class="evLocked">Duels, the Cup & challenges unlock after 4 matches <b>${Math.min(4, career.matchesPlayed || 0)} / 4</b></div>`}${seasonStrip}</div>`;
   sh.querySelectorAll('canvas[data-lgart]').forEach(cv => paintLeagueStill(cv, +cv.dataset.lgart));
   { const pc = sh.querySelector('#evPassPl'); if (pc) paintPlayerTo(pc, Object.assign({}, curLook(), { shirt: 'pass' + passSeasonKey().replace('-', '') })); }
   const car = sh.querySelector('.evCarousel');
@@ -23825,7 +23826,7 @@ document.addEventListener('click', e => {
   const m = t.closest('[data-mode]'); if (m) { playMode(m.dataset.mode); return; }
   const ev = t.closest('[data-ev]'); if (ev) { if (ev.dataset.ev === 'claim') { const l = eventClaim(); if (l) showMessage('+ ' + l.join(' · '), '#FFC93A', 2600); renderCompete(); } else buyEventBundle(); return; }
 }, true);
-FEATURE_UNLOCKS.compete = { when: () => (career.matchesPlayed || 0) >= 8, msg: 'NEW IN EVENTS · CHALLENGES & TOURNAMENTS' };
+FEATURE_UNLOCKS.compete = { when: () => (career.matchesPlayed || 0) >= 4, msg: 'NEW IN EVENTS · CHALLENGES & TOURNAMENTS' };
 
 
 // ---------- NOTIFICATIONS (app build with @capacitor/local-notifications; the browser just keeps the plan) ----------
@@ -24141,7 +24142,7 @@ function renderSettings() {
     mc.style.backgroundImage = `url(${m.art})`;
     mc.querySelector('b').textContent = ps ? (ps.querySelector('.evName b') || {}).textContent || m.label : m.label;
     const words = el => { if (!el) return ''; const out = []; const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const t = n.nodeValue.replace(/\s+/g, ' ').trim(); if (t && !/^ALL TABLES/.test(t)) out.push(t); } return out.join(' ').replace(/ ›/g, ''); };
-    mc.querySelector('small').textContent = ps ? words(ps.querySelector('.evGoal')) : 'UNLOCKS AFTER 8 MATCHES';
+    mc.querySelector('small').textContent = ps ? words(ps.querySelector('.evGoal')) : 'UNLOCKS AFTER 4 MATCHES';
     const go = ps && ps.querySelector('.evGo'); label.textContent = 'PLAY';
     if (go) { const c = go.textContent.split('·')[1]; if (c) { const sm = document.createElement('small'); sm.className = 'modeCost'; sm.textContent = c.trim(); label.after(sm); } }
   };
@@ -24155,7 +24156,7 @@ function renderSettings() {
     e.stopImmediatePropagation(); e.preventDefault(); try { playUiTap(); hapticTap(); } catch (err) {}
     if (cur === 'nets') { playNets(); return; }
     const m = MODES.find(x => x.k === cur), ps = poster(m.pk);
-    if (!ps) { showMessage('UNLOCKS AFTER 8 MATCHES', '#FFC93A', 1800); return; }
+    if (!ps) { showMessage('UNLOCKS AFTER 4 MATCHES', '#FFC93A', 1800); return; }
     const go = ps.querySelector('.evGo'); if (go) go.click(); else playMode(cur);
   }, true);
   const _uh = window.updateMenuHUD; if (typeof _uh === 'function') window.updateMenuHUD = function () { const r = _uh.apply(this, arguments); try { paint(); } catch (e) {} return r; };
@@ -24343,7 +24344,7 @@ const FlickyChallenge = window.FlickyChallenge = {
 // ═══ Inbox (Nov 8, layout review): one place for news, event starts and gifts. Messages live in INBOX_MESSAGES
 // (later: fetched from the website so they can change without an update); a gift is claimed once.
 const INBOX_MESSAGES = [
-  { id: 'welcome-2', from: '2026-11-01', title: 'WELCOME TO FLICKY CRICKET 2.0', body: 'A whole new game: 27 leagues, duels, the Flicky Cup and festive events. Thanks for playing!', gift: { coins: 250 } },
+  { id: 'welcome-2', from: '2026-11-01', title: 'WELCOME TO FLICKY CRICKET', body: 'A whole new game: 27 leagues, duels, the Flicky Cup and festive events. Here\'s a little something to get you going. Thanks for playing!', gift: { coins: 300, gems: 20 } },
   { id: 'xmas-cup-2026', from: '2026-12-12', to: '2027-01-05', title: 'THE CHRISTMAS CUP IS ON', body: 'Snowy grounds, festive kit and a Christmas trophy. Find it in Events.' },
 ];
 const FlickyInbox = window.FlickyInbox = {
