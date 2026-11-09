@@ -17,7 +17,7 @@ def card(cw):
     T=word('DUEL WON!',cw*0.13,(255,226,122),(244,163,10),cw*0.8); drop(C,T,(cw-T.width)//2,int(40*s),blur=int(6*s),off=(0,int(8*s)),a=0.6)
     def tile(x,col,dark,name,flag,runs,wk,win):
         tw,th=int(380*s),int(200*s); y=int(230*s)
-        if win: d.rounded_rectangle((x-int(10*s),y-int(10*s),x+tw+int(10*s),y+th+int(10*s)),int(40*s),fill=(255,201,58))
+        if win: d.rounded_rectangle((x-int(10*s),y-int(10*s),x+tw+int(10*s),y+th+int(20*s)),int(40*s),fill=(255,201,58))
         d.rounded_rectangle((x,y,x+tw,y+th+int(10*s)),int(32*s),fill=dark); d.rounded_rectangle((x,y,x+tw,y+th),int(32*s),fill=col)
         fh=int(50*s); bd=Image.open(f'kitart/{flag}.webp').convert('RGBA'); bd=bd.resize((int(bd.width*fh/bd.height),fh),Image.LANCZOS)
         sh=Image.new('RGBA',bd.size,(0,0,0,0)); sh.putalpha(bd.split()[3].point(lambda v:int(v*0.45))); C.alpha_composite(sh,(0,0)) if False else None
