@@ -10,8 +10,8 @@ def scene(f,light=False):
     a=Image.composite(nav,a,m)
     return Image.blend(bg().convert('RGB'),a,0.82).convert('RGBA')
 
-def slide(n,l1,l2,bgf,shots,extra=None,sub=None,tilt=0,pop=False,pw=0.74):
-    im=scene(bgf); y=int(H*0.045)
+def slide(n,l1,l2,bgf,shots,extra=None,sub=None,tilt=0,pop=False,pw=0.74,cx=0.5,light=False):
+    im=scene(bgf,light); y=int(H*0.045)
     if pop:   # a warm glow behind the phone so a dark screen stands off a dark scene
         gl=Image.new('L',(W,H)); ImageDraw.Draw(gl).ellipse((int(W*0.02),int(H*0.20),int(W*0.98),int(H*0.92)),fill=210); gl=gl.filter(ImageFilter.GaussianBlur(110*K))
         im.paste((255,190,70),(0,0),gl.point(lambda v:int(v*0.62)))
@@ -30,7 +30,7 @@ def slide(n,l1,l2,bgf,shots,extra=None,sub=None,tilt=0,pop=False,pw=0.74):
         if pop:
             G=Image.new('RGBA',(P.width+int(16*K),P.height+int(16*K)),(0,0,0,0)); ImageDraw.Draw(G).rounded_rectangle((0,0,G.width-1,G.height-1),int(76*K),fill=(255,201,58,255)); G.alpha_composite(P,(int(8*K),int(8*K))); P=G
         if tilt: P=P.rotate(tilt,Image.BICUBIC,expand=True)
-        drop(im,P,(W-P.width)//2,top,blur=int(30*K),off=(0,int(26*K)),a=0.6)
+        drop(im,P,int(W*cx-P.width/2),top,blur=int(30*K),off=(0,int(26*K)),a=0.6)
     if extra:
         kind,f,x,wf,flip=extra
         M=Image.open(f).convert('RGBA'); mw=int(W*wf); M=M.resize((mw,int(M.height*mw/M.width)),Image.LANCZOS)
@@ -65,7 +65,7 @@ def poster(n,l1,l2,bgf,pieces,extra=None,sub=None):
 A=(0,0,1,1)
 slide('01','ONE SWIPE.','HUGE SIXES!','bg/b1.png',[('r1.png',A)])
 poster('02','1v1 DUELS','WINNER TAKES ALL','bg/b2.webp',[('dw.png',(0,0.20,1,0.615),0.86,-3,0.5,0.0,0.36)],('pair','duel_pair.png',0.5,1.22,False),'Same 12 balls. Most runs wins the pot.')
-slide('03','27 LEAGUES','CLIMB THE ROAD','bg/lg6.webp',[('r9.png',(0,0.225,1,0.895))],pw=0.9)
+slide('03','27 LEAGUES','CLIMB THE ROAD','bg/road.png',[('r9.png',(0,0.225,1,0.895))],None,None,4,False,0.66,0.62,True)
 slide('04','120+ GROUNDS','BEACH TO THE MOON','bg/b3.png',[('g1.png',A),('g3.png',A),('g0.png',A)])
 poster('05','LIFT THE CUP','EVERY WEEKEND','bg/b4.png',[('cupwin.png',(0.04,0.445,0.96,0.645),0.88,2,0.5,0.0,0.22)],None,'32-team knockout. Lose and you\'re out.')
 poster('06','UNLOCK','LEGENDARY BATS','bg/b6.png',[('r5.png',(0,0.315,1,0.86),0.66,-3,0.5,0.0,0.34)])
