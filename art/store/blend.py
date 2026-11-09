@@ -65,7 +65,7 @@ def poster(n,l1,l2,bgf,pieces,extra=None,sub=None):
 A=(0,0,1,1)
 slide('01','ONE SWIPE.','HUGE SIXES!','bg/b1.png',[('r1.png',A)])
 poster('02','1v1 DUELS','WINNER TAKES ALL','bg/b2.webp',[('dw.png',(0,0.20,1,0.615),0.86,-3,0.5,0.0,0.36)],('pair','duel_pair.png',0.5,1.22,False),'Same 12 balls. Most runs wins the pot.')
-slide('03','27 LEAGUES','CLIMB THE ROAD','bg/road.png',[('r9.png',(0,0.225,1,0.895))],None,None,4,False,0.66,0.62,True)
+slide('03','27 LEAGUES','CLIMB THE ROAD','bg/road.png',[('r9.png',(0,0.225,1,0.895))],None,None,0,False,0.72,0.5,True)
 slide('04','120+ GROUNDS','BEACH TO THE MOON','bg/b3.png',[('g1.png',A),('g3.png',A),('g0.png',A)])
 poster('05','LIFT THE CUP','EVERY WEEKEND','bg/b4.png',[('cupwin.png',(0.04,0.445,0.96,0.645),0.88,2,0.5,0.0,0.22)],None,'32-team knockout. Lose and you\'re out.')
 poster('06','UNLOCK','LEGENDARY BATS','bg/b6.png',[('r5.png',(0,0.315,1,0.86),0.66,-3,0.5,0.0,0.34)])
