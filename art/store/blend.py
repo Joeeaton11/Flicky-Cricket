@@ -10,8 +10,11 @@ def scene(f):
     a=Image.composite(nav,a,m)
     return Image.blend(bg().convert('RGB'),a,0.82).convert('RGBA')
 
-def slide(n,l1,l2,bgf,shots,extra=None,sub=None,tilt=0):
+def slide(n,l1,l2,bgf,shots,extra=None,sub=None,tilt=0,pop=False):
     im=scene(bgf); y=int(H*0.045)
+    if pop:   # a warm glow behind the phone so a dark screen stands off a dark scene
+        gl=Image.new('L',(W,H)); ImageDraw.Draw(gl).ellipse((int(W*0.02),int(H*0.20),int(W*0.98),int(H*0.92)),fill=210); gl=gl.filter(ImageFilter.GaussianBlur(110*K))
+        im.paste((255,190,70),(0,0),gl.point(lambda v:int(v*0.62)))
     for txt,cols in [(l1,((255,255,255),(205,228,255))),(l2,((255,226,122),(244,163,10)))]:
         L=word(txt,W*0.13,*cols,W*0.9); drop(im,L,(W-L.width)//2,y,blur=int(8*K),off=(0,int(12*K)),a=0.7); y+=int(L.height*0.78)
     if sub:
@@ -24,6 +27,8 @@ def slide(n,l1,l2,bgf,shots,extra=None,sub=None,tilt=0):
             drop(im,P,int(W*cx-P.width/2),top+int(H*dy),blur=int(26*K),off=(0,int(22*K)),a=0.6)
     else:
         f,cr=shots[0]; P=phone(f,cr,W*0.74,room)
+        if pop:
+            G=Image.new('RGBA',(P.width+int(16*K),P.height+int(16*K)),(0,0,0,0)); ImageDraw.Draw(G).rounded_rectangle((0,0,G.width-1,G.height-1),int(76*K),fill=(255,201,58,255)); G.alpha_composite(P,(int(8*K),int(8*K))); P=G
         if tilt: P=P.rotate(tilt,Image.BICUBIC,expand=True)
         drop(im,P,(W-P.width)//2,top,blur=int(30*K),off=(0,int(26*K)),a=0.6)
     if extra:
@@ -36,8 +41,8 @@ A=(0,0,1,1)
 slide('01','ONE SWIPE.','HUGE SIXES!','bg/b1.png',[('r1.png',A)],('m','flicky-celebrate.png',0.80,0.36,False))
 slide('02','1v1 DUELS','WINNER TAKES ALL','bg/b2.webp',[('dw.png',(0,0.06,1,0.74))],('pair','duel_pair.png',0.5,1.05,False),'Same 12 balls. Most runs wins the pot.')
 slide('03','27 LEAGUES','CLIMB THE ROAD','bg/b3.png',[('r9.png',A)],('m','flicky-wink.png',0.20,0.36,True))
-slide('04','120+ GROUNDS','BEACH TO THE MOON','bg/b3.png',[('g1.png',A),('g3.png',A),('g2.png',A)])
+slide('04','120+ GROUNDS','BEACH TO THE MOON','bg/b3.png',[('g1.png',A),('g3.png',A),('g0.png',A)])
 slide('05','LIFT THE CUP','EVERY WEEKEND','bg/b4.png',[('cupwin.png',(0,0.17,1,0.82))],None,'32-team knockout. Lose and you\'re out.')
-slide('06','UNLOCK','LEGENDARY BATS','bg/b6.png',[('r5.png',A)],None,None,-3)
+slide('06','UNLOCK','LEGENDARY BATS','bg/b6.png',[('r5.png',A)],None,None,-3,True)
 slide('07','FESTIVE EVENTS','EXCLUSIVE KIT','bg/b5.png',[('r6.png',(0,0.545,1,1))])
 print('ok')
