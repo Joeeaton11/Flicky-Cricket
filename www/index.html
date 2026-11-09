@@ -12794,7 +12794,7 @@ function animateHit(angle, distance, callback, targetDist) {
   ball.flightDist = 0;
   ball.arcHeight = 0;
   ball.hitAnim = true;
-  ballTrail = [];
+  ballTrail = []; try { ball._trail = activeTrail(); } catch (e) { ball._trail = null; }
 
   let _last = performance.now();
   function step() {
@@ -12806,8 +12806,8 @@ function animateHit(angle, distance, callback, targetDist) {
     ball.arcHeight = Math.max(0, arcV);
 
     if (ball.screenX !== undefined) {
-      ballTrail.push({x: ball.screenX, y: ball.screenY});
-      if (ballTrail.length > 10) ballTrail.shift();
+      ballTrail.push({x: ball.screenX, y: ball.screenY, r: ball.screenR || 5});
+      if (ballTrail.length > (ball._trail ? 18 : 10)) ballTrail.shift();
     }
 
     if (frames < maxFrames) {
@@ -18170,6 +18170,7 @@ function drawBall() {
     if (gullyPainted()) gullyNoteBall(px, py, t);
   }
 
+  ball.screenX = px; ball.screenY = py; ball.screenR = size;   // Nov 9: set before the painted-ball early returns so trails work on every ground
   if (gullyPaintedPeople()) {
     if (window._gCatch) return;                              // caught: it's in the fielder's hands
     if (gullyPainted()) { const r = Math.min(6, Math.max(size, 1) * 0.75);
@@ -18933,6 +18934,7 @@ function drawZoneIndicator() {
 
 function drawTrail() {
   if (ballTrail.length < 2) return;
+  if (ball._trail && ball.hitAnim) { try { drawCometTrail(ball._trail); return; } catch (e) {} }
   for (let i=0;i<ballTrail.length;i++) {
     const alpha = (i / ballTrail.length) * 0.5;
     const size = lerp(1, 7, i/ballTrail.length);
@@ -21963,11 +21965,11 @@ function renderShopV2(container) {
   { const ev = activeEvent();   // Nov 6 (Joe: keep it in the game's style) — the event shop is a shelf of the real Shop, same tiles
     if (ev && ev.shop) { const ic = `<img class="evCurS" alt="" src="${ev.icon}">`, left = Math.max(0, Math.ceil((new Date(ev.end + 'T23:59:59') - Date.now()) / 864e5));
       const base = it => it.alt ? Object.assign({}, ev.shop.find(x => x.id === it.id && !x.alt), { price: it.price, alt: true }) : it;
-      const KIND = { bat: 'BAT WRAP', celeb: 'SIX CELEBRATION', trim: 'KIT TRIM', shirt: 'KIT', reward: 'BAG' };
+      const KIND = { bat: 'BAT WRAP', celeb: 'SIX CELEBRATION', trail: 'BALL TRAIL', trim: 'KIT TRIM', shirt: 'KIT', reward: 'BAG' };
       deal += `<div class="gcHd"><img class="evHdI" alt="" src="${ev.icon}"><span>${ev.name.replace(/ CUP$/, '')} SHOP</span><i class="ln"></i><em>${ic}<b>${eventBal(ev)}</b> · ${left} DAY${left === 1 ? '' : 'S'}</em></div>`
         + `<div class="gcGrid" data-shelf="ev">${ev.shop.map((r, i) => ({ it: base(r), i })).filter(x => !(x.it.alt && shopOwned(x.it))).map(({ it, i }) => { const own = shopOwned(it), eq = own && shopEquipped(it);
           const art = it.icon ? `<img class="gcPic evPic" alt="" src="${it.icon}">` : `<canvas class="evPl" data-evpl="${it.kind}:${it.id}" width="10" height="10"></canvas>`;
-          return tile({ tint: ev.kit ? ev.kit.c : '#b3202b', over: KIND[it.kind] + (it.alt ? ' · GEMS' : ''), name: it.name.replace(/ (TRIM|BAT)$/, m => m), art, note: it.kind === 'celeb' ? 'Plays on every six' : it.kind === 'reward' ? 'Buy as often as you like' : 'Looks only',
+          return tile({ tint: ev.kit ? ev.kit.c : '#b3202b', over: KIND[it.kind] + (it.alt ? ' · GEMS' : ''), name: it.name.replace(/ (TRIM|BAT)$/, m => m), art, note: it.kind === 'celeb' ? 'Plays on every six' : it.kind === 'trail' ? 'Follows every shot' : it.kind === 'reward' ? 'Buy as often as you like' : 'Looks only',
             btn: own ? (eq ? 'EQUIPPED' : 'EQUIP') : it.price.cur ? `${it.price.cur}${ic}` : `${it.price.gems}<i class="hIco hi-gem"></i>`, btnCls: own ? (eq ? 'on' : '') : it.price.cur ? 'ev' : '', btnAttr: ` data-esbuy="${i}"` }); }).join('')}</div>`; } }
   deal += hd('BOOSTERS', 'PACKS OF ' + GAME_CONFIG.kit.boosterPack.count) + `<div class="gcGrid four" data-shelf="boost">${['power_bat', 'lucky_grip', 'golden_ball', 'fresh_legs'].map(id =>
     tile({ tint: '#2f5fb0', name: `<span style="color:${BOOSTER_INFO[id].col}">${BOOSTER_INFO[id].short}</span>`, art: BOOST_ART[id], qty: `×${GAME_CONFIG.kit.boosterPack.count}`, note: `${BOOSTER_INFO[id].desc}<br>YOU HAVE ${boosterCount(id)}`,
@@ -23138,6 +23140,7 @@ GAME_CONFIG.season.events = GAME_CONFIG.season.events || [
     icon: 'assets/ui/events/diya.webp',
     shop: [ { id: 'diwali_bat', kind: 'bat', name: 'DIYA BAT', icon: 'assets/ui/events/bat_diwali.webp', look: { c: '#e8a33a', a: '#c8102e', s: '#f2b632' }, price: { cur: 60 } },
             { id: 'diwali_fx', kind: 'celeb', name: 'FIREWORK SIXES', icon: 'assets/ui/events/firework.webp', fx: 'firework', price: { cur: 80 } },
+            { id: 'diwali_trail', kind: 'trail', name: 'DIYA COMET', icon: 'assets/ui/events/trail_diya.webp', trail: 'diya', price: { cur: 70 } },
             { id: 'diwaligold', kind: 'trim', name: 'DIWALI GOLD TRIM', c: '#f2b632', price: { cur: 40 } },
             { id: 'diwali_bat', kind: 'bat', alt: 'gems', price: { gems: 150 } } ] },
   // Nov 6 (Joe: 'presents'): Christmas — presents for league matches AND duels, a track ending in the Christmas jumper kit, and an event shop
@@ -23147,6 +23150,7 @@ GAME_CONFIG.season.events = GAME_CONFIG.season.events || [
     every: 10, bundle: { price: 4.99, diyas: 100, bag: 'gold', gems: 300 }, kit: { id: 'xmas26', name: 'CHRISTMAS JUMPER', c: '#B3202B' },
     shop: [ { id: 'xmas_bat', kind: 'bat', name: 'CANDY CANE BAT', icon: 'assets/ui/events/bat_candycane.webp', look: { c: '#f3ead8', a: '#1f7a3a', s: '#d8202c' }, price: { cur: 60 } },
             { id: 'xmas_fx', kind: 'celeb', name: 'SNOWFALL SIXES', icon: 'assets/ui/events/snow.webp', fx: 'snow', price: { cur: 80 } },
+            { id: 'xmas_trail', kind: 'trail', name: 'CANDY CANE COMET', icon: 'assets/ui/events/trail_candy.webp', trail: 'candy', price: { cur: 70 } },
             { id: 'xmasholly', kind: 'trim', name: 'HOLLY GREEN TRIM', c: '#1f7a3a', price: { cur: 40 } },
             { id: 'xmas_bag', kind: 'reward', name: 'GOLD BAG', icon: 'assets/ui/events/present_ball.webp', r: { bag: 'gold' }, price: { cur: 50 }, repeat: true } ] },
 ];
@@ -23168,9 +23172,9 @@ function eventClaim() {
 // ---------- EVENT SHOP (Nov 6): spend the event currency (what you've earned minus what you've spent; the track counts all earned) ----------
 function eventBal(ev) { const st = eventState(ev); return st.cur - (st.spent || 0); }
 function shopOwned(it) { return it.kind === 'reward' ? false : ownedCos.includes(it.id + ':' + it.kind); }
-function shopEquipped(it) { const L = curLook(); return it.kind === 'bat' ? L.batWrap === it.id : it.kind === 'celeb' ? L.celeb === it.id : it.kind === 'trim' ? L.trim === it.id : it.kind === 'shirt' ? L.shirt === it.id : false; }
+function shopEquipped(it) { const L = curLook(); return it.kind === 'bat' ? L.batWrap === it.id : it.kind === 'celeb' ? L.celeb === it.id : it.kind === 'trail' ? L.trail === it.id : it.kind === 'trim' ? L.trim === it.id : it.kind === 'shirt' ? L.shirt === it.id : false; }
 function shopEquip(it) { if (!playerLook) playerLook = curLook(); const L = playerLook;
-  if (it.kind === 'bat') L.batWrap = L.batWrap === it.id ? null : it.id; else if (it.kind === 'celeb') L.celeb = L.celeb === it.id ? null : it.id; else L[it.kind] = it.id;
+  if (it.kind === 'bat') L.batWrap = L.batWrap === it.id ? null : it.id; else if (it.kind === 'celeb') L.celeb = L.celeb === it.id ? null : it.id; else if (it.kind === 'trail') L.trail = L.trail === it.id ? null : it.id; else L[it.kind] = it.id;
   savePlayerLook(); try { refreshPlayerArt(); } catch (e) {} try { _gpBatCache && Object.keys(_gpBatCache).forEach(k => delete _gpBatCache[k]); } catch (e) {} }
 function shopBuy(ev, i) {
   const it = ev.shop[i], st = eventState(ev), cost = it.price; if (shopOwned(it)) { shopEquip(it); openEventShop(); return; }
@@ -23192,7 +23196,7 @@ function openEventShopSheet() {
   el.innerHTML = `<div class="esCard"><div class="esTop"><b>${ev.name} SHOP</b><span class="esBal">${cur}<em>${eventBal(ev)}</em></span><button class="esX" data-esclose aria-label="Close">✕</button></div>
     <div class="esGrid">${items.map(({ it, i }) => { const own = shopOwned(it), eq = own && shopEquipped(it);
       const btn = own ? `<button data-esbuy="${i}" class="${eq ? 'on' : ''}">${eq ? 'EQUIPPED' : 'EQUIP'}</button>` : it.price.cur ? `<button data-esbuy="${i}">${cur}${it.price.cur}</button>` : `<button data-esbuy="${i}" class="gem"><i class="hIco hi-gem"></i>${it.price.gems}</button>`;
-      return `<div class="esItem${own ? ' own' : ''}"><div class="esArt">${prev(it)}</div><b>${it.name}</b><small>${it.kind === 'bat' ? 'BAT WRAP' : it.kind === 'celeb' ? 'SIX CELEBRATION' : it.kind === 'trim' ? 'KIT TRIM' : it.kind === 'reward' ? 'BUY AS OFTEN AS YOU LIKE' : 'KIT'}${it.alt ? ' · OR GEMS' : ''}</small>${btn}</div>`; }).join('')}</div>
+      return `<div class="esItem${own ? ' own' : ''}"><div class="esArt">${prev(it)}</div><b>${it.name}</b><small>${it.kind === 'bat' ? 'BAT WRAP' : it.kind === 'celeb' ? 'SIX CELEBRATION' : it.kind === 'trail' ? 'BALL TRAIL' : it.kind === 'trim' ? 'KIT TRIM' : it.kind === 'reward' ? 'BUY AS OFTEN AS YOU LIKE' : 'KIT'}${it.alt ? ' · OR GEMS' : ''}</small>${btn}</div>`; }).join('')}</div>
     <p class="esNote">Looks only — nothing here changes your stats. Shop items leave when the event ends on ${new Date(ev.end + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}.</p></div>`;
   el.classList.add('show');
 }
@@ -23209,6 +23213,39 @@ function celebFx() { const L = curLook(); if (!L.celeb) return; let fx = null; G
   else for (let k = 0; k < 4; k++) { const x = 15 + Math.random() * 70, y = 12 + Math.random() * 35, c = ['#FFD54A', '#FF4FA3', '#4CE06A', '#5AC8FF'][k];
     for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2; h += `<i style="left:${x}%;top:${y}%;--dx:${Math.cos(a) * 70}px;--dy:${Math.sin(a) * 70}px;background:${c};animation-delay:${k * 0.22}s"></i>`; } }
   box.innerHTML = h; document.body.appendChild(box); setTimeout(() => box.remove(), 3600); }
+// ---------- BALL TRAILS (Nov 9, Joe: the icon's comet as an unlockable + seasonal cosmetic) ----------
+// A trail item is any shop/track entry with kind 'trail' and a `trail` style key. Looks only. New seasons add a style here + an item in their shop.
+const TRAIL_STYLES = {
+  comet: { core: '#FFF6D6', mid: '#FFC93A', edge: '#FF5A14', sparks: ['#FFE27A', '#FF9A1A', '#FFFFFF'] },   // the app icon
+  diya:  { core: '#FFF3C4', mid: '#FFB21A', edge: '#FF4FA3', sparks: ['#FFD54A', '#FF4FA3', '#FFFFFF'] },
+  candy: { core: '#FFFFFF', mid: '#FF3B3B', edge: '#B3202B', sparks: ['#FFFFFF', '#4CE06A', '#FF6B6B'], stripes: true },
+  spook: { core: '#EFFFE0', mid: '#7CFF4F', edge: '#8A3DF0', sparks: ['#B48CFF', '#7CFF4F'] },
+  frost: { core: '#FFFFFF', mid: '#7FD0FF', edge: '#2A62D6', sparks: ['#FFFFFF', '#BDE8FF'] },
+};
+GAME_CONFIG.trails = GAME_CONFIG.trails || { items: [ { id: 'comet_trail', kind: 'trail', name: 'COMET TRAIL', trail: 'comet', icon: 'assets/ui/events/trail_comet.webp' } ] };   // unlock route for the base comet: to decide
+function trailItem(id) { let f = (GAME_CONFIG.trails.items || []).find(x => x.id === id) || null;
+  if (!f) GAME_CONFIG.season.events.forEach(ev => (ev.shop || []).concat(ev.track || []).forEach(it => { if (!f && it.kind === 'trail' && (it.id === id || it.cos === id)) f = it; })); return f; }
+function activeTrail() { const L = curLook(); if (!L.trail || !ownedCos.includes(L.trail + ':trail')) return null; const it = trailItem(L.trail); return it ? TRAIL_STYLES[it.trail] || null : null; }
+function drawCometTrail(S) {
+  const raw = ballTrail.concat([{ x: ball.screenX, y: ball.screenY, r: ball.screenR || 5 }]); if (raw.length < 3) return;
+  const pts = []; for (let k = 0; k < raw.length - 1; k++) for (let j = 0; j < 5; j++) { const u = j / 5, A = raw[k], B = raw[k + 1]; pts.push({ x: A.x + (B.x - A.x) * u, y: A.y + (B.y - A.y) * u, r: A.r + (B.r - A.r) * u }); }
+  pts.push(raw[raw.length - 1]); const n = pts.length;   // subdivided so the ribbon is smooth, not stepped
+  const side = (k, w) => { const a = pts[Math.max(0, k - 6)], b = pts[Math.min(n - 1, k + 6)]; let dx = b.x - a.x, dy = b.y - a.y; const l = Math.hypot(dx, dy) || 1; return { x: -dy / l * w, y: dx / l * w }; };
+  const ribbon = (scale) => { const L = [], R = []; for (let k = 0; k < n; k++) { const t = k / (n - 1), w = (0.3 + pts[k].r * 1.15 * Math.pow(t, 1.1)) * scale, o = side(k, w); L.push([pts[k].x + o.x, pts[k].y + o.y]); R.push([pts[k].x - o.x, pts[k].y - o.y]); }
+    ctx.beginPath(); ctx.moveTo(L[0][0], L[0][1]); for (let k = 1; k < n; k++) ctx.lineTo(L[k][0], L[k][1]); for (let k = n - 1; k >= 0; k--) ctx.lineTo(R[k][0], R[k][1]); ctx.closePath(); };
+  const grad = (col, a) => { const g = ctx.createLinearGradient(pts[0].x, pts[0].y, pts[n - 1].x, pts[n - 1].y); g.addColorStop(0, col + '00'); g.addColorStop(0.45, col + Math.round(a * 128).toString(16).padStart(2, '0')); g.addColorStop(1, col + Math.round(a * 255).toString(16).padStart(2, '0')); return g; };
+  ctx.save();   // solid colours (not additive) so the trail still reads on pale pitches, snow and sand
+  const mix = (c1, c2, u) => '#' + [1, 3, 5].map(i => Math.round(parseInt(c1.substr(i, 2), 16) * (1 - u) + parseInt(c2.substr(i, 2), 16) * u).toString(16).padStart(2, '0')).join('');
+  ctx.shadowColor = S.edge; ctx.shadowBlur = 12;
+  for (let l = 0; l < 9; l++) { const f = l / 8, col = f < 0.5 ? mix(S.edge, S.mid, f * 2) : mix(S.mid, S.core, (f - 0.5) * 2);   // stacked soft layers: flame edge -> gold -> white-hot core
+    ribbon(1.35 - f * 1.1); ctx.fillStyle = grad(col, l === 0 ? 0.55 : 0.42 + f * 0.4); ctx.fill(); if (l === 0) ctx.shadowBlur = 0; }
+  if (S.stripes) { ctx.save(); ribbon(1.35); ctx.clip(); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; for (let k = 5; k < n - 6; k += 10) { const o = side(k, (pts[k].r + 2) * 2.2); ctx.lineWidth = Math.max(1, pts[k].r * 0.55); ctx.beginPath(); ctx.moveTo(pts[k].x - o.x, pts[k].y - o.y); ctx.lineTo(pts[k + 5].x + o.x, pts[k + 5].y + o.y); ctx.stroke(); } ctx.restore(); }
+  const f = (window._trailTick = (window._trailTick || 0) + 1);
+  for (let k = 4; k < n - 1; k += 3) { const h = Math.sin(k * 12.9898 + f * 0.7) * 43758.5453, rnd = h - Math.floor(h); if (rnd > 0.5) continue;
+    const o = side(k, (rnd - 0.27) * pts[k].r * 5), sz = 0.6 + rnd * pts[k].r * 0.35; ctx.globalAlpha = 0.35 + 0.65 * (k / n);
+    ctx.fillStyle = S.sparks[k % S.sparks.length]; ctx.beginPath(); ctx.arc(pts[k].x + o.x, pts[k].y + o.y, sz, 0, Math.PI * 2); ctx.fill(); }
+  ctx.globalAlpha = 1; ctx.restore();
+}
 function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st = eventState(ev); if (st.bundle) return;
   buyRealMoney('event_' + ev.id, ev.bundle.price, () => { st.bundle = true; st.cur += ev.bundle.diyas; SAVE.save(); return grantReward({ bag: ev.bundle.bag, gems: ev.bundle.gems }) + ` + ${ev.bundle.diyas} ${ev.currency}`; }); renderCompete(); }
 
