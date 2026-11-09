@@ -3912,25 +3912,33 @@ window._imgPending = new Set(); window._imgSeen = 0;
 <script>
 // Nov 9 (Joe: a real comet tail, not a loading ring) — ball orbits, its tail is fire that sheds off and flares outward, then fades
 window.cometSpin=function(cv){
+  // Nov 9 (Joe: match the icon's comet) — one solid tapering flame behind the ball: white-hot core, gold body, orange flame tongues, a few sparks
   if(!cv||cv._spin) return; cv._spin=1;
-  var ctx=cv.getContext('2d'), S=cv.width, c=S/2, R=S*0.29, br=S*0.12, img=new Image(), P=[], a=-Math.PI/2, last=performance.now();
+  var ctx=cv.getContext('2d'), S=cv.width, c=S/2, R=S*0.25, br=S*0.115, img=new Image(), a=-Math.PI/2, last=performance.now(), T=0, N=52, SPAN=2.55;
   img.src='assets/ui/comet_ball.webp';
-  var C=[[255,252,230],[255,216,96],[255,140,30],[220,50,16]];
-  function col(t){ t=Math.max(0,Math.min(1,t)); var i=Math.min(2,Math.floor(t*3)), u=t*3-i, A=C[i], B=C[i+1]; return [A[0]+(B[0]-A[0])*u|0, A[1]+(B[1]-A[1])*u|0, A[2]+(B[2]-A[2])*u|0]; }
+  function edge(scale, tongue, out){   // one flame layer: outline along the arc behind the ball; out = which side gets the licking tongues
+    var L=[], Rr=[];
+    for(var k=0;k<=N;k++){ var t=k/N, ang=a-t*SPAN, rad=R+Math.pow(t,1.6)*S*0.045,                // drifts outward as it trails
+        w=br*scale*Math.pow(1-t,0.85)*(1+0.35*Math.sin(t*3.1)),                                    // fat behind the ball, tapering to a point
+        n=(Math.sin(t*19-T*13)*0.6+Math.sin(t*8+T*7)*0.4)*tongue*br*Math.pow(t,0.6)*(1-t*0.6),       // flame tongues, stronger further back
+        ox=Math.cos(ang), oy=Math.sin(ang), px=c+ox*rad, py=c+oy*rad;
+      L.push([px+ox*(w+Math.max(0,n)*out), py+oy*(w+Math.max(0,n)*out)]); Rr.push([px-ox*(w+Math.max(0,-n)*(1-out*0.6)), py-oy*(w+Math.max(0,-n)*(1-out*0.6))]); }
+    ctx.beginPath(); ctx.moveTo(L[0][0],L[0][1]); for(var i=1;i<L.length;i++) ctx.lineTo(L[i][0],L[i][1]); for(var j=Rr.length-1;j>=0;j--) ctx.lineTo(Rr[j][0],Rr[j][1]); ctx.closePath();
+  }
+  function grad(c1,c2){ var hx=c+Math.cos(a)*R, hy=c+Math.sin(a)*R, ta=a-SPAN, tx=c+Math.cos(ta)*R*1.1, ty=c+Math.sin(ta)*R*1.1, g=ctx.createLinearGradient(hx,hy,tx,ty); g.addColorStop(0,c1); g.addColorStop(1,c2); return g; }
   (function f(now){
     if(!cv.isConnected) return;
-    var dt=Math.max(0,Math.min(50,now-last))/1000; last=Math.max(last,now); a+=dt*5.4;
-    var x=c+Math.cos(a)*R, y=c+Math.sin(a)*R, tx=-Math.sin(a), ty=Math.cos(a), ox=Math.cos(a), oy=Math.sin(a);
-    for(var k=0;k<5;k++){ var j=(Math.random()-.5)*br*0.7;
-      P.push({x:x-tx*br*0.4+ox*j, y:y-ty*br*0.4+oy*j, vx:(-tx*0.42+ox*0.32+(Math.random()-.5)*0.22)*S*0.75, vy:(-ty*0.42+oy*0.32+(Math.random()-.5)*0.22)*S*0.75, l:0, L:0.32+Math.random()*0.32, r:br*(0.75+Math.random()*0.55)}); }
-    ctx.clearRect(0,0,S,S); ctx.globalCompositeOperation='lighter';
-    for(var i=P.length-1;i>=0;i--){ var p=P[i]; p.l+=dt; if(p.l>p.L){ P.splice(i,1); continue; }
-      p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=0.95; p.vy*=0.95;
-      var t=p.l/p.L, q=col(t), rr=Math.max(0.5,p.r*(1-t*0.8)), g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,rr), rgb=q[0]+','+q[1]+','+q[2];
-      g.addColorStop(0,'rgba('+rgb+','+(0.6*(1-t)).toFixed(3)+')'); g.addColorStop(1,'rgba('+rgb+',0)');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,rr,0,7); ctx.fill(); }
-    ctx.globalCompositeOperation='source-over';
-    if(img.complete&&img.naturalWidth){ ctx.save(); ctx.translate(x,y); ctx.rotate(a*2.5); ctx.drawImage(img,-br,-br,br*2,br*2); ctx.restore(); }
+    var dt=Math.max(0,Math.min(50,now-last))/1000; last=Math.max(last,now); a+=dt*5.2; T+=dt;
+    ctx.clearRect(0,0,S,S);
+    ctx.save(); ctx.shadowColor='rgba(255,110,20,0.9)'; ctx.shadowBlur=S*0.06;
+    edge(1.3,1.35,1); ctx.fillStyle=grad('rgba(255,104,18,1)','rgba(235,60,10,0)'); ctx.fill(); ctx.restore();   // orange flame edge
+    edge(0.9,0.7,1); ctx.fillStyle=grad('rgba(255,190,40,1)','rgba(255,140,25,0)'); ctx.fill();                // gold body
+    edge(0.3,0.15,1); ctx.fillStyle=grad('rgba(255,252,220,1)','rgba(255,225,120,0)'); ctx.fill();               // white-hot core
+    for(var k=0;k<6;k++){ var t=((k*0.17+T*1.6)%1), ang=a-t*SPAN*1.05, rad=R+Math.pow(t,1.5)*S*0.1+Math.sin(k*7+T*9)*br*0.6;   // a few sparks peeling off
+      ctx.globalAlpha=Math.max(0,1-t)*0.9; ctx.fillStyle=k%2?'#FFE27A':'#FF9A1A'; ctx.beginPath(); ctx.arc(c+Math.cos(ang)*rad, c+Math.sin(ang)*rad, S*0.016*(1.4-t), 0, 7); ctx.fill(); }
+    ctx.globalAlpha=1;
+    var x=c+Math.cos(a)*R, y=c+Math.sin(a)*R;
+    if(img.complete&&img.naturalWidth){ ctx.save(); ctx.shadowColor='rgba(255,170,60,0.85)'; ctx.shadowBlur=S*0.05; ctx.translate(x,y); ctx.rotate(a*2.5); ctx.drawImage(img,-br,-br,br*2,br*2); ctx.restore(); }
     requestAnimationFrame(f);
   })(performance.now());
 };
