@@ -48,7 +48,7 @@ def pill(t):
     pd.rounded_rectangle((0,0,p.width-1,p.height-1),p.height//2,fill=(255,201,58),outline=(12,18,40),width=int(7*K)); pd.text((int(35*K),int(p.height*0.16)),t,font=fs,fill=(40,20,0)); return p
 # (art, align, lines, sub, cards=[(src,crop,width_frac,cx_frac,top_frac,bottom_frac,angle)])
 S=[(1,1,['ONE SWIPE.','HUGE SIXES!'],None,[('r1',(0,0.07,1,0.62),0.72,0.40,0.205,0.60,4)]),
-   (2,1,['1v1 DUELS','WINNER TAKES ALL'],'Same 12 balls. Most runs wins the pot.',[('r3',(0,0.30,1,0.76),0.80,0.5,0.225,0.555,-3)]),
+   (2,1,['1v1 DUELS','WINNER TAKES ALL'],'Same 12 balls. Most runs wins the pot.',[('r3',(0,0.30,1,0.76),0.62,0.5,0.205,0.445,-3)]),
    (3,1,['120+ GROUNDS','BEACH TO THE MOON'],None,[('g1',(0,0.10,1,0.80),0.38,0.24,0.25,0.74,9),('g3',(0,0.10,1,0.80),0.38,0.76,0.25,0.74,-9),('g0',(0,0.08,1,0.80),0.44,0.5,0.22,0.76,0)]),
    (4,0,['LIFT THE CUP','EVERY WEEKEND'],'32-team knockout. Lose and you\'re out.',[('r4',(0,0.02,1,0.40),0.80,0.5,0.215,0.48,2)]),
    (5,1,['FESTIVE EVENTS','EXCLUSIVE KIT'],None,[('r6',(0,0.12,1,0.86),0.56,0.71,0.205,0.62,4)]),
@@ -58,6 +58,7 @@ for n,(ai,al,lines,sub,cards) in enumerate(S,1):
     sh=Image.new('L',(W,H),0); sd=ImageDraw.Draw(sh)
     for y in range(int(H*0.26)): sd.line([(0,y),(W,y)],fill=int(150*(1-y/(H*0.26))**1.4))
     im.paste((6,10,30),(0,0),sh)
+    if n==2 and H/W<2.1: cards=[('r3',(0,0.30,1,0.76),0.50,0.5,0.205,0.395,-3)]   # shorter Play screen: keep faces clear
     for (src,crop,wf,cx,t,b,ang) in cards:
         C=card(src,crop,W*wf,H*(b-t),ang); drop(im,C,int(W*cx-C.width/2),int(H*t),blur=int(26*K),off=(0,int(22*K)),a=0.7)
     headline(im,lines,sub,int(H*0.035))
