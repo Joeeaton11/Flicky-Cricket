@@ -3896,11 +3896,8 @@ window._imgPending = new Set(); window._imgSeen = 0;
 #bootSplash .bsBar{position:relative;margin-top:5vh;width:min(60vw,240px);height:14px;border-radius:9px;background:#06152C;border:3px solid #050A14;box-shadow:0 2px 0 rgba(255,255,255,.08)}
 #bootSplash .bsBar i{position:absolute;left:2px;top:2px;bottom:2px;width:0;border-radius:6px;background:linear-gradient(#FFE08A,#D99A22);transition:width .35s ease}
 @keyframes bsSpin{to{transform:rotate(360deg)}}
-/* Nov 9: comet loading spinner (the app icon's ball, looping with its fire trail) */
-.cmSpin{position:relative;width:64px;height:64px;animation:cmRot 1.05s linear infinite}
-.cmSpin>i{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(255,90,20,0) 0deg,rgba(255,90,20,0) 170deg,rgba(255,110,30,.35) 240deg,#FF8A1A 295deg,#FFC93A 330deg,#FFF6D6 352deg,rgba(0,0,0,0) 353deg);-webkit-mask:radial-gradient(closest-side,transparent 70%,#000 73%,#000 95%,transparent 98%);mask:radial-gradient(closest-side,transparent 70%,#000 73%,#000 95%,transparent 98%);filter:drop-shadow(0 0 5px #FF8A1A)}
-.cmSpin>img{position:absolute;left:50%;top:8%;width:30%;height:30%;transform:translate(-50%,-50%);filter:drop-shadow(0 0 4px rgba(255,170,60,.8))}
-@keyframes cmRot{to{transform:rotate(360deg)}}
+/* Nov 9: comet loading spinner — a canvas comet (ball + flaring fire tail), driven by window.cometSpin */
+.cmSpin{display:block;width:72px;height:72px}
 #bootSplash .bsBar{display:none}#bootSplash .cmSpin{margin-top:5vh}
 @keyframes bsDrop{from{opacity:0;transform:translateY(-30px) scale(.8)}to{opacity:1;transform:none}}
 @keyframes bsPop{from{opacity:0;transform:translateY(50px) scale(.5)}to{opacity:1;transform:none}}
@@ -3910,9 +3907,34 @@ window._imgPending = new Set(); window._imgSeen = 0;
 <img class="bsWm" alt="Flicky Cricket" src="assets/ui/ui_1002_2b08ec41.webp">
 <img class="bsFl" alt="" src="assets/ui/flicky_splash.webp">
 <div class="bsBar"><i id="bootBar"></i></div>
-<div class="cmSpin" aria-label="Loading"><i></i><img alt="" src="assets/ui/comet_ball.webp"></div>
+<canvas class="cmSpin" width="144" height="144" aria-label="Loading"></canvas>
 </div>
 <script>
+// Nov 9 (Joe: a real comet tail, not a loading ring) — ball orbits, its tail is fire that sheds off and flares outward, then fades
+window.cometSpin=function(cv){
+  if(!cv||cv._spin) return; cv._spin=1;
+  var ctx=cv.getContext('2d'), S=cv.width, c=S/2, R=S*0.29, br=S*0.12, img=new Image(), P=[], a=-Math.PI/2, last=performance.now();
+  img.src='assets/ui/comet_ball.webp';
+  var C=[[255,252,230],[255,216,96],[255,140,30],[220,50,16]];
+  function col(t){ t=Math.max(0,Math.min(1,t)); var i=Math.min(2,Math.floor(t*3)), u=t*3-i, A=C[i], B=C[i+1]; return [A[0]+(B[0]-A[0])*u|0, A[1]+(B[1]-A[1])*u|0, A[2]+(B[2]-A[2])*u|0]; }
+  (function f(now){
+    if(!cv.isConnected) return;
+    var dt=Math.max(0,Math.min(50,now-last))/1000; last=Math.max(last,now); a+=dt*5.4;
+    var x=c+Math.cos(a)*R, y=c+Math.sin(a)*R, tx=-Math.sin(a), ty=Math.cos(a), ox=Math.cos(a), oy=Math.sin(a);
+    for(var k=0;k<5;k++){ var j=(Math.random()-.5)*br*0.7;
+      P.push({x:x-tx*br*0.4+ox*j, y:y-ty*br*0.4+oy*j, vx:(-tx*0.42+ox*0.32+(Math.random()-.5)*0.22)*S*0.75, vy:(-ty*0.42+oy*0.32+(Math.random()-.5)*0.22)*S*0.75, l:0, L:0.32+Math.random()*0.32, r:br*(0.75+Math.random()*0.55)}); }
+    ctx.clearRect(0,0,S,S); ctx.globalCompositeOperation='lighter';
+    for(var i=P.length-1;i>=0;i--){ var p=P[i]; p.l+=dt; if(p.l>p.L){ P.splice(i,1); continue; }
+      p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=0.95; p.vy*=0.95;
+      var t=p.l/p.L, q=col(t), rr=Math.max(0.5,p.r*(1-t*0.8)), g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,rr), rgb=q[0]+','+q[1]+','+q[2];
+      g.addColorStop(0,'rgba('+rgb+','+(0.6*(1-t)).toFixed(3)+')'); g.addColorStop(1,'rgba('+rgb+',0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,rr,0,7); ctx.fill(); }
+    ctx.globalCompositeOperation='source-over';
+    if(img.complete&&img.naturalWidth){ ctx.save(); ctx.translate(x,y); ctx.rotate(a*2.5); ctx.drawImage(img,-br,-br,br*2,br*2); ctx.restore(); }
+    requestAnimationFrame(f);
+  })(performance.now());
+};
+try{ window.cometSpin(document.querySelector('#bootSplash canvas.cmSpin')); }catch(e){}
 (function(){
   var t0=Date.now(), bar=document.getElementById('bootBar'), p=0, done=false;
   var tick=setInterval(function(){ if(done) return; p+= (88-p)*0.08; bar.style.width=p+'%'; },120);
@@ -4708,6 +4730,7 @@ const ACHIEVEMENTS = [
   { key:'fours_100',   name:'BOUNDARY HUNTER',desc:'Hit 100 career fours',          check: c => c.fours >= 100,            gems:8, prog: c => [c.fours, 100] },
   { key:'fours_500',   name:'FENCE FINDER',   desc:'Hit 500 career fours',          check: c => c.fours >= 500,            gems:20, prog: c => [c.fours, 500] },
   { key:'sixes_25',    name:'BIG HITTER',     desc:'Hit 25 career sixes',           check: c => c.sixes >= 25,             gems:5, prog: c => [c.sixes, 25] },
+  { key:'sixes_50',    name:'COMET',          desc:'Hit 50 career sixes · unlocks the Comet ball trail', check: c => c.sixes >= 50, gems:0, cos:'comet_trail:trail', prog: c => [c.sixes, 50] },
   { key:'sixes_100',   name:'MAXIMUM',        desc:'Hit 100 career sixes',          check: c => c.sixes >= 100,            gems:15, prog: c => [c.sixes, 100] },
   { key:'sixes_250',   name:'OUT OF THE GROUND',desc:'Hit 250 career sixes',        check: c => c.sixes >= 250,            gems:25, prog: c => [c.sixes, 250] },
   { key:'coin_collector',name:'COIN COLLECTOR',desc:'Earn 250 coins total',         check: c => (c.totalCoinsEarned||0) >= 250, gems:10, prog: c => [c.totalCoinsEarned || 0, 250] },
@@ -4739,6 +4762,9 @@ function checkAchievements(runStats) {
     if (!unlockedAchievements.includes(a.key) && a.check(career, runStats)) {
       unlockedAchievements.push(a.key);
       newly.push(a);
+      if (a.cos) { try { if (!ownedCos.includes(a.cos)) { ownedCos.push(a.cos); SAVE.setItem('flickyCosmetics', JSON.stringify(ownedCos)); }
+        const L = curLook(), id = a.cos.split(':')[0]; if (!L.trail) { playerLook = L; L.trail = id; savePlayerLook(); }   // first trail: put it straight on
+        setTimeout(() => { try { showMessage('COMET TRAIL UNLOCKED', '#FFC93A', 2600); hapticBig(); } catch (e) {} }, 1800); } catch (e) {} }
       // gems wait in Stats as a CLAIM (no auto-grant)
     }
   });
@@ -8003,8 +8029,8 @@ function sceneReady(go) {
     if ((left === 0 && waited > 120) || waited > 15000) { if (el) { el.classList.add('out'); setTimeout(() => el && el.remove(), 350); } go(); return; }
     if (!shown && waited > 150) { shown = true; el = document.createElement('div'); el.id = 'sceneGate';
       const lg = THEMED_LEAGUES[(window.chase && window.chase.leagueIdx) || 1], cr = lg ? crestSrc(lg) : '', gk = currentTimeOfDay && currentTimeOfDay.key;
-      el.innerHTML = `${cr ? `<img alt="" src="${cr}">` : ''}<b>${gk ? sceneName(gk) : 'LOADING'}</b><small>${lg ? lg.name : ''}</small><div class="sgBar" style="display:none"><i></i></div><div class="cmSpin" style="margin-top:12px" aria-label="Loading"><i></i><img alt="" src="assets/ui/comet_ball.webp"></div><em>Getting the ground ready…</em>`;
-      document.body.appendChild(el); window._sgTotal = Math.max(left, 1); }
+      el.innerHTML = `${cr ? `<img alt="" src="${cr}">` : ''}<b>${gk ? sceneName(gk) : 'LOADING'}</b><small>${lg ? lg.name : ''}</small><div class="sgBar" style="display:none"><i></i></div><canvas class="cmSpin" width="144" height="144" style="margin-top:12px" aria-label="Loading"></canvas><em>Getting the ground ready…</em>`;
+      document.body.appendChild(el); window._sgTotal = Math.max(left, 1); try { window.cometSpin(el.querySelector('canvas.cmSpin')); } catch (e) {} }
     if (el) { const tot = Math.max(window._sgTotal, left); el.querySelector('.sgBar i').style.width = Math.round(100 * (1 - left / tot)) + '%'; }
     requestAnimationFrame(tick);
   };
@@ -23456,11 +23482,7 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
   #sceneGate img{width:150px;height:150px;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(0,0,0,.5));animation:cdFloat 2.4s ease-in-out infinite}
   #sceneGate b{font-size:30px;text-shadow:0 3px 0 #050A14;letter-spacing:.03em}#sceneGate small{font-size:14px;color:#FFC93A;letter-spacing:.1em}
   /* comet spinner, persistent copy (the boot splash's style block is removed with it) */
-.cmSpin{position:relative;width:64px;height:64px;animation:cmRot 1.05s linear infinite}
-.cmSpin>i{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(255,90,20,0) 0deg,rgba(255,90,20,0) 170deg,rgba(255,110,30,.35) 240deg,#FF8A1A 295deg,#FFC93A 330deg,#FFF6D6 352deg,rgba(0,0,0,0) 353deg);-webkit-mask:radial-gradient(closest-side,transparent 70%,#000 73%,#000 95%,transparent 98%);mask:radial-gradient(closest-side,transparent 70%,#000 73%,#000 95%,transparent 98%);filter:drop-shadow(0 0 5px #FF8A1A)}
-.cmSpin>img{position:absolute;left:50%;top:8%;width:30%;height:30%;transform:translate(-50%,-50%);filter:drop-shadow(0 0 4px rgba(255,170,60,.8))}
-@keyframes cmRot{to{transform:rotate(360deg)}}
-  #sceneGate .cmSpin>img{width:30%;height:30%;animation:none;filter:drop-shadow(0 0 4px rgba(255,170,60,.8))}
+.cmSpin{display:block;width:72px;height:72px}
   #sceneGate .sgBar{width:min(260px,70vw);height:14px;margin-top:10px;border-radius:999px;background:#050A14;border:2px solid #2a4680;overflow:hidden}
   #sceneGate .sgBar i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(#ffe08a,#ffb020);transition:width .25s}
   #sceneGate em{font-style:normal;font-size:13px;color:#9fb3da}
