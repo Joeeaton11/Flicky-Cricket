@@ -17,16 +17,16 @@ im.convert('RGB').save(f'{OUT}/01_pill.png')
 # ── slide 5 challenge
 im=scene('bg3/sydney.png',True); top=head(im,'CHALLENGE','YOUR MATES','Same 12 balls. Who scores more?')
 tall=H/W>2.1; z=1 if tall else 0.88
-Bb=bubble('SAM','Beat my 31 off 12 balls. Go on, I dare you.','flickycricket.com/play',0.82*z,3)
+Bb=bubble('SAM','Bet you can\'t beat me. Your go!','flickycricket.com/play',0.82*z,3)
 y1=int(H*(0.405 if tall else 0.42)); drop(im,Bb,int(W*0.97-Bb.width),y1,blur=int(22*K),off=(0,int(16*K)),a=0.5)
-CH=Image.open('ch_in.png').convert('RGB')
+CH=Image.open('ch_in33.png').convert('RGB')
 dlg=rounded(crop(CH,0.1295,0.4085,0.8705,0.5915),0.72*z,62,-2)
 y2=y1+Bb.height-int(H*0.035)
 P=phone('bc_ta_scg.png',(0,0,1,0.70),W*0.46*z,H).rotate(-5,Image.BICUBIC,expand=True)
-y3=y2+int(dlg.height*0.55)+int(H*0.047)
+y3=y2+int(dlg.height*0.86)
 drop(im,dlg,int(W*0.60-dlg.width/2),y2,blur=int(28*K),off=(0,int(22*K)),a=0.65)
-drop(im,P,int(W*0.24-P.width/2),y3,blur=int(26*K),off=(0,int(20*K)),a=0.6)
-gpill(im,'YOUR TURN',W*0.24,min(H-int(H*0.045),y3+P.height*0.62),0.042)
+drop(im,P,int(W*0.36-P.width/2),y3,blur=int(26*K),off=(0,int(20*K)),a=0.6)
+gpill(im,'YOUR TURN',W*0.36,min(H-int(H*0.045),y3+P.height*0.62),0.042)
 im.convert('RGB').save(f'{OUT}/05_ch.png')
 
 # ── slide 6 bats
