@@ -33,60 +33,78 @@
     if (fx.width !== Math.round(W * dpr) || fx.height !== Math.round(H * dpr)) { fx.width = Math.round(W * dpr); fx.height = Math.round(H * dpr); }
     fctx.setTransform(dpr, 0, 0, dpr, 0, 0); fctx.clearRect(0, 0, W, H);
     var pHit = FEND * (cfg.hit + 0.5) / (N - 1), u = (p - pHit) / (0.985 - pHit);
-    var fadeOut = ss(0.8, 0.9, u);
-    phoneEl.style.opacity = groundEl.style.opacity = String(1 - fadeOut);
-    endEl.classList.toggle('on', u > 0.95); sec.classList.toggle('ending', u > 0.86);
+    phoneEl.style.opacity = groundEl.style.opacity = String(1 - ss(0.74, 0.88, u));
+    endEl.classList.toggle('on', u > 0.95); sec.classList.toggle('ending', u > 0.8);
     if (u <= 0) return; u = Math.min(1, u);
     var sr = stick.getBoundingClientRect(), pr = phoneEl.getBoundingClientRect(), cr = cv.getBoundingClientRect();
-    var x0 = cr.left - sr.left + cr.width * 0.5, y0 = cr.top - sr.top + cr.height * 0.655, top = cr.top - sr.top;
-    // where the icon lands: centred on the phone; its ball sits at (0.74, 0.275) of the tile, radius 0.177
-    var IS = Math.min(W * 0.62, pr.height * 0.42, 300), ix = pr.left - sr.left + pr.width / 2 - IS / 2, iy = pr.top - sr.top + pr.height * 0.40 - IS / 2;
+    var ox = sr.left, oy = sr.top, x0 = cr.left - ox + cr.width * 0.5, y0 = cr.top - oy + cr.height * 0.655, top = cr.top - oy;
+    // the icon's spot, centred on the phone
+    var IS = Math.min(W * 0.62, pr.height * 0.42, 300), ix = pr.left - ox + pr.width / 2 - IS / 2, iy = pr.top - oy + pr.height * 0.40 - IS / 2;
     endEl.style.top = (iy + IS + 18) + 'px';
-    var bx = ix + IS * 0.74, by = iy + IS * 0.275, br = IS * 0.177;
-    var hiX = pr.left - sr.left + pr.width * 0.12, hiY = top + pr.height * 0.06;           // high point, far away
-    var side = Math.min(W - 46, pr.right - sr.left + pr.width * (W > 900 ? 1.1 : 0.35));
-    var base = cr.width * 0.03;
-    function P(t) {
-      if (t < 0.5) { var q = t / 0.5; return [bez(x0, x0 + cr.width * 0.55, side + cr.width * 0.2, hiX, q), bez(y0, y0 - cr.height * 0.3, top + cr.height * 0.3, hiY, q)]; }
-      var q = (t - 0.5) / 0.5, lx = ix + IS * 0.05, ly = iy + IS * 1.05;                   // dive down the left, then up into the icon along its flame
-      return [bez(hiX, hiX - cr.width * 0.35, lx - IS * 0.1, bx, q * q * (3 - 2 * q) * 0 + q), bez(hiY, hiY + cr.height * 0.5, ly + IS * 0.25, by, q)];
+    var br = IS * 0.177, base = cr.width * 0.03, side = Math.min(W - 46, pr.right - ox + pr.width * (W > 900 ? 1.1 : 0.32));
+    function T(x, y) { return [ix + IS * x, iy + IS * y]; }
+    // one smooth path: off the bat, out past the phone towards you, high over the top, down the left,
+    // then along the line of the icon's own flame into the ball's spot on the icon
+    var WP = [[x0, y0, base], [x0 + cr.width * 0.3, y0 - cr.height * 0.2, base * 3.4], [side, top + cr.height * 0.42, base * 5],
+              [pr.left - ox + pr.width * 0.62, top + cr.height * 0.05, base * 1.6], [pr.left - ox + pr.width * 0.12, top + cr.height * 0.2, base * 1.1],
+              T(0.06, 0.95).concat(br * 0.45), T(0.17, 0.80).concat(br * 0.55), T(0.23, 0.52).concat(br * 0.72), T(0.42, 0.33).concat(br * 0.88), T(0.74, 0.275).concat(br)];
+    var pts = [], len = [0];
+    for (var i = 0; i < WP.length - 1; i++) {
+      var p0 = WP[Math.max(0, i - 1)], p1 = WP[i], p2 = WP[i + 1], p3 = WP[Math.min(WP.length - 1, i + 2)];
+      for (var k = 0; k < 24; k++) { var t = k / 24, t2 = t * t, t3 = t2 * t, q = [];
+        for (var c = 0; c < 3; c++) q.push(0.5 * ((2 * p1[c]) + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t3));
+        pts.push(q); }
     }
-    function R(t) {
-      if (t < 0.5) { var q = t / 0.5; return q < 0.45 ? base * (1 + 4 * Math.sin(q / 0.45 * Math.PI / 2)) : base * (5 - 4.4 * Math.pow((q - 0.45) / 0.55, 0.8)); }
-      var q = (t - 0.5) / 0.5; return base * 0.6 + (br - base * 0.6) * Math.pow(q, 1.6);
-    }
-    var K = 26, span = 0.13, C = [], tp = Math.min(1, u / 0.9);
-    for (var k = 0; k <= K; k++) { var t = Math.max(0, tp - span * k / K); C.push([P(t), t]); }
-    function ribbon(scale, wob) {
+    pts.push(WP[WP.length - 1].slice());
+    for (var i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    var TOT = len[len.length - 1];
+    function at(d) { d = Math.max(0, Math.min(TOT, d)); var j = 1; while (j < len.length - 1 && len[j] < d) j++; var f = (d - len[j - 1]) / ((len[j] - len[j - 1]) || 1), A = pts[j - 1], B = pts[j]; return [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f, A[2] + (B[2] - A[2]) * f]; }
+    var x = Math.min(1, u / 0.92), dist = TOT * (1 - Math.pow(1 - x, 1.25));      // eases into the icon
+    var near = ss(0.62, 1, x);                                                  // how far it has turned into the icon
+    var flameLen = TOT - len[24 * 6];                                           // the icon's flame, from its tail spark to the ball
+    var span = (cr.width * 0.55) * (1 - near) + flameLen * near;
+    var K = 34, C = [];
+    for (var k = 0; k <= K; k++) C.push(at(dist - span * k / K));
+    var head = C[0], r = head[2];
+    function ribbon(scale, tongue) {
       var L = [], Rr = [];
       for (var k = 0; k < C.length; k++) {
-        var a = C[k][0], b = C[Math.min(C.length - 1, k + 1)][0], dx = a[0] - b[0], dy = a[1] - b[1], m = Math.hypot(dx, dy) || 1, nx = -dy / m, ny = dx / m;
-        var f = k / K, w = R(C[0][1]) * scale * Math.pow(1 - f, 0.9) * (1 + wob * Math.sin(f * 17 + p * 90) * f);
-        L.push([a[0] + nx * w, a[1] + ny * w]); Rr.push([a[0] - nx * w, a[1] - ny * w]);
+        var a = C[k], b = C[Math.min(C.length - 1, k + 1)], dx = a[0] - b[0], dy = a[1] - b[1], m = Math.hypot(dx, dy) || 1, nx = -dy / m, ny = dx / m;
+        var f = k / K, shape = (1 - near) * Math.pow(1 - f, 0.9) + near * Math.pow(1 - f, 0.7) * (1 + 0.3 * Math.sin(f * 3.1));
+        var w = r * scale * shape;
+        // licking flame tongues, stronger towards the tail, like the painted flame on the icon
+        var n1 = (Math.sin(f * 19 - p * 420) * 0.6 + Math.sin(f * 8 + p * 260) * 0.4) * tongue * r * Math.pow(f, 0.6) * (1 - f * 0.5);
+        var n2 = (Math.sin(f * 15 + p * 380 + 1.7) * 0.6 + Math.sin(f * 6 - p * 200) * 0.4) * tongue * r * Math.pow(f, 0.6) * (1 - f * 0.5) * 0.7;
+        L.push([a[0] + nx * (w + Math.max(0, n1)), a[1] + ny * (w + Math.max(0, n1))]); Rr.push([a[0] - nx * (w + Math.max(0, n2)), a[1] - ny * (w + Math.max(0, n2))]);
       }
       fctx.beginPath(); fctx.moveTo(L[0][0], L[0][1]); L.forEach(function (q) { fctx.lineTo(q[0], q[1]); }); for (var j = Rr.length - 1; j >= 0; j--) fctx.lineTo(Rr[j][0], Rr[j][1]); fctx.closePath();
     }
-    var h = C[0][0], tl = C[C.length - 1][0];
-    function g(c1, c2) { var gr = fctx.createLinearGradient(h[0], h[1], tl[0], tl[1]); gr.addColorStop(0, c1); gr.addColorStop(1, c2); return gr; }
-    var iconA = ss(0.86, 0.96, u);
-    // the icon tile builds up around the arriving ball
-    if (iconA > 0 && icon.complete && icon.naturalWidth) {
-      fctx.save(); fctx.globalAlpha = iconA; var sc = 0.9 + 0.1 * iconA, cx = bx, cy = by;
-      fctx.translate(cx, cy); fctx.scale(sc, sc); fctx.translate(-cx, -cy);
-      fctx.shadowColor = 'rgba(0,0,0,.55)'; fctx.shadowBlur = 40; fctx.shadowOffsetY = 14;
-      var rr = IS * 0.22; fctx.beginPath(); fctx.moveTo(ix + rr, iy); fctx.arcTo(ix + IS, iy, ix + IS, iy + IS, rr); fctx.arcTo(ix + IS, iy + IS, ix, iy + IS, rr); fctx.arcTo(ix, iy + IS, ix, iy, rr); fctx.arcTo(ix, iy, ix + IS, iy, rr); fctx.closePath();
-      fctx.fillStyle = '#ffc93a'; fctx.fill(); fctx.shadowColor = 'transparent';
-      var pd = IS * 0.03, r2 = rr - pd; fctx.beginPath(); fctx.moveTo(ix + pd + r2, iy + pd); fctx.arcTo(ix + IS - pd, iy + pd, ix + IS - pd, iy + IS - pd, r2); fctx.arcTo(ix + IS - pd, iy + IS - pd, ix + pd, iy + IS - pd, r2); fctx.arcTo(ix + pd, iy + IS - pd, ix + pd, iy + pd, r2); fctx.arcTo(ix + pd, iy + pd, ix + IS - pd, iy + pd, r2); fctx.closePath(); fctx.clip();
-      fctx.drawImage(icon, ix + pd, iy + pd, IS - 2 * pd, IS - 2 * pd); fctx.restore();
+    var tl = C[C.length - 1];
+    function g(c1, c2) { var gr = fctx.createLinearGradient(head[0], head[1], tl[0], tl[1]); gr.addColorStop(0, c1); gr.addColorStop(1, c2); return gr; }
+    function tile(path) { var rr = IS * 0.22; fctx.beginPath(); fctx.moveTo(ix + rr, iy); fctx.arcTo(ix + IS, iy, ix + IS, iy + IS, rr); fctx.arcTo(ix + IS, iy + IS, ix, iy + IS, rr); fctx.arcTo(ix, iy + IS, ix, iy, rr); fctx.arcTo(ix, iy, ix + IS, iy, rr); fctx.closePath(); }
+    // the tile gathers behind the ball as it comes in: a soft blue glow first, then the framed tile, then the painted icon
+    var tileA = ss(0.68, 0.97, x), paintA = ss(0.93, 1, u);
+    if (tileA > 0) {
+      fctx.save(); fctx.globalAlpha = tileA;
+      fctx.shadowColor = 'rgba(0,0,0,.5)'; fctx.shadowBlur = 40 * tileA; fctx.shadowOffsetY = 14 * tileA; tile();
+      var gr = fctx.createRadialGradient(ix + IS * 0.72, iy + IS * 0.28, IS * 0.05, ix + IS * 0.5, iy + IS * 0.55, IS * 0.85);
+      gr.addColorStop(0, '#2f7ff0'); gr.addColorStop(0.45, '#1450c0'); gr.addColorStop(1, '#06246e'); fctx.fillStyle = gr; fctx.fill();
+      fctx.shadowColor = 'transparent'; fctx.lineWidth = IS * 0.03 * ss(0.6, 1, tileA); fctx.strokeStyle = '#ffc93a'; if (fctx.lineWidth > 0.3) fctx.stroke();
+      if (paintA > 0 && icon.complete && icon.naturalWidth) { fctx.globalAlpha = tileA * paintA; fctx.clip(); var pd = IS * 0.03; fctx.drawImage(icon, ix + pd, iy + pd, IS - 2 * pd, IS - 2 * pd); }
+      fctx.restore();
+      if (paintA > 0) { fctx.save(); fctx.globalAlpha = tileA; tile(); fctx.lineWidth = IS * 0.03; fctx.strokeStyle = '#ffc93a'; fctx.stroke(); fctx.restore(); }
     }
-    var flyA = 1 - ss(0.93, 0.98, u);
+    var flyA = 1 - paintA;
     if (flyA > 0) {
       fctx.globalAlpha = flyA;
-      fctx.save(); fctx.shadowColor = 'rgba(255,110,20,.9)'; fctx.shadowBlur = 18; ribbon(1.05, 0.35); fctx.fillStyle = g('rgba(255,100,18,1)', 'rgba(235,60,10,0)'); fctx.fill(); fctx.restore();
-      ribbon(0.72, 0.2); fctx.fillStyle = g('rgba(255,190,40,1)', 'rgba(255,140,25,0)'); fctx.fill();
-      ribbon(0.3, 0.08); fctx.fillStyle = g('rgba(255,252,220,1)', 'rgba(255,225,120,0)'); fctx.fill();
-      var r = R(tp);
-      if (ball.complete && ball.naturalWidth) { fctx.save(); fctx.shadowColor = 'rgba(255,170,60,.85)'; fctx.shadowBlur = r * 0.8; fctx.translate(h[0], h[1]); fctx.rotate(tp * 26); fctx.drawImage(ball, -r, -r, r * 2, r * 2); fctx.restore(); }
+      fctx.save(); fctx.shadowColor = 'rgba(255,110,20,.9)'; fctx.shadowBlur = 16 + 8 * near; ribbon(1.0, 0.5 + 0.5 * near); fctx.fillStyle = g('rgba(255,96,16,1)', 'rgba(235,60,10,' + (0.5 * near) + ')'); fctx.fill(); fctx.restore();
+      ribbon(0.7, 0.3 + 0.3 * near); fctx.fillStyle = g('rgba(255,196,44,1)', 'rgba(255,150,25,' + (0.5 * near) + ')'); fctx.fill();
+      ribbon(0.32, 0.08); fctx.fillStyle = g('rgba(255,253,228,1)', 'rgba(255,236,150,' + (0.7 * near) + ')'); fctx.fill();
+      if (near > 0) {   // the bright spark at the tail of the icon's flame
+        var sp = r * 0.9 * near, tx = tl[0], ty = tl[1]; fctx.save(); fctx.globalAlpha = flyA * near; fctx.shadowColor = 'rgba(255,200,80,1)'; fctx.shadowBlur = sp; fctx.fillStyle = '#fff3c4'; fctx.beginPath();
+        for (var i = 0; i < 16; i++) { var an = i * Math.PI / 8 + 0.3, rr = i % 2 ? sp * 0.18 : sp * (i % 4 ? 0.6 : 1); fctx.lineTo(tx + Math.cos(an) * rr, ty + Math.sin(an) * rr); } fctx.fill(); fctx.restore(); }
+      var spin = Math.PI * 2 * 5 * (1 - Math.pow(1 - x, 2.2));                    // spins down and settles seam-on, just like the icon
+      if (ball.complete && ball.naturalWidth) { fctx.save(); fctx.shadowColor = 'rgba(255,170,60,.85)'; fctx.shadowBlur = r * 0.8; fctx.translate(head[0], head[1]); fctx.rotate(spin); fctx.drawImage(ball, -r, -r, r * 2, r * 2); fctx.restore(); }
       fctx.globalAlpha = 1;
     }
   }
