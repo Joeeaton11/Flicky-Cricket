@@ -1,4 +1,4 @@
-// Scroll story: one delivery, sixteen grounds. The phone stays pinned while the page scrolls;
+// Scroll story: one delivery, twenty-four grounds. The phone stays pinned while the page scrolls;
 // scroll position picks the frame, and the ground changes every few frames.
 (function () {
   var sec = document.getElementById('story'); if (!sec) return;
@@ -56,7 +56,7 @@
     function at(d) { d = Math.max(0, Math.min(TOT, d)); var j = 1; while (j < len.length - 1 && len[j] < d) j++; var f = (d - len[j - 1]) / ((len[j] - len[j - 1]) || 1), A = pts[j - 1], B = pts[j]; return [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f, A[2] + (B[2] - A[2]) * f]; }
     var x = Math.min(1, u / 0.8), dist = x < 0.4 ? L1 * x / 0.4 : L1 + (TOT - L1) * (1 - Math.pow(1 - (x - 0.4) / 0.6, 1.6));
     // the whole screen shudders when the ball hits the side of it
-    if (lastD < L1 && dist >= L1) { stick.classList.remove('shudder'); void stick.offsetWidth; stick.classList.add('shudder'); }
+    if (lastD < L1 && dist >= L1) { stick.classList.remove('shudder'); void stick.offsetWidth; stick.classList.add('shudder'); try { navigator.vibrate && navigator.vibrate([40, 30, 25]); } catch (e) {} }   // and on Android the phone really buzzes
     lastD = dist;
     var imp = wall;
     var near = 0;   // plain comet trail for now (no morphing into the logo's flame)
