@@ -84,13 +84,21 @@
       (xm ? (live ? 'The <b>Christmas Cup</b> is on: win exclusive festive kit' : 'The <b>Christmas Cup</b> starts 12 December') : 'The <b>Diwali Cup</b> is on: collect diyas for exclusive kit') + '</span><em>PLAY ▶</em>';
     var top = document.querySelector('.top'); top && top.insertAdjacentElement('afterend', band);
     document.documentElement.classList.add('season-' + season);
+    if (xm) {   // snow cap on the logo, and a drift that builds up along the bottom as you scroll down
+      var ic = document.querySelector('.hero-icon'); if (ic) { var hc = document.createElement('i'); hc.className = 'heroCap'; ic.insertAdjacentElement('beforebegin', hc); }
+      var drift = document.createElement('div'); drift.className = 'snowDrift'; drift.setAttribute('aria-hidden', 'true'); document.body.appendChild(drift);
+      var dr = function () { var p = Math.min(1, scrollY / Math.max(1, document.body.scrollHeight - innerHeight)); drift.style.height = Math.round(14 + 34 * p) + 'px'; };
+      addEventListener('scroll', dr, { passive: true }); dr();
+    }
     if (!reduce) {
-      if (xm) {   // gentle snow over the whole page
-        var flakes = []; for (var i = 0; i < 46; i++) flakes.push({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 2.6, s: 0.2 + Math.random() * 0.5, w: Math.random() * 6.28 });
+      if (xm) {   // snow over the whole page
+        var flakes = []; for (var i = 0; i < 70; i++) flakes.push({ x: Math.random(), y: Math.random(), r: 1.2 + Math.random() * 3.4, s: 0.25 + Math.random() * 0.6, w: Math.random() * 6.28, star: Math.random() < 0.22 });
         var last = performance.now();
         add(function (t) { var dt = Math.min(50, t - last) / 16.7; last = t; fc.fillStyle = 'rgba(255,255,255,.85)';
           flakes.forEach(function (f) { f.y += f.s * dt / H * 2.2; f.w += 0.02 * dt; if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
-            fc.globalAlpha = 0.5 + f.r / 6; fc.beginPath(); fc.arc(f.x * W + Math.sin(f.w) * 12, f.y * H, f.r, 0, 7); fc.fill(); });
+            fc.globalAlpha = 0.5 + f.r / 8; var X = f.x * W + Math.sin(f.w) * 12, Y = f.y * H;
+            if (f.star) { fc.save(); fc.strokeStyle = '#fff'; fc.lineWidth = 1.3; fc.translate(X, Y); fc.rotate(f.w * 0.3); for (var k = 0; k < 3; k++) { fc.rotate(Math.PI / 3); fc.beginPath(); fc.moveTo(-f.r * 1.8, 0); fc.lineTo(f.r * 1.8, 0); fc.stroke(); } fc.restore(); }
+            else { fc.beginPath(); fc.arc(X, Y, f.r, 0, 7); fc.fill(); } });
           fc.globalAlpha = 1; return true; });
       } else {   // little firework bursts in the sky over the hero
         var hero = document.querySelector('.hero'), bursts = [], nextB = 0, cols = ['#ffd75e', '#ff8a3d', '#ff5fa2', '#7fd3ff', '#b46cff'];
