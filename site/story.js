@@ -47,7 +47,7 @@
     var bat = [c0[0] - cr.width * 0.035, c0[1] + cr.height * 0.012, base * 1.1];                   // meets the bat
     var edge = [cr.left - ox - base, bat[1] - cr.height * 0.05, base * 2];                          // leaves the game screen
     var wall = [base * 3, edge[1] - cr.height * 0.035, base * 3];                                    // smack: the side of your screen
-    var pd0 = IS * 0.03, logo = [ix + pd0 + (IS - 2 * pd0) * 0.74, iy + pd0 + (IS - 2 * pd0) * 0.2754, (IS - 2 * pd0) * 0.1768];   // exactly on the icon's ball
+    var pd0 = IS * 0.035, logo = [ix + pd0 + (IS - 2 * pd0) * 0.74, iy + pd0 + (IS - 2 * pd0) * 0.2754, (IS - 2 * pd0) * 0.1768];   // exactly on the icon's ball
     var pos, seg, segD, hitK = 0, spin = 0;
     function lerp3(A, B, t) { return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; }
     function seg1(t) { var a = lerp3(bat, edge, Math.min(1, t / 0.5)); return t <= 0.5 ? a : lerp3(edge, wall, (t - 0.5) / 0.5); }
@@ -71,12 +71,16 @@
     // along its flame while the flying ball and trail melt into it
     var tileA = ss(pArr - 0.04, pArr + 0.02, p), paintA = ss(pArr - 0.005, 0.975, p), flyA = 1 - ss(0.94, 0.985, p);
     function tile() { var rr = IS * 0.22; fctx.beginPath(); fctx.moveTo(ix + rr, iy); fctx.arcTo(ix + IS, iy, ix + IS, iy + IS, rr); fctx.arcTo(ix + IS, iy + IS, ix, iy + IS, rr); fctx.arcTo(ix, iy + IS, ix, iy, rr); fctx.arcTo(ix, iy, ix + IS, iy, rr); fctx.closePath(); }
-    if (tileA > 0) {
-      fctx.save(); fctx.globalAlpha = tileA; fctx.shadowColor = 'rgba(0,0,0,.5)'; fctx.shadowBlur = 40 * tileA; fctx.shadowOffsetY = 14 * tileA;
-      var sc = 0.92 + 0.08 * tileA; fctx.translate(logo[0], logo[1]); fctx.scale(sc, sc); fctx.translate(-logo[0], -logo[1]); tile();
+    function rrect(x, y, w, h, r) { fctx.beginPath(); fctx.moveTo(x + r, y); fctx.arcTo(x + w, y, x + w, y + h, r); fctx.arcTo(x + w, y + h, x, y + h, r); fctx.arcTo(x, y + h, x, y, r); fctx.arcTo(x, y, x + w, y, r); fctx.closePath(); }
+    if (tileA > 0) {   // gold frame, then the blue tile and painted icon clipped to the inner rounded corner so nothing pokes out
+      var sc = 0.92 + 0.08 * tileA, RR = IS * 0.22, PD = IS * 0.035;
+      fctx.save(); fctx.globalAlpha = tileA; fctx.translate(logo[0], logo[1]); fctx.scale(sc, sc); fctx.translate(-logo[0], -logo[1]);
+      fctx.shadowColor = 'rgba(0,0,0,.5)'; fctx.shadowBlur = 40 * tileA; fctx.shadowOffsetY = 14 * tileA;
+      rrect(ix, iy, IS, IS, RR); var gg = fctx.createLinearGradient(ix, iy, ix, iy + IS); gg.addColorStop(0, '#ffe07a'); gg.addColorStop(1, '#f2b228'); fctx.fillStyle = gg; fctx.fill();
+      fctx.shadowColor = 'transparent';
+      rrect(ix + PD, iy + PD, IS - 2 * PD, IS - 2 * PD, RR - PD); fctx.clip();
       var gr = fctx.createRadialGradient(ix + IS * 0.72, iy + IS * 0.28, IS * 0.05, ix + IS * 0.5, iy + IS * 0.55, IS * 0.85);
-      gr.addColorStop(0, '#2f7ff0'); gr.addColorStop(0.45, '#1450c0'); gr.addColorStop(1, '#06246e'); fctx.fillStyle = gr; fctx.fill();
-      fctx.shadowColor = 'transparent'; fctx.lineWidth = IS * 0.03; fctx.strokeStyle = '#ffc93a'; fctx.stroke(); fctx.clip();
+      gr.addColorStop(0, '#2f7ff0'); gr.addColorStop(0.45, '#1450c0'); gr.addColorStop(1, '#06246e'); fctx.fillStyle = gr; fctx.fillRect(ix, iy, IS, IS);
       if (paintA > 0 && icon.complete && icon.naturalWidth) {
         var oc = flight._oc || (flight._oc = document.createElement('canvas')), S2 = Math.round(IS * dpr);
         if (oc.width !== S2) { oc.width = oc.height = S2; }
@@ -84,9 +88,10 @@
         var R0 = S2 * (0.12 + 1.35 * paintA), mg = o.createRadialGradient(S2 * 0.74, S2 * 0.275, R0 * 0.55, S2 * 0.74, S2 * 0.275, R0);
         mg.addColorStop(0, 'rgba(0,0,0,1)'); mg.addColorStop(1, 'rgba(0,0,0,0)');
         o.globalCompositeOperation = 'destination-in'; o.fillStyle = mg; o.fillRect(0, 0, S2, S2);
-        var pd = IS * 0.03; fctx.globalAlpha = tileA; fctx.drawImage(oc, ix + pd, iy + pd, IS - 2 * pd, IS - 2 * pd);
+        fctx.drawImage(oc, ix + PD, iy + PD, IS - 2 * PD, IS - 2 * PD);
       }
       fctx.restore();
+      fctx.save(); fctx.globalAlpha = tileA * 0.5; rrect(ix + PD, iy + PD, IS - 2 * PD, IS - 2 * PD, RR - PD); fctx.lineWidth = 1.5; fctx.strokeStyle = 'rgba(120,70,0,.6)'; fctx.stroke(); fctx.restore();   // crisp inner edge
     }
     if (flyA <= 0) return;
     fctx.globalAlpha = flyA;

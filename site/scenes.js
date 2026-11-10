@@ -103,7 +103,7 @@
       world.style.transform = 'translateY(' + (-(WH - H) * (1 - pan)) + 'px)';
       var shown = 0, off = (WH - H) * (1 - pan);
       pcs.forEach(function (c, i) {
-        var y = parseFloat(c.style.top) / 100 * WH - off, s = Math.min((y - 0.08 * H) / (0.14 * H), (p - 0.022 * i) / 0.03), k = back(s), r = +c.dataset.r;   // pops as it comes into view
+        var y = parseFloat(c.style.top) / 100 * WH - off, s = Math.max(Math.min((y + 0.02 * H) / (0.14 * H), (p - 0.022 * i) / 0.03), (p - 0.86) / 0.06), k = back(s), r = +c.dataset.r;   // pops as it comes into view
         if (s <= 0) { c.style.opacity = 0; c.style.transform = 'translate(-50%,-50%) scale(.2) rotate(' + (r * 3) + 'deg)'; return; }
         shown++;
         c.style.opacity = Math.min(1, s * 3);
