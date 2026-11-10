@@ -106,7 +106,7 @@
         var y = parseFloat(c.style.top) / 100 * WH - off, s = Math.max(Math.min((y + 0.02 * H) / (0.14 * H), (p - 0.022 * i) / 0.03), (p - 0.86) / 0.06), k = back(s), r = +c.dataset.r;   // pops as it comes into view
         if (s <= 0) { c.style.opacity = 0; c.style.transform = 'translate(-50%,-50%) scale(.2) rotate(' + (r * 3) + 'deg)'; return; }
         shown++;
-        c.style.opacity = Math.min(1, s * 3);
+        c.style.opacity = Math.min(1, s * 3) * ss(0.1 * H, 0.24 * H, y);   // fades away as it slides up under the title
         c.style.transform = 'translate(-50%,-50%) perspective(700px) rotateY(' + (-95 * (1 - Math.min(1, s * 1.15))) + 'deg) scale(' + (0.2 + 0.8 * k) + ') rotate(' + (r * (3 - 2 * Math.min(1, k))) + 'deg)';   // flips over as it lands
       });
       count.textContent = shown;
