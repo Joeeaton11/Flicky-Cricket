@@ -33,7 +33,7 @@
     if (fx.width !== Math.round(W * dpr) || fx.height !== Math.round(H * dpr)) { fx.width = Math.round(W * dpr); fx.height = Math.round(H * dpr); }
     fctx.setTransform(dpr, 0, 0, dpr, 0, 0); fctx.clearRect(0, 0, W, H);
     // timeline (scroll progress): contact frame -> bat comes through -> ball out to the wall -> bounce -> logo
-    var pHit = FEND * cfg.hit / (N - 1), pBat = FEND * (cfg.hit + 2.5) / (N - 1), pWall = pBat + 0.05, pArr = 0.9;
+    var pHit = FEND * (cfg.hit - 0.5) / (N - 1), pBat = FEND * (cfg.hit + 2) / (N - 1), pWall = pBat + 0.05, pArr = 0.9;
     var after = ss(pWall, pArr, p);
     phoneEl.style.opacity = groundEl.style.opacity = String(1 - after);
     endEl.classList.toggle('on', p > 0.955); sec.classList.toggle('ending', p > pWall);
