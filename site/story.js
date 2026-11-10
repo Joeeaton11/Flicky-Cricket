@@ -58,9 +58,14 @@
     lastD = seg;
     // trail: a tidy tapered comet behind the ball on the current leg of its journey
     var trail = [], K = 22;
-    if (seg > 0) {
-      var len = seg === 1 ? 0.55 : 0.32, from = Math.max(0, segD - len * Math.min(1, segD / len + 0.15));
-      for (var k = 0; k <= K; k++) { var tt = segD - (segD - from) * k / K; trail.push(seg === 1 ? seg1(tt) : lerp3(wall, logo, 1 - Math.pow(1 - tt, 1))); }
+    if (seg === 0) {   // the flame lights up while the bat comes through
+      var hk = ss(pHit, pBat, p) * 0.5;
+      for (var k = 0; k <= K; k++) trail.push(lerp3(bat, edge, (-0.55 * hk * k / K) / 0.5).map(function (v, i) { return i < 2 ? v + (pos[i] - bat[i]) : v; }));
+    }
+    if (seg > 0) {   // full-length trail straight away: it runs back along the line of the shot, even before the ball has travelled that far
+      var len = seg === 1 ? 0.55 : 0.32, ramp = 0.55 + 0.45 * Math.min(1, segD / 0.12);
+      for (var k = 0; k <= K; k++) { var tt = segD - len * ramp * k / K;
+        trail.push(seg === 1 ? (tt >= 0 ? seg1(tt) : lerp3(bat, edge, tt / 0.5)) : lerp3(wall, logo, tt)); }
     }
     var paintA = ss(0.935, 0.985, p), tileA = ss(pArr - 0.015, 0.95, p), flyA = 1 - paintA;
     function tile() { var rr = IS * 0.22; fctx.beginPath(); fctx.moveTo(ix + rr, iy); fctx.arcTo(ix + IS, iy, ix + IS, iy + IS, rr); fctx.arcTo(ix + IS, iy + IS, ix, iy + IS, rr); fctx.arcTo(ix, iy + IS, ix, iy, rr); fctx.arcTo(ix, iy, ix + IS, iy, rr); fctx.closePath(); }
