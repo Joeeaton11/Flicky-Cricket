@@ -33,7 +33,7 @@
     if (fx.width !== Math.round(W * dpr) || fx.height !== Math.round(H * dpr)) { fx.width = Math.round(W * dpr); fx.height = Math.round(H * dpr); }
     fctx.setTransform(dpr, 0, 0, dpr, 0, 0); fctx.clearRect(0, 0, W, H);
     var pHit = FEND * (cfg.hit + 0.5) / (N - 1), u = (p - pHit) / (0.985 - pHit);
-    phoneEl.style.opacity = groundEl.style.opacity = String(1 - ss(0.42, 0.7, u));
+    phoneEl.style.opacity = groundEl.style.opacity = String(1 - ss(0.4, 0.75, u));
     endEl.classList.toggle('on', u > 0.95); sec.classList.toggle('ending', u > 0.4);
     if (u <= 0) return; u = Math.min(1, u);
     var sr = stick.getBoundingClientRect(), pr = phoneEl.getBoundingClientRect(), cr = cv.getBoundingClientRect();
@@ -46,28 +46,22 @@
     // a pull shot off a short ball: out of the game screen, smack into the side of YOUR phone, one bounce, into the logo
     var wallR = base * 2.6, wall = [wallR + 2, y0 - cr.height * 0.12, base * 2.6];
     var edge = [cr.left - ox, y0 - cr.height * 0.07, base * 1.7];
-    var WP = [wall, T(0.12, 0.86).concat(br * 0.5), T(0.18, 0.72).concat(br * 0.58), T(0.24, 0.5).concat(br * 0.72), T(0.42, 0.33).concat(br * 0.88), T(0.74, 0.275).concat(br)];
+    var WP = [wall, T(0.74, 0.275).concat(br)];   // after the bounce: straight to the ball's spot on the logo
     var pts = [], len = [0];
     for (var k = 0; k < 24; k++) { var t = k / 24, q = t < 0.5 ? t / 0.5 : (t - 0.5) / 0.5, A = t < 0.5 ? [x0, y0, base] : edge, B = t < 0.5 ? edge : wall; pts.push([A[0] + (B[0] - A[0]) * q, A[1] + (B[1] - A[1]) * q, A[2] + (B[2] - A[2]) * q]); }
-    for (var i = 0; i < WP.length - 1; i++) {
-      var p0 = WP[Math.max(0, i - 1)], p1 = WP[i], p2 = WP[i + 1], p3 = WP[Math.min(WP.length - 1, i + 2)];
-      if (i === 0) p0 = [wall[0] - (WP[1][0] - wall[0]), wall[1] - (wall[1] - y0) * 0.6, wall[2]];   // leave the wall like a real bounce
-      for (var k = 0; k < 24; k++) { var t = k / 24, t2 = t * t, t3 = t2 * t, q = [];
-        for (var c = 0; c < 3; c++) q.push(0.5 * ((2 * p1[c]) + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t3));
-        pts.push(q); }
-    }
+    for (var k = 0; k < 24; k++) { var t = k / 24, A = WP[0], B = WP[1]; pts.push([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]); }
     pts.push(WP[WP.length - 1].slice());
     for (var i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     var TOT = len[len.length - 1], L1 = len[24];
     function at(d) { d = Math.max(0, Math.min(TOT, d)); var j = 1; while (j < len.length - 1 && len[j] < d) j++; var f = (d - len[j - 1]) / ((len[j] - len[j - 1]) || 1), A = pts[j - 1], B = pts[j]; return [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f, A[2] + (B[2] - A[2]) * f]; }
-    var x = Math.min(1, u / 0.92), dist = x < 0.3 ? L1 * x / 0.3 : L1 + (TOT - L1) * (1 - Math.pow(1 - (x - 0.3) / 0.7, 1.4));
+    var x = Math.min(1, u / 0.8), dist = x < 0.4 ? L1 * x / 0.4 : L1 + (TOT - L1) * (1 - Math.pow(1 - (x - 0.4) / 0.6, 1.6));
     // the whole screen shudders when the ball hits the side of it
     if (lastD < L1 && dist >= L1) { stick.classList.remove('shudder'); void stick.offsetWidth; stick.classList.add('shudder'); }
     lastD = dist;
     var imp = wall;
-    var near = ss(0.4, 1, x);
+    var near = 0;   // plain comet trail for now (no morphing into the logo's flame)
     var flameLen = TOT - len[24];
-    var span = Math.min(dist, (cr.width * 0.55) * (1 - near) + flameLen * near);
+    var span = Math.min(dist, cr.width * 0.5);
     var K = 34, C = [];
     for (var k = 0; k <= K; k++) C.push(at(dist - span * k / K));
     var head = C[0], r = head[2];
@@ -88,7 +82,7 @@
     function g(c1, c2) { var gr = fctx.createLinearGradient(head[0], head[1], tl[0], tl[1]); gr.addColorStop(0, c1); gr.addColorStop(1, c2); return gr; }
     function tile(path) { var rr = IS * 0.22; fctx.beginPath(); fctx.moveTo(ix + rr, iy); fctx.arcTo(ix + IS, iy, ix + IS, iy + IS, rr); fctx.arcTo(ix + IS, iy + IS, ix, iy + IS, rr); fctx.arcTo(ix, iy + IS, ix, iy, rr); fctx.arcTo(ix, iy, ix + IS, iy, rr); fctx.closePath(); }
     // the tile gathers behind the ball as it comes in: a soft blue glow first, then the framed tile, then the painted icon
-    var tileA = ss(0.4, 0.95, x), paintA = ss(0.93, 1, u);
+    var tileA = ss(0.8, 0.9, u), paintA = ss(0.86, 0.96, u);   // ball arrives, then the logo loads around it
     if (tileA > 0) {
       fctx.save(); fctx.globalAlpha = tileA;
       fctx.shadowColor = 'rgba(0,0,0,.5)'; fctx.shadowBlur = 40 * tileA; fctx.shadowOffsetY = 14 * tileA; tile();
