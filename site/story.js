@@ -140,7 +140,8 @@
   function onScroll() { if (ticking) return; ticking = true; requestAnimationFrame(function () { ticking = false; prog = progress(); want = Math.round(Math.min(1, prog / FEND) * (N - 1)); draw(want); flight(prog); }); }
   if (reduce) { sec.classList.add('still'); load(cfg.hero); var im = imgs[cfg.hero]; im.onload = function () { want = cfg.hero; draw(cfg.hero); }; return; }
   // first scenes straight away, then the rest in order once the story is near
-  for (var i = 0; i < Math.min(N, 14); i++) load(i);
+  function first() { for (var i = 0; i < Math.min(N, 14); i++) load(i); }   // after the top of the page has loaded, so the hero comes first
+  if (document.readyState === 'complete') first(); else addEventListener('load', first);
   var started = false;
   function rest() { if (started) return; started = true; var i = 14; (function next() { var n = 0; while (i < N && n < 6) { load(i++); n++; } if (i < N) setTimeout(next, 60); })(); }
   if ('IntersectionObserver' in window) new IntersectionObserver(function (e) { if (e[0].isIntersecting) rest(); }, { rootMargin: '150% 0px' }).observe(sec); else rest();
