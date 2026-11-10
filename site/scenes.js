@@ -90,8 +90,6 @@
   if (road) {
     var rp = road.querySelector('.panel'), world = road.querySelector('.world'), pcs = [].slice.call(road.querySelectorAll('.pc')), count = road.querySelector('.count b'), more = road.querySelector('.more');
     var rNow = road.querySelector('.side.r .now b'), rN = road.querySelector('.side.r .n');
-    var runner = road.querySelector('.runner'), PATH = window.ROAD_PATH, lastFr = -1, RUN = [];
-    for (var q = 0; q < 8; q++) { RUN[q] = new Image(); RUN[q].src = 'img/run/' + q + '.webp'; }
     if (reduce) {   // still layout: the whole road from the beach to the moon, every postcard in place
       road.classList.add('still');
       var fit = function () { var H = rp.clientHeight, WH = world.offsetHeight, k = H / WH; world.style.transformOrigin = '50% 0'; world.style.transform = 'scale(' + k + ')';
@@ -112,15 +110,6 @@
         c.style.transform = 'translate(-50%,-50%) perspective(700px) rotateY(' + (-95 * (1 - Math.min(1, s * 1.15))) + 'deg) scale(' + (0.2 + 0.8 * k) + ') rotate(' + (r * (3 - 2 * Math.min(1, k))) + 'deg)';   // flips over as it lands
       });
       count.textContent = shown;
-      // a little runner heading up the road, beach to moon
-      if (runner && PATH) {
-        var vTop = off / WH, frac = 0.66 - 0.5 * ss(0.72, 1, pan), yn = Math.min(PATH[0][1], Math.max(PATH[PATH.length - 1][1], vTop + (H / WH) * frac)), j = 1;
-        while (j < PATH.length - 1 && PATH[j][1] > yn) j++;
-        var A = PATH[j - 1], B = PATH[j], f = (A[1] - yn) / ((A[1] - B[1]) || 1), xn = A[0] + (B[0] - A[0]) * f;
-        runner.style.left = (xn * 100) + '%'; runner.style.top = (yn * 100) + '%';
-        var fr = Math.floor(p * 160) % 8; if (fr !== lastFr) { lastFr = fr; runner.src = RUN[fr].src; }
-        runner.style.opacity = p < 0.995 ? 1 : 0;
-      }
       if (rNow) { var last = pcs[Math.max(0, shown - 1)].querySelector('b').textContent; if (rNow.textContent !== last) rNow.textContent = last; rN.textContent = shown; }
       more.classList.toggle('on', p > 0.9);
     });
