@@ -67,6 +67,7 @@
     lastD = dist;
     var near = ss(0.62, 1, x);
     var flameLen = TOT - len[24 + 24 * 5];
+    var span = Math.min(dist, (cr.width * 0.55) * (1 - near) + flameLen * near);
     var K = 34, C = [];
     for (var k = 0; k <= K; k++) C.push(at(dist - span * k / K));
     var head = C[0], r = head[2];
