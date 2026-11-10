@@ -14,11 +14,12 @@
     var bw = bag.querySelector('.bagWrap'), pop = bag.querySelector('.bagPop'), fl = pop.querySelector('.flash'), rays = [].slice.call(pop.querySelectorAll('.rays')),
         rings = [].slice.call(pop.querySelectorAll('.ring')), bits = [].slice.call(pop.querySelectorAll('.bits b'));
     var sideNow = bag.querySelector('.side.l .now'), sideN = bag.querySelector('.side.r .n'), sideList = bag.querySelector('.side.r .got'), sideKey = '';
-    var SLOTS = [[0.2, 0.2], [0.4, 0.2], [0.6, 0.2], [0.8, 0.2], [0.3, 0.37], [0.5, 0.37], [0.7, 0.37]];
-    var OPEN = 0.17, C0 = 0.2, CS = 0.78 / 7;
+    var SLOTS = [[0.23, 0.2], [0.5, 0.2], [0.77, 0.2], [0.36, 0.37], [0.64, 0.37]];
+    var lg = bag.querySelector('.legGlow'), OPEN = 0.17, C0 = 0.2, CS = 0.78 / 5.8, LEG = CS * 0.8;   // the last (legendary) card gets a slow build-up first
+    var START = cards.map(function (c, i) { return C0 + i * CS + (i === cards.length - 1 ? LEG : 0); });
     if (reduce) {   // still layout: bag open, all seven cards laid out above it
       bag.classList.add('still'); bw.classList.add('isOpen');
-      var lay = function () { var W = panel.clientWidth, H = panel.clientHeight, cw = cards[0].offsetWidth, k = (W * 0.19) / cw;
+      var lay = function () { var W = panel.clientWidth, H = panel.clientHeight, cw = cards[0].offsetWidth, k = (W * 0.24) / cw;
         cards.forEach(function (c, i) { var x = SLOTS[i][0] * W, y = SLOTS[i][1] * H; c.style.opacity = 1; c.style.transform = 'translate(' + (x - cw / 2) + 'px,' + (y - c.offsetHeight / 2) + 'px) scale(' + k + ')'; });
         head.classList.add('on'); };
       lay(); addEventListener('resize', lay); addEventListener('load', lay);
@@ -45,22 +46,28 @@
     scenes.push(function () {
       if (reduce) return;
       var p = prog(bag), W = panel.clientWidth, H = panel.clientHeight, n = cards.length;
-      var cw = cards[0].offsetWidth, big = Math.min(1, (W * 0.54) / cw), small = (W * 0.19) / cw, mouth = [0.5 * W, 0.63 * H];
+      var cw = cards[0].offsetWidth, big = Math.min(1, (W * 0.54) / cw), small = (W * 0.24) / cw, mouth = [0.5 * W, 0.63 * H];
       // the bag: bump, bump, crouch, POP open; then a hop for every card
       var y = 0, sx = 1, sy = 1, rot = 0, r;
       if (p < OPEN) { var t = p / OPEN * 1.5;
         if ((r = bump((t - 0.18) / 0.42, 16, -3)) || (r = bump((t - 0.72) / 0.46, 24, 3.5))) { y = r[0]; sx = r[1]; sy = 2 - r[1]; rot = r[2]; }
         else if (t > 1.24) { sx = 1 + 0.14 * Math.sin(Math.PI / 2 * (t - 1.24) / 0.26); sy = 2 - sx; } }
       else if (p < OPEN + 0.04) { var k = (p - OPEN) / 0.04; sx = k < 0.45 ? 0.82 + (1.12 - 0.82) * k / 0.45 : 1.12 - 0.12 * (k - 0.45) / 0.55; sy = k < 0.45 ? 1.12 - 0.22 * k / 0.45 : 0.9 + 0.1 * (k - 0.45) / 0.55; }   // lid pop
-      else for (var i = 0; i < n; i++) { var hh = hop(((p - C0 - i * CS) / CS) / 0.3); if (hh) { y = hh[0]; sx = hh[1]; sy = hh[2]; rot = hh[3]; } }
+      else for (var i = 0; i < n; i++) { var hh = hop(((p - START[i]) / CS) / 0.3); if (hh) { y = hh[0]; sx = hh[1]; sy = hh[2]; rot = hh[3]; } }
+      // legendary build-up before the last card: the bag rattles faster and faster and glows gold
+      var lb = (p - (START[n - 1] - LEG)) / LEG, gl = 0;
+      if (lb > 0 && lb < 1.25) { var e = Math.min(1, lb); gl = lb < 1 ? e : 1 - (lb - 1) / 0.25;
+        if (lb < 1) { rot = Math.sin(lb * lb * 60) * 5 * e; y = -Math.abs(Math.sin(lb * lb * 60)) * 6 * e; sx = 1 + 0.05 * e; sy = 1 - 0.04 * e; } }
+      lg.style.opacity = gl; lg.style.transform = 'translate(-50%,-50%) scale(' + (0.6 + 0.6 * gl) + ')';
       bw.classList.toggle('isOpen', p >= OPEN);
       bw.style.transform = 'translate(-50%,-92%) translateY(' + y + 'px) rotate(' + rot + 'deg) scale(' + sx + ',' + sy + ')';
       // bursts: a big one when it opens, a small one with every card
       var bs = (p - OPEN) / 0.07, isBig = true;
-      if (bs >= 1 || bs <= 0) { isBig = false; bs = -1; for (var i = 0; i < n; i++) { var q = ((p - C0 - i * CS) / CS - 0.12) / 0.3; if (q > 0 && q < 1) bs = q; } }
+      if (bs >= 1 || bs <= 0) { isBig = false; bs = -1; for (var i = 0; i < n; i++) { var q = ((p - START[i]) / CS - 0.12) / (i === n - 1 ? 0.6 : 0.3); if (q > 0 && q < 1) { bs = q; isBig = i === n - 1; } } }
       burst(bs, isBig);
       cards.forEach(function (c, i) {
-        var s = (p - C0 - i * CS) / CS - 0.12;                                  // launches just as the bag lands its hop
+        var s = (p - START[i]) / CS - 0.12;                                     // launches just as the bag lands its hop
+        c.classList.toggle('leg', i === n - 1 && s > 0);
         var st = SLOTS[i], sx2 = st[0] * W, sy2 = st[1] * H, cx = 0.5 * W, cy = 0.5 * H, x, y2, k, rt, o = 1;
         if (s <= 0) { c.style.opacity = 0; return; }
         var up = back(s / 0.3), fly = ss(0.66, 0.98, s);
@@ -71,7 +78,7 @@
         c.classList.toggle('big', s < 0.8);
       });
       head.classList.toggle('on', p < C0 + 0.08);
-      if (sideNow) { var cur = -1, got = 0; cards.forEach(function (c, i) { var q = (p - C0 - i * CS) / CS - 0.12; if (q > 0) { cur = i; if (q > 0.66) got = i + 1; } });
+      if (sideNow) { var cur = -1, got = 0; cards.forEach(function (c, i) { var q = (p - START[i]) / CS - 0.12; if (q > 0) { cur = i; if (q > 0.66) got = i + 1; } });
         var key = cur + ':' + got; if (key !== sideKey) { sideKey = key;
           if (cur >= 0) { var c = cards[cur]; sideNow.innerHTML = '<em>' + c.querySelector('em').textContent + '</em><b>' + c.querySelector('b').textContent + '</b><p>' + c.querySelector('small').innerHTML + '</p>'; }
           sideN.textContent = got; sideList.innerHTML = cards.slice(0, got).map(function (c) { return '<li>' + c.querySelector('b').textContent + '</li>'; }).join(''); } }
@@ -83,6 +90,8 @@
   if (road) {
     var rp = road.querySelector('.panel'), world = road.querySelector('.world'), pcs = [].slice.call(road.querySelectorAll('.pc')), count = road.querySelector('.count b'), more = road.querySelector('.more');
     var rNow = road.querySelector('.side.r .now b'), rN = road.querySelector('.side.r .n');
+    var runner = road.querySelector('.runner'), PATH = window.ROAD_PATH, lastFr = -1, RUN = [];
+    for (var q = 0; q < 8; q++) { RUN[q] = new Image(); RUN[q].src = 'img/run/' + q + '.webp'; }
     if (reduce) {   // still layout: the whole road from the beach to the moon, every postcard in place
       road.classList.add('still');
       var fit = function () { var H = rp.clientHeight, WH = world.offsetHeight, k = H / WH; world.style.transformOrigin = '50% 0'; world.style.transform = 'scale(' + k + ')';
@@ -100,9 +109,18 @@
         if (s <= 0) { c.style.opacity = 0; c.style.transform = 'translate(-50%,-50%) scale(.2) rotate(' + (r * 3) + 'deg)'; return; }
         shown++;
         c.style.opacity = Math.min(1, s * 3);
-        c.style.transform = 'translate(-50%,-50%) scale(' + (0.2 + 0.8 * k) + ') rotate(' + (r * (3 - 2 * Math.min(1, k))) + 'deg)';
+        c.style.transform = 'translate(-50%,-50%) perspective(700px) rotateY(' + (-95 * (1 - Math.min(1, s * 1.15))) + 'deg) scale(' + (0.2 + 0.8 * k) + ') rotate(' + (r * (3 - 2 * Math.min(1, k))) + 'deg)';   // flips over as it lands
       });
       count.textContent = shown;
+      // a little runner heading up the road, beach to moon
+      if (runner && PATH) {
+        var vTop = off / WH, frac = 0.66 - 0.5 * ss(0.72, 1, pan), yn = Math.min(PATH[0][1], Math.max(PATH[PATH.length - 1][1], vTop + (H / WH) * frac)), j = 1;
+        while (j < PATH.length - 1 && PATH[j][1] > yn) j++;
+        var A = PATH[j - 1], B = PATH[j], f = (A[1] - yn) / ((A[1] - B[1]) || 1), xn = A[0] + (B[0] - A[0]) * f;
+        runner.style.left = (xn * 100) + '%'; runner.style.top = (yn * 100) + '%';
+        var fr = Math.floor(p * 160) % 8; if (fr !== lastFr) { lastFr = fr; runner.src = RUN[fr].src; }
+        runner.style.opacity = p < 0.995 ? 1 : 0;
+      }
       if (rNow) { var last = pcs[Math.max(0, shown - 1)].querySelector('b').textContent; if (rNow.textContent !== last) rNow.textContent = last; rN.textContent = shown; }
       more.classList.toggle('on', p > 0.9);
     });
