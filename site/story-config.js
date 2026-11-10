@@ -1,2 +1,2 @@
-// filled in when the frames are captured
-window.STORY = { frames: 0, hero: 0, scenes: [{ from: 0, name: 'VILLAGE GREEN' }] };
+// One delivery across sixteen grounds: frames captured from the real game
+window.STORY = {"frames": 63, "hero": 49, "scenes": [{"from": 0, "name": "ST JOHN'S WOOD"}, {"from": 4, "name": "THE BEACH"}, {"from": 8, "name": "JUNGLE TEMPLE"}, {"from": 12, "name": "HARBOUR CITY"}, {"from": 16, "name": "THE PYRAMIDS"}, {"from": 20, "name": "THE FUNFAIR"}, {"from": 24, "name": "PIRATE COVE"}, {"from": 28, "name": "TABLE MOUNTAIN"}, {"from": 32, "name": "THE CASTLE"}, {"from": 35, "name": "CORAL REEF"}, {"from": 39, "name": "NEON CITY"}, {"from": 43, "name": "THE ARCTIC"}, {"from": 47, "name": "HAUNTED MANSION"}, {"from": 51, "name": "THE VOLCANO"}, {"from": 55, "name": "MARS"}, {"from": 59, "name": "THE MOON"}]};
