@@ -11,7 +11,7 @@
   var bag = document.getElementById('bagScene');
   if (bag) {
     var panel = bag.querySelector('.panel'), cards = [].slice.call(bag.querySelectorAll('.kc')), head = bag.querySelector('.sceneHead');
-    var bw = bag.querySelector('.bagWrap'), pop = bag.querySelector('.pop'), fl = pop.querySelector('.flash'), rays = [].slice.call(pop.querySelectorAll('.rays')),
+    var bw = bag.querySelector('.bagWrap'), pop = bag.querySelector('.bagPop'), fl = pop.querySelector('.flash'), rays = [].slice.call(pop.querySelectorAll('.rays')),
         rings = [].slice.call(pop.querySelectorAll('.ring')), bits = [].slice.call(pop.querySelectorAll('.bits b'));
     var SLOTS = [[0.2, 0.2], [0.4, 0.2], [0.6, 0.2], [0.8, 0.2], [0.3, 0.37], [0.5, 0.37], [0.7, 0.37]];
     var OPEN = 0.17, C0 = 0.2, CS = 0.78 / 7;
