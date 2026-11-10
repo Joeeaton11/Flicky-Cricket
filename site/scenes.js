@@ -13,9 +13,16 @@
     var panel = bag.querySelector('.panel'), cards = [].slice.call(bag.querySelectorAll('.kc')), head = bag.querySelector('.sceneHead');
     var bw = bag.querySelector('.bagWrap'), pop = bag.querySelector('.bagPop'), fl = pop.querySelector('.flash'), rays = [].slice.call(pop.querySelectorAll('.rays')),
         rings = [].slice.call(pop.querySelectorAll('.ring')), bits = [].slice.call(pop.querySelectorAll('.bits b'));
+    var sideNow = bag.querySelector('.side.l .now'), sideN = bag.querySelector('.side.r .n'), sideList = bag.querySelector('.side.r .got'), sideKey = '';
     var SLOTS = [[0.2, 0.2], [0.4, 0.2], [0.6, 0.2], [0.8, 0.2], [0.3, 0.37], [0.5, 0.37], [0.7, 0.37]];
     var OPEN = 0.17, C0 = 0.2, CS = 0.78 / 7;
-    if (reduce) bag.classList.add('still');
+    if (reduce) {   // still layout: bag open, all seven cards laid out above it
+      bag.classList.add('still'); bw.classList.add('isOpen');
+      var lay = function () { var W = panel.clientWidth, H = panel.clientHeight, cw = cards[0].offsetWidth, k = (W * 0.19) / cw;
+        cards.forEach(function (c, i) { var x = SLOTS[i][0] * W, y = SLOTS[i][1] * H; c.style.opacity = 1; c.style.transform = 'translate(' + (x - cw / 2) + 'px,' + (y - c.offsetHeight / 2) + 'px) scale(' + k + ')'; });
+        head.classList.add('on'); };
+      lay(); addEventListener('resize', lay); addEventListener('load', lay);
+    }
     function bump(u, h, tilt) {   // the game's bump: squat, up and over, land squash  -> [y, sx, rot]
       if (u <= 0 || u >= 1) return null; var e = function (k) { return Math.sin(Math.PI * k); };
       if (u < 0.18) return [0, 1 + 0.1 * Math.sin(Math.PI / 2 * u / 0.18), 0];
@@ -64,6 +71,10 @@
         c.classList.toggle('big', s < 0.8);
       });
       head.classList.toggle('on', p < C0 + 0.08);
+      if (sideNow) { var cur = -1, got = 0; cards.forEach(function (c, i) { var q = (p - C0 - i * CS) / CS - 0.12; if (q > 0) { cur = i; if (q > 0.66) got = i + 1; } });
+        var key = cur + ':' + got; if (key !== sideKey) { sideKey = key;
+          if (cur >= 0) { var c = cards[cur]; sideNow.innerHTML = '<em>' + c.querySelector('em').textContent + '</em><b>' + c.querySelector('b').textContent + '</b><p>' + c.querySelector('small').innerHTML + '</p>'; }
+          sideN.textContent = got; sideList.innerHTML = cards.slice(0, got).map(function (c) { return '<li>' + c.querySelector('b').textContent + '</li>'; }).join(''); } }
     });
   }
 
@@ -71,7 +82,13 @@
   var road = document.getElementById('roadScene');
   if (road) {
     var rp = road.querySelector('.panel'), world = road.querySelector('.world'), pcs = [].slice.call(road.querySelectorAll('.pc')), count = road.querySelector('.count b'), more = road.querySelector('.more');
-    if (reduce) road.classList.add('still');
+    var rNow = road.querySelector('.side.r .now b'), rN = road.querySelector('.side.r .n');
+    if (reduce) {   // still layout: the whole road from the beach to the moon, every postcard in place
+      road.classList.add('still');
+      var fit = function () { var H = rp.clientHeight, WH = world.offsetHeight, k = H / WH; world.style.transformOrigin = '50% 0'; world.style.transform = 'scale(' + k + ')';
+        pcs.forEach(function (c) { c.style.opacity = 1; c.style.transform = 'translate(-50%,-50%) scale(' + Math.min(2, 0.9 / k) * 0.6 + ') rotate(' + c.dataset.r + 'deg)'; }); count.textContent = pcs.length; more.classList.add('on'); };
+      fit(); addEventListener('resize', fit); addEventListener('load', fit);
+    }
     scenes.push(function () {
       if (reduce) return;
       var p = prog(road), H = rp.clientHeight, WH = world.offsetHeight, n = pcs.length;
@@ -86,6 +103,7 @@
         c.style.transform = 'translate(-50%,-50%) scale(' + (0.2 + 0.8 * k) + ') rotate(' + (r * (3 - 2 * Math.min(1, k))) + 'deg)';
       });
       count.textContent = shown;
+      if (rNow) { var last = pcs[Math.max(0, shown - 1)].querySelector('b').textContent; if (rNow.textContent !== last) rNow.textContent = last; rN.textContent = shown; }
       more.classList.toggle('on', p > 0.9);
     });
   }
