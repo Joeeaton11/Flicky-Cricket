@@ -32,8 +32,9 @@
     if (u <= 0) return; u = Math.min(1, u);
     var sr = stick.getBoundingClientRect(), pr = cv.getBoundingClientRect();
     var x0 = pr.left - sr.left + pr.width * 0.5, y0 = pr.top - sr.top + pr.height * 0.655, top = pr.top - sr.top;
-    var wide = W > 900, ex = wide ? W * 0.5 + pr.width * 1.35 : W * 0.74, ey = wide ? H * 0.14 : H * 0.11;
-    var P = function (t) { return [bez(x0, x0 + pr.width * 0.08, wide ? W * 0.5 + pr.width * 2.2 : W * 1.02, ex, t), bez(y0, top - H * 0.32, wide ? H * 0.55 : H * 0.5, ey, t)]; };
+    // out to the right towards you, then back up and away until it lands in the sky of the last ground
+    var ex = pr.left - sr.left + pr.width * 0.8, ey = top + pr.height * 0.1, side = Math.min(W - 46, pr.right - sr.left + pr.width * (W > 900 ? 1.1 : 0.35));
+    var P = function (t) { return [bez(x0, x0 + pr.width * 0.55, side + pr.width * 0.25, ex, t), bez(y0, y0 - pr.height * 0.3, top + pr.height * 0.22, ey, t)]; };
     var base = pr.width * 0.03;
     var R = function (t) { return t < 0.4 ? base * (1 + 4.2 * Math.sin(t / 0.4 * Math.PI / 2)) : base * (5.2 - 5.0 * Math.pow((t - 0.4) / 0.6, 0.8)); };
     // tapered fire trail, same build as the icon: orange edge, gold body, white-hot core
