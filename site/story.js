@@ -47,7 +47,7 @@
     var bat = [c0[0] - cr.width * 0.035, c0[1] + cr.height * 0.012, base * 1.1];                   // meets the bat
     var edge = [cr.left - ox - base, bat[1] - cr.height * 0.05, base * 2];                          // leaves the game screen
     var wall = [base * 3, edge[1] - cr.height * 0.035, base * 3];                                    // smack: the side of your screen
-    var logo = [ix + IS * 0.74, iy + IS * 0.275, br];
+    var pd0 = IS * 0.03, logo = [ix + pd0 + (IS - 2 * pd0) * 0.74, iy + pd0 + (IS - 2 * pd0) * 0.2754, (IS - 2 * pd0) * 0.1768];   // exactly on the icon's ball
     var pos, seg, segD, hitK = 0, spin = 0;
     function lerp3(A, B, t) { return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]; }
     function seg1(t) { var a = lerp3(bat, edge, Math.min(1, t / 0.5)); return t <= 0.5 ? a : lerp3(edge, wall, (t - 0.5) / 0.5); }
@@ -63,25 +63,36 @@
       for (var k = 0; k <= K; k++) trail.push(lerp3(bat, edge, (-0.55 * hk * k / K) / 0.5).map(function (v, i) { return i < 2 ? v + (pos[i] - bat[i]) : v; }));
     }
     if (seg > 0) {   // full-length trail straight away: it runs back along the line of the shot, even before the ball has travelled that far
-      var len = seg === 1 ? 0.55 : 0.32, ramp = 0.55 + 0.45 * Math.min(1, segD / 0.12);
+      var len = seg === 1 ? 0.55 : 0.6, ramp = 0.55 + 0.45 * Math.min(1, segD / 0.12);
       for (var k = 0; k <= K; k++) { var tt = segD - len * ramp * k / K;
         trail.push(seg === 1 ? (tt >= 0 ? seg1(tt) : lerp3(bat, edge, tt / 0.5)) : lerp3(wall, logo, tt)); }
     }
-    var paintA = ss(0.935, 0.985, p), tileA = ss(pArr - 0.015, 0.95, p), flyA = 1 - paintA;
+    // blend into the logo: the tile gathers behind the ball, then the painted icon spreads out from the ball
+    // along its flame while the flying ball and trail melt into it
+    var tileA = ss(pArr - 0.04, pArr + 0.02, p), paintA = ss(pArr - 0.005, 0.975, p), flyA = 1 - ss(0.94, 0.985, p);
     function tile() { var rr = IS * 0.22; fctx.beginPath(); fctx.moveTo(ix + rr, iy); fctx.arcTo(ix + IS, iy, ix + IS, iy + IS, rr); fctx.arcTo(ix + IS, iy + IS, ix, iy + IS, rr); fctx.arcTo(ix, iy + IS, ix, iy, rr); fctx.arcTo(ix, iy, ix + IS, iy, rr); fctx.closePath(); }
-    if (tileA > 0) {   // the logo loads around the ball
-      fctx.save(); fctx.globalAlpha = tileA; fctx.shadowColor = 'rgba(0,0,0,.5)'; fctx.shadowBlur = 40 * tileA; fctx.shadowOffsetY = 14 * tileA; tile();
+    if (tileA > 0) {
+      fctx.save(); fctx.globalAlpha = tileA; fctx.shadowColor = 'rgba(0,0,0,.5)'; fctx.shadowBlur = 40 * tileA; fctx.shadowOffsetY = 14 * tileA;
+      var sc = 0.92 + 0.08 * tileA; fctx.translate(logo[0], logo[1]); fctx.scale(sc, sc); fctx.translate(-logo[0], -logo[1]); tile();
       var gr = fctx.createRadialGradient(ix + IS * 0.72, iy + IS * 0.28, IS * 0.05, ix + IS * 0.5, iy + IS * 0.55, IS * 0.85);
       gr.addColorStop(0, '#2f7ff0'); gr.addColorStop(0.45, '#1450c0'); gr.addColorStop(1, '#06246e'); fctx.fillStyle = gr; fctx.fill();
-      fctx.shadowColor = 'transparent'; fctx.lineWidth = IS * 0.03; fctx.strokeStyle = '#ffc93a'; fctx.stroke();
-      if (paintA > 0 && icon.complete && icon.naturalWidth) { fctx.globalAlpha = tileA * paintA; fctx.clip(); var pd = IS * 0.03; fctx.drawImage(icon, ix + pd, iy + pd, IS - 2 * pd, IS - 2 * pd); }
+      fctx.shadowColor = 'transparent'; fctx.lineWidth = IS * 0.03; fctx.strokeStyle = '#ffc93a'; fctx.stroke(); fctx.clip();
+      if (paintA > 0 && icon.complete && icon.naturalWidth) {
+        var oc = flight._oc || (flight._oc = document.createElement('canvas')), S2 = Math.round(IS * dpr);
+        if (oc.width !== S2) { oc.width = oc.height = S2; }
+        var o = oc.getContext('2d'); o.globalCompositeOperation = 'source-over'; o.clearRect(0, 0, S2, S2); o.drawImage(icon, 0, 0, S2, S2);
+        var R0 = S2 * (0.12 + 1.35 * paintA), mg = o.createRadialGradient(S2 * 0.74, S2 * 0.275, R0 * 0.55, S2 * 0.74, S2 * 0.275, R0);
+        mg.addColorStop(0, 'rgba(0,0,0,1)'); mg.addColorStop(1, 'rgba(0,0,0,0)');
+        o.globalCompositeOperation = 'destination-in'; o.fillStyle = mg; o.fillRect(0, 0, S2, S2);
+        var pd = IS * 0.03; fctx.globalAlpha = tileA; fctx.drawImage(oc, ix + pd, iy + pd, IS - 2 * pd, IS - 2 * pd);
+      }
       fctx.restore();
-      if (paintA > 0) { fctx.save(); tile(); fctx.lineWidth = IS * 0.03; fctx.strokeStyle = '#ffc93a'; fctx.stroke(); fctx.restore(); }
     }
     if (flyA <= 0) return;
     fctx.globalAlpha = flyA;
     var r = pos[2];
-    if (trail.length > 2) {
+    if (trail.length > 2 && paintA < 0.86) {
+      fctx.globalAlpha = flyA * (1 - ss(0.3, 0.85, paintA));
       var hd = trail[0], tl = trail[trail.length - 1];
       var layer = function (scale, c1, c2, glow) {
         var L = [], Rr = [];
@@ -101,6 +112,7 @@
       layer(0.66, 'rgba(255,196,44,1)', 'rgba(255,160,30,0)');
       layer(0.3, 'rgba(255,252,226,1)', 'rgba(255,236,160,0)');
     }
+    fctx.globalAlpha = flyA;
     if (hitK > 0) {   // impact at the side of the screen: flash and a few speed lines
       fctx.save(); fctx.globalAlpha = flyA * hitK; fctx.translate(0, wall[1]);
       var gl = fctx.createRadialGradient(0, 0, 0, 0, 0, base * 9); gl.addColorStop(0, 'rgba(255,255,240,1)'); gl.addColorStop(0.35, 'rgba(255,214,110,.8)'); gl.addColorStop(1, 'rgba(255,180,60,0)');
