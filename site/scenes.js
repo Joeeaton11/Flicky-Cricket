@@ -46,7 +46,7 @@
     scenes.push(function () {
       if (reduce) return;
       var p = prog(bag), W = panel.clientWidth, H = panel.clientHeight, n = cards.length;
-      var cw = cards[0].offsetWidth, big = Math.min(1, (W * 0.54) / cw), small = (W * 0.24) / cw, mouth = [0.5 * W, 0.63 * H];
+      var cw = cards[0].offsetWidth, big = Math.min(1, (W * 0.54) / cw), small = (W * 0.24) / cw, mouth = [0.5 * W, 0.53 * H];
       // the bag: bump, bump, crouch, POP open; then a hop for every card
       var y = 0, sx = 1, sy = 1, rot = 0, r;
       if (p < OPEN) { var t = p / OPEN * 1.5;
