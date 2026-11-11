@@ -18198,10 +18198,65 @@ function drawBatsman() {
 
 // Nov 10 (Joe): the ball now bounces. It drops out of the hand, pitches (shorter balls pitch earlier and rear up
 // higher), kicks up a puff of dust and comes on to the batter. A shadow on the ground shows where it is.
+// Nov 11 (Joe): each ground kicks up its own thing where the ball pitches
+const BOUNCE_STYLE_RULES = [
+  [/^(tin_volcano|tin_lavalake|tin_forge)$/, 'lava'],
+  [/^(tc_beach|tc_beachnight|td_|tpi_cove|tpi_island|tin_tiki|tfr_canyon|tfr_rodeo|tet_egypt)/, 'sand'],
+  [/^tne_/, 'neon'],
+  [/^tco_/, 'moon'],
+  [/^tfz_/, 'snow'],
+  [/^(tju_|thw_forest|twz_forest)/, 'leaves'],
+  [/^(tdp_|tc_harbour|tc_rockpool|tc_storm|tkn_moat|twz_underwater|tpi_galleon)/, 'splash'],
+  [/^(thw_mansion|thw_crypt|thw_graveyard|tf_fright)/, 'ghost'],
+  [/^(tw_wizard|twz_)/, 'magic'],
+];
+function bounceStyle() { const k = (currentTimeOfDay && currentTimeOfDay.key) || ''; for (const [re, st] of BOUNCE_STYLE_RULES) if (re.test(k)) return st; return 'dust'; }
+function drawBouncePuff(st, xx, yy, k, since) {
+  const ring = (col, a, lw, rx, ry) => { ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.ellipse(xx, yy, rx, ry, 0, 0, 7); ctx.stroke(); };
+  const dots = (n, col, spread, lift, r0, seed) => { for (let i = 0; i < n; i++) { const a = (i + seed) / n * Math.PI * 2, j = 0.6 + ((i * 37) % 10) / 25; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(xx + Math.cos(a) * spread * k * j, yy + Math.sin(a) * spread * 0.4 * k * j - lift * k * j * (1.6 - k), Math.max(0.5, r0 * (1 - k) + 0.6), 0, 7); ctx.fill(); } };
+  ctx.save(); ctx.translate(xx, yy); ctx.scale(1.6, 1.6); ctx.translate(-xx, -yy);   // big enough to read at phone size
+  if (st === 'sand') {
+    ring('#c98a3a', 0.55 * (1 - k), 2, 5 + 16 * k, 2.5 + 5 * k);
+    ctx.globalAlpha = 0.95 * (1 - k); dots(12, '#b9772e', 20, 22, 2.2, 0.3); dots(6, '#fff1c9', 12, 30, 1.6, 0.7);
+  } else if (st === 'lava') {
+    const g = Math.max(0, 1 - since / 0.5);                       // scorch mark glows, then cools
+    ctx.globalAlpha = 0.55 * g; const rg = ctx.createRadialGradient(xx, yy, 0, xx, yy, 14); rg.addColorStop(0, '#ffe08a'); rg.addColorStop(0.4, '#ff7a1a'); rg.addColorStop(1, 'rgba(120,20,0,0)');
+    ctx.fillStyle = rg; ctx.beginPath(); ctx.ellipse(xx, yy, 14, 5.5, 0, 0, 7); ctx.fill();
+    const kk = Math.min(1, since / 0.13); if (kk < 1) { const k0 = k; k = kk; ctx.globalAlpha = 1 - kk; dots(10, '#ffb02e', 18, 34, 1.8, 0.1); dots(6, '#ff4d1a', 12, 26, 1.4, 0.5); k = k0; }
+  } else if (st === 'neon') {
+    ring('#29f0ff', 0.9 * (1 - k), 2.5, 4 + 20 * k, 2 + 7 * k); ring('#ff3df2', 0.7 * (1 - k), 1.6, 2 + 12 * k, 1 + 4 * k);
+    ctx.globalAlpha = 0.9 * (1 - k); dots(8, '#9ffcff', 16, 10, 1.4, 0.2);
+  } else if (st === 'moon') {
+    ctx.globalAlpha = 0.55 * (1 - k * k); ctx.fillStyle = '#7e8292'; ctx.beginPath(); ctx.ellipse(xx, yy - 4 * k, 6 + 20 * k, 3 + 7 * k, 0, 0, 7); ctx.fill();
+    ctx.globalAlpha = 0.9 * (1 - k); dots(10, '#5d6172', 22, 16, 1.6, 0.4); dots(5, '#ffffff', 14, 22, 1.2, 0.6);
+  } else if (st === 'snow') {
+    ring('#5aa6e0', 0.7 * (1 - k), 2, 5 + 16 * k, 2.5 + 6 * k);
+    ctx.globalAlpha = 0.95 * (1 - k); dots(10, '#3f8fd0', 20, 24, 1.8, 0.2); dots(8, '#ffffff', 14, 30, 1.6, 0.6);
+  } else if (st === 'leaves') {
+    ring('#d9c79a', 0.35 * (1 - k), 2, 5 + 14 * k, 2.5 + 5 * k);
+    for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2 + 0.4, px = xx + Math.cos(a) * 18 * k, py = yy + Math.sin(a) * 7 * k - 20 * k * (1.4 - k);
+      ctx.save(); ctx.globalAlpha = 0.95 * (1 - k * 0.8); ctx.translate(px, py); ctx.rotate(a + k * 5); ctx.fillStyle = i % 3 ? '#4fae3a' : '#9bd14a'; ctx.beginPath(); ctx.ellipse(0, 0, 3.2, 1.5, 0, 0, 7); ctx.fill(); ctx.restore(); }
+  } else if (st === 'splash') {
+    ring('#bfefff', 0.8 * (1 - k), 2, 5 + 18 * k, 2.5 + 6 * k); ring('#ffffff', 0.6 * (1 - k), 1.2, 3 + 10 * k, 1.5 + 3.5 * k);
+    ctx.globalAlpha = 0.9 * (1 - k); dots(10, '#7fd8ff', 16, 30, 1.8, 0.15); dots(6, '#ffffff', 10, 36, 1.3, 0.55);
+  } else if (st === 'ghost') {
+    for (let i = 0; i < 3; i++) { ctx.globalAlpha = 0.35 * (1 - k); ctx.fillStyle = i === 1 ? '#c9b6ff' : '#9fffd8'; ctx.beginPath(); ctx.ellipse(xx + (i - 1) * 8 * k, yy - 6 - 22 * k * (0.6 + i * 0.2), 4 + 4 * k, 6 + 8 * k, 0, 0, 7); ctx.fill(); }
+    ring('#b8a6ff', 0.4 * (1 - k), 1.6, 5 + 12 * k, 2.5 + 4 * k);
+  } else if (st === 'magic') {
+    ring('#ffe36b', 0.7 * (1 - k), 2, 4 + 18 * k, 2 + 6 * k);
+    for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2, px = xx + Math.cos(a) * 18 * k, py = yy + Math.sin(a) * 7 * k - 18 * k, r = 3 * (1 - k) + 1;
+      ctx.globalAlpha = 1 - k; ctx.fillStyle = i % 2 ? '#fff6b0' : '#b98cff'; ctx.beginPath(); for (let q = 0; q < 8; q++) { const rr = q % 2 ? r * 0.4 : r, aa = q * Math.PI / 4; ctx.lineTo(px + Math.cos(aa) * rr, py + Math.sin(aa) * rr); } ctx.closePath(); ctx.fill(); }
+  } else {
+    ring('#f3e3c0', 0.5 * (1 - k), 2.5, 5 + 18 * k, 2.5 + 6 * k);
+    ctx.globalAlpha = 1; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; ctx.fillStyle = '#e9d6a8'; ctx.beginPath(); ctx.arc(xx + Math.cos(a) * 15 * k, yy + Math.sin(a) * 6 * k - 8 * k, 2 * (1 - k) + 0.8, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 0.5 * (1 - k);
+  }
+  ctx.restore();
+}
 let _bShadow = null;
 function ballBounceHeight(t) {
   const zc = ball.zoneCenter !== undefined ? ball.zoneCenter : 0.92, n = Math.max(0, Math.min(1, (zc - 0.76) / 0.26));
-  const PT = 0.42 + n * 0.3, RISE = 20 - n * 13;                 // short: pitches early, rears up · full: pitches late, stays low
+  const PT = 0.42 + n * 0.3, RISE = (20 - n * 13) * (bounceStyle() === 'moon' ? 1.7 : 1);   // short: pitches early, rears up · full: pitches late, stays low · low gravity floats
   if (t < PT) return 26 * (1 - Math.pow(t / PT, 2)) * (t > 0.24 ? 1 : t / 0.24);
   return RISE * Math.sin(Math.min(1, (t - PT) / (1 - PT)) * Math.PI / 2);
 }
@@ -18210,12 +18265,10 @@ function drawBallBounced() {
   const t = Math.min(ball.z, 1), h = ballBounceHeight(t);
   const zc = ball.zoneCenter !== undefined ? ball.zoneCenter : 0.92, n = Math.max(0, Math.min(1, (zc - 0.76) / 0.26)), PT = 0.42 + n * 0.3;
   if (_bShadow) { ctx.save(); ctx.globalAlpha = 0.32; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(_bShadow[0], _bShadow[1] + 2, 3.5 + t * 3, 1.8 + t * 1.2, 0, 0, 7); ctx.fill(); ctx.restore(); }
-  if (t > PT - 0.01 && t < PT + 0.12) {   // puff of dust where it pitches
-    const k = (t - PT + 0.01) / 0.13, yy = lerp(PITCH_TOP() + 6, PITCH_BOTTOM() - 8, PT), xx = lerp(W / 2, W / 2 + (ball.targetX - 0.5) * PITCH_BOTTOM_W() * 2, PT);
-    ctx.save(); ctx.globalAlpha = 0.5 * (1 - k); ctx.strokeStyle = '#f3e3c0'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(xx, yy, 5 + 18 * k, 2.5 + 6 * k, 0, 0, 7); ctx.stroke();
-    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; ctx.fillStyle = '#e9d6a8'; ctx.beginPath(); ctx.arc(xx + Math.cos(a) * 15 * k, yy + Math.sin(a) * 6 * k - 8 * k, 2 * (1 - k) + 0.8, 0, 7); ctx.fill(); }
-    ctx.restore();
-  }
+  { const st = bounceStyle(), L = st === 'moon' ? 0.22 : 0.13;
+    if (t > PT - 0.01 && t < PT + (st === 'lava' ? 1 : L - 0.01)) {   // what it kicks up where it pitches: each ground its own
+      const k = Math.min(1, (t - PT + 0.01) / L), yy = lerp(PITCH_TOP() + 6, PITCH_BOTTOM() - 8, PT), xx = lerp(W / 2, W / 2 + (ball.targetX - 0.5) * PITCH_BOTTOM_W() * 2, PT);
+      drawBouncePuff(st, xx, yy, k, t - PT); } }
   ctx.save(); ctx.translate(0, -h); drawBall(); ctx.restore();
   if (ball.screenX !== undefined) { _bShadow = [ball.screenX, ball.screenY]; ball.screenY -= h; }
 }
