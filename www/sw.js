@@ -1,6 +1,6 @@
 // Flicky Cricket service worker (v4, Nov 7): network-first for the page so updates always show,
 // cache-first for art/sounds so grounds load instantly on the second visit
-const CACHE = 'flicky-v4';
+const CACHE = 'flicky-v5';
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
@@ -8,7 +8,8 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   const r = e.request; if (r.method !== 'GET') return;
-  const page = r.mode === 'navigate' || /\.html?(\?|$)|\/$/.test(new URL(r.url).pathname);
+  const u = new URL(r.url); if (u.origin !== self.location.origin || u.pathname.indexOf('/live/') !== -1) return;   // Nov 11: the live calendar always comes fresh from the network
+  const page = r.mode === 'navigate' || /\.html?(\?|$)|\/$/.test(u.pathname);
   if (page) {
     e.respondWith(fetch(r).then(res => { const c = res.clone(); caches.open(CACHE).then(x => x.put(r, c)); return res; }).catch(() => caches.match(r)));
     return;
