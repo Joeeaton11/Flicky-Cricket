@@ -10171,7 +10171,8 @@ function hsvRgb(h, s, v) {
 }
 // returns a canvas of the player in the given look (cached)
 async function renderPlayer(look) {
-  const key = plArtKey(look) + '|' + look.shirt + '|' + look.trim + '|' + plPantsOf(look);
+  const _hat = (look && look.noHat) ? null : (eventLook() || {}).hat;
+  const key = plArtKey(look) + '|' + look.shirt + '|' + look.trim + '|' + plPantsOf(look) + (_hat ? '|' + _hat : '');
   if (_plCache[key]) return _plCache[key];
   const art = PLAYER_ART[plArtKey(look)] || PLAYER_ART.m;
   const [base, mask] = await Promise.all([plLoadImg(art.src), plLoadImg(art.mask)]);
@@ -10199,6 +10200,9 @@ async function renderPlayer(look) {
     }
     cx.putImageData(img, 0, 0);
   }
+  if (_hat) { const hi = await plLoadImg(_hat); if (hi) try { const r = plDrawHat(cx, cv, hi);
+      if (r) { const pad = Math.max(0, Math.ceil(-r.y) + 4), out = document.createElement('canvas'); out.width = cv.width; out.height = cv.height + pad;   // room above the head for the bobble
+        const ox = out.getContext('2d'); ox.drawImage(cv, 0, pad); ox.drawImage(hi, r.x, r.y + pad, r.w, r.h); _plCache[key] = out; return out; } } catch (e) {} }
   _plCache[key] = cv;
   return cv;
 }
@@ -12254,7 +12258,8 @@ function fxBig(kind, opts) {
     el.style.setProperty('--sq', Math.min(1, (h + 10) / K.burst).toFixed(2));  // squash the burst to fit the band
   } catch (e) {}
   // Gully: hand-painted truck-art word, no burst or banner behind it
-  const _tw = themedWords();
+  let _tw = themedWords();
+  try { const _lk = eventLook(); if (kind === 'six' && _lk && _lk.six) _tw = Object.assign({}, _tw || {}, { six: _lk.six }); } catch (e) {}   // event look: its own SIX! on every ground
   const _pw = _tw && (_tw[kind === 'out' ? ((opts && opts.caught) ? 'caught' : 'bowled') : kind] || (kind === 'out' && _tw.out));
   if (_pw) {
     el.classList.add('fxPainted');
@@ -18233,7 +18238,7 @@ const BOUNCE_STYLE_RULES = [
   [/^(thw_mansion|thw_crypt|thw_graveyard|tf_fright)/, 'ghost'],
   [/^(tw_wizard|twz_)/, 'magic'],
 ];
-function bounceStyle() { const k = (currentTimeOfDay && currentTimeOfDay.key) || ''; for (const [re, st] of BOUNCE_STYLE_RULES) if (re.test(k)) return st; return 'dust'; }
+function bounceStyle() { try { const lk = eventLook(); if (lk && lk.bounce) return lk.bounce; } catch (e) {} const k = (currentTimeOfDay && currentTimeOfDay.key) || ''; for (const [re, st] of BOUNCE_STYLE_RULES) if (re.test(k)) return st; return 'dust'; }
 function drawBouncePuff(st, xx, yy, k, since) {
   const ring = (col, a, lw, rx, ry) => { ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.ellipse(xx, yy, rx, ry, 0, 0, 7); ctx.stroke(); };
   const dots = (n, col, spread, lift, r0, seed) => { for (let i = 0; i < n; i++) { const a = (i + seed) / n * Math.PI * 2, j = 0.6 + ((i * 37) % 10) / 25; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(xx + Math.cos(a) * spread * k * j, yy + Math.sin(a) * spread * 0.4 * k * j - lift * k * j * (1.6 - k), Math.max(0.5, r0 * (1 - k) + 0.6), 0, 7); ctx.fill(); } };
@@ -19172,6 +19177,11 @@ function drawPopText() {
     : 1;
 
   if (overallAlpha <= 0) { popText = null; popBoundaryParticles = []; return; }
+  // event look (Nov 11): the event's own SIX! art replaces the ground's lettering
+  if (isSix && popTextType !== 'wicket' && popTextType !== 'milestone') { const _l6 = (eventLook() || {}).six, im = _l6 ? lookImg(_l6) : null;
+    if (im && im.complete && im.naturalWidth) { const t = Math.min(1, elapsed / 380), k = t < 1 ? 1 - Math.pow(1 - t, 3) : 1, sc = 0.35 + 0.65 * k + (t < 1 ? Math.sin(t * Math.PI) * 0.12 : 0) + Math.sin(elapsed / 260) * 0.012;
+      const w = W * 0.8 * sc, h = w * im.naturalHeight / im.naturalWidth; ctx.save(); ctx.globalAlpha = overallAlpha;
+      ctx.translate(W / 2, H * 0.36); ctx.rotate(-0.05 * (1 - k)); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); return; } }
 
   ctx.save();
   ctx.textBaseline = 'middle';
@@ -23322,6 +23332,53 @@ function registerEventCosmetics() { GAME_CONFIG.season.events.forEach(ev => { if
   (ev.shop || []).forEach(it => { if (it.kind === 'trim' && !PLAYER_TRIMS.find(x => x.id === it.id)) PLAYER_TRIMS.push({ id: it.id, name: it.name.replace(/ TRIM$/, ''), c: it.c, unlock: { event: ev.id } });
     if (it.kind === 'bat' && it.look) EVENT_BATS[it.id] = it.look; }); }); }
 registerEventCosmetics();
+// ── EVENT LOOKS (Nov 11, Joe) ── while an event runs, its "look" (from the live calendar) dresses the whole game:
+// snow over the home screen, frost in the corners, snow on the PLAY button and the menu bar, the event's own SIX!,
+// its bounce on every ground and a hat on your player. A look only names art that is already in the app.
+const _lkImgs = {}; function lookImg(src) { if (!_lkImgs[src]) { const i = new Image(); i.src = src; _lkImgs[src] = i; } return _lkImgs[src]; }
+function eventLook() { try { const ev = activeEvent(); return ev && ev.look && typeof ev.look === 'object' ? ev.look : null; } catch (e) { return null; } }
+function plDrawHat(cx, cv, hat) {   // find the cap (top of the head) in the player art and sit the hat over it
+  const W = cv.width, H = cv.height, d = cx.getImageData(0, 0, W, Math.round(H * 0.2)).data, op = (x, y) => d[(y * W + x) * 4 + 3] > 140;
+  let y0 = -1; for (let y = 0; y < H * 0.2 && y0 < 0; y++) for (let x = 0; x < W; x++) if (op(x, y)) { y0 = y; break; }
+  if (y0 < 0) return;
+  let tx = 0, tn = 0; for (let x = 0; x < W; x++) if (op(x, y0 + 2)) { tx += x; tn++; } const mid = tn ? tx / tn : W / 2;
+  const yr = Math.min(Math.round(H * 0.2) - 1, y0 + Math.round(H * 0.045)); let a = Math.round(mid), b = Math.round(mid);
+  while (a > 0 && op(a - 1, yr)) a--; while (b < W - 1 && op(b + 1, yr)) b++;
+  const capW = Math.max(40, b - a), hw = capW * 1.5, hh = hw * hat.height / hat.width, cxm = (a + b) / 2;
+  return { x: cxm - hw / 2, y: y0 + capW * 0.62 - hh, w: hw, h: hh };   // the band sits low over the cap's peak
+}
+function applyEventLook() {
+  const lk = eventLook(), on = !!lk, key = on ? (lk.key || 'look') : '';
+  const B = document.body; if (!B) return;
+  if (B.dataset.evlook === key) return;
+  B.dataset.evlook = key; B.classList.toggle('evLook', on);
+  document.querySelectorAll('.lkFx,.lkCap').forEach(e => e.remove());
+  try { _plCache && Object.keys(_plCache).forEach(k => delete _plCache[k]); refreshPlayerArt(); } catch (e) {}
+  if (!on) return;
+  if (lk.six) lookImg(lk.six);
+  const home = document.getElementById('overlay');
+  if (home && (lk.snow || lk.corner)) { const fx = document.createElement('div'); fx.className = 'lkFx' + (lk.snow ? ' snow' : ''); let h = '';
+    if (lk.corner) h += `<img class="lkCorner l" alt="" src="${lk.corner}"><img class="lkCorner r" alt="" src="${lk.corner}">`;
+    if (lk.snow) for (let i = 0; i < 40; i++) h += `<i style="left:${(Math.random() * 100).toFixed(1)}%;animation-delay:-${(Math.random() * 9).toFixed(1)}s;animation-duration:${(6 + Math.random() * 6).toFixed(1)}s;--sz:${(3 + Math.random() * 5).toFixed(1)}px;--dx:${(Math.random() * 60 - 30).toFixed(0)}px"></i>`;
+    fx.innerHTML = h; home.insertBefore(fx, home.firstChild ? home.firstChild.nextSibling : null); }
+  if (lk.cap) [document.getElementById('homePlayBtns'), document.getElementById('bottomNav')].forEach(el => { if (!el) return;
+    const c = document.createElement('i'); c.className = 'lkCap'; c.style.backgroundImage = `url(${lk.cap})`; el.appendChild(c); });
+}
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `
+  .lkFx{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+  .lkFx i{position:absolute;top:-10px;width:var(--sz);height:var(--sz);border-radius:50%;background:#fff;opacity:.9;box-shadow:0 0 4px rgba(255,255,255,.8);animation:lkSnow linear infinite}
+  @keyframes lkSnow{to{transform:translate3d(var(--dx),105vh,0)}}
+  .lkCorner{position:absolute;top:0;width:38%;max-width:220px;opacity:.9;filter:drop-shadow(0 0 6px rgba(190,232,255,.6))}
+  .lkCorner.l{left:0}.lkCorner.r{right:0;transform:scaleX(-1)}
+  #homePlayBtns{position:relative}
+  .lkCap{position:absolute;left:-2%;right:-2%;top:-15px;height:30px;background:center top/100% 100% no-repeat;pointer-events:none;z-index:5}
+  #bottomNav .lkCap{top:-12px;height:24px;left:0;right:0}
+  @media (prefers-reduced-motion: reduce){.lkFx i{animation:none;display:none}}`;
+  document.head.appendChild(css);
+  setTimeout(applyEventLook, 600); setInterval(applyEventLook, 30000);
+})();
 // LIVE CALENDAR (Nov 11, Joe): the year's themed events live in https://flickycricket.com/live/calendar.json, so a theme can be
 // added, moved or switched on without an app update. Only data comes down (dates, names, rewards, art links); every effect,
 // trail and celebration it names must already be in the game. The last good copy is kept on the phone; with no copy and no
@@ -23336,7 +23393,7 @@ function applyLiveCalendar(cal) {
   const live = cal.events.filter(ev => ev && ev.ready !== false).map(ev => byId[ev.id] ? Object.assign({}, byId[ev.id], ev) : ev).filter(_calEventOk);   // a known event can be changed with just the fields that move
   live.forEach(ev => byId[ev.id] = ev);
   GAME_CONFIG.season.events = Object.values(byId).sort((a, b) => a.start < b.start ? -1 : 1);
-  registerEventCosmetics(); window._liveCal = cal.version || 1; return true;
+  registerEventCosmetics(); window._liveCal = cal.version || 1; try { if (document.body) { document.body.dataset.evlook = '?'; applyEventLook(); } } catch (e) {} return true;
 }
 (function liveCalendar() {
   try { const c = JSON.parse(localStorage.getItem('flickyLiveCal') || 'null'); if (c) applyLiveCalendar(c); } catch (e) {}
