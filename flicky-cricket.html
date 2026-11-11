@@ -5131,6 +5131,8 @@ const ADMOB_CONFIG = {
 // Capacitor plugins are reached through window.Capacitor (an ES import can't resolve inside this single HTML file)
 function capAdMob() { return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob || null; }
 function capPlatform() { try { return window.Capacitor && window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : 'web'; } catch (e) { return 'web'; } }
+// Nov 11: testers can switch the app to Google's test ads (tap the version line in Settings 7 times) so tapping ads on your own phone never risks the AdMob account
+function adTestMode() { try { return SAVE.getItem('flickyTestAds') === '1'; } catch (e) { return false; } }
 function admobId(kind) { const p = capPlatform() === 'ios' ? 'ios' : 'android'; return ADMOB_CONFIG[kind][p]; }
 const IAP_REMOVE_ADS_ID = 'remove_ads'; // must match App Store Connect / Google Play product ID
 
@@ -5155,9 +5157,9 @@ async function initAds() {
     if (!AdMob) return;   // running in a browser
     const platform = capPlatform();
     await adConsent(AdMob);
-    await AdMob.initialize({ testingDevices: [], initializeForTesting: !MONEY_CONFIG.admobLive });
+    await AdMob.initialize({ testingDevices: [], initializeForTesting: !MONEY_CONFIG.admobLive || adTestMode() });
     // Preload first interstitial
-    await AdMob.prepareInterstitial({ adId: admobId('interstitialId') });
+    await AdMob.prepareInterstitial({ adId: admobId('interstitialId'), isTesting: adTestMode() });
     window._admob = AdMob;
     window._admobPlatform = platform;
   } catch(e) {
@@ -5177,6 +5179,7 @@ async function showInterstitialIfDue() {
       adId: window._admobPlatform === 'ios'
         ? ADMOB_CONFIG.interstitialId.ios
         : ADMOB_CONFIG.interstitialId.android,
+      isTesting: adTestMode(),
     });
   } catch(e) {}
 }
@@ -13692,7 +13695,7 @@ async function showRewardedVideo(onReward, onFail) {
   try {
     const AdMob = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
     if (AdMob) {
-      await AdMob.prepareRewardVideoAd({ adId: admobId('rewardedId') });
+      await AdMob.prepareRewardVideoAd({ adId: admobId('rewardedId'), isTesting: adTestMode() });
       const r = await AdMob.showRewardVideoAd();
       if (r && (r.type === 'Rewarded' || r.amount != null)) { onReward(); return; }
       if (onFail) onFail(); return;
@@ -24041,7 +24044,7 @@ function renderSettings() {
       <div class="stRow"><div class="setLbl"><i class="stIco sti-playerid"></i><div><b>PLAYER ID</b><small>Quote this if you contact support</small></div></div><button class="stId" data-st="copyid">${playerId()}</button></div>
     </div>
     <button class="stReset" data-st="reset"><i class="stIco sti-reset" style="width:26px;height:26px;margin-right:8px"></i>RESET ALL PROGRESS</button>
-    <div class="stFoot">FLICKY CRICKET · v${A.version}</div>`;
+    <div class="stFoot" data-st="ver">FLICKY CRICKET · v${A.version}${adTestMode() ? ' · TEST ADS' : ''}</div>`;
 }
 (function () {
   const css = document.createElement('style');
@@ -24084,6 +24087,9 @@ function renderSettings() {
     if (t.closest('#settingsBtn')) { renderSettings(); p.classList.add('show'); try { playUiTap(); } catch (err) {} return; }
     if (!p.classList.contains('show')) return;
     if (t === p) { p.classList.remove('show'); return; }
+    if (t.closest('.stFoot')) { const n = (window._verTaps = (window._verTaps || 0) + 1); clearTimeout(window._verTapT); window._verTapT = setTimeout(() => { window._verTaps = 0; }, 2500);
+      if (n >= 7) { window._verTaps = 0; const on = !adTestMode(); SAVE.setItem('flickyTestAds', on ? '1' : '0'); renderSettings(); showMessage(on ? 'TEST ADS ON · RESTART THE APP' : 'TEST ADS OFF · RESTART THE APP', '#FFC93A', 2600); }
+      return; }
     const tog = t.closest('[data-tog]');
     if (tog) { const k = tog.dataset.tog;
       if (k === 'sound') { setMuted(!audioMuted); try { muteBtn.textContent = audioMuted ? '🔇' : '🔊'; } catch (err) {} }
