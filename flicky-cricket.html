@@ -4435,11 +4435,39 @@ async function loadRemoteConfig(url) {
 }
 function matchBand(leagueNo) { return GAME_CONFIG.match.bands.find(b => leagueNo >= b.leagues[0] && leagueNo <= b.leagues[1]) || GAME_CONFIG.match.bands[0]; }
 
+// ── STORE REVIEW PROMPT (Nov 11) ── the phone's own "Enjoying Flicky Cricket?" box, only on a high: a win or a promotion,
+// never after a loss or a purchase. Not before 8 matches, at most once every 45 days, 3 times ever (Apple shows it at most 3 times a year anyway).
+function reviewMoment(why) {
+  const R = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.InAppReview; if (!R) return;
+  if ((career && career.matchesPlayed || 0) < 8 || window._reviewAskedThisSession || window._buying) return;
+  const n = Number(SAVE.getItem('flickyReviewAsks') || 0), last = Number(SAVE.getItem('flickyReviewLast') || 0);
+  if (n >= 3 || Date.now() - last < 45 * 864e5) return;
+  window._reviewAskedThisSession = true;
+  setTimeout(() => { if (state === 'ballcoming' || state === 'ready') return;
+    SAVE.setItem('flickyReviewAsks', String(n + 1)); SAVE.setItem('flickyReviewLast', String(Date.now()));
+    try { R.requestReview(); track('review_prompt', { why, n: n + 1 }); } catch (e) {} }, 2600);
+}
+// ── CRASH REPORTING (Nov 11) ── Firebase Crashlytics in the app: native crashes are caught by the plugin itself; game
+// (JavaScript) errors are sent as non-fatal reports with the screen and league they happened on.
+(function crashReporting() {
+  const C = () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FirebaseCrashlytics;
+  if (!C()) return;
+  let sent = 0;
+  const report = (msg, stack) => { if (sent >= 20) return; sent++;
+    try { const c = C(); c.setCustomKey({ key: 'state', value: String(typeof state !== 'undefined' ? state : '?'), type: 'string' });
+      c.setCustomKey({ key: 'version', value: String(GAME_CONFIG.app.version), type: 'string' });
+      c.recordException({ message: String(msg || 'error').slice(0, 300) + (stack ? '\n' + String(stack).slice(0, 1500) : '') }); } catch (e) {} };
+  window.addEventListener('error', e => report(e.message + ' @ ' + (e.filename || '').split('/').pop() + ':' + e.lineno, e.error && e.error.stack));
+  window.addEventListener('unhandledrejection', e => { const r = e.reason || {}; report('promise: ' + (r.message || r), r.stack); });
+  setTimeout(() => { try { C().setUserId({ userId: playerId() }); } catch (e) {} }, 3000);
+})();
+
 // ---------- ANALYTICS ----------
 // track(name, data) at every key moment. Logs to the console now (filter on "[track]"); sprint 7 sends the
 // same calls to an analytics service. The last 200 events are kept in memory for testing (window._trackLog).
 window._trackLog = [];
 function track(name, data) {
+  try { if ((name === 'match_end' && data && data.won && data.mode !== 'preview' && data.mode !== 'nets') || name === 'league_promoted') reviewMoment(name); } catch (e) {}
   const ev = Object.assign({ t: Date.now() }, data || {});
   try { window._trackLog.push([name, ev]); if (window._trackLog.length > 200) window._trackLog.shift(); console.log('[track]', name, ev); } catch (e) {}
   // Nov 7: same events go to Firebase Analytics in the app (names and keys trimmed to Firebase's rules, flat values only)
@@ -5102,6 +5130,13 @@ const FlickyStore = window.FlickyStore = {
 };
 // the price to show for a store product: the store's own local price when loaded, else the UK price
 function storePrice(storeId, gbp) { return FlickyStore.prices[storeId] || ('£' + Number(gbp).toFixed(2)); }
+// Nov 11: a "worth" figure in the player's own currency, scaled from the store's local price for that product (£ only on the web)
+function storeWorth(storeId, gbpPrice, gbpWorth) {
+  try { const pr = FlickyStore.products && FlickyStore.products[storeId];
+    if (pr && pr.price && pr.currencyCode) { const v = pr.price * gbpWorth / gbpPrice;
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency: pr.currencyCode, maximumFractionDigits: v >= 100 ? 0 : 2 }).format(v); } } catch (e) {}
+  return '£' + Number(gbpWorth).toFixed(2);
+}
 
 // ── ADS & IAP ──
 // Replace these IDs with your real AdMob IDs before release.
@@ -5418,10 +5453,10 @@ function renderGemShopTab(container) {
         <div class="gemShopRowIcon">⭐</div>
         <div>
           <div class="gemShopRowTitle">Remove Ads + 100 Gems</div>
-          <div style="font-size:10px;color:rgba(255,255,255,0.4)">No ads ever again · £2.99</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.4)">No ads ever again · ${storePrice('no_ads', 2.99)}</div>
         </div>
       </div>
-      <div class="gemShopRowCost">£2.99</div>
+      <div class="gemShopRowCost">${storePrice('no_ads', 2.99)}</div>
     `;
     bundleRow.addEventListener('click', () => { hapticTap(); purchaseRemoveAdsGemBundle(); });
     offerSection.appendChild(bundleRow);
@@ -21555,7 +21590,7 @@ function renderOfferPop(o) {
     <div class="of2Top"><small>${o.id === 'noads' ? 'ONE-OFF PURCHASE' : 'ONE-TIME OFFER'}</small><b>${o.title}</b></div>
     <div class="of2Stage">${big}${mult >= 2 ? `<span class="of2Val"><b>×${mult}</b><small>VALUE</small></span>` : ''}${o.until ? `<span class="of2Time" data-until="${o.until}">ENDS IN ${fmtLeft(o.until - Date.now())}</span>` : ''}</div>
     <div class="of2Grid n${items.length}">${items.join('')}</div>
-    ${mult >= 2 ? `<div class="of2Was">WORTH <s>£${worth.toFixed(2)}</s></div>` : ''}
+    ${mult >= 2 ? `<div class="of2Was">WORTH <s>${storeWorth(storeIdFor('offer_' + o.id, o.price), o.price, worth)}</s></div>` : ''}
     <button id="ofBuy" class="of2Buy">${storePrice(storeIdFor('offer_' + o.id, o.price), o.price)}</button>
     <button id="ofNo" class="of2No">NOT NOW</button></div>`;
   const big2 = document.getElementById('of2Bag'); if (big2) drawChestArt(big2, c.bag, 1, false);
@@ -22082,7 +22117,7 @@ function renderShopV2(container) {
     if (featureOn('pass')) { const P = GAME_CONFIG.season.pass, t = passTier(), into = passState().xp - t * P.xpPerTier;
       deal += wide({ attr: ' data-shelf="pass"', tint: '#e8a21a', art: img(CHEST_IMG_SRC.gold), timer: `ENDS IN <b>${passDaysLeft()} DAY${passDaysLeft() === 1 ? '' : 'S'}</b>`, name: `FLICKY PASS · ${PASS_MONTH_NAMES[_nowDate().getMonth()]}`,
         mid: `<div class="gcBar"><i style="width:${t >= P.tiers ? 100 : Math.max(4, into / P.xpPerTier * 100)}%"></i><span>TIER ${t} / ${P.tiers}</span></div>`,
-        sub: passPremiumActive() ? 'Premium active' : "This month's kit · 600 gems · gold bags", btn: passPremiumActive() ? 'OPEN' : '£' + P.premium.toFixed(2), btnAttr: ' data-act="pass"' }); }
+        sub: passPremiumActive() ? 'Premium active' : "This month's kit · 600 gems · gold bags", btn: passPremiumActive() ? 'OPEN' : storePrice('pass_premium', P.premium), btnAttr: ' data-act="pass"' }); }
   }
   if (featureOn('deals')) {
     deal += hd('KIT DEALS', `NEW IN <b>${fmtLeft(nextDeal)}</b>`) + `<div class="gcGrid" data-shelf="kit">${deals.map((d, i) => { const got = s.deals[d.key];
