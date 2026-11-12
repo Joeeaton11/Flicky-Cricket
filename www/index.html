@@ -2618,6 +2618,8 @@ window._imgPending = new Set(); window._imgSeen = 0;
   #playerScreen #plBody { -webkit-mask:linear-gradient(#000 calc(100% - 22px),transparent); mask:linear-gradient(#000 calc(100% - 22px),transparent); }
   #playerScreen .plName { height:44px !important; font-size:20px !important; }
   #playerScreen .plFaces button { flex:0 0 62px; height:62px; scroll-snap-align:start; }
+  #playerScreen .plHair button { position:relative; flex-basis:62px; height:46px; border-radius:12px; }
+  #playerScreen .plHair button small { position:absolute; left:0; right:0; bottom:4px; font:900 9px/1 'Lilita One',sans-serif; color:#fff; text-shadow:0 1px 0 #050A14, 0 0 3px #050A14; letter-spacing:.04em; }
   #playerScreen .plHats button { position:relative; flex-basis:74px; height:74px; }
   #playerScreen .plHats button small { position:absolute; left:0; right:0; bottom:3px; font:900 9px/1 'Lilita One',sans-serif; color:#fff; text-shadow:0 1px 0 #050A14, 0 0 3px #050A14; letter-spacing:.04em; }
   #playerScreen .plHats button.lk canvas { filter:grayscale(.7) brightness(.7); }
@@ -10133,6 +10135,8 @@ const PLAYER_TRIMS = [
 ];
 const PLAYER_FACES = 5;   // look 0 = the base art's own skin, 1-4 = PLAYER_SKIN tones painted over it
 const PLAYER_SKIN = ['#EBB896', '#6B3F26', '#B87550', '#C98E64', '#F2C4A8'];
+const PLAYER_HAIR = [ { id:'brown', name:'BROWN', c:'#5a3a24' }, { id:'black', name:'BLACK', c:'#211a17' }, { id:'blonde', name:'BLONDE', c:'#d9b25e' },
+  { id:'ginger', name:'GINGER', c:'#b8561f' }, { id:'grey', name:'GREY', c:'#aaa49c' } ];   // Nov 12: hair colour painted onto the base's own hair
 function plPantsOf(L) { return (L && L.pants) || (PLAYER_PANTS_IDS.includes(L && L.shirt) ? L.shirt : 'black'); }   // default trousers: match the shirt, else black
 // Nov 12 (Joe): headwear as layers. Each hat image is the bald base + that hat, lined up pixel for pixel with the
 // original art (the default cap is the original art itself); its mask skips the hat so kit recolours never touch it.
@@ -10179,15 +10183,31 @@ function hsvRgb(h, s, v) {
   const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
   return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
 }
+// paint a colour into the masked part of the player, keeping the art's own shading. hi: how much highlights above
+// the average are kept (0 = flat, 1 = full); keep: how much of the shading range carries over (lower = flatter, for big jumps like dark → blonde)
+function plTint(cx, art, maskImg, hex, hi, keep) {
+  const sc = document.createElement('canvas'); sc.width = art.w; sc.height = art.h;
+  const sx = sc.getContext('2d', { willReadFrequently: true }); sx.drawImage(maskImg, 0, 0, art.w, art.h);
+  const sd = sx.getImageData(0, 0, art.w, art.h).data, img = cx.getImageData(0, 0, art.w, art.h), d = img.data;
+  let sum = 0, n = 0;
+  for (let i = 0; i < d.length; i += 4) if (sd[i] > 200) { sum += d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11; n++; }
+  const avg = Math.max(1, sum / Math.max(1, n)), t = parseInt(hex.slice(1), 16), T = [t >> 16 & 255, t >> 8 & 255, t & 255];
+  for (let i = 0; i < d.length; i += 4) { const w = sd[i] / 255; if (w < 0.02) continue;
+    let l = (d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11) / avg; if (l > 1) l = 1 + (l - 1) * hi; l = 1 - keep + keep * l;
+    d[i] = d[i] * (1 - w) + Math.min(255, T[0] * l) * w; d[i + 1] = d[i + 1] * (1 - w) + Math.min(255, T[1] * l) * w; d[i + 2] = d[i + 2] * (1 - w) + Math.min(255, T[2] * l) * w; }
+  cx.putImageData(img, 0, 0);
+}
 // returns a canvas of the player in the given look (cached)
 async function renderPlayer(look) {
   const hatArt = plHatArt(look);
   const face = Math.max(0, Math.min(PLAYER_SKIN.length - 1, look.face | 0));
-  const key = plArtKey(look) + '|' + look.shirt + '|' + look.trim + '|' + plPantsOf(look) + '|' + (hatArt || '') + '|' + face;
+  const hairC = Math.max(0, Math.min(PLAYER_HAIR.length - 1, look.hairC | 0));
+  const key = plArtKey(look) + '|' + look.shirt + '|' + look.trim + '|' + plPantsOf(look) + '|' + (hatArt || '') + '|' + face + '|' + hairC;
   if (_plCache[key]) return _plCache[key];
   const art = PLAYER_ART[plArtKey(look)] || PLAYER_ART.m;
   const [base, mask, skinM] = await Promise.all([plLoadImg(hatArt ? hatArt + '.webp' : art.src), plLoadImg(hatArt ? hatArt + '_mask.webp' : art.mask),
     face ? plLoadImg(hatArt ? hatArt + '_skin.webp' : 'assets/ui/player/' + plArtKey(look) + '_skin.webp') : null]);
+  const hairM = hairC ? await plLoadImg(hatArt ? hatArt + '_hair.webp' : 'assets/ui/player/' + plArtKey(look) + '_hair.webp') : null;
   const cv = document.createElement('canvas'); cv.width = art.w; cv.height = art.h;
   const cx = cv.getContext('2d', { willReadFrequently: true });
   if (!base) return cv;
@@ -10212,18 +10232,8 @@ async function renderPlayer(look) {
     }
     cx.putImageData(img, 0, 0);
   }
-  if (skinM) {   // skin tone: keep the art's shading, swap the colour (luminance against the base skin's average)
-    const sc = document.createElement('canvas'); sc.width = art.w; sc.height = art.h;
-    const sx = sc.getContext('2d', { willReadFrequently: true }); sx.drawImage(skinM, 0, 0, art.w, art.h);
-    const sd = sx.getImageData(0, 0, art.w, art.h).data, img = cx.getImageData(0, 0, art.w, art.h), d = img.data;
-    let sum = 0, n = 0;
-    for (let i = 0; i < d.length; i += 4) if (sd[i] > 200) { sum += d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11; n++; }
-    const avg = Math.max(1, sum / Math.max(1, n)), t = parseInt(PLAYER_SKIN[face].slice(1), 16), T = [t >> 16 & 255, t >> 8 & 255, t & 255];
-    for (let i = 0; i < d.length; i += 4) { const w = sd[i] / 255; if (w < 0.02) continue;
-      let l = (d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11) / avg; if (l > 1) l = 1 + (l - 1) * 0.45;   // soften highlights so fair tones don't wash out
-      d[i] = d[i] * (1 - w) + Math.min(255, T[0] * l) * w; d[i + 1] = d[i + 1] * (1 - w) + Math.min(255, T[1] * l) * w; d[i + 2] = d[i + 2] * (1 - w) + Math.min(255, T[2] * l) * w; }
-    cx.putImageData(img, 0, 0);
-  }
+  if (skinM) plTint(cx, art, skinM, PLAYER_SKIN[face], 0.45, 1);
+  if (hairM) plTint(cx, art, hairM, PLAYER_HAIR[hairC].c, 0.5, 0.42);
   _plCache[key] = cv;
   return cv;
 }
@@ -10320,6 +10330,7 @@ function renderPlayerScreen() {
   if (plTab === 'body') {
     body.innerHTML = `<div class="plGender"><button data-g="m" class="${L.g === 'm' ? 'on' : ''}"><canvas></canvas>MALE</button><button data-g="f" class="${L.g === 'f' ? 'on' : ''}"><canvas></canvas>FEMALE</button></div>
       <div class="plLbl"><span>LOOK</span></div><div class="plFaces">${Array.from({ length: PLAYER_FACES }, (_, i) => `<button data-face="${i}" class="${(L.face | 0) === i ? 'on' : ''}" aria-label="Look ${i + 1}"><canvas width="88" height="88"></canvas></button>`).join('')}</div>
+      <div class="plLbl"><span>HAIR</span></div><div class="plFaces plHair">${PLAYER_HAIR.map((h, i) => `<button data-hairc="${i}" class="${(L.hairC | 0) === i ? 'on' : ''}" aria-label="${h.name} hair" style="background:${h.c}"><small>${h.name}</small></button>`).join('')}</div>
       <div class="plLbl"><span>HEADWEAR</span></div><div class="plFaces plHats">${PLAYER_HATS.map(h => { const un = cosUnlocked(h, 'hat'), fits = plHatOk(L, h.id), on = (L.hat || 'cap') === h.id;
         return `<button data-hat="${h.id}" class="${on ? 'on' : ''} ${un && fits ? '' : 'lk'}" aria-label="${h.name}"><canvas width="88" height="88"></canvas><small>${!un ? 'EVENT' : !fits ? 'SOON' : h.name}</small></button>`; }).join('')}</div>
       <button class="plRand" id="plRand" aria-label="Surprise me"><i class="plDice"></i>SURPRISE ME</button>`;
@@ -10327,7 +10338,7 @@ function renderPlayerScreen() {
     document.getElementById('plRand').onclick = () => {
       playUiTap();
       const pick = a => a[Math.floor(Math.random() * a.length)];
-      L.g = Math.random() < .5 ? 'm' : 'f'; L.face = Math.floor(Math.random() * PLAYER_FACES);
+      L.g = Math.random() < .5 ? 'm' : 'f'; L.face = Math.floor(Math.random() * PLAYER_FACES); L.hairC = Math.floor(Math.random() * PLAYER_HAIR.length);
       L.shirt = pick(PLAYER_SHIRTS.filter(x => cosUnlocked(x, 'shirt'))).id;
       L.trim = pick(PLAYER_TRIMS.filter(x => cosUnlocked(x, 'trim') && x.id !== L.shirt)).id;
       { const m = PLAYER_PANTS.find(x => x.id === L.shirt && cosUnlocked(x, 'pants')); L.pants = m && Math.random() < .6 ? m.id : 'black'; }
@@ -10338,6 +10349,7 @@ function renderPlayerScreen() {
       paintPlayerTo(b.querySelector('canvas'), Object.assign({}, L, { face: +b.dataset.face }), true);
       b.onclick = () => { playUiTap(); L.face = +b.dataset.face; plCommit(); };
     });
+    body.querySelectorAll('.plHair button').forEach(b => { b.onclick = () => { playUiTap(); L.hairC = +b.dataset.hairc; plCommit(); }; });
     body.querySelectorAll('.plHats button').forEach(b => {
       const h = PLAYER_HATS.find(x => x.id === b.dataset.hat);
       paintPlayerTo(b.querySelector('canvas'), Object.assign({}, L, { hat: h.id }), true);
