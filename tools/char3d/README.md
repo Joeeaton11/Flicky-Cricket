@@ -23,3 +23,7 @@ Next: texel-level class mask (smooth trim edges), rig with tools/mocap3d/rig.py,
   classes: wristbands = wrists, shoe tops = ankles; same 25-bone skeleton and welded heat weights as tools/mocap3d,
   body faces +X, his left +Y, 1.8 m). `posetest.py` renders a few hand-set poses.
 Next: retarget the KUMU captures with tools/mocap3d/bake2.py onto rig_flicky, hair / beard / headwear parts on the Head bone.
+- Nov 12, matching the game art: `mat2.py` (pads light grey with deeper shading so the ridges read, darker navy), then
+  copy `base_mat2.blend` → `base_mat2_pre.blend` and `FACE=1.12 EYE=1.35 ER=0.055 JAW=0.88 python reshape.py`
+  (chest and shoulders 12% wider, 8% deeper; arms 18% thicker; face 12% wider; jaw shorter; legs 5% shorter).
+  Rig again after reshaping (rig_flicky.py).

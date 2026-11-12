@@ -3,9 +3,10 @@ bpy.ops.wm.open_mainfile(filepath=os.path.abspath('base_mat.blend'))
 ob=[o for o in bpy.data.objects if o.type=='MESH'][0]; me=ob.data
 avg=json.load(open('avg.json'))
 NAMES=['unk','skin','shirt','trim','trousers','pads','straps','shoes','shoe_stripe','wristband','face_dark','face_white']
-DEF={'skin':(0.92,0.62,0.48),'shirt':(0.11,0.18,0.42),'trim':(0.95,0.72,0.16),'trousers':(0.93,0.89,0.76),'pads':(0.97,0.97,0.97),
-     'straps':(0.11,0.18,0.42),'shoes':(0.97,0.97,0.97),'shoe_stripe':(0.11,0.18,0.42),'wristband':(0.11,0.18,0.42)}
+DEF={'skin':(0.92,0.62,0.48),'shirt':(0.10,0.15,0.34),'trim':(0.95,0.72,0.16),'trousers':(0.93,0.89,0.76),'pads':(0.86,0.87,0.90),
+     'straps':(0.10,0.15,0.34),'shoes':(0.97,0.97,0.97),'shoe_stripe':(0.10,0.15,0.34),'wristband':(0.10,0.15,0.34)}
 tex=[n for n in me.materials[1].node_tree.nodes if n.type=='TEX_IMAGE'][0].image
+te=bpy.data.images.load(os.path.abspath('tex_eyes.png')); te.colorspace_settings.name=tex.colorspace_settings.name; te.pack(); tex=te
 cmimg=bpy.data.images.load(os.path.abspath('classmap.png')); cmimg.colorspace_settings.name='Non-Color'; cmimg.pack()
 m=bpy.data.materials.new('flicky'); m.use_nodes=True; nt=m.node_tree; N=nt.nodes; L=nt.links
 bs=N['Principled BSDF']; bs.inputs['Roughness'].default_value=0.38
@@ -21,7 +22,7 @@ for k,nm in enumerate(NAMES):
     if nm not in DEF: continue
     cmp=N.new('ShaderNodeMath'); cmp.operation='COMPARE'; cmp.inputs[1].default_value=k; cmp.inputs[2].default_value=0.4; L.new(idx.outputs[0],cmp.inputs[0])
     dv=N.new('ShaderNodeMath'); dv.operation='DIVIDE'; dv.inputs[1].default_value=max(avg.get(nm,0.5)**2.2,0.01); L.new(bw.outputs[0],dv.inputs[0])
-    pw=N.new('ShaderNodeMath'); pw.operation='POWER'; pw.inputs[1].default_value=0.8; L.new(dv.outputs[0],pw.inputs[0])
+    pw=N.new('ShaderNodeMath'); pw.operation='POWER'; pw.inputs[1].default_value=2.2 if nm=='pads' else 0.8; L.new(dv.outputs[0],pw.inputs[0])
     tint=N.new('ShaderNodeRGB'); tint.name='tint_'+nm; c=DEF[nm]; tint.outputs[0].default_value=(c[0]**2.2,c[1]**2.2,c[2]**2.2,1)
     mul=N.new('ShaderNodeMix'); mul.data_type='RGBA'; mul.blend_type='MULTIPLY'; mul.inputs['Factor'].default_value=1
     L.new(tint.outputs[0],mul.inputs[6]); L.new(pw.outputs[0],mul.inputs[7])
