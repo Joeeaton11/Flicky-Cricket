@@ -12,3 +12,14 @@ One rigged-to-be 3D base per gender, built in parts so skin, kit and (later) hai
    RGB node → `base_mat.blend`. `variants.py` renders colour sets to prove it.
 Run with the Blender Python module (bpy 5.x): `python seg.py` etc. from this folder.
 Next: texel-level class mask (smooth trim edges), rig with tools/mocap3d/rig.py, then hair / beard / headwear parts on a head socket.
+
+## Nov 12 (later)
+- Head: `dome.py` lowers the cranium above the brows (SZ 0.72 height, SXY 0.94 width at the crown); the face and head size stay.
+  (`headscale.py` scales the whole head; not used: Joe wants the big head, just a less domed top.)
+- Crisp part edges: `dumpuv.py` → `texcls.py` builds `classmap.png` (class per texel; boundaries settled by nearest class
+  colour; highlights at the sides/back of the head → skin, eye whites/teeth kept). `mat2.py` makes one material `flicky`
+  that reads the class map and tints each class (`tint_<class>` RGB nodes) → `base_mat2.blend`. `variants2.py` renders sets.
+- Rig: `RIGPY=../mocap3d/rig.py python rig_flicky.py` → `rig_flicky.blend` (joints found from the mesh and the part
+  classes: wristbands = wrists, shoe tops = ankles; same 25-bone skeleton and welded heat weights as tools/mocap3d,
+  body faces +X, his left +Y, 1.8 m). `posetest.py` renders a few hand-set poses.
+Next: retarget the KUMU captures with tools/mocap3d/bake2.py onto rig_flicky, hair / beard / headwear parts on the Head bone.
