@@ -32,11 +32,17 @@ for v,yaw in [('front',0),('tq',35),('side',90)]:
     yc,xc=yi.clip(0,H-1),xi.clip(0,W-1); mm=m[yc,xc]*vis
     z=P[:,2]; head=np.clip((z-0.50)/0.04,0,1)
     if v=='front':
-        fm=np.zeros((H,W),np.float32)
-        for x0,y0,x1,y1 in [(545,262,755,360),(608,340,692,412)]: fm[y0:y1,x0:x1]=1
-        fm=cv2.GaussianBlur(fm,(0,0),7); fe=fm[yc,xc]
+        def box(x0,y0,x1,y1,sg):
+            f=np.zeros((H,W),np.float32); f[y0:y1,x0:x1]=1; return cv2.GaussianBlur(f,(0,0),sg)
+        fb=box(540,258,760,305,4); fe_=box(548,300,752,360,4); fn=box(615,345,685,392,3)
+        Rf=Rh.copy()
+        Rf=np.where(fb[...,None]>0.01,np.minimum(Rh,1.0)**1.0,Rf)          # brows: darken only, no light halo
+        Rf=np.where(fn[...,None]>0.01,np.clip(Rh,0.8,1.15)**0.6,Rf)          # nose: softer
+        Rh=np.where((fb+fe_+fn)[...,None]>0.01,Rf,Rh**1.35)                  # body: stronger detail
+        fm=np.clip(fb+fe_+fn,0,1); fe=fm[yc,xc]
         w=(fd**6*(1-head)+head*fe*(fd>0.25)*20)*mm
     else:
+        Rh=Rh**1.35
         w=fd**6*(1-head)*mm
     np.add.at(acc,(ty,tx),Rh[yc,xc]*w[:,None]); np.add.at(ws,(ty,tx),w)
     print(v,vis.mean(),w.mean())
