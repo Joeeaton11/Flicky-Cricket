@@ -10183,18 +10183,40 @@ function hsvRgb(h, s, v) {
   const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
   return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
 }
-// paint a colour into the masked part of the player, keeping the art's own shading. hi: how much highlights above
-// the average are kept (0 = flat, 1 = full); keep: how much of the shading range carries over (lower = flatter, for big jumps like dark → blonde)
-function plTint(cx, art, maskImg, hex, hi, keep) {
+// paint a colour into the masked part of the player as a gradient map: the art's own light and shade (measured
+// between the 4th and 96th percentile inside the mask) maps onto shadow → colour → highlight of the new colour,
+// so a dark-brown ponytail turns into clean blonde instead of a tinted smudge. shade / lift: how deep the shadows
+// and how bright the highlights of the new colour go.
+function plTintMul(cx, art, maskImg, hex, hi) {   // skin: multiply by the art's light so cheeks, lips and warmth survive
   const sc = document.createElement('canvas'); sc.width = art.w; sc.height = art.h;
   const sx = sc.getContext('2d', { willReadFrequently: true }); sx.drawImage(maskImg, 0, 0, art.w, art.h);
   const sd = sx.getImageData(0, 0, art.w, art.h).data, img = cx.getImageData(0, 0, art.w, art.h), d = img.data;
-  let sum = 0, n = 0;
-  for (let i = 0; i < d.length; i += 4) if (sd[i] > 200) { sum += d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11; n++; }
-  const avg = Math.max(1, sum / Math.max(1, n)), t = parseInt(hex.slice(1), 16), T = [t >> 16 & 255, t >> 8 & 255, t & 255];
+  let sum = [0, 0, 0], n = 0;
+  for (let i = 0; i < d.length; i += 4) if (sd[i] > 200) { sum[0] += d[i]; sum[1] += d[i + 1]; sum[2] += d[i + 2]; n++; }
+  if (!n) return;
+  const t = parseInt(hex.slice(1), 16), T = [t >> 16 & 255, t >> 8 & 255, t & 255], A = sum.map(v => Math.max(1, v / n));
   for (let i = 0; i < d.length; i += 4) { const w = sd[i] / 255; if (w < 0.02) continue;
-    let l = (d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11) / avg; if (l > 1) l = 1 + (l - 1) * hi; l = 1 - keep + keep * l;
-    d[i] = d[i] * (1 - w) + Math.min(255, T[0] * l) * w; d[i + 1] = d[i + 1] * (1 - w) + Math.min(255, T[1] * l) * w; d[i + 2] = d[i + 2] * (1 - w) + Math.min(255, T[2] * l) * w; }
+    for (let c = 0; c < 3; c++) { let l = d[i + c] / A[c]; if (l > 1) l = 1 + (l - 1) * hi; d[i + c] = d[i + c] * (1 - w) + Math.min(255, T[c] * l) * w; } }
+  cx.putImageData(img, 0, 0);
+}
+function plTint(cx, art, maskImg, hex, shade, lift) {
+  const sc = document.createElement('canvas'); sc.width = art.w; sc.height = art.h;
+  const sx = sc.getContext('2d', { willReadFrequently: true }); sx.drawImage(maskImg, 0, 0, art.w, art.h);
+  const sd = sx.getImageData(0, 0, art.w, art.h).data, img = cx.getImageData(0, 0, art.w, art.h), d = img.data;
+  const hist = new Uint32Array(256); let n = 0;
+  for (let i = 0; i < d.length; i += 4) if (sd[i] > 200) { hist[Math.round(d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11)]++; n++; }
+  if (!n) return;
+  const pct = q => { let c = 0; for (let v = 0; v < 256; v++) { c += hist[v]; if (c >= n * q) return v; } return 255; };
+  const lo = pct(0.04), hi = Math.max(lo + 8, pct(0.96)), mid = pct(0.5);
+  const t = parseInt(hex.slice(1), 16), T = [t >> 16 & 255, t >> 8 & 255, t & 255];
+  const S = T.map(c => c * shade), H = T.map(c => c + (255 - c) * lift);
+  const m = (mid - lo) / (hi - lo);
+  for (let i = 0; i < d.length; i += 4) { const w = sd[i] / 255; if (w < 0.02) continue;
+    const l = Math.max(0, Math.min(1, ((d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11) - lo) / (hi - lo)));
+    let r, g, b;
+    if (l < m) { const k = l / Math.max(m, 0.01); r = S[0] + (T[0] - S[0]) * k; g = S[1] + (T[1] - S[1]) * k; b = S[2] + (T[2] - S[2]) * k; }
+    else { const k = (l - m) / Math.max(1 - m, 0.01); r = T[0] + (H[0] - T[0]) * k; g = T[1] + (H[1] - T[1]) * k; b = T[2] + (H[2] - T[2]) * k; }
+    d[i] = d[i] * (1 - w) + r * w; d[i + 1] = d[i + 1] * (1 - w) + g * w; d[i + 2] = d[i + 2] * (1 - w) + b * w; }
   cx.putImageData(img, 0, 0);
 }
 // returns a canvas of the player in the given look (cached)
@@ -10232,8 +10254,8 @@ async function renderPlayer(look) {
     }
     cx.putImageData(img, 0, 0);
   }
-  if (skinM) plTint(cx, art, skinM, PLAYER_SKIN[face], 0.45, 1);
-  if (hairM) plTint(cx, art, hairM, PLAYER_HAIR[hairC].c, 0.5, 0.42);
+  if (skinM) plTintMul(cx, art, skinM, PLAYER_SKIN[face], 0.55);
+  if (hairM) plTint(cx, art, hairM, PLAYER_HAIR[hairC].c, 0.45, 0.42);
   _plCache[key] = cv;
   return cv;
 }
