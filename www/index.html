@@ -2618,6 +2618,9 @@ window._imgPending = new Set(); window._imgSeen = 0;
   #playerScreen #plBody { -webkit-mask:linear-gradient(#000 calc(100% - 22px),transparent); mask:linear-gradient(#000 calc(100% - 22px),transparent); }
   #playerScreen .plName { height:44px !important; font-size:20px !important; }
   #playerScreen .plFaces button { flex:0 0 62px; height:62px; scroll-snap-align:start; }
+  #playerScreen .plHats button { position:relative; flex-basis:74px; height:74px; }
+  #playerScreen .plHats button small { position:absolute; left:0; right:0; bottom:3px; font:900 9px/1 'Lilita One',sans-serif; color:#fff; text-shadow:0 1px 0 #050A14, 0 0 3px #050A14; letter-spacing:.04em; }
+  #playerScreen .plHats button.lk canvas { filter:grayscale(.7) brightness(.7); }
   #playerScreen .plFlags button { flex:0 0 46px; height:42px; }
   #playerScreen .plSets button { flex:0 0 118px; scroll-snap-align:start; }
   #playerScreen .plSw button { flex:0 0 46px; }
@@ -10132,6 +10135,13 @@ Object.assign(PLAYER_ART, {"m1": {"src": "assets/ui/ui_229_6131bc4d.webp", "mask
 const PLAYER_FACES = 5;   // look 0 = the original art, 1-4 = extra skin tones / hair
 const PLAYER_SKIN = ['#EBB896', '#6B3F26', '#B87550', '#C98E64', '#F2C4A8'];
 function plPantsOf(L) { return (L && L.pants) || (PLAYER_PANTS_IDS.includes(L && L.shirt) ? L.shirt : 'black'); }   // default trousers: match the shirt, else black
+// Nov 12 (Joe): headwear as layers. Each hat image is the bald base + that hat, lined up pixel for pixel with the
+// original art (the default cap is the original art itself); its mask skips the hat so kit recolours never touch it.
+// Only the first male look has hat art so far — other looks keep the cap until theirs are made.
+const PLAYER_HATS = [ { id:'cap', name:'CAP' }, { id:'helmet', name:'HELMET' } ];
+const PLAYER_HAT_ART = { 'm|helmet': 'assets/ui/player/m_helmet', 'm|xmas_hat': 'assets/ui/player/m_xmas_hat' };
+function plHatArt(look) { const h = look && look.hat; return h && h !== 'cap' ? PLAYER_HAT_ART[plArtKey(look) + '|' + h] || null : null; }
+function plHatOk(look, id) { return id === 'cap' || !!PLAYER_HAT_ART[plArtKey(look) + '|' + id]; }
 function plArtKey(look) { const f = look.face | 0; return f > 0 && PLAYER_ART[look.g + f] ? look.g + f : look.g; }
 const PLAYER_PANTS = [
   { id:'cream', name:'CREAM', c:'#E8DDBF' }, { id:'white', name:'WHITE', c:'#F2F2EE' }, { id:'grey', name:'GREY', c:'#8A93A3' },
@@ -10171,10 +10181,11 @@ function hsvRgb(h, s, v) {
 }
 // returns a canvas of the player in the given look (cached)
 async function renderPlayer(look) {
-  const key = plArtKey(look) + '|' + look.shirt + '|' + look.trim + '|' + plPantsOf(look);
+  const hatArt = plHatArt(look);
+  const key = plArtKey(look) + '|' + look.shirt + '|' + look.trim + '|' + plPantsOf(look) + '|' + (hatArt || '');
   if (_plCache[key]) return _plCache[key];
   const art = PLAYER_ART[plArtKey(look)] || PLAYER_ART.m;
-  const [base, mask] = await Promise.all([plLoadImg(art.src), plLoadImg(art.mask)]);
+  const [base, mask] = await Promise.all([plLoadImg(hatArt ? hatArt + '.webp' : art.src), plLoadImg(hatArt ? hatArt + '_mask.webp' : art.mask)]);
   const cv = document.createElement('canvas'); cv.width = art.w; cv.height = art.h;
   const cx = cv.getContext('2d', { willReadFrequently: true });
   if (!base) return cv;
@@ -10295,6 +10306,8 @@ function renderPlayerScreen() {
   if (plTab === 'body') {
     body.innerHTML = `<div class="plGender"><button data-g="m" class="${L.g === 'm' ? 'on' : ''}"><canvas></canvas>MALE</button><button data-g="f" class="${L.g === 'f' ? 'on' : ''}"><canvas></canvas>FEMALE</button></div>
       <div class="plLbl"><span>LOOK</span></div><div class="plFaces">${Array.from({ length: PLAYER_FACES }, (_, i) => `<button data-face="${i}" class="${(L.face | 0) === i ? 'on' : ''}" aria-label="Look ${i + 1}"><canvas width="88" height="88"></canvas></button>`).join('')}</div>
+      <div class="plLbl"><span>HEADWEAR</span></div><div class="plFaces plHats">${PLAYER_HATS.map(h => { const un = cosUnlocked(h, 'hat'), fits = plHatOk(L, h.id), on = (L.hat || 'cap') === h.id;
+        return `<button data-hat="${h.id}" class="${on ? 'on' : ''} ${un && fits ? '' : 'lk'}" aria-label="${h.name}"><canvas width="88" height="88"></canvas><small>${!un ? 'EVENT' : !fits ? 'SOON' : h.name}</small></button>`; }).join('')}</div>
       <button class="plRand" id="plRand" aria-label="Surprise me"><i class="plDice"></i>SURPRISE ME</button>`;
     { const st = document.getElementById('plStage'), old = st && st.querySelector('#plRand'), nw = document.querySelectorAll('#plRand'); if (st) { nw.forEach(n => { if (n !== old) { if (old) old.remove(); st.appendChild(n); } }); } }
     document.getElementById('plRand').onclick = () => {
@@ -10307,9 +10320,17 @@ function renderPlayerScreen() {
       L.flag = L.flag || PLAYER_FLAGS[0];
       plCommit();
     };
-    body.querySelectorAll('.plFaces button').forEach(b => {
+    body.querySelectorAll('.plFaces button[data-face]').forEach(b => {
       paintPlayerTo(b.querySelector('canvas'), Object.assign({}, L, { face: +b.dataset.face }), true);
       b.onclick = () => { playUiTap(); L.face = +b.dataset.face; plCommit(); };
+    });
+    body.querySelectorAll('.plHats button').forEach(b => {
+      const h = PLAYER_HATS.find(x => x.id === b.dataset.hat);
+      paintPlayerTo(b.querySelector('canvas'), Object.assign({}, L, { hat: h.id }), true);
+      b.onclick = () => { playUiTap();
+        if (!cosUnlocked(h, 'hat')) { showMessage(`${h.name} — FROM THE EVENT SHOP`, '#FFC93A', 1600); return; }
+        if (!plHatOk(L, h.id)) { showMessage(`${h.name} — COMING SOON FOR THIS LOOK`, '#FFC93A', 1600); return; }
+        L.hat = h.id; plCommit(); };
     });
     body.querySelectorAll('.plGender button').forEach(b => {
       paintPlayerTo(b.querySelector('canvas'), Object.assign({}, L, { g: b.dataset.g }));
@@ -22127,7 +22148,7 @@ function renderShopV2(container) {
   { const ev = activeEvent();   // Nov 6 (Joe: keep it in the game's style) — the event shop is a shelf of the real Shop, same tiles
     if (ev && ev.shop) { const ic = `<img class="evCurS" alt="" src="${ev.icon}">`, left = Math.max(0, Math.ceil((new Date(ev.end + 'T23:59:59') - Date.now()) / 864e5));
       const base = it => it.alt ? Object.assign({}, ev.shop.find(x => x.id === it.id && !x.alt), { price: it.price, alt: true }) : it;
-      const KIND = { bat: 'BAT WRAP', celeb: 'SIX CELEBRATION', trail: 'BALL TRAIL', trim: 'KIT TRIM', shirt: 'KIT', reward: 'BAG' };
+      const KIND = { bat: 'BAT WRAP', celeb: 'SIX CELEBRATION', trail: 'BALL TRAIL', trim: 'KIT TRIM', hat: 'HEADWEAR', shirt: 'KIT', reward: 'BAG' };
       deal += `<div class="gcHd"><img class="evHdI" alt="" src="${ev.icon}"><span>${ev.name.replace(/ CUP$/, '')} SHOP</span><i class="ln"></i><em>${ic}<b>${eventBal(ev)}</b> · ${left} DAY${left === 1 ? '' : 'S'}</em></div>`
         + `<div class="gcGrid" data-shelf="ev">${ev.shop.map((r, i) => ({ it: base(r), i })).filter(x => !(x.it.alt && shopOwned(x.it))).map(({ it, i }) => { const own = shopOwned(it), eq = own && shopEquipped(it);
           const art = it.icon ? `<img class="gcPic evPic" alt="" src="${it.icon}">` : `<canvas class="evPl" data-evpl="${it.kind}:${it.id}" width="10" height="10"></canvas>`;
@@ -23313,6 +23334,7 @@ GAME_CONFIG.season.events = GAME_CONFIG.season.events || [
     shop: [ { id: 'xmas_bat', kind: 'bat', name: 'CANDY CANE BAT', icon: 'assets/ui/events/bat_candycane.webp', look: { c: '#f3ead8', a: '#1f7a3a', s: '#d8202c' }, price: { cur: 60 } },
             { id: 'xmas_fx', kind: 'celeb', name: 'SNOWFALL SIXES', icon: 'assets/ui/events/snow.webp', fx: 'snow', price: { cur: 80 } },
             { id: 'xmas_trail', kind: 'trail', name: 'CANDY CANE COMET', icon: 'assets/ui/events/trail_candy.webp', trail: 'candy', price: { cur: 70 } },
+            { id: 'xmas_hat', kind: 'hat', name: 'SANTA HAT', icon: 'assets/ui/events/hat_santa.webp', price: { cur: 50 } },
             { id: 'xmasholly', kind: 'trim', name: 'HOLLY GREEN TRIM', c: '#1f7a3a', price: { cur: 40 } },
             { id: 'xmas_bag', kind: 'reward', name: 'GOLD BAG', icon: 'assets/ui/events/present_ball.webp', r: { bag: 'gold' }, price: { cur: 50 }, repeat: true } ] },
 ];
@@ -23320,6 +23342,7 @@ GAME_CONFIG.season.events = GAME_CONFIG.season.events || [
 // start of the English summer, The Hundred / the Ashes when on, Halloween, Diwali, Christmas.
 function registerEventCosmetics() { GAME_CONFIG.season.events.forEach(ev => { if (ev.kit && !PLAYER_SHIRTS.find(x => x.id === ev.kit.id)) PLAYER_SHIRTS.push({ id: ev.kit.id, name: ev.kit.name, c: ev.kit.c, unlock: { event: ev.id } });
   (ev.shop || []).forEach(it => { if (it.kind === 'trim' && !PLAYER_TRIMS.find(x => x.id === it.id)) PLAYER_TRIMS.push({ id: it.id, name: it.name.replace(/ TRIM$/, ''), c: it.c, unlock: { event: ev.id } });
+    if (it.kind === 'hat' && !PLAYER_HATS.find(x => x.id === it.id)) PLAYER_HATS.push({ id: it.id, name: it.name, unlock: { event: ev.id } });
     if (it.kind === 'bat' && it.look) EVENT_BATS[it.id] = it.look; }); }); }
 registerEventCosmetics();
 // LIVE CALENDAR (Nov 11, Joe): the year's themed events live in https://flickycricket.com/live/calendar.json, so a theme can be
@@ -23359,7 +23382,7 @@ function eventClaim() {
 // ---------- EVENT SHOP (Nov 6): spend the event currency (what you've earned minus what you've spent; the track counts all earned) ----------
 function eventBal(ev) { const st = eventState(ev); return st.cur - (st.spent || 0); }
 function shopOwned(it) { return it.kind === 'reward' ? false : ownedCos.includes(it.id + ':' + it.kind); }
-function shopEquipped(it) { const L = curLook(); return it.kind === 'bat' ? L.batWrap === it.id : it.kind === 'celeb' ? L.celeb === it.id : it.kind === 'trail' ? L.trail === it.id : it.kind === 'trim' ? L.trim === it.id : it.kind === 'shirt' ? L.shirt === it.id : false; }
+function shopEquipped(it) { const L = curLook(); return it.kind === 'bat' ? L.batWrap === it.id : it.kind === 'celeb' ? L.celeb === it.id : it.kind === 'trail' ? L.trail === it.id : it.kind === 'trim' ? L.trim === it.id : it.kind === 'hat' ? L.hat === it.id : it.kind === 'shirt' ? L.shirt === it.id : false; }
 function shopEquip(it) { if (!playerLook) playerLook = curLook(); const L = playerLook;
   if (it.kind === 'bat') L.batWrap = L.batWrap === it.id ? null : it.id; else if (it.kind === 'celeb') L.celeb = L.celeb === it.id ? null : it.id; else if (it.kind === 'trail') L.trail = L.trail === it.id ? null : it.id; else L[it.kind] = it.id;
   savePlayerLook(); try { refreshPlayerArt(); } catch (e) {} try { _gpBatCache && Object.keys(_gpBatCache).forEach(k => delete _gpBatCache[k]); } catch (e) {} }
@@ -23383,7 +23406,7 @@ function openEventShopSheet() {
   el.innerHTML = `<div class="esCard"><div class="esTop"><b>${ev.name} SHOP</b><span class="esBal">${cur}<em>${eventBal(ev)}</em></span><button class="esX" data-esclose aria-label="Close">✕</button></div>
     <div class="esGrid">${items.map(({ it, i }) => { const own = shopOwned(it), eq = own && shopEquipped(it);
       const btn = own ? `<button data-esbuy="${i}" class="${eq ? 'on' : ''}">${eq ? 'EQUIPPED' : 'EQUIP'}</button>` : it.price.cur ? `<button data-esbuy="${i}">${cur}${it.price.cur}</button>` : `<button data-esbuy="${i}" class="gem"><i class="hIco hi-gem"></i>${it.price.gems}</button>`;
-      return `<div class="esItem${own ? ' own' : ''}"><div class="esArt">${prev(it)}</div><b>${it.name}</b><small>${it.kind === 'bat' ? 'BAT WRAP' : it.kind === 'celeb' ? 'SIX CELEBRATION' : it.kind === 'trail' ? 'BALL TRAIL' : it.kind === 'trim' ? 'KIT TRIM' : it.kind === 'reward' ? 'BUY AS OFTEN AS YOU LIKE' : 'KIT'}${it.alt ? ' · OR GEMS' : ''}</small>${btn}</div>`; }).join('')}</div>
+      return `<div class="esItem${own ? ' own' : ''}"><div class="esArt">${prev(it)}</div><b>${it.name}</b><small>${it.kind === 'bat' ? 'BAT WRAP' : it.kind === 'celeb' ? 'SIX CELEBRATION' : it.kind === 'trail' ? 'BALL TRAIL' : it.kind === 'trim' ? 'KIT TRIM' : it.kind === 'hat' ? 'HEADWEAR' : it.kind === 'reward' ? 'BUY AS OFTEN AS YOU LIKE' : 'KIT'}${it.alt ? ' · OR GEMS' : ''}</small>${btn}</div>`; }).join('')}</div>
     <p class="esNote">Looks only — nothing here changes your stats. Shop items leave when the event ends on ${new Date(ev.end + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}.</p></div>`;
   el.classList.add('show');
 }
