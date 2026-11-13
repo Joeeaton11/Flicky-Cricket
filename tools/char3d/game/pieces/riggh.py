@@ -44,3 +44,20 @@ for v in body.data.vertices:
     kb.data[v.index].co=v.co.lerp(best,0.45*min(1,w)); n+=1
 print('ok hand verts',n)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(out))
+
+# skull tucks inside the helmet (shape key 'UnderHelmet', on for batting)
+from mathutils.bvhtree import BVHTree
+import bmesh
+H=bpy.data.objects['Helmet']; bmh=bmesh.new(); bmh.from_mesh(H.data); hv=BVHTree.FromBMesh(bmh)
+kh=body.shape_key_add(name='UnderHelmet',from_mix=False); kh.value=0
+C=Vector((0,0,1.60)); hg=body.vertex_groups['Head'].index; n=0
+for v in body.data.vertices:
+    w=next((g.weight for g in v.groups if g.group==hg),0)
+    if w<0.5 or v.co.z<1.45: continue
+    if v.co.x>0.04 and v.co.z<1.70 and abs(v.co.y)<0.115: continue   # the face
+    d=v.co-C; L=d.length; dn=d.normalized(); hit=hv.ray_cast(C,dn)
+    if hit[0] is None: continue
+    hd=(hit[0]-C).length
+    if hd<L+0.008: kh.data[v.index].co=C+dn*max(0.02,hd-0.008); n+=1
+print('ok skull verts',n)
+bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(out))

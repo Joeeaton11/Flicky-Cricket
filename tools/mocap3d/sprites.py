@@ -8,7 +8,7 @@ bpy.ops.wm.open_mainfile(filepath=f'{W}/{CLIP}.blend')
 sc = bpy.context.scene; rig = bpy.data.objects['Rig']; body = bpy.data.objects['Body']
 ball = bpy.data.objects.get('Ball'); bat = bpy.data.objects.get('Bat')
 for o in bpy.data.objects:
-    if o.type == 'MESH' and o not in (body, ball, bat): o.hide_render = True
+    if o.type == 'MESH' and o not in (body, ball, bat) and o.parent is not rig: o.hide_render = True
 BOWL = CLIP in ('seam', 'offspin', 'legspin')
 T0 = {'seam': 0.55, 'offspin': 0.8, 'legspin': 1.15}.get(CLIP, 0.0)
 TREL = {'seam': 3.25, 'offspin': 3.475, 'legspin': 3.84}.get(CLIP, 0.0)
@@ -66,7 +66,10 @@ def set_cls(obj, per_face):
     lin = np.where(vals[:, 0] <= 0.04045, vals[:, 0] / 12.92, ((vals[:, 0] + 0.055) / 1.055) ** 2.4)
     vals[:, 0] = lin
     a.data.foreach_set('color', vals.ravel()); m.color_attributes.active_color = a
-set_cls(body, cls)
+sys.path.insert(0, W); from pieces_cls import classify_all
+NEWBODY, PIECES = classify_all(rig, body)   # customisable 3D player: classmap body + pieces (skin 14, hair 15)
+if not NEWBODY: set_cls(body, cls)
+print('pieces', [o.name for o in PIECES])
 if bat:
     bc = [11 if bat.data.materials[p.material_index].name.startswith('Willow') else 12 for p in bat.data.polygons]; set_cls(bat, bc)
 if ball: set_cls(ball, [0] * len(ball.data.polygons))
