@@ -5,6 +5,6 @@ All pieces come from the game's own batter model (`tools/mocap/src/batter.glb`),
 
 - **Pads** (`pads_only.blend`, object `Pads`):
   - `mkpads.py` takes the white shell and the grey straps, drops the shoe bits and nudges the pad 3 mm out.
-  - `addpads.py <master> <out>` parents the pads to `Rig` and weights them 100% to the shin. The top above the knee blends to the thigh.
+  - `addpads.py <master> <out>` parents the pads to `Rig` and weights them 100% to the shin, so the whole pad is rigid on the shin and the thigh moves freely behind it. The bottom rim blends a little to the foot so the shoe never pokes through.
   - To toggle the pads, show or hide the `Pads` object.
 - `bake2.py` (mocap3d) now exports any mesh parented to `Rig`, so worn pieces animate with the clip.

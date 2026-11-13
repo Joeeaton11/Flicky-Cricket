@@ -10,7 +10,7 @@ for sd in 'LR':
 kz=rig.data.bones['Shin.L'].head_local.z
 for v in po.data.vertices:
     sd='L' if v.co.y>0 else 'R'
-    th=0.6*min(max((v.co.z-kz)/0.12,0),1)
+    th=0.0   # pads are rigid on the shin: the top never follows the thigh
     ft=0.55*min(max((0.175-v.co.z)/0.05,0),1)
     sh=1-th-ft
     po.vertex_groups[f'Shin.{sd}'].add([v.index],sh,'REPLACE')
