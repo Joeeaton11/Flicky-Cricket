@@ -5,6 +5,30 @@ with bpy.data.libraries.load(os.path.abspath('pads_only.blend')) as (src,dst): d
 po=dst.objects[0]; bpy.context.scene.collection.objects.link(po)
 rig=bpy.data.objects['Rig']; body=bpy.data.objects['Body']
 po.parent=rig; po.matrix_parent_inverse=rig.matrix_world.inverted()
+# nothing of the pad may sit inside the trousers: push any buried part (the low strap on the wider hem) out onto the surface
+from mathutils.bvhtree import BVHTree
+from mathutils import Vector
+dg=bpy.context.evaluated_depsgraph_get(); be=body.evaluated_get(dg); bvh=BVHTree.FromObject(be,dg)
+moved=0
+for v in po.data.vertices:
+    sd='L' if v.co.y>0 else 'R'; b=rig.data.bones['Shin.'+sd]; K,A=b.head_local,b.tail_local
+    if v.co.z>K.z+0.05 or v.co.z<A.z: continue
+    t=(K.z-v.co.z)/(K.z-A.z); ax=K+(A-K)*t; ax=Vector((ax.x,ax.y,v.co.z))
+    d=Vector((v.co.x-ax.x,v.co.y-ax.y,0)); r=d.length
+    if r<1e-5: continue
+    hit,n,i,dist=bvh.ray_cast(ax,d.normalized(),0.3)
+    # take the outermost body surface along this ray
+    far=None; o=ax.copy()
+    for _ in range(6):
+        h=bvh.ray_cast(o,d.normalized(),0.3)
+        if h[0] is None: break
+        if (Vector((h[0].x,h[0].y,0))-Vector((ax.x,ax.y,0))).length>0.13: break   # that's the other leg
+        far=h[0]; o=h[0]+d.normalized()*1e-4
+    if far is None: continue
+    rb=(Vector((far.x,far.y,0))-Vector((ax.x,ax.y,0))).length
+    if r<rb+0.004:
+        nv=ax+d.normalized()*(rb+0.004); v.co.x,v.co.y=nv.x,nv.y; moved+=1
+print('pad verts pushed out',moved)
 for sd in 'LR':
     for b in ('Shin','Thigh','Foot'): po.vertex_groups.new(name=f'{b}.{sd}')
 kz=rig.data.bones['Shin.L'].head_local.z
