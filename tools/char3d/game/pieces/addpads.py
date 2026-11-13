@@ -8,6 +8,16 @@ po.parent=rig; po.matrix_parent_inverse=rig.matrix_world.inverted()
 for sd in 'LR':
     for b in ('Shin','Thigh','Foot'): po.vertex_groups.new(name=f'{b}.{sd}')
 kz=rig.data.bones['Shin.L'].head_local.z
+# pull the pad shell in towards the shin (front and sides), straps at the back stay on the leg
+import os as _o
+TIGHT=float(_o.environ.get('TIGHT','0.12'))
+for v in po.data.vertices:
+    sd='L' if v.co.y>0 else 'R'; b=rig.data.bones['Shin.'+sd]; K,A=b.head_local,b.tail_local
+    t=(K.z-v.co.z)/(K.z-A.z); ax=K+(A-K)*t
+    dx,dy=v.co.x-ax.x,v.co.y-ax.y
+    front=min(max((dx+0.01)/0.04,0),1)
+    k=1-TIGHT*front
+    v.co.x=ax.x+dx*k; v.co.y=ax.y+dy*(1-TIGHT*0.5*front)
 for v in po.data.vertices:
     sd='L' if v.co.y>0 else 'R'
     th=0.0   # pads are rigid on the shin: the top never follows the thigh
