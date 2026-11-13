@@ -6,13 +6,16 @@ po=dst.objects[0]; bpy.context.scene.collection.objects.link(po)
 rig=bpy.data.objects['Rig']; body=bpy.data.objects['Body']
 po.parent=rig; po.matrix_parent_inverse=rig.matrix_world.inverted()
 for sd in 'LR':
-    for b in ('Shin','Thigh'): po.vertex_groups.new(name=f'{b}.{sd}')
+    for b in ('Shin','Thigh','Foot'): po.vertex_groups.new(name=f'{b}.{sd}')
 kz=rig.data.bones['Shin.L'].head_local.z
 for v in po.data.vertices:
     sd='L' if v.co.y>0 else 'R'
-    f=1-0.6*min(max((v.co.z-kz)/0.12,0),1)
-    po.vertex_groups[f'Shin.{sd}'].add([v.index],f,'REPLACE')
-    if f<1: po.vertex_groups[f'Thigh.{sd}'].add([v.index],1-f,'REPLACE')
+    th=0.6*min(max((v.co.z-kz)/0.12,0),1)
+    ft=0.55*min(max((0.175-v.co.z)/0.05,0),1)
+    sh=1-th-ft
+    po.vertex_groups[f'Shin.{sd}'].add([v.index],sh,'REPLACE')
+    if th>0: po.vertex_groups[f'Thigh.{sd}'].add([v.index],th,'REPLACE')
+    if ft>0: po.vertex_groups[f'Foot.{sd}'].add([v.index],ft,'REPLACE')
 m=po.modifiers.new('Armature','ARMATURE'); m.object=rig
 for p in po.data.polygons: p.use_smooth=True
 print('ok knee',round(kz,3),len(po.data.vertices))

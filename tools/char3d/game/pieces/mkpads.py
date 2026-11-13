@@ -44,8 +44,9 @@ for comp in parts:
 print('parts',[len(c) for c in parts[:8]],'dropped faces',len(drop))
 bmesh.ops.delete(bm,geom=drop,context='FACES')
 # and any remaining shoe faces: white, very low, in front of the shin
-lo=[f for f in bm.faces if f.calc_center_median().z<0.165]
+lo=[f for f in bm.faces if f.calc_center_median().z<0.125]
 bmesh.ops.delete(bm,geom=lo,context='FACES'); print('low front faces removed',len(lo))
+bmesh.ops.holes_fill(bm,edges=bm.edges,sides=24)
 bm.normal_update()
 for v in bm.verts: v.co+=v.normal*0.003
 nb=bpy.data.meshes.new('Pads'); bm.to_mesh(nb); bm.free()
