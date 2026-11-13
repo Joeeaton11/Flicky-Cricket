@@ -44,6 +44,13 @@ zr = 1.712                                           # Danny's rim height at the
 T = Matrix.Translation((DX, 0, 1.664 + DZ)) @ Matrix.Diagonal((SX, SY, SZ, 1)) @ Matrix.Translation((-cx, -cy, -zr))
 bmesh.ops.transform(bm, matrix=T, verts=bm.verts)
 SZL = float(os.environ.get('HSZL', '1.55')); RZ = 1.664 + DZ   # the cartoon face is long: stretch what hangs below the rim
+# the back comes down over the cartoon skull (sheared: rim drops most, the crown stays)
+BK = float(os.environ.get('HBACK', '0.10')); ZTOP = max(v.co.z for v in bm.verts)
+for v in bm.verts:
+    t = min(1.0, max(0.0, (0.03 - v.co.x) / 0.15)); t = t * t * (3 - 2 * t)
+    if t <= 0: continue
+    w = min(1.0, max(0.0, (ZTOP - v.co.z) / (ZTOP - RZ + 1e-6))) if v.co.z > RZ else 1.0
+    v.co.z -= BK * t * w
 # below the rim: Danny's eye slot (peak -> first bar) opens up to fit the big cartoon eyes, the rest reaches the chin
 DK = [0.0, 0.024 * SZ, 0.141 * SZ, 0.3]; OK_ = [0.0, float(os.environ.get('HEYE', '0.098')), float(os.environ.get('HCHIN', '0.232')), 0.232 + (0.3 - 0.141 * SZ) * 1.1]
 for v in bm.verts:
