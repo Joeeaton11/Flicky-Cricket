@@ -1,6 +1,9 @@
 import bpy, os, math, mathutils, sys
 f,pads,yaw,out=sys.argv[-4],sys.argv[-3]=='1',float(sys.argv[-2]),sys.argv[-1]
 bpy.ops.wm.open_mainfile(filepath=os.path.abspath(f))
+b=bpy.data.objects['Body']
+if b.data.shape_keys and 'UnderPads' in b.data.shape_keys.key_blocks: b.data.shape_keys.key_blocks['UnderPads'].value=1.0 if pads else 0.0
+bpy.context.view_layer.update()
 for n in ('Pads','Pads_Outline'):
     if n in bpy.data.objects: bpy.data.objects[n].hide_render=not pads
 for o in list(bpy.data.objects):
