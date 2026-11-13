@@ -10,4 +10,4 @@ Built from the in-game mocap character (`tools/mocap3d/rig_base.blend`), so it a
   - `tint_skin` is a per-channel multiplier (1 = unchanged), which keeps the blush and lips.
   - Every other tint is the target colour in linear RGB, multiplied by the texture's own shading.
 - Swappable pieces (hair, beards, caps, helmets, pads, gloves) are separate meshes parented to the rig's Head and Shin bones. They're built in 3D and fitted to this head.
-- Rebuild the bald base from scratch: `python texcls.py && python post.py && python mat.py rig_base.blend gm_base.blend && python bald.py`
+- Rebuild the bald base from scratch: `python texcls.py && python post.py && python mat.py rig_base.blend gm_base.blend && python bald.py && python scalpfix.py && cp gm_bald2.blend gm_bald.blend`
