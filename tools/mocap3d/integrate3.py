@@ -4,7 +4,9 @@ W = os.path.dirname(os.path.abspath(__file__)); REPO = sys.argv[1]; H = f'{REPO}
 BLOCKS = [('m3_', 'm3_sprites.json'), ('b3_', 'b3work/b3_sprites.json'), ('b3o_', 'b3work_offspin/b3_sprites.json'),
           ('b3l_', 'b3work_legspin/b3_sprites.json'), ('f3_', 'f3_sprites.json'), ('f3b_', 'f3b_sprites.json'), ('f3w_', 'f3w_sprites.json')]
 s = open(H).read(); lines = s.split('\n')
+ONLY = os.environ.get('ONLY')
 for pre, p in BLOCKS:
+    if ONLY and pre not in ONLY.split(','): continue
     d = json.load(open(f'{W}/{p}'))
     old = json.loads(next(l for l in lines if l.startswith('Object.assign(GP_SRC, {"' + pre))[len('Object.assign(GP_SRC, '):-2])
     for k in old:
