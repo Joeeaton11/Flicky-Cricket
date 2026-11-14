@@ -34,7 +34,7 @@ gv=set()
 for c in comps:
     if c[0].material_index!=2: continue
     P=np.array([v.co[:] for f in c for v in f.verts])
-    if P[:,2].min()<RIM-0.03 and P[:,0].max()>0.02: gv|={v for f in c for v in f.verts}
+    if P[:,2].min()<RIM and P[:,0].max()>0.02: gv|={v for f in c for v in f.verts}
 print('grille verts', len(gv))
 for v in gv: v.co.z-=GD; v.co.x+=GF
 bm.to_mesh(me)

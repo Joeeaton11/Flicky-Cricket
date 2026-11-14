@@ -59,5 +59,13 @@ for v in body.data.vertices:
     if hit[0] is None: continue
     hd=(hit[0]-C).length
     if hd<L+0.008: kh.data[v.index].co=C+dn*max(0.02,hd-0.008); n+=1
-print('ok skull verts',n)
+# ears fold flat against the head under the helmet's side pads
+ne=0
+for v in body.data.vertices:
+    w=next((g.weight for g in v.groups if g.group==hg),0)
+    if w<0.5: continue
+    co=kh.data[v.index].co; ay=abs(co.y)
+    if ay>0.095 and -0.075<co.x<0.05 and 1.49<co.z<1.67:
+        co.y=(1 if co.y>0 else -1)*(0.095+(ay-0.095)*0.25); ne+=1
+print('ok skull verts',n,'ear verts',ne)
 bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(out))
