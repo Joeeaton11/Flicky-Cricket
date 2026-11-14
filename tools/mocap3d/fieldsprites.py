@@ -32,7 +32,7 @@ def setup(blend):
     bpy.ops.wm.open_mainfile(filepath=f'{W}/{blend}.blend')
     sc = bpy.context.scene; rig = bpy.data.objects['Rig']; body = bpy.data.objects['Body']
     for o in bpy.data.objects:
-        if o.type == 'MESH' and o is not body: o.hide_render = True
+        if o.type == 'MESH' and o is not body and o.parent is not rig: o.hide_render = True
     me = body.data; img = [n.image for n in me.materials[0].node_tree.nodes if n.type == 'TEX_IMAGE'][0]
     iw, ih = img.size; px = np.array(img.pixels[:]).reshape(ih, iw, img.channels)[..., :3]; uv = me.uv_layers.active.data
     cls = np.zeros(len(me.polygons), int)
@@ -55,6 +55,7 @@ def setup(blend):
         for li in p.loop_indices: vals[li] = (v, 0, 0, 1)
     vals[:, 0] = np.where(vals[:, 0] <= 0.04045, vals[:, 0] / 12.92, ((vals[:, 0] + 0.055) / 1.055) ** 2.4)
     a.data.foreach_set('color', vals.ravel()); me.color_attributes.active_color = a
+    from pieces_cls import classify_all; classify_all(rig, body)   # customisable 3D player: classmap body + pieces
     cam = bpy.data.objects.new('FC', bpy.data.cameras.new('FC')); sc.collection.objects.link(cam); sc.camera = cam
     cam.data.type = 'ORTHO'; cam.data.ortho_scale = OS; cam.data.clip_start = 0.1; cam.data.clip_end = 60
     sc.render.resolution_x, sc.render.resolution_y = RES; sc.render.resolution_percentage = 100

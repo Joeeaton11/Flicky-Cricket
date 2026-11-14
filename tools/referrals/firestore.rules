@@ -1,0 +1,18 @@
+rules_version = '2';
+// Flicky Cricket MATES referrals. refs/{code}: owner = the inviter's anonymous uid.
+// refs/{code}/mates/{uid}: one per friend, written by that friend once they've played a match.
+service cloud.firestore {
+  match /databases/{db}/documents {
+    match /refs/{code} {
+      allow get: if request.auth != null;
+      allow create: if request.auth != null && code.matches('^[A-HJ-NP-Z2-9]{6}$')
+                    && request.resource.data.owner == request.auth.uid && request.resource.data.keys().hasOnly(['owner', 'at']);
+      match /mates/{uid} {
+        allow list: if request.auth != null && get(/databases/$(db)/documents/refs/$(code)).data.owner == request.auth.uid;
+        allow create: if request.auth != null && uid == request.auth.uid
+                      && get(/databases/$(db)/documents/refs/$(code)).data.owner != request.auth.uid
+                      && request.resource.data.keys().hasOnly(['at', 'n']) && request.resource.data.n is string && request.resource.data.n.size() <= 14;
+      }
+    }
+  }
+}

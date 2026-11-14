@@ -276,7 +276,7 @@ for k in range(NF + 1):
         for prop in ('location', 'rotation_quaternion', 'scale'): pb.keyframe_insert(prop, frame=k)
 sc.frame_start, sc.frame_end = 0, NF
 for o in list(bpy.data.objects):          # only our rig and body go out
-    if o not in (rig, body): bpy.data.objects.remove(o, do_unlink=True)
+    if o not in (rig, body) and o.parent is not rig: bpy.data.objects.remove(o, do_unlink=True)   # swappable pieces (pads, gloves, hats) are rig children and go out too
 mine = rig.animation_data.action
 for a in list(bpy.data.actions):
     if a != mine: bpy.data.actions.remove(a)
