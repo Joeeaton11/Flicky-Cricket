@@ -3673,6 +3673,8 @@ window._imgPending = new Set(); window._imgSeen = 0;
   .cs-chests .cs-queued .chestBay { filter:saturate(.8); }
   .cs-chests .chestSlot.bagNudge { animation:bagNudge .5s ease-in-out; } @keyframes bagNudge { 20%,60% { transform:translateX(-5px) rotate(-1deg); } 40%,80% { transform:translateX(5px) rotate(1deg); } }
   .cs-chests .oddsBtn { position:absolute; right:14px; top:6px; z-index:3; width:34px; height:34px; padding:0; margin:0; border-radius:50%; font-size:0; border:2.5px solid #2a1606; background:linear-gradient(#fdf4dc,#e8d09b); box-shadow:0 3px 0 #2a1606; }
+  .pracTag { display:inline-block; margin:4px auto 2px; padding:2px 8px; border-radius:9px; background:rgba(127,208,255,.16); border:1.5px solid rgba(127,208,255,.55); color:#9fdcff; font:11px 'Lilita One','Arial Black',Arial,sans-serif; font-style:normal; letter-spacing:.08em; }
+  .vsSide .pracTag { display:block; width:max-content; }
   .cs-chests .oddsBtn::before { content:'i'; font:18px 'Lilita One','Arial Black',Arial,sans-serif; color:#4a2a0c; }
   .cs-chests #equipContent { position:relative; }
   .bagsEmpty { position:absolute; z-index:4; left:14px; right:14px; top:44%; transform:translateY(-50%); padding:16px; border-radius:18px; text-align:center; color:#fff; font-family:'Lilita One','Arial Black',Arial,sans-serif;
@@ -22772,6 +22774,8 @@ const BACKEND = {
   submit(key, score) { const b = SAVE.section('season'); b.boards = b.boards || {}; const e = b.boards[key] = b.boards[key] || { best: 0, entries: 0 }; e.entries++; if (score > e.best) e.best = score; SAVE.save(); return e; },
   rank(key, mean, sd) { const e = (SAVE.section('season').boards || {})[key]; if (!e) return null; const rv = this.rivals(key, mean, sd); const above = rv.filter(x => x > e.best).length; return { rank: above + 1, of: 100, pct: (above + 1) / 100, best: e.best, top: rv.slice(0, 5) }; },
 };
+// Nov 15 (Joe): until real online play is connected, rivals and ranks are labelled as practice.
+const PRACTICE = () => BACKEND.mode === 'local';
 const BOARD_NAMES = ['RAJ_99', 'SIXMACHINE', 'SLOGKING', 'GULLYKING', 'SPINNER7', 'COVERDRIVE', 'YORKERMAN', 'FLICKMASTER', 'SIXERFAN', 'TUKTUK', 'DUCKLESS', 'HOWZAT', 'ZOOMER', 'NETSNINJA', 'DILSCOOP'];
 function seasonState() { const s = SAVE.section('season'); s.tickets = s.tickets || {}; s.boards = s.boards || {}; return s; }
 function ticketsToday() { const s = seasonState(); if (s.tickets.day !== todayKey()) s.tickets = { day: todayKey(), challenge: 0, tourney: 0, endless: 0 }; return s.tickets; }
@@ -22867,7 +22871,7 @@ function duelVersus(rival, extra, go) {
   el.innerHTML = `<div class="vsHead">${head}</div>
     <div class="vsSide me"><canvas width="10" height="10"></canvas><b>${(me.name || 'YOU').slice(0, 14)}</b><small>${flagHtml(me.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(d.trophies)].name}</span> · <i class="hIco hi-trophy"></i>${d.trophies}</small></div>
     <div class="vsMid"><img alt="" src="assets/ui/icon_duel.webp"><span>VS</span></div>
-    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(rival.trophies || 0)].name}</span> · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small></div>
+    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(rival.trophies || 0)].name}</span> · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small>${PRACTICE() && !extra.friend ? '<em class="pracTag">PRACTICE RIVAL</em>' : ''}</div>
     <div class="vsFoot">${prize}<em>${GAME_CONFIG.season.duel.balls} BALLS EACH · SAME BALLS</em></div><i class="vsFlash"></i>`;
   const cv = el.querySelectorAll('canvas');
   try { paintPlayerTo(cv[0], me); paintPlayerTo(cv[1], Object.assign({}, me, { shirt: rival.shirt || 'maroon', g: rival.g || 'm', name: rival.name })); } catch (e) {}
@@ -23270,14 +23274,14 @@ function modeEnd() {
     SAVE.save();
   } else if (c.mode === 'tourney') {
     BACKEND.submit(c.board, runs); try { FlickyCloud.submit('weekly', runs); } catch (e) {} const st = tourneyStats(c.leagueIdx), rk = BACKEND.rank(c.board, st.mean, st.sd);
-    title = 'TOURNAMENT'; line = `${runs} runs · your best ${rk.best} · rank #${rk.rank} of ${rk.of}`; extra = `Ends in ${passDaysLeftWeek()} day${passDaysLeftWeek() === 1 ? '' : 's'} · top 1% gold bag + 200 gems`;
+    title = 'TOURNAMENT'; line = `${runs} runs · your best ${rk.best} · ${PRACTICE() ? 'practice ' : ''}rank #${rk.rank} of ${rk.of}`; extra = `Ends in ${passDaysLeftWeek()} day${passDaysLeftWeek() === 1 ? '' : 's'} · top 1% gold bag + 200 gems`;
   } else if (c.mode === 'duel') {
     const r = duelEnd(c); title = r.title; line = r.line; extra = r.extra; c._duelRes = r.res; c._duelAgain = r.again; if (r.cup) c.mode = 'cup'; else if (r.ui) window._duelUi = Object.assign(r.ui, { again: r.again });
   } else if (c.mode === 'endless') {
     BACKEND.submit(c.board, runs); try { FlickyCloud.submit('endless', runs); } catch (e) {} const st = endlessStats(), rk = BACKEND.rank(c.board, st.mean, st.sd);
     const ms = GAME_CONFIG.season.endless.milestones.filter(m => runs >= m), s = seasonState(); s.endlessBadges = s.endlessBadges || {};
     const fresh = ms.filter(m => !s.endlessBadges[m]); fresh.forEach(m => { s.endlessBadges[m] = Date.now(); }); SAVE.save();
-    title = 'ENDLESS'; line = `${runs} runs · best ${rk.best} · rank #${rk.rank} of ${rk.of}`; if (fresh.length) extra = `BADGE: ${fresh.map(m => m + ' RUNS').join(' · ')}`;
+    title = 'ENDLESS'; line = `${runs} runs · best ${rk.best} · ${PRACTICE() ? 'practice ' : ''}rank #${rk.rank} of ${rk.of}`; if (fresh.length) extra = `BADGE: ${fresh.map(m => m + ' RUNS').join(' · ')}`;
   }
   track('match_end', { mode: c.mode, runs, won, ballsUsed: c.used || 0 });
   window.chase = null; window._modeScene = null; window._activeLeagueIdx = null; window._modeEndAt = Date.now();
@@ -23899,7 +23903,7 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
 function boardHtml(rk) {
   if (!rk) return '<small>No score yet this week.</small>';
   const rows = rk.top.slice(0, 3).map((s, i) => `<span>${i + 1}</span><span>${BOARD_NAMES[(i * 7 + rk.top.length) % BOARD_NAMES.length]}</span><span>${s}</span>`).join('');
-  return `<div class="cpBoard">${rows}<span class="me">${rk.rank}</span><span class="me">${curLook().name} (YOU)</span><span class="me">${rk.best}</span></div>`;
+  return `${PRACTICE() ? '<em class="pracTag">PRACTICE BOARD · ONLINE SOON</em>' : ''}<div class="cpBoard">${rows}<span class="me">${rk.rank}</span><span class="me">${curLook().name} (YOU)</span><span class="me">${rk.best}</span></div>`;
 }
 function renderCompete() {
   if (window.EVENTS_V2 !== false) return renderCompeteV2();   // Events v4 posters (Joe signed off Oct 30); EVENTS_V2 = false shows the old sheet
