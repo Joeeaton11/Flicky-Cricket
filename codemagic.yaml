@@ -30,9 +30,15 @@ workflows:
           cd ios/App
           agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0) + 1))
       - name: Build IPA
-        script: xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
+        script: |
+          xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App --log-path /tmp/xcodebuild_logs || {
+            echo "==== xcodebuild errors ===="
+            grep -h -E "error:|fatal error|Provisioning profile|requires a provisioning|entitlement" -A2 /tmp/xcodebuild_logs/*.log | head -120
+            exit 1
+          }
     artifacts:
       - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
         auth: integration
