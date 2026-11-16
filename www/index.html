@@ -3673,6 +3673,11 @@ window._imgPending = new Set(); window._imgSeen = 0;
   .cs-chests .cs-queued .chestBay { filter:saturate(.8); }
   .cs-chests .chestSlot.bagNudge { animation:bagNudge .5s ease-in-out; } @keyframes bagNudge { 20%,60% { transform:translateX(-5px) rotate(-1deg); } 40%,80% { transform:translateX(5px) rotate(1deg); } }
   .cs-chests .oddsBtn { position:absolute; right:14px; top:6px; z-index:3; width:34px; height:34px; padding:0; margin:0; border-radius:50%; font-size:0; border:2.5px solid #2a1606; background:linear-gradient(#fdf4dc,#e8d09b); box-shadow:0 3px 0 #2a1606; }
+  .plHair button.nat b { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font:9px/1 'Lilita One','Arial Black',Arial,sans-serif; color:#fff; text-shadow:0 1px 2px #000; text-align:center; }
+  .plHair button { position:relative; }
+  .plHint { font:11px 'Lilita One','Arial Black',Arial,sans-serif; color:#9fb4d8; letter-spacing:.06em; margin:2px 0 6px; }
+  .pracTag { display:inline-block; margin:4px auto 2px; padding:2px 8px; border-radius:9px; background:rgba(127,208,255,.16); border:1.5px solid rgba(127,208,255,.55); color:#9fdcff; font:11px 'Lilita One','Arial Black',Arial,sans-serif; font-style:normal; letter-spacing:.08em; }
+  .vsSide .pracTag { display:block; width:max-content; }
   .cs-chests .oddsBtn::before { content:'i'; font:18px 'Lilita One','Arial Black',Arial,sans-serif; color:#4a2a0c; }
   .cs-chests #equipContent { position:relative; }
   .bagsEmpty { position:absolute; z-index:4; left:14px; right:14px; top:44%; transform:translateY(-50%); padding:16px; border-radius:18px; text-align:center; color:#fff; font-family:'Lilita One','Arial Black',Arial,sans-serif;
@@ -10151,6 +10156,21 @@ function plPantsOf(L) { return (L && L.pants) || (PLAYER_PANTS_IDS.includes(L &&
 // Nov 12 (Joe): headwear as layers. Each hat image is the bald base + that hat, lined up pixel for pixel with the
 // original art (the default cap is the original art itself); its mask skips the hat so kit recolours never touch it.
 // Only the first male and first female looks have hat art so far — other looks keep the cap until theirs are made.
+// Nov 15 (Joe): hair colour on every look. hair_<look>.webp marks the hair (painted per look); the colour is
+// relit from the art's own light and shade, so highlights and strands survive. ref = the hair's typical brightness.
+const PLAYER_HAIR = [
+  { id:'natural', name:'NATURAL', c:'' }, { id:'black', name:'BLACK', c:'#1d1916' }, { id:'brown', name:'BROWN', c:'#4a2c1a' },
+  { id:'blonde', name:'BLONDE', c:'#e2c06a' }, { id:'ginger', name:'GINGER', c:'#c4561c' }, { id:'grey', name:'GREY', c:'#9aa0a8' },
+  { id:'blue', name:'BLUE', c:'#2f6fe0', unlock:{ league:3 } }, { id:'pink', name:'PINK', c:'#e0408f', unlock:{ league:5 } },
+  { id:'green', name:'GREEN', c:'#2fb35a', unlock:{ gems:40 } }, { id:'purple', name:'PURPLE', c:'#8a4fd8', unlock:{ gems:40 } },
+  { id:'platinum', name:'PLATINUM', c:'#ece6d2', unlock:{ league:8 } }, { id:'red', name:'RED', c:'#d62828', unlock:{ gems:60 } },
+];
+const PLAYER_HAIR_MASK = {"m": 0.498, "f": 0.322, "m1": 0.125, "m2": 0.263, "m3": 0.239, "m4": 0.82, "f1": 0.102, "f2": 0.157, "f3": 0.157, "f4": 0.827, "f|xmas_hat": 0.329};
+function plHairMask(look) {   // [src, ref] for this look (hat art has its own), or null when the hair is hidden (helmets)
+  const h = look && look.hat, k = plArtKey(look);
+  if (h && h !== 'cap') { const r = PLAYER_HAIR_MASK[k + '|' + h], a = plHatArt(look); return r && a ? [a + '_hair.webp', r] : null; }
+  return PLAYER_HAIR_MASK[k] ? ['assets/ui/player/hair_' + k + '.webp', PLAYER_HAIR_MASK[k]] : null;
+}
 const PLAYER_HATS = [ { id:'cap', name:'CAP' }, { id:'helmet', name:'HELMET' } ];
 const PLAYER_HAT_ART = { 'm|helmet': 'assets/ui/player/m_helmet', 'm|xmas_hat': 'assets/ui/player/m_xmas_hat',
   'f|helmet': 'assets/ui/player/f_helmet', 'f|xmas_hat': 'assets/ui/player/f_xmas_hat' };
@@ -10196,7 +10216,8 @@ function hsvRgb(h, s, v) {
 // returns a canvas of the player in the given look (cached)
 async function renderPlayer(look) {
   const hatArt = plHatArt(look);
-  const key = plArtKey(look) + '|' + look.shirt + '|' + look.trim + '|' + plPantsOf(look) + '|' + (hatArt || '');
+  const hairIt = PLAYER_HAIR.find(x => x.id === look.hair && x.c), hairM = hairIt ? plHairMask(look) : null;
+  const key = plArtKey(look) + '|' + look.shirt + '|' + look.trim + '|' + plPantsOf(look) + '|' + (hatArt || '') + '|' + (hairM ? hairIt.id : '');
   if (_plCache[key]) return _plCache[key];
   const art = PLAYER_ART[plArtKey(look)] || PLAYER_ART.m;
   const [base, mask] = await Promise.all([plLoadImg(hatArt ? hatArt + '.webp' : art.src), plLoadImg(hatArt ? hatArt + '_mask.webp' : art.mask)]);
@@ -10223,6 +10244,22 @@ async function renderPlayer(look) {
       d[i] = d[i] * (1 - w) + col[0] * w; d[i + 1] = d[i + 1] * (1 - w) + col[1] * w; d[i + 2] = d[i + 2] * (1 - w) + col[2] * w;
     }
     cx.putImageData(img, 0, 0);
+  }
+  if (hairM) {
+    const hm = await plLoadImg(hairM[0]);
+    if (hm) {
+      const mc = document.createElement('canvas'); mc.width = art.w; mc.height = art.h;
+      const m2 = mc.getContext('2d', { willReadFrequently: true }); m2.drawImage(hm, 0, 0, art.w, art.h);
+      const md = m2.getImageData(0, 0, art.w, art.h).data, img = cx.getImageData(0, 0, art.w, art.h), d = img.data;
+      const [hH, hS, hV] = hexHsv(hairIt.c), ref = hairM[1];
+      for (let i = 0; i < d.length; i += 4) {
+        const w = md[i] / 255; if (w < 0.02) continue;
+        const k2 = Math.min(1.6, (Math.max(d[i], d[i + 1], d[i + 2]) / 255) / ref);
+        const col = hsvRgb(hH, Math.min(1, hS * (1.05 - 0.35 * Math.max(0, Math.min(1, k2 - 1)))), Math.min(1, hV * (0.18 + 0.82 * k2)));
+        d[i] = d[i] * (1 - w) + col[0] * w; d[i + 1] = d[i + 1] * (1 - w) + col[1] * w; d[i + 2] = d[i + 2] * (1 - w) + col[2] * w;
+      }
+      cx.putImageData(img, 0, 0);
+    }
   }
   _plCache[key] = cv;
   return cv;
@@ -10261,7 +10298,8 @@ function plCount() {
 function plUnlockedKeys() {
   return PLAYER_SHIRTS.filter(x => x.unlock && cosUnlocked(x, 'shirt')).map(x => x.id + ':shirt')
     .concat(PLAYER_TRIMS.filter(x => x.unlock && cosUnlocked(x, 'trim')).map(x => x.id + ':trim'))
-    .concat(PLAYER_PANTS.filter(x => x.unlock && cosUnlocked(x, 'pants')).map(x => x.id + ':pants'));
+    .concat(PLAYER_PANTS.filter(x => x.unlock && cosUnlocked(x, 'pants')).map(x => x.id + ':pants'))
+    .concat(PLAYER_HAIR.filter(x => x.unlock && cosUnlocked(x, 'hair')).map(x => x.id + ':hair'));
 }
 function plSeen() {
   let v = null; try { v = JSON.parse(SAVE.getItem('flickyPlSeen') || 'null'); } catch (e) {}
@@ -10304,7 +10342,7 @@ function renderPlayerScreen() {
   document.getElementById('plCollFill').style.width = (pc.got / pc.all * 100) + '%';
   paintPlayerTo(document.getElementById('plCanvas'), plPreview ? Object.assign({}, L, { [plPreview.kind]: plPreview.id }) : L);
   plRenderTry();
-  if (plTab === 'kit') plMarkSeen();
+  if (plTab === 'kit' || plTab === 'body') plMarkSeen();
   const kitNew = plNewKeys().length;
   document.querySelectorAll('#plTabs button').forEach(b => {
     b.classList.toggle('on', b.dataset.pt === plTab);
@@ -10320,10 +10358,21 @@ function renderPlayerScreen() {
   if (plTab === 'body') {
     body.innerHTML = `<div class="plGender"><button data-g="m" class="${L.g === 'm' ? 'on' : ''}"><canvas></canvas>MALE</button><button data-g="f" class="${L.g === 'f' ? 'on' : ''}"><canvas></canvas>FEMALE</button></div>
       <div class="plLbl"><span>LOOK</span></div><div class="plFaces">${Array.from({ length: PLAYER_FACES }, (_, i) => `<button data-face="${i}" class="${(L.face | 0) === i ? 'on' : ''}" aria-label="Look ${i + 1}"><canvas width="88" height="88"></canvas></button>`).join('')}</div>
+      <div class="plLbl"><span>HAIR COLOUR</span><span>${PLAYER_HAIR.filter(x => cosUnlocked(x, 'hair')).length} / ${PLAYER_HAIR.length}</span></div><div class="plSw plHair">${PLAYER_HAIR.map(it => {
+        const un = cosUnlocked(it, 'hair'), on = (L.hair || 'natural') === it.id, u = it.unlock || {}, tr = plPreview && plPreview.kind === 'hair' && plPreview.id === it.id;
+        const chip = un ? '' : u.gems ? `<small class="gem">${u.gems} GEMS</small>` : (THEMED_LEAGUES[u.league] ? `<small>${THEMED_LEAGUES[u.league].name}</small>` : '<small>LOCKED</small>');
+        const nw = plShownNew.includes(it.id + ':hair') ? '<i class="plNew">NEW</i>' : '';
+        return `<button data-k="hair" data-id="${it.id}" aria-label="${it.name} hair" class="${on ? 'on' : ''} ${un ? '' : 'lk'} ${tr ? 'try' : ''} ${it.c ? '' : 'nat'}" style="background:${it.c || 'conic-gradient(#1d1916 0 25%,#4a2c1a 0 50%,#e2c06a 0 75%,#c4561c 0)'}">${it.c ? '' : '<b>AS<br>DRAWN</b>'}${chip}${nw}</button>`; }).join('')}</div>
+      ${plHairMask(Object.assign({}, L, { hat: L.hat || 'cap' })) ? '' : '<div class="plHint">HAIR IS HIDDEN UNDER THIS HEADWEAR</div>'}
       <div class="plLbl"><span>HEADWEAR</span></div><div class="plFaces plHats">${PLAYER_HATS.map(h => { const un = cosUnlocked(h, 'hat'), fits = plHatOk(L, h.id), on = (L.hat || 'cap') === h.id;
         return `<button data-hat="${h.id}" class="${on ? 'on' : ''} ${un && fits ? '' : 'lk'}" aria-label="${h.name}"><canvas width="88" height="88"></canvas><small>${!un ? 'EVENT' : !fits ? 'SOON' : h.name}</small></button>`; }).join('')}</div>
       <button class="plRand" id="plRand" aria-label="Surprise me"><i class="plDice"></i>SURPRISE ME</button>`;
     { const st = document.getElementById('plStage'), old = st && st.querySelector('#plRand'), nw = document.querySelectorAll('#plRand'); if (st) { nw.forEach(n => { if (n !== old) { if (old) old.remove(); st.appendChild(n); } }); } }
+    body.querySelectorAll('.plHair button').forEach(b => b.onclick = () => {
+      const it = PLAYER_HAIR.find(x => x.id === b.dataset.id);
+      if (!cosUnlocked(it, 'hair')) { playUiTap(); plPreview = { kind: 'hair', id: it.id }; renderPlayerScreen(); plHop(); return; }
+      playUiTap(); plPreview = null; L.hair = it.id; plCommit();
+    });
     document.getElementById('plRand').onclick = () => {
       playUiTap();
       const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -10394,8 +10443,8 @@ function renderPlayerScreen() {
     body.querySelectorAll('.plFlags button').forEach(b => b.onclick = () => { playUiTap(); L.flag = b.dataset.f; plCommit(); });
   }
 }
-const PL_KIND_NAME = { shirt:'SHIRT', trim:'TRIM', pants:'TROUSERS' };
-function plListFor(kind) { return kind === 'shirt' ? PLAYER_SHIRTS : kind === 'pants' ? PLAYER_PANTS : PLAYER_TRIMS; }
+const PL_KIND_NAME = { shirt:'SHIRT', trim:'TRIM', pants:'TROUSERS', hair:'HAIR' };
+function plListFor(kind) { return kind === 'shirt' ? PLAYER_SHIRTS : kind === 'pants' ? PLAYER_PANTS : kind === 'hair' ? PLAYER_HAIR : PLAYER_TRIMS; }
 function plRenderTry() {
   const el = document.getElementById('plTry'); if (!el) return;
   document.getElementById('playerScreen').classList.toggle('trying', !!plPreview);
@@ -10410,7 +10459,7 @@ function plRenderTry() {
   buy.onclick = e => {
     e.stopPropagation(); if (!it.unlock.gems) return;
     const kind = plPreview.kind;
-    bagConfirm(it.unlock.gems, `Unlock ${it.name} ${kind === 'shirt' ? 'kit' : kind === 'pants' ? 'trousers' : 'trim'}?`, () => {
+    bagConfirm(it.unlock.gems, `Unlock ${it.name} ${kind === 'shirt' ? 'kit' : kind === 'pants' ? 'trousers' : kind === 'hair' ? 'hair' : 'trim'}?`, () => {
       if (gems < it.unlock.gems) { showMessage('Not enough gems!', '#ff6b6b', 1500); return; }
       gems -= it.unlock.gems; saveEquipmentState();
       ownedCos.push(it.id + ':' + kind); try { SAVE.setItem('flickyCosmetics', JSON.stringify(ownedCos)); } catch (e) {}
@@ -22649,6 +22698,8 @@ const BACKEND = {
   submit(key, score) { const b = SAVE.section('season'); b.boards = b.boards || {}; const e = b.boards[key] = b.boards[key] || { best: 0, entries: 0 }; e.entries++; if (score > e.best) e.best = score; SAVE.save(); return e; },
   rank(key, mean, sd) { const e = (SAVE.section('season').boards || {})[key]; if (!e) return null; const rv = this.rivals(key, mean, sd); const above = rv.filter(x => x > e.best).length; return { rank: above + 1, of: 100, pct: (above + 1) / 100, best: e.best, top: rv.slice(0, 5) }; },
 };
+// Nov 15 (Joe): until real online play is connected, rivals and ranks are labelled as practice.
+const PRACTICE = () => BACKEND.mode === 'local';
 const BOARD_NAMES = ['RAJ_99', 'SIXMACHINE', 'SLOGKING', 'GULLYKING', 'SPINNER7', 'COVERDRIVE', 'YORKERMAN', 'FLICKMASTER', 'SIXERFAN', 'TUKTUK', 'DUCKLESS', 'HOWZAT', 'ZOOMER', 'NETSNINJA', 'DILSCOOP'];
 function seasonState() { const s = SAVE.section('season'); s.tickets = s.tickets || {}; s.boards = s.boards || {}; return s; }
 function ticketsToday() { const s = seasonState(); if (s.tickets.day !== todayKey()) s.tickets = { day: todayKey(), challenge: 0, tourney: 0, endless: 0 }; return s.tickets; }
@@ -22744,7 +22795,7 @@ function duelVersus(rival, extra, go) {
   el.innerHTML = `<div class="vsHead">${head}</div>
     <div class="vsSide me"><canvas width="10" height="10"></canvas><b>${(me.name || 'YOU').slice(0, 14)}</b><small>${flagHtml(me.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(d.trophies)].name}</span> · <i class="hIco hi-trophy"></i>${d.trophies}</small></div>
     <div class="vsMid"><img alt="" src="assets/ui/icon_duel.webp"><span>VS</span></div>
-    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(rival.trophies || 0)].name}</span> · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small></div>
+    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(rival.trophies || 0)].name}</span> · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small>${PRACTICE() && !extra.friend ? '<em class="pracTag">PRACTICE RIVAL</em>' : ''}</div>
     <div class="vsFoot">${prize}<em>${GAME_CONFIG.season.duel.balls} BALLS EACH · SAME BALLS</em></div><i class="vsFlash"></i>`;
   const cv = el.querySelectorAll('canvas');
   try { paintPlayerTo(cv[0], me); paintPlayerTo(cv[1], Object.assign({}, me, { shirt: rival.shirt || 'maroon', g: rival.g || 'm', name: rival.name })); } catch (e) {}
@@ -23146,15 +23197,15 @@ function modeEnd() {
     else line = `${runs} of ${c.target} · ${spare ? spare + ' balls left' : 'all balls used'}`;
     SAVE.save();
   } else if (c.mode === 'tourney') {
-    BACKEND.submit(c.board, runs); const st = tourneyStats(c.leagueIdx), rk = BACKEND.rank(c.board, st.mean, st.sd);
-    title = 'TOURNAMENT'; line = `${runs} runs · your best ${rk.best} · rank #${rk.rank} of ${rk.of}`; extra = `Ends in ${passDaysLeftWeek()} day${passDaysLeftWeek() === 1 ? '' : 's'} · top 1% gold bag + 200 gems`;
+    BACKEND.submit(c.board, runs); try { FlickyCloud.submit('weekly', runs); } catch (e) {} const st = tourneyStats(c.leagueIdx), rk = BACKEND.rank(c.board, st.mean, st.sd);
+    title = 'TOURNAMENT'; line = `${runs} runs · your best ${rk.best} · ${PRACTICE() ? 'practice ' : ''}rank #${rk.rank} of ${rk.of}`; extra = `Ends in ${passDaysLeftWeek()} day${passDaysLeftWeek() === 1 ? '' : 's'} · top 1% gold bag + 200 gems`;
   } else if (c.mode === 'duel') {
     const r = duelEnd(c); title = r.title; line = r.line; extra = r.extra; c._duelRes = r.res; c._duelAgain = r.again; if (r.cup) c.mode = 'cup'; else if (r.ui) window._duelUi = Object.assign(r.ui, { again: r.again });
   } else if (c.mode === 'endless') {
-    BACKEND.submit(c.board, runs); const st = endlessStats(), rk = BACKEND.rank(c.board, st.mean, st.sd);
+    BACKEND.submit(c.board, runs); try { FlickyCloud.submit('endless', runs); } catch (e) {} const st = endlessStats(), rk = BACKEND.rank(c.board, st.mean, st.sd);
     const ms = GAME_CONFIG.season.endless.milestones.filter(m => runs >= m), s = seasonState(); s.endlessBadges = s.endlessBadges || {};
     const fresh = ms.filter(m => !s.endlessBadges[m]); fresh.forEach(m => { s.endlessBadges[m] = Date.now(); }); SAVE.save();
-    title = 'ENDLESS'; line = `${runs} runs · best ${rk.best} · rank #${rk.rank} of ${rk.of}`; if (fresh.length) extra = `BADGE: ${fresh.map(m => m + ' RUNS').join(' · ')}`;
+    title = 'ENDLESS'; line = `${runs} runs · best ${rk.best} · ${PRACTICE() ? 'practice ' : ''}rank #${rk.rank} of ${rk.of}`; if (fresh.length) extra = `BADGE: ${fresh.map(m => m + ' RUNS').join(' · ')}`;
   }
   track('match_end', { mode: c.mode, runs, won, ballsUsed: c.used || 0 });
   window.chase = null; window._modeScene = null; window._activeLeagueIdx = null; window._modeEndAt = Date.now();
@@ -23776,7 +23827,7 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
 function boardHtml(rk) {
   if (!rk) return '<small>No score yet this week.</small>';
   const rows = rk.top.slice(0, 3).map((s, i) => `<span>${i + 1}</span><span>${BOARD_NAMES[(i * 7 + rk.top.length) % BOARD_NAMES.length]}</span><span>${s}</span>`).join('');
-  return `<div class="cpBoard">${rows}<span class="me">${rk.rank}</span><span class="me">${curLook().name} (YOU)</span><span class="me">${rk.best}</span></div>`;
+  return `${PRACTICE() ? '<em class="pracTag">PRACTICE BOARD · ONLINE SOON</em>' : ''}<div class="cpBoard">${rows}<span class="me">${rk.rank}</span><span class="me">${curLook().name} (YOU)</span><span class="me">${rk.best}</span></div>`;
 }
 function renderCompete() {
   if (window.EVENTS_V2 !== false) return renderCompeteV2();   // Events v4 posters (Joe signed off Oct 30); EVENTS_V2 = false shows the old sheet
@@ -24402,8 +24453,8 @@ function renderSettings() {
 // is copied to the player's account after every match and when the app goes to the background, and brought back
 // on a new phone or a reinstall. Leaderboard ids come from App Store Connect / Play Console (empty = not set up yet).
 const GAME_SERVICES = {
-  ios: { on: true, boards: { duel: '', weekly: '' } },
-  android: { on: false, boards: { duel: '', weekly: '' } },   // on once the Play Games project id is in AndroidManifest.xml
+  ios: { on: true, boards: { endless: 'flicky.endless', weekly: 'flicky.weekly' } },   // ids made in App Store Connect → Game Center
+  android: { on: false, boards: { endless: '', weekly: '' } },   // on once the Play Games project id is in AndroidManifest.xml
   snapshot: 'flicky-main',
 };
 const FlickyCloud = window.FlickyCloud = {
