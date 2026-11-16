@@ -27,6 +27,64 @@ window._imgPending = new Set(); window._imgSeen = 0;
     set(v) { d.set.call(this, v); if (!this.complete) { const im = this; window._imgPending.add(im); window._imgSeen++; const done = () => window._imgPending.delete(im);
       im.addEventListener('load', done, { once: true }); im.addEventListener('error', done, { once: true }); } } }); })();
 </script>
+<script src="assets/i18n.js"></script>
+<script>
+// ═══ LANGUAGES (Nov 16, Joe): English, Hindi and Urdu. The game's text stays written in English in the code; this layer
+// swaps every piece of text on its way to the screen (page text, buttons, labels, canvas text, toasts) using the sheets in
+// i18n/*.tsv (built into assets/i18n.js). '#' in a sheet stands for any number. Proper names (kit, leagues' brand names,
+// grounds, rivals) stay in English. Urdu text reads right to left inside each label; the layout stays as it is.
+const FlickyLang = window.FlickyLang = (function () {
+  let lang = null; try { lang = localStorage.getItem('flickyLang'); } catch (e) {}
+  if (!lang) { const n = (navigator.language || '').toLowerCase(); lang = n.startsWith('hi') ? 'hi' : n.startsWith('ur') ? 'ur' : 'en'; }
+  const L = { lang, idx: { hi: 0, ur: 1 }[lang], D: null, cache: new Map(), phrases: null };
+  L.on = () => L.idx != null;
+  L.set = v => { try { localStorage.setItem('flickyLang', v); } catch (e) {} location.reload(); };
+  const exact = core => { const nums = []; const k = core.replace(/\d[\d,.]*/g, m => { nums.push(m); return '#'; }); const t = L.D[k]; if (!t) return null; let i = 0; return t[L.idx].replace(/#/g, () => nums[i] != null ? nums[i++] : '#'); };
+  const isL = c => /[A-Za-z0-9]/.test(c || '');
+  L.tr = s => {
+    if (!L.on() || typeof s !== 'string' || !/[A-Za-z]{2}/.test(s)) return s;
+    const hit = L.cache.get(s); if (hit !== undefined) return hit;
+    if (!L.D) L.D = window.FC_I18N || {};
+    const lead = s.match(/^\s*/)[0], trail = s.match(/\s*$/)[0], core = s.trim().replace(/­/g, '').replace(/\s+/g, ' ');
+    let r = exact(core);
+    if (r == null && / · |: /.test(core)) { const sep = core.includes(' · ') ? ' · ' : ': ', parts = core.split(sep), tp = parts.map(p => exact(p)); if (tp.some(x => x != null)) r = parts.map((p, i) => tp[i] != null ? tp[i] : p).join(sep); }
+    if (r == null) {   // longest known phrases inside the text (whole words only)
+      if (!L.phrases) L.phrases = Object.keys(L.D).filter(k => !k.includes('#') && /[A-Za-z]{2}/.test(k) && (k.includes(' ') || k.length >= 5)).sort((a, b) => b.length - a.length);
+      let x = core, any = false;
+      for (const p of L.phrases) { if (p.length > x.length) continue; let i = x.indexOf(p);
+        while (i >= 0) { if (!isL(x[i - 1]) && !isL(x[i + p.length])) { const t = L.D[p][L.idx]; x = x.slice(0, i) + t + x.slice(i + p.length); any = true; i = x.indexOf(p, i + t.length); } else i = x.indexOf(p, i + 1); } }
+      if (any) r = x;
+    }
+    const out = r == null ? s : lead + r + trail; if (L.cache.size > 5000) L.cache.clear(); L.cache.set(s, out); return out;
+  };
+  if (!L.on()) return L;
+  document.documentElement.lang = lang; document.documentElement.classList.add('lang-' + lang);
+  // text on the canvas (match HUD, prompts) and its measuring, so layouts fit the translated words
+  ['fillText', 'strokeText', 'measureText'].forEach(k => { const o = CanvasRenderingContext2D.prototype[k];
+    CanvasRenderingContext2D.prototype[k] = function (t, ...a) { return o.call(this, typeof t === 'string' ? L.tr(t) : t, ...a); }; });
+  // page text: everything already there, and everything added or changed later
+  const SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, INPUT: 1, NOSCRIPT: 1 };
+  const doText = n => { const p = n.parentNode; if (!p || SKIP[p.nodeName] || (p.closest && p.closest('[data-noi18n]'))) return; const v = n.nodeValue, t = L.tr(v); if (t !== v) n.nodeValue = t; };
+  const doEl = e => { ['placeholder', 'aria-label', 'title'].forEach(a => { const v = e.getAttribute && e.getAttribute(a); if (v) { const t = L.tr(v); if (t !== v) e.setAttribute(a, t); } }); };
+  const walk = root => { if (root.nodeType === 3) return doText(root); if (root.nodeType !== 1 || SKIP[root.nodeName]) return; doEl(root);
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT); let n; while ((n = w.nextNode())) n.nodeType === 3 ? doText(n) : doEl(n); };
+  const mo = new MutationObserver(ms => { for (const m of ms) { if (m.type === 'characterData') doText(m.target); else if (m.type === 'attributes') doEl(m.target); else m.addedNodes.forEach(walk); } });
+  const start = () => { walk(document.body); mo.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'aria-label', 'title'] });
+    // fonts: the game's fonts have no Hindi or Urdu letters, so those letters come from Baloo (same chunky feel)
+    const dev = "url(assets/fonts/baloo-2-devanagari-800-normal.woff2) format('woff2')", ara = "url(assets/fonts/baloo-bhaijaan-2-arabic-800-normal.woff2) format('woff2')";
+    const R_DEV = 'U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+25CC,U+A830-A839,U+A8E0-A8FF', R_ARA = 'U+0600-06FF,U+0750-077F,U+0870-08FF,U+200C-200E,U+FB50-FDFF,U+FE70-FEFC';
+    const fams = ["Lilita One", "Arial Black", "Arial", "Courier New", "FlickyHand", "Comic Sans MS", "Baloo Fallback"];
+    const css = document.createElement('style'); css.id = 'langFonts';
+    css.textContent = fams.map(f => `@font-face{font-family:'${f}';font-weight:100 900;src:${dev};unicode-range:${R_DEV}}@font-face{font-family:'${f}';font-weight:100 900;src:${ara};unicode-range:${R_ARA}}`).join('')
+      + `html.lang-hi *,html.lang-ur *{letter-spacing:0 !important;-webkit-text-stroke-width:0 !important}html.lang-ur body *{unicode-bidi:plaintext}`
+      + `body{font-family:'Baloo Fallback',sans-serif}`;
+    document.head.appendChild(css);
+    try { document.fonts.load("20px 'Lilita One'", lang === 'ur' ? 'ا' : 'अ'); document.fonts.load("20px 'Arial Black'", lang === 'ur' ? 'ا' : 'अ'); } catch (e) {}
+  };
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+  return L;
+})();
+</script>
 <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js?v=5');</script>
 <link rel="icon" type="image/png" href="data:image/png;base64,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">
 
@@ -21425,7 +21483,7 @@ function renderToday() {
       ${x.claimed ? '<span class="ok">✓</span>' : done ? `<button class="gcBuy claim" data-mission="${x.id}">CLAIM</button>` : `<button class="gcBuy blue" data-go="${df.ev}">GO</button>`}</div>`; };
   const wn = w.wDays.length, wReady = wn >= T3_WEEK_DAYS && !w.wClaimed;
   const dow = (now.getDay() + 6) % 7, wkStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow);
-  const pips = 'MTWTFSS'.split('').map((L, i) => { const dd = new Date(wkStart.getFullYear(), wkStart.getMonth(), wkStart.getDate() + i), k = `${dd.getFullYear()}-${dd.getMonth() + 1}-${dd.getDate()}`;
+  const pips = (({hi:['सो','मं','बु','गु','शु','श','र'],ur:['پ','م','ب','ج','ج','ہ','ا']})[window.FlickyLang && FlickyLang.lang] || 'MTWTFSS'.split('')).map((L, i) => { const dd = new Date(wkStart.getFullYear(), wkStart.getMonth(), wkStart.getDate() + i), k = `${dd.getFullYear()}-${dd.getMonth() + 1}-${dd.getDate()}`;
     return `<i class="${w.wDays.includes(k) ? 'on' : ''}${i === dow ? ' now' : ''}">${w.wDays.includes(k) ? '✓' : L}</i>`; }).join('');
   const calReady = calendarReady(), d = dailyState(), cal = GAME_CONFIG.daily.calendar;
   sh.innerHTML = `<div class="evTop"><button class="evBack" id="todayClose" aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b>MISSIONS</b>
@@ -24199,6 +24257,8 @@ function renderSettings() {
       ${tg('haptics', SAVE.getItem('flickyHapticsOff') !== 'true', 'VIBRATION')}
       ${tg('notify', notifyOn(), 'NOTIFICATIONS', 'Bag ready and daily rewards · never more than 2 a day')}
     </div>
+    <div class="stCard"><div class="stRow"><div class="setLbl"><i class="stIco" style="display:flex;align-items:center;justify-content:center;font-size:20px">🌐</i><div><b>LANGUAGE</b></div></div>
+      <div class="stLang" data-noi18n>${[['en', 'English'], ['hi', 'हिन्दी'], ['ur', 'اردو']].map(([k, l]) => `<button data-lang="${k}" class="${FlickyLang.lang === k ? 'on' : ''}">${l}</button>`).join('')}</div></div></div>
     ${(window.FlickyCloud && FlickyCloud.cfg().on && FlickyCloud.plugin()) ? `<div class="stCard"><div class="stRow"><div class="setLbl"><i class="stIco" style="background:url(assets/ui/icon_cloud.webp) center/contain no-repeat"></i><div><b>${capPlatform() === 'ios' ? 'GAME CENTER' : 'PLAY GAMES'}</b><small>${FlickyCloud.signedIn ? 'Signed in · progress saved to your account' + (FlickyCloud.player && FlickyCloud.player.displayName ? ' as ' + FlickyCloud.player.displayName : '') : 'Sign in to keep your progress on a new phone'}</small></div></div>${FlickyCloud.signedIn ? '<button class="stId" data-st="boards">BOARDS</button>' : '<button class="stId" data-st="cloudin">SIGN IN</button>'}</div></div>` : ''}
     <div class="stCard">
       ${link('tutorial', 'REPLAY TUTORIAL', true)}
@@ -24227,6 +24287,7 @@ function renderSettings() {
   #settingsPanel .sheet{width:min(440px,100%);max-height:94%;overflow:auto;background:#0E1C38;border:3px solid #050A14;border-bottom:none;border-radius:22px 22px 0 0;padding:14px 12px calc(18px + env(safe-area-inset-bottom,0px));box-sizing:border-box;display:flex;flex-direction:column;gap:12px}
   #settingsPanel h2{margin:0;font-size:24px;font-weight:400;display:flex;align-items:center;justify-content:space-between}
   #settingsPanel .x{width:40px;height:40px;border-radius:50%;border:2px solid #050A14;background:#14203a;color:#fff;font-size:18px;cursor:pointer}
+  .stLang{display:flex;gap:6px}.stLang button{height:34px;padding:0 10px;border-radius:10px;border:2px solid #050A14;background:#0a1428;color:#B4C2DD;font:15px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;letter-spacing:0}.stLang button.on{background:linear-gradient(#FFE27A,#F4A30A);color:#3a2300}
   .stCard{border-radius:16px;background:#14203a;border:3px solid #050A14;padding:4px 12px;display:flex;flex-direction:column}
   .stRow{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px}
   .stRow+.stRow,.stLink+.stLink,.stLink+.stRow{border-top:1px solid rgba(255,255,255,.08)}
@@ -25414,5 +25475,8 @@ document.addEventListener('click', e => { const t = e.target && e.target.closest
   `; document.head.appendChild(css); })();
 </script>
 
+<script>
+document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-lang]'); if (!b) return; e.stopPropagation(); try { playUiTap(); } catch (er) {} if (b.dataset.lang !== FlickyLang.lang) FlickyLang.set(b.dataset.lang); }, true);
+</script>
 </body>
 </html>
