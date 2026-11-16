@@ -4158,7 +4158,7 @@ try{ window.cometSpin(document.querySelector('#bootSplash canvas.cmSpin')); }cat
   <div id="plPanel">
     <button id="plGrab" aria-label="Show or hide options"><i></i></button>
     <div id="plColl"><span>LOOKS</span><div id="plCollBar"><i id="plCollFill"></i></div><b id="plCollN">0 / 0</b></div>
-    <div id="plTabs" role="tablist"><button data-pt="body">BODY</button><button data-pt="kit">KIT COLOURS</button><button data-pt="name">NAME</button></div>
+    <div id="plTabs" role="tablist"><button data-pt="body">BODY</button><button data-pt="kit">KIT COLOURS</button><button data-pt="name">NAME</button><button data-pt="style">STYLE</button></div>
     <div id="plBody"></div>
     <button id="plStart" class="hidden">START</button>
   </div>
@@ -10432,6 +10432,7 @@ function renderPlayerScreen() {
       }
       playUiTap(); plPreview = null; L[kind] = it.id; plCommit();
     });
+  } else if (plTab === 'style') { renderStyleTab(body);   // Nov 16: STYLE collections
   } else {
     body.innerHTML = `<div class="plLbl"><span>NAME</span></div><input class="plName" id="plNameIn" maxlength="14" autocomplete="off" spellcheck="false" aria-label="Player name" value="${(L.name || '').replace(/"/g, '')}">
       <div class="plLbl" style="margin-top:4px"><span>TEAM NAME</span><span>OPTIONAL</span></div><input class="plName" id="plTeamIn" maxlength="16" autocomplete="off" spellcheck="false" aria-label="Team name" placeholder="E.G. ${(L.name || 'JOE').split(' ')[0]}'S XI" value="${(L.team || '').replace(/"/g, '')}">
@@ -11161,7 +11162,13 @@ function renderKitBag(container) {
   let kbRev = null; try { kbRev = JSON.parse(SAVE.getItem('flickyKitRevealed') || 'null'); } catch (e) {}
   if (!Array.isArray(kbRev)) { kbRev = Object.keys(itemLevels).filter(id => (itemLevels[id] || 0) >= 1); SAVE.setItem('flickyKitRevealed', JSON.stringify(kbRev)); }
   const kbRevNow = [];
-  const grid = items.map((it, idx) => {
+  // Nov 16 (Golf Clash review): sort the list — owned first, by level, rarity or any stat
+  const RO = { common: 0, rare: 1, epic: 2, legendary: 3 }, sk = window.kbSortKey || 'owned';
+  const order = items.map((it, idx) => ({ it, idx })).sort((A, B) => { const a = A.it, b = B.it, la = itemLevels[a.id] || 0, lb = itemLevels[b.id] || 0;
+    if (sk === 'level') return lb - la || RO[b.rarity] - RO[a.rarity]; if (sk === 'rarity') return RO[b.rarity] - RO[a.rarity] || lb - la;
+    if (sk !== 'owned' && a.stats && a.stats[sk] != null) return statAtLevel(b, sk, Math.max(1, lb)) - statAtLevel(a, sk, Math.max(1, la));
+    return (lb >= 1) - (la >= 1) ? (lb >= 1 ? 1 : -1) : A.idx - B.idx; });
+  const grid = order.map(({ it, idx }) => {
     const st = kbState(slot, it);
     const foot = st.owned ? (st.isMax ? 'LV ' + st.level + ' · MAX' : `LV ${st.level} · ${st.cards}/${st.needed}`) : (st.cards > 0 ? `${st.cards}/${st.needed} · ${st.lockShort}` : st.lockShort);
     const isNew = kbIsNew(it);
@@ -11189,7 +11196,7 @@ function renderKitBag(container) {
         <div class="k3Top">${kbTile(slot, eqItem, 0, est)}<div class="k3Info"><span class="kbEq">EQUIPPED · LV ${est.level}</span><span class="kbName">${kbEsc(eqItem.name)}</span><span class="k3Stats">${stats}</span></div></div>
         <div class="k3Bot"><span class="k3Bar${est.ready ? ' ready' : ''}"><i style="width:${pct}%"></i><em>${est.isMax ? 'MAX LEVEL' : `CARDS ${est.cards}/${est.needed}`}</em></span>
           ${est.isMax ? '' : `<button class="k3Up${est.ready ? ' ready' : ''}" data-act="up">${est.ready ? `UPGRADE <i class="hIco hi-coin"></i>${est.cost.toLocaleString()}` : 'UPGRADE'}</button>`}</div></div>
-      <div class="kbListHead" style="margin-top:12px"><span>ALL ${KB_PLURAL[slot]} · ${ownedCount}/${items.length}</span><span class="k3Rate">KIT ${score}<b style="background:${gr.color}">${gr.letter}</b><button class="kbBest" data-best>BEST KIT</button></span></div>
+      <div class="kbListHead" style="margin-top:12px"><span>ALL ${KB_PLURAL[slot]} · ${ownedCount}/${items.length}<button class="kbSortB" data-kbsort>${{ owned: 'OWNED', level: 'LEVEL', rarity: 'RARITY' }[sk] || ((STAT_INFO[sk] || {}).short || sk).toUpperCase()} ▾</button></span><span class="k3Rate">KIT ${score}<b style="background:${gr.color}">${gr.letter}</b><button class="kbBest" data-best>BEST KIT</button></span></div>
       <div class="kbGrid" style="margin-top:8px">${grid}</div></div></div></div>`;
   } else
   container.innerHTML = `<div class="kb v2">${kbRating()}${kbSetsStrip()}<div class="kbBody"><div class="kbRail">${tabs}</div><div>
@@ -11205,6 +11212,8 @@ function renderKitBag(container) {
   card.addEventListener('click', e => { if (e.target.closest('[data-act="up"]')) return; hapticTap(); kbShowroom(slot, +card.dataset.idx); });
   kbBindStats(container);
   const bb = container.querySelector('[data-best]'); if (bb) bb.addEventListener('click', () => { hapticTap(); kbEquipBest(); });
+  const so = container.querySelector('[data-kbsort]'); if (so) so.addEventListener('click', e => { e.stopPropagation(); hapticTap();
+    const keys = ['owned', 'level', 'rarity'].concat(Object.keys(eqItem.stats || {})); window.kbSortKey = keys[(keys.indexOf(window.kbSortKey || 'owned') + 1) % keys.length]; renderKitBag(container); });
   const sb = container.querySelector('[data-sets]'); if (sb) sb.addEventListener('click', () => { hapticTap(); kbSetsView(); });
   const ub = container.querySelector('.kbCard [data-act="up"]');
   if (ub) ub.addEventListener('click', e => { e.stopPropagation(); hapticTap(); kbUpgrade(slot, eqItem); });
@@ -13381,6 +13390,7 @@ function endGame() {
       if (window._freeEntry) coinsEarned = 0;   // a free entry has nothing to refund
     }
     if (window.chase && window.chase.boosters && window.chase.boosters.includes('golden_ball')) coinsEarned *= GAME_CONFIG.kit.boosters.golden_ball.effect.coinMult;
+    try { const pk = stylePerkCoins(); if (pk && coinsEarned > 0) coinsEarned = Math.round(coinsEarned * (1 + pk / 100)); } catch (e) {}   // Nov 16: STYLE coin bonus
     trophyState.count = Math.max(0, trophyState.count + trophyDelta);
     trophyState.best = Math.max(trophyState.best || 0, trophyState.count);
     saveTrophies();
@@ -21363,6 +21373,8 @@ function renderToday() {
       <span class="lgPill"><i class="hIco hi-coin"></i><span>${career.coins.toLocaleString()}</span></span><span class="lgPill"><i class="hIco hi-gem"></i><span>${gems.toLocaleString()}</span></span></div>
     <div class="sh2 sh3 bgA t3">
       ${calReady ? `<button class="t3Cal" data-dailypop>${t3RewardArt(cal[d.calDay % cal.length])}<span>DAY ${d.calDay % cal.length + 1} REWARD WAITING</span><b>CLAIM ›</b></button>` : ''}
+      ${(() => { try { const a = adCalState(), n = a.got.filter(Boolean).length, rd = adCalReady(), r = adCalReward(adCalDay());
+        return `<button class="t3Cal t3Bonus${rd ? '' : ' done'}" data-adcalopen>${t3RewardArt(r)}<span>${rd ? "TODAY'S BONUS · WATCH A VIDEO" : 'BONUS COLLECTED TODAY'}<small>${n} / 7 THIS WEEK · ALL 7 = GOLD BAG</small></span><b>${rd ? '▶ WATCH' : 'VIEW ›'}</b></button>`; } catch (e) { return ''; } })()}
       <div class="t3Bag${all && !m.dailyBag ? ' ready' : ''}${m.dailyBag ? ' got' : ''}"><div class="gcArt"><img class="gcPic" alt="" src="${CHEST_IMG_SRC[bagT]}"></div>
         <div class="t"><span class="gcTimer">NEW MISSIONS IN <b>${fmtLeft(toMid)}</b></span><b>DAILY ${bagNm(bagT)} BAG</b><small>Finish all 3 missions</small>
           <div class="segs">${list.map(x => `<i class="${x.claimed ? 'on' : ''}"></i>`).join('')}</div></div>
@@ -21384,7 +21396,7 @@ function showDailyPop(force) {
   const strip = cal.map((x, i) => `<span class="${i < cur ? 'done' : i === cur ? 'now' : ''}${i === cal.length - 1 ? ' big' : ''}"><em>${t3RewardArt(x)}</em><small>${i < cur ? '✓' : 'DAY ' + (i + 1)}</small></span>`).join('');
   p.innerHTML = `<div class="c"><span class="dk">DAILY REWARD</span><b class="dn">DAY ${cur + 1}</b>
     <div class="art">${t3RewardArt(r)}</div><b class="rn">${t3RewardText(r)}</b>
-    <button class="gcBuy" id="dpClaim">CLAIM</button><div class="strip">${strip}</div>
+    <button class="gcBuy" id="dpClaim">CLAIM</button>${(() => { try { return adCalReady() ? `<button class="dpBonus" data-adcalopen>▶ + WATCH A VIDEO FOR TODAY'S BONUS</button>` : ''; } catch (e) { return ''; } })()}<div class="strip">${strip}</div>
     <small class="nx">${cur < cal.length - 1 ? `Tomorrow: ${t3RewardText(cal[cur + 1])}` : 'Day 7! A new week starts tomorrow.'} · missed days wait for you</small></div>`;
   p.classList.add('show'); window._dailyPopShown = true; return true;
 }
@@ -21397,6 +21409,7 @@ function maybeDailyPop() {
 document.addEventListener('click', e => {
   const t = e.target && e.target.closest ? e.target : null; if (!t) return;
   if (t.closest('[data-dailypop]')) { showDailyPop(true); return; }
+  if (t.closest('[data-adcalopen]')) { e.stopImmediatePropagation(); const dp = document.getElementById('dailyPop'); if (dp && dp.classList.contains('show')) { const l = claimCalendar(); dp.classList.remove('show'); if (l) showMessage('+ ' + l, '#FFC93A', 2000); } openAdCal(); return; }
   if (t.closest('#dpClaim')) { const l = claimCalendar(); document.getElementById('dailyPop').classList.remove('show'); setTimeout(() => { try { maybeOfferPopup(); } catch (err) {} }, 900); if (l) { showMessage('+ ' + l, '#FFC93A', 2200); try { hapticBig(); playAchievementChime(); } catch (err) {} }
     try { updateTodayBadge(); updateMenuHUD(); } catch (err) {} if (document.getElementById('todayPanel').classList.contains('show')) renderToday(); return; }
   if (t.id === 'dailyPop') { t.classList.remove('show'); window._dailyPopSkipped = true; setTimeout(() => { try { maybeOfferPopup(); } catch (err) {} }, 900); return; }
@@ -22069,6 +22082,8 @@ function renderShopV2(container) {
     const mid = new Date(); mid.setHours(24, 0, 0, 0); const left = Math.max(0, mid - Date.now()), hh = Math.floor(left / 36e5), mm = Math.floor(left % 36e5 / 6e4);
     deal += wide({ attr: ' data-shelf="gift"', tint: '#22c55e', art: `<img alt="" style="width:100%;height:100%;object-fit:contain;padding:10px;box-sizing:border-box" src="${g.gems ? REWARD_HEAP_ART.gems_s : g.bag && typeof CHEST_IMG_SRC !== 'undefined' ? CHEST_IMG_SRC[g.bag] : REWARD_HEAP_ART.coins_s}">`, name: 'FREE DAILY GIFT', sub: gr ? `Today: ${gl}` : `Next gift in ${hh}h ${mm}m`,
       btn: gr ? 'CLAIM' : 'CLAIMED', btnCls: gr ? '' : 'goal', btnAttr: gr ? ' data-act="gift"' : ' disabled' }); } catch (e) {}
+  // Nov 16 (Joe, Golf Clash review): the 12th Man Calendar, the upgrade offer and the offers carousel
+  try { deal += upOfferShelf(wide); } catch (e) {}
   const ds = dsActive();
   if (off || featureOn('pass') || ds) {
     deal += hd('FEATURED');
@@ -22079,7 +22094,8 @@ function renderShopV2(container) {
     if (featureOn('pass')) { const P = GAME_CONFIG.season.pass, t = passTier(), into = passState().xp - t * P.xpPerTier;
       deal += wide({ attr: ' data-shelf="pass"', tint: '#e8a21a', art: img(CHEST_IMG_SRC.gold), timer: `ENDS IN <b>${passDaysLeft()} DAY${passDaysLeft() === 1 ? '' : 'S'}</b>`, name: `FLICKY PASS · ${PASS_MONTH_NAMES[_nowDate().getMonth()]}`,
         mid: `<div class="gcBar"><i style="width:${t >= P.tiers ? 100 : Math.max(4, into / P.xpPerTier * 100)}%"></i><span>TIER ${t} / ${P.tiers}</span></div>`,
-        sub: passPremiumActive() ? 'Premium active' : "This month's kit · 600 gems · gold bags", btn: passPremiumActive() ? 'OPEN' : storePrice('pass_premium', P.premium), btnAttr: ' data-act="pass"' }); }
+        sub: passPremiumActive() ? 'Premium active' : "This month's kit · 600 gems · gold bags", btn: passPremiumActive() ? 'OPEN' : storePrice('pass_premium', P.premium), btnAttr: ' data-act="pass"' });
+      if (!passState().plus && storeHas('pass_max')) deal += wide({ attr: ' data-shelf="passmax"', tint: '#c8102e', art: img(CHEST_IMG_SRC.platinum || CHEST_IMG_SRC.gold), name: 'PASS MAX', sub: 'The Pass + Pass+ trim + jump 20 tiers straight away', btn: storePrice('pass_max', 19.99), btnAttr: ' data-act="passmax"' }); }
   }
   if (featureOn('deals')) {
     deal += hd('KIT DEALS', `NEW IN <b>${fmtLeft(nextDeal)}</b>`) + `<div class="gcGrid" data-shelf="kit">${deals.map((d, i) => { const got = s.deals[d.key];
@@ -22098,6 +22114,7 @@ function renderShopV2(container) {
   deal += hd('BOOSTERS', 'PACKS OF ' + GAME_CONFIG.kit.boosterPack.count) + `<div class="gcGrid four" data-shelf="boost">${['power_bat', 'lucky_grip', 'golden_ball', 'fresh_legs'].map(id =>
     tile({ tint: '#2f5fb0', name: `<span style="color:${BOOSTER_INFO[id].col}">${BOOSTER_INFO[id].short}</span>`, art: BOOST_ART[id], qty: `×${GAME_CONFIG.kit.boosterPack.count}`, note: `${BOOSTER_INFO[id].desc}<br>YOU HAVE ${boosterCount(id)}`,
       btn: GAME_CONFIG.kit.boosterPack.gems + gem, btnAttr: ` data-boost="${id}"` })).join('')}</div>`;
+  try { deal += styShopShelf(hd, tile); } catch (e) {}
   if (featureOn('jar')) deal += hd('GEM JAR', `+${J.perSix} A SIX · +${J.perFour} A FOUR`) + wide({ attr: ' data-shelf="jar"', tint: '#8a3df0', art: img(REWARD_HEAP_ART.gems_m), name: `${jar} / ${J.cap} GEMS INSIDE`,
     mid: `<div class="gcBar purple"><i style="width:${jar / J.cap * 100}%"></i><span>OPENS AT ${J.buyableFrom}</span></div>`, sub: 'Fills up as you hit boundaries in league matches',
     btn: jar < J.buyableFrom ? `${J.buyableFrom - jar} TO GO` : `${storePrice('gem_jar', J.price)}`, btnCls: jar < J.buyableFrom ? 'goal' : '', btnAttr: ' data-act="jar"' });
@@ -22110,12 +22127,13 @@ function renderShopV2(container) {
     return tile({ tint: '#7a3dd8', name: GN[i] || 'GEMS', art: img(REWARD_HEAP_ART['gems_' + gsize(i)]), qty: (first ? p.gems * 2 : p.gems).toLocaleString(),
       tag: p.tag || (i === best ? 'BEST VALUE' : ''), tagCls: !p.tag && i === best ? 'bv' : '', flag: first ? '×2 FIRST BUY' : bonus >= 5 ? `+${bonus}% MORE` : '',
       btn: `${storePrice('gems_' + p.gems, p.price)}`, attr: ` data-pack="${i}"` }); }).join('')}</div>`;
-  const CP = [[30, 500, 's', 'HANDFUL OF COINS'], [150, 3000, 'm', 'POT OF COINS'], [500, 12000, 'l', 'HEAP OF COINS']], crate = c => c[1] / c[0];
+  const CP = [[30, 500, 's', 'HANDFUL OF COINS'], [150, 3000, 'm', 'POT OF COINS'], [500, 12000, 'l', 'HEAP OF COINS'], [1200, 32000, 'l', 'CHEST OF COINS'], [3000, 90000, 'l', 'COIN MOUNTAIN']], crate = c => c[1] / c[0];
   cur += hd('COINS') + `<div class="gcGrid" data-shelf="coins">${CP.map(c => { const bonus = Math.round((crate(c) / crate(CP[0]) - 1) * 100);
-    return tile({ tint: '#d08a10', name: c[3], art: img(REWARD_HEAP_ART['coins_' + c[2]]), qty: c[1].toLocaleString(), flag: bonus >= 5 ? `+${bonus}% MORE` : '', btn: c[0] + gem, btnAttr: ` data-coins="${c[0]}:${c[1]}"` }); }).join('')}</div>`;
+    return tile({ tint: '#d08a10', name: c[3], art: img(REWARD_HEAP_ART['coins_' + c[2]]), qty: c[1].toLocaleString(), flag: bonus >= 5 ? `${bonus}% FREE!` : '', btn: c[0] + gem, btnAttr: ` data-coins="${c[0]}:${c[1]}"` }); }).join('')}</div>`;
   // ---------- MORE ----------
   const more = [];
   if (!adsRemoved) more.push(tile({ tint: '#2fa05a', name: 'NO ADS', art: '<i class="hIco hi-noads gcNoAdArt"></i>', qty: '+100' + gem, note: 'No ads, ever. Ads you choose still work.', btn: `${storePrice('no_ads', O.offers.noAds.price)}`, btnAttr: ' data-act="noads"' }));
+  { const ac = adCoinsState(); more.push(tile({ tint: '#2fa05a', name: 'FREE COINS', art: img(REWARD_HEAP_ART.coins_m || REWARD_HEAP_ART.coins_s) + '<span class="gcPlay">▶</span>', qty: '+' + adCoinsAmount().toLocaleString(), note: `Watch an ad · ${ac.n}/${AD_COINS_PER_DAY} today`, btn: ac.n >= AD_COINS_PER_DAY ? 'TOMORROW' : 'FREE', btnCls: ac.n >= AD_COINS_PER_DAY ? 'goal' : '', btnAttr: ' data-act="adcoins"' })); }
   more.push(tile({ tint: '#2f6fd0', name: 'FREE GEMS', art: img(REWARD_HEAP_ART.gems_s) + '<span class="gcPlay">▶</span>', qty: '+' + GEM_AD_REWARD, note: `Watch an ad · ${getDailyAdWatches()}/${GEM_AD_DAILY_MAX} today`, btn: 'FREE', btnAttr: ' data-act="ad"' }));
   if (!hasExtraChestSlot()) more.push(tile({ tint: '#b0662a', name: '5TH BAG SLOT', art: img(CHEST_IMG_SRC.bronze), note: 'Hold one extra bag', btn: GEM_EXTRA_SLOT_COST + gem, btnAttr: ' data-act="slot"' }));
   const moreHtml = hd('MORE') + `<div class="gcGrid" data-shelf="more">${more.join('')}</div><button class="gcOdds" data-act="odds">BAG ODDS · exactly what's in every bag ›</button>`;
@@ -23350,7 +23368,7 @@ function openEventShopSheet() {
     <div class="esGrid">${items.map(({ it, i }) => { const own = shopOwned(it), eq = own && shopEquipped(it);
       const btn = own ? `<button data-esbuy="${i}" class="${eq ? 'on' : ''}">${eq ? 'EQUIPPED' : 'EQUIP'}</button>` : it.price.cur ? `<button data-esbuy="${i}">${cur}${it.price.cur}</button>` : `<button data-esbuy="${i}" class="gem"><i class="hIco hi-gem"></i>${it.price.gems}</button>`;
       return `<div class="esItem${own ? ' own' : ''}"><div class="esArt">${prev(it)}</div><b>${it.name}</b><small>${it.kind === 'bat' ? 'BAT WRAP' : it.kind === 'celeb' ? 'SIX CELEBRATION' : it.kind === 'trail' ? 'BALL TRAIL' : it.kind === 'trim' ? 'KIT TRIM' : it.kind === 'hat' ? 'HEADWEAR' : it.kind === 'reward' ? 'BUY AS OFTEN AS YOU LIKE' : 'KIT'}${it.alt ? ' · OR GEMS' : ''}</small>${btn}</div>`; }).join('')}</div>
-    <p class="esNote">Looks only — nothing here changes your stats. Shop items leave when the event ends on ${new Date(ev.end + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}.</p></div>`;
+    <p class="esNote">Looks only — nothing here changes your stats. Equip them any time in Player › Style. Shop items leave when the event ends on ${new Date(ev.end + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}.</p></div>`;
   el.classList.add('show');
 }
 document.addEventListener('click', e => { const t = e.target && e.target.closest ? e.target : null; if (!t) return;
@@ -24984,5 +25002,357 @@ if (TEASER_ON) (function () {
     return r; };
 })();
 </script>
+<script>
+// ═══ STYLE, 12TH MAN CALENDAR & SHOP UPGRADES (Nov 16, Joe's Golf Clash shop review — "build all 11") ═══
+// STYLE = looks-only collections (duel chat lines, six celebrations, ball trails, bat wraps); most carry a small
+// coin perk (+n% coins on wins) so there's a reason to collect and something to spend gems on.
+// 12TH MAN CALENDAR = one optional video a day, Mon–Sun, a reward a day + a bonus for all seven.
+const STY_KINDS = [['chat', 'CHAT'], ['celeb', 'SIXES'], ['trail', 'TRAILS'], ['bat', 'BAT WRAPS']];
+const STY_KIND_NAME = { chat: 'DUEL CHAT', celeb: 'SIX CELEBRATION', trail: 'BALL TRAIL', bat: 'BAT WRAP' };
+const STY_PRICE = { common: 60, rare: 150, epic: 400, legendary: 1200 };
+const STYLE_ITEMS = (() => {
+  const out = [], C = (id, kind, name, rarity, extra) => out.push(Object.assign({ id, kind, name, rarity, gems: STY_PRICE[rarity] }, extra || {}));
+  // duel chat — six free to start
+  [['GOOD LUCK', 1], ['SHOT!', 1], ['WELL PLAYED', 1], ['UNLUCKY', 1], ['HOWZAT!', 1], ['GOOD GAME', 1],
+   ['WHAT A SIX!', 'common'], ['BOWLED HIM!', 'common'], ['PLAY AND MISS', 'common'], ['EDGED IT!', 'common'], ['LEAVE IT!', 'common'], ['TEA TIME', 'common'],
+   ['OUT OF THE GROUND!', 'rare'], ['CATCHES WIN MATCHES', 'rare'], ['DRINKS BREAK?', 'rare'], ['RAIN DELAY…', 'rare'], ['NERVOUS NINETIES', 'rare'], ['STILL STANDING', 'rare'],
+   ["THAT'S CRICKET", 'epic'], ['TOO EASY', 'epic'], ['ANOTHER ONE!', 'epic'], ['CLUB CRICKET VIBES', 'epic'], ['MAXIMUM!', 'legendary'], ['CAPTAIN’S KNOCK', 'legendary']]
+    .forEach(([t, r], i) => C('ch' + i, 'chat', t, r === 1 ? 'common' : r, r === 1 ? { free: true, gems: 0 } : { gems: { common: 40, rare: 80, epic: 150, legendary: 300 }[r] }));
+  // six celebrations (perk: +% coins on wins)
+  C('cel_confetti', 'celeb', 'CONFETTI CANNON', 'common', { fx: 'confetti', perk: 2 });
+  C('cel_stars', 'celeb', 'STAR BURST', 'rare', { fx: 'stars', perk: 3 });
+  C('cel_bunting', 'celeb', 'VILLAGE BUNTING', 'rare', { fx: 'bunting', perk: 3 });
+  C('cel_goldrain', 'celeb', 'GOLD RAIN', 'epic', { fx: 'goldrain', perk: 5 });
+  C('cel_fireworks', 'celeb', 'FIREWORKS', 'epic', { fx: 'firework', perk: 6 });
+  C('cel_supernova', 'celeb', 'SUPERNOVA', 'legendary', { fx: 'supernova', perk: 9 });
+  // ball trails
+  C('tr_mint', 'trail', 'MINT STREAK', 'common', { trail: 'mint', perk: 1 });
+  C('tr_rose', 'trail', 'ROSE STREAK', 'common', { trail: 'rose', perk: 1 });
+  C('tr_frost', 'trail', 'FROST TRAIL', 'rare', { trail: 'frost', perk: 3 });
+  C('tr_royal', 'trail', 'ROYAL TRAIL', 'rare', { trail: 'royal', perk: 3 });
+  C('tr_ember', 'trail', 'EMBER COMET', 'epic', { trail: 'ember', perk: 5 });
+  C('tr_spook', 'trail', 'GHOST LIGHT', 'epic', { trail: 'spook', perk: 5 });
+  C('tr_gilded', 'trail', 'GILDED COMET', 'legendary', { trail: 'gilded', perk: 8 });
+  // bat wraps (colours over the equipped bat: c = blade, a = handle grip, s = sticker)
+  C('bw_classic', 'bat', 'CLUB CLASSIC', 'common', { look: { c: '#efd9a8', a: '#1d4f91', s: '#c8102e' }, perk: 1 });
+  C('bw_mint', 'bat', 'MINT CONDITION', 'common', { look: { c: '#e8e0c8', a: '#2fb37a', s: '#2fb37a' }, perk: 1 });
+  C('bw_tiger', 'bat', 'TIGER STRIPE', 'rare', { look: { c: '#f2a23a', a: '#1b1b1b', s: '#1b1b1b' }, perk: 3 });
+  C('bw_ocean', 'bat', 'DEEP OCEAN', 'rare', { look: { c: '#d9c49a', a: '#0e5aa8', s: '#2fb7e8' }, perk: 3 });
+  C('bw_carbon', 'bat', 'CARBON', 'epic', { look: { c: '#3a3d44', a: '#111316', s: '#FFC93A' }, perk: 5 });
+  C('bw_neon', 'bat', 'NEON NIGHTS', 'epic', { look: { c: '#2a1f44', a: '#ff4fa3', s: '#4ce0ff' }, perk: 5 });
+  C('bw_gold', 'bat', 'SOLID GOLD', 'legendary', { look: { c: '#f2c650', a: '#8a5a0c', s: '#fff2b0' }, perk: 8 });
+  C('bw_union', 'bat', 'RED, WHITE & BLUE', 'rare', { look: { c: '#f4f4f0', a: '#1d4fb8', s: '#d8202c' }, perk: 3 });
+  // Nov 16: painted icons (art/style/style_sheet_1.png, trails recoloured from the comet icon)
+  out.forEach(it => { if (it.kind !== 'chat') it.icon = it.id === 'cel_fireworks' ? 'assets/ui/events/firework.webp' : it.id === 'tr_spook' ? 'assets/ui/style/tr_spook.webp' : 'assets/ui/style/' + it.id + '.webp'; });
+  return out;
+})();
+Object.assign(TRAIL_STYLES, {
+  mint: { core: '#F2FFF8', mid: '#5BE6A8', edge: '#14A37A', sparks: ['#BFFFE2', '#FFFFFF'] },
+  rose: { core: '#FFF2F7', mid: '#FF7FB4', edge: '#D6336C', sparks: ['#FFC2DA', '#FFFFFF'] },
+  royal: { core: '#F1EEFF', mid: '#8A7DFF', edge: '#3A2FB8', sparks: ['#C9C2FF', '#FFE27A'] },
+  ember: { core: '#FFF1D6', mid: '#FF7A1A', edge: '#B3200E', sparks: ['#FFB21A', '#FF5A14', '#FFE27A'] },
+  gilded: { core: '#FFFDF0', mid: '#FFD54A', edge: '#C98A0C', sparks: ['#FFF2B0', '#FFFFFF', '#FFC93A'] },
+});
+STYLE_ITEMS.forEach(it => { if (it.kind === 'bat') EVENT_BATS[it.id] = it.look; });
+function styEventItems() { const out = [], seen = {};
+  const add = (it, from) => { const id = it.id || it.cos; if (!id || seen[id] || !['celeb', 'trail', 'bat'].includes(it.kind)) return; seen[id] = 1;
+    out.push({ id, kind: it.kind, name: it.name || it.label || id.toUpperCase(), rarity: 'epic', ev: from, fx: it.fx, trail: it.trail, look: it.look || EVENT_BATS[id], icon: it.icon, gems: 0 }); };
+  (GAME_CONFIG.season.events || []).forEach(ev => (ev.shop || []).concat(ev.track || []).forEach(it => add(it, ev.name)));
+  ((GAME_CONFIG.trails || {}).items || []).forEach(it => add(it, 'SPECIAL')); return out; }
+function styAll() { return STYLE_ITEMS.concat(styEventItems()); }
+function styItem(id) { return styAll().find(x => x.id === id) || null; }
+function styOwned(it) { return !!(it.free || ownedCos.includes(it.id + ':' + it.kind)); }
+function styFx(it) { return it.fx || 'firework'; }
+function styChat() { const L = curLook(); const own = STYLE_ITEMS.filter(x => x.kind === 'chat' && styOwned(x)); const pick = (L.chat || []).filter(id => { const it = styItem(id); return it && styOwned(it); });
+  return (pick.length ? pick : own.slice(0, 6).map(x => x.id)).slice(0, 6); }
+function styEquipped(it) { const L = curLook(); return it.kind === 'chat' ? styChat().includes(it.id) : it.kind === 'celeb' ? L.celeb === it.id : it.kind === 'trail' ? L.trail === it.id : L.batWrap === it.id; }
+// the perk: +n% coins on every win, from whatever is equipped
+function stylePerkCoins() { const L = curLook(); let p = 0; [L.celeb, L.trail, L.batWrap].forEach(id => { const it = id && styItem(id); if (it && styOwned(it) && it.perk) p += it.perk; }); return p; }
+function styEquip(it) {
+  if (!playerLook) playerLook = curLook(); const L = playerLook;
+  if (it.kind === 'chat') { let c = styChat(); if (c.includes(it.id)) { if (c.length <= 1) return; c = c.filter(x => x !== it.id); } else { if (c.length >= 6) c = c.slice(1); c = c.concat(it.id); } L.chat = c; }
+  else shopEquip(it);
+  savePlayerLook();
+}
+function styBuy(it, after) {
+  if (styOwned(it)) { styEquip(it); after && after(); return; }
+  bagConfirm(it.gems, `Unlock ${it.name}?`, () => {
+    if (gems < it.gems) { showMessage('Not enough gems!', '#ff6b6b', 1500); return; }
+    gems -= it.gems; saveEquipmentState(); ownedCos.push(it.id + ':' + it.kind); SAVE.setItem('flickyCosmetics', JSON.stringify(ownedCos));
+    styEquip(it); try { hapticBig(); playAchievementChime(); } catch (e) {}
+    showMessage(`${it.name} — ${it.kind === 'chat' ? 'ADDED TO YOUR CHAT' : 'EQUIPPED'}`, '#FFC93A', 2000);
+    track('style_buy', { item: it.id, kind: it.kind, gems: it.gems }); after && after();
+  });
+}
+// six celebrations + trails: the permanent STYLE items join the event ones
+{ const _cf = celebFx; celebFx = function () { const L = curLook(), it = L.celeb && styItem(L.celeb);
+    if (!it || it.ev) return _cf.apply(this, arguments); if (!styOwned(it)) return; styCelebrate(it.fx); }; }
+{ const _ti = trailItem; trailItem = function (id) { const it = STYLE_ITEMS.find(x => x.id === id); return it && it.kind === 'trail' ? it : _ti(id); }; }
+function styCelebrate(fx, inBox) {
+  const box = document.createElement('div'); box.className = 'celFx ' + fx + (inBox ? ' prev' : ''); let h = ''; const R = Math.random;
+  const C = ['#FFD54A', '#FF4FA3', '#4CE06A', '#5AC8FF', '#FF7A1A', '#B48CFF'];
+  if (fx === 'confetti') for (let i = 0; i < 70; i++) h += `<i style="left:${50 + (R() - .5) * 20}%;--dx:${(R() - .5) * 140}vw;--dy:${-30 - R() * 50}vh;--r:${R() * 900 - 450}deg;background:${C[i % 6]};animation-delay:${R() * .25}s"></i>`;
+  else if (fx === 'stars' || fx === 'supernova') { const n = fx === 'supernova' ? 3 : 2; for (let k = 0; k < n; k++) { const x = 20 + R() * 60, y = 15 + R() * 30;
+      for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; h += `<i style="left:${x}%;top:${y}%;--dx:${Math.cos(a) * 90}px;--dy:${Math.sin(a) * 90}px;animation-delay:${k * .25}s;color:${fx === 'supernova' ? '#FFE27A' : C[(i + k) % 6]}">★</i>`; } }
+    if (fx === 'supernova') h += '<b class="snRing"></b><b class="snRing two"></b><b class="snSix">SIX!</b>'; }
+  else if (fx === 'goldrain') for (let i = 0; i < 40; i++) h += `<i style="left:${R() * 100}%;animation-delay:${R() * .9}s;animation-duration:${1.4 + R()}s"></i>`;
+  else if (fx === 'bunting') { for (let r = 0; r < 2; r++) { h += `<span class="bt" style="top:${8 + r * 9}%;animation-delay:${r * .2}s">`; for (let i = 0; i < 16; i++) h += `<i style="border-top-color:${C[(i + r) % 6]}"></i>`; h += '</span>'; } }
+  else if (fx === 'firework' || fx === 'snow') { box.className = 'celFx ' + fx + (inBox ? ' prev' : '');
+    if (fx === 'snow') for (let i = 0; i < 46; i++) h += `<i style="left:${R() * 100}%;animation-delay:${R() * .9}s;animation-duration:${1.8 + R() * 1.4}s;width:${5 + R() * 8}px;height:${5 + R() * 8}px"></i>`;
+    else for (let k = 0; k < 4; k++) { const x = 15 + R() * 70, y = 12 + R() * 35, c = C[k]; for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2; h += `<i style="left:${x}%;top:${y}%;--dx:${Math.cos(a) * 70}px;--dy:${Math.sin(a) * 70}px;background:${c};animation-delay:${k * .22}s"></i>`; } } }
+  box.innerHTML = h; (inBox || document.body).appendChild(box); setTimeout(() => box.remove(), 3400);
+}
+// small previews drawn in code: a bubble, a burst, a streak, a bat
+function styPreview(it) {
+  if (it.icon) return `<img class="styIcon" alt="" src="${it.icon}">`;
+  if (it.kind === 'chat') return `<span class="styBub">${it.name}</span>`;
+  if (it.kind === 'trail') { const S = TRAIL_STYLES[it.trail] || TRAIL_STYLES.comet; return `<span class="styTr" style="--e:${S.edge};--m:${S.mid};--c:${S.core}"><i></i></span>`; }
+  if (it.kind === 'bat') { const k = it.look; return `<svg class="styBat" viewBox="0 0 40 100" aria-hidden="true"><rect x="16.5" y="2" width="7" height="34" rx="3.5" fill="${k.a}" stroke="#050A14" stroke-width="2.5"/><path d="M12 36h16l2 56q0 6-10 6t-10-6z" fill="${k.c}" stroke="#050A14" stroke-width="2.5"/><path d="M14 46h12v14H14z" fill="${k.s}" opacity=".9"/><path d="M15 40l1 52" stroke="#fff" stroke-width="2.5" opacity=".35"/></svg>`; }
+  const G = { confetti: '✦✧✦', stars: '★', bunting: '▼▼▼', goldrain: '●●●', firework: '✺', supernova: '✷', snow: '❄' }[it.fx] || '★';
+  return `<span class="styCel ${it.fx}">${G}</span>`;
+}
+// ── the STYLE tab (Player screen) ──
+let styKind = 'chat', stySort = 'collected';
+function renderStyleTab(body) {
+  const items = styAll().filter(x => x.kind === styKind && (!x.ev || styOwned(x) || (activeEvent() && activeEvent().name === x.ev))), RO = { common: 0, rare: 1, epic: 2, legendary: 3 };
+  const got = items.filter(styOwned).length, perk = stylePerkCoins();
+  const sorted = items.slice().sort((a, b) => stySort === 'rarity' ? RO[b.rarity] - RO[a.rarity] : stySort === 'perk' ? (b.perk || 0) - (a.perk || 0) : (styOwned(b) - styOwned(a)) || (RO[a.rarity] - RO[b.rarity]));
+  const sel = styKind === 'chat' ? `<div class="plLbl"><span>IN YOUR DUEL CHAT</span><span>${styChat().length} / 6</span></div><div class="styChatSel">${styChat().map(id => `<span class="styBub on">${styItem(id).name}</span>`).join('')}</div>` : '';
+  body.innerHTML = `<div class="styTabs">${STY_KINDS.map(([k, l]) => `<button data-styk="${k}" class="${k === styKind ? 'on' : ''}">${l}</button>`).join('')}</div>
+    ${perk ? `<div class="styPerk">STYLE BONUS <b>+${perk}% COINS</b> ON EVERY WIN</div>` : '<div class="styPerk dim">Sixes, trails and bat wraps give a small coin bonus on every win</div>'}
+    ${sel}<div class="plLbl"><span>COLLECTED ${got} / ${items.length}</span><span class="stySort">SORT <button data-stys>${stySort.toUpperCase()}</button></span></div>
+    <div class="styGrid">${sorted.map(it => { const own = styOwned(it), eq = own && styEquipped(it);
+      return `<button class="styIt${own ? '' : ' lk'}${eq ? ' eq' : ''}" data-sty="${it.id}" style="--rc:${rarityColor(it.rarity)}"><span class="styArt">${styPreview(it)}</span>
+        ${it.kind === 'chat' ? '' : `<b>${it.name}</b>`}${it.perk ? `<em>+${it.perk}% COINS</em>` : ''}
+        ${it.ev ? `<em class="styEv">${it.ev}</em>` : ''}<span class="styFoot">${eq ? (it.kind === 'chat' ? 'IN CHAT' : 'EQUIPPED') : own ? (it.kind === 'chat' ? 'ADD' : 'EQUIP') : it.ev ? 'EVENT SHOP' : `<i class="hIco hi-gem"></i>${it.gems}`}</span></button>`; }).join('')}</div>
+    <p class="styNote">Everything you own lives here, event items too. Looks only — plus the small coin bonus. Sixes play on every six; trails follow every shot; chat lines appear on duel results.</p>`;
+  body.querySelectorAll('[data-styk]').forEach(b => b.onclick = () => { try { playUiTap(); } catch (e) {} styKind = b.dataset.styk; renderStyleTab(body); });
+  const sb = body.querySelector('[data-stys]'); if (sb) sb.onclick = () => { try { playUiTap(); } catch (e) {} stySort = { collected: 'rarity', rarity: 'perk', perk: 'collected' }[stySort]; renderStyleTab(body); };
+  body.querySelectorAll('[data-sty]').forEach(b => b.onclick = () => { const it = styItem(b.dataset.sty); try { playUiTap(); hapticTap(); } catch (e) {}
+    if (styOwned(it)) { styEquip(it); if (it.kind === 'celeb' && styEquipped(it)) { if (it.ev) celebFx(); else styCelebrate(it.fx); } renderStyleTab(body); try { refreshPlayerArt(); } catch (e) {} return; }
+    if (it.ev) { showMessage(`Get ${it.name} in the ${it.ev} shop`, '#7fd0ff', 2000); return; }
+    if (it.kind === 'celeb') styCelebrate(it.fx);   // try it before buying
+    styBuy(it, () => { renderStyleTab(body); try { renderPlayerScreen(); } catch (e) {} }); });
+}
+// ── duel chat on the duel result: send one of your lines, the rival answers ──
+{ const _sdr = showDuelResult; showDuelResult = function (u) { const r = _sdr.apply(this, arguments);
+    try { const el = document.getElementById('duelRes'), card = el && el.querySelector('.drCard'); if (!card) return r;
+      const row = document.createElement('div'); row.className = 'drChat'; row.innerHTML = styChat().map(id => `<button data-dc="${id}">${styItem(id).name}</button>`).join('');
+      card.appendChild(row); let busy = false;
+      row.querySelectorAll('[data-dc]').forEach(b => b.onclick = e => { e.stopPropagation(); if (busy) return; busy = true; try { playUiTap(); } catch (er) {}
+        styBubble(card.querySelector('.drP.me'), styItem(b.dataset.dc).name, 'me');
+        const free = STYLE_ITEMS.filter(x => x.kind === 'chat' && x.free), reply = (u.res === 'win' ? ['WELL PLAYED', 'GOOD GAME', 'UNLUCKY'] : u.res === 'lose' ? ['SHOT!', 'GOOD GAME', 'HOWZAT!'] : ['GOOD GAME', 'WELL PLAYED']);
+        setTimeout(() => { styBubble(card.querySelector('.drP.them'), reply[Math.floor(Math.random() * reply.length)], 'them'); busy = false; }, 900);
+        track('duel_chat', { line: b.dataset.dc }); }); } catch (e) {}
+    return r; }; }
+function styBubble(anchor, text, side) { if (!anchor) return; anchor.style.position = 'relative'; const b = document.createElement('div'); b.className = 'drBub ' + side; b.textContent = text; anchor.appendChild(b); setTimeout(() => b.remove(), 2400); }
+// ── rotating STYLE offers in the Shop: two featured (every 2 days), three daily ──
+function styFeatured() { const w = Math.floor((_nowDate().getTime()) / (2 * 864e5)), r = _seeded('styF' + w), pool = STYLE_ITEMS.filter(x => !styOwned(x) && x.kind !== 'chat' && (x.rarity === 'epic' || x.rarity === 'legendary'));
+  const out = []; while (out.length < 2 && pool.length) out.push(pool.splice(Math.floor(r() * pool.length), 1)[0]); return { items: out, ends: (w + 1) * 2 * 864e5 }; }
+function styDaily() { const r = _seeded('styD' + todayKey()), pool = STYLE_ITEMS.filter(x => !styOwned(x) && (x.rarity === 'common' || x.rarity === 'rare'));
+  const out = []; while (out.length < 3 && pool.length) out.push(pool.splice(Math.floor(r() * pool.length), 1)[0]); const mid = _nowDate(); mid.setHours(24, 0, 0, 0); return { items: out, ends: mid.getTime() }; }
+function styShopShelf(hd, tile) {
+  const f = styFeatured(), d = styDaily(), gem = '<i class="hIco hi-gem"></i>';
+  if (!f.items.length && !d.items.length) return '';
+  const t = it => tile({ tint: rarityColor(it.rarity), over: `${STY_KIND_NAME[it.kind]} · <span style="color:${rarityColor(it.rarity)}">${it.rarity.toUpperCase()}</span>`, name: it.kind === 'chat' ? '“' + it.name + '”' : it.name,
+    art: `<span class="styShopArt">${styPreview(it)}</span>`, flag: it.perk ? `+${it.perk}% COINS` : '', btn: it.gems + gem, btnAttr: ` data-stybuy="${it.id}"` });
+  return hd('STYLE', `<button class="gcLink" data-act="style">SEE ALL ›</button>`)
+    + (f.items.length ? `<div class="styShopSub"><span>FEATURED</span><em>ENDS IN <b>${fmtLeft(f.ends - Date.now())}</b></em></div><div class="gcGrid two" data-shelf="style">${f.items.map(t).join('')}</div>` : '')
+    + (d.items.length ? `<div class="styShopSub"><span>DAILY</span><em>ENDS IN <b>${fmtLeft(d.ends - Date.now())}</b></em></div><div class="gcGrid">${d.items.map(t).join('')}</div>` : '');
+}
+function openStyle(kind) { if (kind) styKind = kind; try { closeAllScreens(); } catch (e) {} try { openPlayerScreen('edit'); } catch (e) {} plTab = 'style'; renderPlayerScreen(); }
+
+// ═══ 12TH MAN CALENDAR: watch one short video a day (Mon–Sun) for that day's reward; all seven = bonus bag ═══
+const ADCAL_REWARDS = [{ bag: 'silver' }, { booster: 'power_bat', boosterCount: 2 }, { gems: 30 }, { booster: 'golden_ball', boosterCount: 2 }, { bag: 'silver' }, { coins: 'scaled' }, { gems: 50 }];
+const ADCAL_BONUS = { bag: 'gold' };
+function adCalState() { const s = SAVE.section('adcal'), wk = weekKey(); if (s.week !== wk) { s.week = wk; s.got = [0, 0, 0, 0, 0, 0, 0]; s.bonus = 0; SAVE.save(); } return s; }
+function adCalDay() { return (_nowDate().getDay() + 6) % 7; }
+function adCalReward(i) { const r = Object.assign({}, ADCAL_REWARDS[i]); if (r.coins === 'scaled') { const lg = THEMED_LEAGUES[Math.max(1, currentLeagueIdx())]; r.coins = Math.max(500, Math.round(lg.entry * 1.5 / 50) * 50); } return r; }
+function adCalReady() { const s = adCalState(); return !s.got[adCalDay()]; }
+function adCalArt(r) { return r.bag ? `<img alt="" src="${CHEST_IMG_SRC[r.bag]}">` : r.booster ? `<i class="gcImg bo-${r.booster}"></i>` : r.gems ? `<img alt="" src="${REWARD_HEAP_ART.gems_s}">` : `<img alt="" src="${REWARD_HEAP_ART.coins_m || REWARD_HEAP_ART.coins_s}">`; }
+function openAdCal() {
+  let el = document.getElementById('adCal'); if (!el) { el = document.createElement('div'); el.id = 'adCal'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '12th Man Calendar'); document.body.appendChild(el); }
+  const s = adCalState(), today = adCalDay(), mid = _nowDate(); mid.setHours(24, 0, 0, 0);
+  const cell = i => { const r = adCalReward(i), got = s.got[i], st = got ? 'got' : i < today ? 'miss' : i === today ? 'now' : 'lock';
+    const lbl = r.bag ? bagNm(r.bag) + ' BAG' : r.booster ? `${BOOSTER_INFO[r.booster].short} ×${r.boosterCount}` : r.gems ? `${r.gems} GEMS` : `${r.coins.toLocaleString()} COINS`;
+    return `<div class="acC ${st}"><span class="acD">DAY ${i + 1}</span><span class="acA">${adCalArt(r)}</span><small>${lbl}</small>
+      ${st === 'now' ? '<button class="gcBuy acGo" data-acgo>▶ WATCH</button>' : `<span class="acS">${st === 'got' ? '✔ COLLECTED' : st === 'miss' ? 'MISSED' : 'LOCKED'}</span>`}</div>`; };
+  const allGot = s.got.every(Boolean), bonusLost = s.got.some((g, i) => !g && i < today);
+  el.innerHTML = `<div class="acCard"><button class="acX" data-acx aria-label="Close">✕</button>
+    <div class="acTitle"><b>12TH MAN BONUS</b></div>
+    <div class="acTime">DAY ${today + 1} ENDS IN <b>${fmtLeft(mid - _nowDate())}</b></div><div class="acSub">WATCH A SHORT VIDEO EACH DAY FOR THAT DAY'S REWARD</div>
+    <div class="acGrid">${[0, 1, 2, 3, 4, 5, 6].map(cell).join('')}
+      <div class="acC bonus ${s.bonus ? 'got' : bonusLost ? 'miss' : ''}"><span class="acD">BONUS</span><span class="acA">${adCalArt(ADCAL_BONUS)}</span><small>COLLECT ALL 7 FOR A GOLD BAG</small>
+        ${s.bonus ? '<span class="acS">✔ COLLECTED</span>' : allGot ? '<button class="gcBuy acGo" data-acbonus>CLAIM</button>' : `<span class="acS">${bonusLost ? 'MISSED' : `${s.got.filter(Boolean).length} / 7`}</span>`}</div></div>
+    <p class="acNote">Optional videos — they still work with No Ads. A new calendar starts every Monday.</p></div>`;
+  el.classList.add('show');
+  el.onclick = e => { if (e.target === el || e.target.closest('[data-acx]')) { el.classList.remove('show'); try { updateMenuHUD(); if (document.getElementById('todayPanel').classList.contains('show')) renderToday(); } catch (er) {} return; }
+    if (e.target.closest('[data-acgo]')) { const i = adCalDay(); if (s.got[i]) return; try { playUiTap(); } catch (er) {}
+      showRewardedVideo(() => { const st = adCalState(); if (st.got[i]) return; st.got[i] = 1; SAVE.save(); const l = grantReward(adCalReward(i)); showMessage('+ ' + l, '#FFC93A', 2200);
+        track('adcal_claim', { day: i + 1 }); try { hapticBig(); playAchievementChime(); } catch (er) {} openAdCal(); });
+      return; }
+    if (e.target.closest('[data-acbonus]')) { const st = adCalState(); if (st.bonus || !st.got.every(Boolean)) return; st.bonus = 1; SAVE.save(); const l = grantReward(ADCAL_BONUS); showMessage('BONUS! + ' + l, '#FFC93A', 2400); track('adcal_bonus', {}); openAdCal(); } };
+}
+// Home button (above Invite mates), with a "!" while today's video is waiting
+(function adCalHome() {
+  return;   // Nov 16 (Joe): merged into the Today calendar — no separate Home button
+  const home = document.getElementById('overlay'); if (!home) return;
+  const b = document.createElement('button'); b.id = 'adCalBtn'; b.setAttribute('aria-label', '12th Man Calendar');
+  b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3" fill="#fff"/><rect x="3" y="5" width="18" height="5" rx="2" fill="#FF5A5A"/><rect x="7" y="2.5" width="2.4" height="5" rx="1.2" fill="#FFC93A"/><rect x="14.6" y="2.5" width="2.4" height="5" rx="1.2" fill="#FFC93A"/><path d="M10 12.6v6l5-3z" fill="#7a3dd8"/></svg><span id="adCalBadge">!</span>';
+  home.appendChild(b); b.addEventListener('click', () => { try { playUiTap(); hapticTap(); } catch (e) {} openAdCal(); });
+  const place = () => { const ref = document.getElementById('matesBtn') || document.getElementById('inboxBtn'); if (!ref || !ref.style.top) return; b.style.left = ref.style.left; b.style.top = (parseFloat(ref.style.top) - 58) + 'px';
+    const bd = document.getElementById('adCalBadge'); if (bd) bd.style.display = adCalReady() ? '' : 'none'; };
+  setTimeout(place, 1200); window.addEventListener('resize', () => setTimeout(place, 0));
+  const _uh = window.updateMenuHUD; if (typeof _uh === 'function') window.updateMenuHUD = function () { const r = _uh.apply(this, arguments); try { place(); } catch (e) {} return r; };
+})();
+
+function adCalShelf(wide) { const s = adCalState(), n = s.got.filter(Boolean).length, mid = _nowDate(), r = adCalReward(adCalDay()); mid.setHours(24, 0, 0, 0);
+  return wide({ attr: ' data-shelf="adcal"', tint: '#6a5cf0', art: `<span class="upArt">${adCalArt(r)}</span>`, timer: `DAY ${adCalDay() + 1} ENDS IN <b>${fmtLeft(mid - _nowDate())}</b>`, name: '12TH MAN CALENDAR',
+    mid: `<div class="gcBar purple"><i style="width:${n / 7 * 100}%"></i><span>${n} / 7 THIS WEEK · ALL 7 = GOLD BAG</span></div>`, sub: 'Watch a short video each day for that day\'s reward', btn: adCalReady() ? '▶ WATCH' : 'OPEN', btnAttr: ' data-act="adcal"' }); }
+// ═══ WATCH AN AD FOR COINS (Shop): 3 a day, sized to your league ═══
+const AD_COINS_PER_DAY = 3;
+function adCoinsState() { const s = SAVE.section('adcoins'); if (s.day !== todayKey()) { s.day = todayKey(); s.n = 0; SAVE.save(); } return s; }
+function adCoinsAmount() { const lg = THEMED_LEAGUES[Math.max(1, currentLeagueIdx())]; return Math.max(400, Math.round(lg.entry * 0.6 / 50) * 50); }
+function watchAdForCoins(after) { const s = adCoinsState(); if (s.n >= AD_COINS_PER_DAY) { showMessage('Daily limit reached. Come back tomorrow!', '#ff6b6b', 1800); return; }
+  showRewardedVideo(() => { const st = adCoinsState(); st.n++; SAVE.save(); const c = adCoinsAmount(); career.coins += c; saveCareerStats(); showMessage(`+${c.toLocaleString()} COINS`, '#FFC93A', 1800); track('ad_coins', { coins: c }); after && after(); }); }
+
+// ═══ REAL-MONEY OFFERS ═══
+// (a) UPGRADE OFFER: one piece of YOUR kit jumps up to 4 levels instantly, plus gems and coins. Changes every 8 hours; one free re-roll.
+Object.assign(STORE_PRODUCTS, { upgrade_offer: 9.99, pass_max: 19.99 });
+{ const _sif = storeIdFor; storeIdFor = function (pid, price) { if (pid === 'upgrade_offer' || pid === 'pass_max') return pid; return _sif(pid, price); }; }
+function storeHas(id) { const local = !window.Capacitor; return local || (FlickyStore.ready && !!FlickyStore.products[id]); }
+function upOffer() {
+  const s = shopState(), w = dealWindow();
+  if (!s.up || s.up.w !== w || (s.up.bought && s.up.w !== w)) s.up = { w, roll: 0, bought: 0 };
+  if (s.up.bought) return null;
+  const r = _seeded('up' + w + ':' + s.up.roll), cands = [];
+  EQUIP_SLOTS.forEach(sl => (EQUIPMENT[sl] || []).forEach(it => { const lv = itemLevels[it.id] || 0, mx = RARITY_MAX_LEVEL[it.rarity] || 10; if (lv >= 1 && lv <= mx - 2) cands.push({ sl, it, lv, mx, eq: equippedItems[sl] === it.id }); }));
+  if (!cands.length) return null;
+  const pool = cands.filter(c => c.eq).length && r() < .7 ? cands.filter(c => c.eq) : cands, c = pool[Math.floor(r() * pool.length)];
+  const to = Math.min(c.mx, c.lv + 4);
+  return Object.assign(c, { to, gems: 300, coins: Math.max(3000, Math.round(THEMED_LEAGUES[Math.max(1, currentLeagueIdx())].entry * 4 / 100) * 100), ends: (w + 1) * GAME_CONFIG.shop.kitDealsRefreshHours * 3600e3, canRoll: s.up.roll < 1 });
+}
+function buyUpOffer() { const o = upOffer(); if (!o) return;
+  buyRealMoney('upgrade_offer', STORE_PRODUCTS.upgrade_offer, () => { itemLevels[o.it.id] = o.to; const s = shopState(); s.up.bought = 1; SAVE.save(); saveEquipmentState();
+    track('offer_bought', { offer: 'upgrade', item: o.it.id, from: o.lv, to: o.to }); return `${o.it.name} LV ${o.lv} → ${o.to} + ` + grantReward({ gems: o.gems, coins: o.coins }); }); }
+function upOfferShelf(wide) { const o = upOffer(); if (!o || !storeHas('upgrade_offer')) return '';
+  return wide({ attr: ' data-shelf="upoffer"', tint: '#e86a1a', art: `<span class="upArt">${typeof EQUIP_ART !== 'undefined' && EQUIP_ART[o.it.id] ? `<i class="gcImg ka-${o.it.id}"></i>` : `<i class="gcImg ki-${o.sl}"></i>`}<b class="upLv">${o.lv}<i>›</i>${o.to}</b></span>`,
+    timer: `OFFER ENDS IN <b>${fmtLeft(o.ends - (Date.now() + (window._dayOffset || 0) * 864e5))}</b>`, name: 'UPGRADE OFFER!', mid: `<div class="upRow"><span>INSTANT UPGRADE · <b style="color:${rarityColor(o.it.rarity)}">${o.it.name}</b> LV ${o.lv} → ${o.to}</span></div>`,
+    sub: `+ ${o.gems} gems + ${o.coins.toLocaleString()} coins${o.canRoll ? ' · <button class="gcLink" data-act="uproll">RE-ROLL ⟳</button>' : ''}`, btn: storePrice('upgrade_offer', STORE_PRODUCTS.upgrade_offer), btnAttr: ' data-act="upbuy"' }); }
+// (b) SPECIAL OFFERS carousel: every live offer in one swipeable card (offer 1 / n), using products that already exist
+function specialOffers() {
+  const out = [], O = GAME_CONFIG.shop.offers, ev = activeEvent(), off = activeOffer(), ds = dsActive(), P = GAME_CONFIG.season.pass;
+  if (off) out.push({ id: 'offer', tag: 'NEW!', name: off.title, line: off.label, price: storePrice(storeIdFor('offer_' + off.id, off.price), off.price), ends: off.until, pct: off.id === 'starter' ? 90 : 60, art: REWARD_HEAP_ART.gems_l, act: 'offer' });
+  if (ds) { const x = GAME_CONFIG.shop.dealStreak.steps[ds.step]; out.push({ id: 'so', name: 'SUPER OVER', line: x.free ? 'A FREE HIT is waiting — claim it to unlock the next ball' : 'Six balls of deals, free and paid', price: x.free ? 'FREE HIT' : 'OPEN', ends: Date.now() + dsLeft(), pct: 0, art: SO_CARD_ART, act: 'dstreak' }); }
+  if (ev && ev.bundle && !eventState(ev).bundle) out.push({ id: 'ev', tag: 'EVENT', name: ev.name + ' BUNDLE', line: `${ev.bundle.diyas} ${ev.currency.toLowerCase()} + ${bagNm(ev.bundle.bag)} bag + ${ev.bundle.gems} gems`, price: storePrice('event_bundle', ev.bundle.price), ends: new Date(ev.end + 'T23:59:59').getTime(), pct: 70, art: CHEST_IMG_SRC[ev.bundle.bag], act: 'evbundle' });
+  if (false && !passPremiumActive()) out.push({ id: 'pass', name: 'FLICKY PASS', line: "This month's kit · 600 gems · gold bags", price: storePrice('pass_premium', P.premium), ends: Date.now() + passDaysLeft() * 864e5, pct: 80, art: CHEST_IMG_SRC.gold, act: 'pass' });
+  const jar = shopState().jar; if (jar >= O.gemJar.buyableFrom) out.push({ id: 'jar', name: 'GEM JAR', line: `${jar} gems inside — break it open`, price: storePrice('gem_jar', O.gemJar.price), pct: 50, art: REWARD_HEAP_ART.gems_m, act: 'jar' });
+  if (!adsRemoved) out.push({ id: 'noads', name: 'NO ADS', line: 'No ads, ever + 100 gems. Ads you choose still work.', price: storePrice('no_ads', O.noAds.price), pct: 0, art: REWARD_HEAP_ART.gems_s, act: 'noads' });
+  return out;
+}
+let _soIdx = 0;
+function specialOffersShelf(hd) { const L = specialOffers(); window._soOn = L.length >= 2; if (L.length < 2) return ''; _soIdx = ((_soIdx % L.length) + L.length) % L.length; const o = L[_soIdx];
+  return hd('OFFERS', `OFFER <b>${_soIdx + 1} / ${L.length}</b>`) + `<div class="soCar" data-shelf="offers"><button class="soNav" data-sonav="-1" aria-label="Previous offer">‹</button>
+    <div class="soCard">${o.tag ? `<span class="soNew">${o.tag}</span>` : ''}${o.pct ? `<span class="soPct">${o.pct}%<small>OFF</small></span>` : ''}
+      <img class="soArt" alt="" src="${o.art}"><b>${o.name}</b><small>${o.line}</small>${o.ends ? `<span class="soEnd">ENDS IN <b>${fmtLeft(o.ends - Date.now())}</b></span>` : ''}
+      <button class="gcBuy" data-act="${o.act}">${o.price}</button></div>
+    <button class="soNav" data-sonav="1" aria-label="Next offer">›</button></div>`; }
+// (c) PASS MAX: the Pass + Pass+ + jump 20 tiers, for £19.99 (needs the pass_max product in both stores)
+function buyPassMax() { const P = GAME_CONFIG.season.pass;
+  buyRealMoney('pass_max', STORE_PRODUCTS.pass_max, () => { const p = passState(); p.premium = true; p.plus = true; p.xp += 20 * P.xpPerTier; SAVE.save(); try { syncBagSlots(); } catch (e) {}
+    track('offer_bought', { offer: 'pass_max', price: STORE_PRODUCTS.pass_max });
+    const got = []; try { for (let i = 1; i <= passTier(); i++) { const l = claimPassTier(i, true); if (l) got.push(l); } } catch (e) {}
+    return 'PASS MAX ACTIVE · +20 TIERS'; }); }
+
+// Shop clicks for the new shelves
+document.addEventListener('click', e => { const t = e.target && e.target.closest ? e.target : null; if (!t || !t.closest('.sh2')) return;
+  const refresh = () => { const c = document.getElementById('equipContent'); window._shopKeepY = c ? c.scrollTop : null; try { updateEquipTopBar(); updateMenuHUD(); } catch (err) {} openEquipTab('shop'); };
+  const sb = t.closest('[data-stybuy]'); if (sb) { e.stopImmediatePropagation(); const it = styItem(sb.dataset.stybuy); if (it) { if (it.kind === 'celeb') styCelebrate(it.fx); styBuy(it, refresh); } return; }
+  const nav = t.closest('[data-sonav]'); if (nav) { e.stopImmediatePropagation(); try { playUiTap(); } catch (err) {} _soIdx += +nav.dataset.sonav; refresh(); return; }
+  const a = t.closest('[data-act]'); if (!a) return; const act = a.dataset.act;
+  if (act === 'adcal') { e.stopImmediatePropagation(); openAdCal(); }
+  else if (act === 'adcoins') { e.stopImmediatePropagation(); watchAdForCoins(refresh); }
+  else if (act === 'style') { e.stopImmediatePropagation(); openStyle(); }
+  else if (act === 'upbuy') { e.stopImmediatePropagation(); buyUpOffer(); refresh(); }
+  else if (act === 'uproll') { e.stopImmediatePropagation(); const s = shopState(); if (s.up && s.up.roll < 1) { s.up.roll++; SAVE.save(); } refresh(); }
+  else if (act === 'passmax') { e.stopImmediatePropagation(); buyPassMax(); refresh(); }
+  else if (act === 'evbundle') { e.stopImmediatePropagation(); buyEventBundle(); setTimeout(refresh, 50); }
+}, true);
+
+(function styleCss() { const css = document.createElement('style'); css.textContent = `
+  #plTabs{grid-template-columns:repeat(4,1fr)}#plTabs button{font-size:12px;letter-spacing:.03em;padding:0 2px;white-space:nowrap}
+  #playerScreen.create #plTabs{grid-template-columns:repeat(3,1fr)}#playerScreen.create #plTabs [data-pt="style"]{display:none}
+  .styTabs{display:flex;gap:6px;margin:2px 0 8px}.styTabs button{flex:1;height:34px;border-radius:10px;border:3px solid #050A14;background:linear-gradient(#2f5fb0,#1d3f7c);color:#cfe0ff;font:13px 'Lilita One','Arial Black',Arial,sans-serif;letter-spacing:.04em}
+  .styTabs button.on{background:linear-gradient(#FFE27A,#F2B21A);color:#3a2400}
+  .styPerk{font:12px 'Lilita One','Arial Black',Arial,sans-serif;color:#cfe0ff;letter-spacing:.05em;margin:0 0 6px}.styPerk b{color:#7CF29A;font-weight:400}.styPerk.dim{color:#8fa6cf;font:12px system-ui,sans-serif}
+  .stySort button{height:24px;border-radius:8px;border:2px solid #050A14;background:#7CF29A;color:#0b3a1c;font:11px 'Lilita One','Arial Black',Arial,sans-serif;padding:0 8px;margin-left:4px}
+  .styChatSel{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+  .styGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .styIt{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px 0;border-radius:12px;border:3px solid #050A14;background:linear-gradient(#24477f,#142c55);box-shadow:inset 0 0 0 2px var(--rc);color:#fff;font:11px 'Lilita One','Arial Black',Arial,sans-serif;overflow:hidden;min-height:118px}
+  .styIt.eq{box-shadow:inset 0 0 0 3px #7CF29A}.styIt.lk .styArt{filter:saturate(.55) brightness(.8)}
+  .styIt b{font-weight:400;font-size:11px;line-height:1.05;text-align:center}.styIt em{font-style:normal;color:#7CF29A;font-size:10px}
+  .styArt{height:58px;display:flex;align-items:center;justify-content:center;width:100%}
+  .styFoot{margin-top:auto;width:100%;padding:5px 0;background:#0a1830;color:#FFE27A;display:flex;justify-content:center;align-items:center;gap:3px;font-size:12px}.styIt.eq .styFoot{background:#1f5a38;color:#9ff0b8}
+  .styFoot .hIco{width:15px;height:15px}
+  .styBub{position:relative;display:inline-block;background:linear-gradient(#ffffff,#dfe8f6);color:#14284a;border:3px solid #050A14;border-radius:12px;box-shadow:0 3px 0 #050A14,inset 0 2px 0 rgba(255,255,255,.9);padding:5px 7px;font:11px 'Lilita One','Arial Black',Arial,sans-serif;line-height:1.05;text-align:center;max-width:100%}
+  .styBub:after{content:'';position:absolute;left:12px;bottom:-8px;border:5px solid transparent;border-top-color:#050A14}
+  .styBub.on{background:linear-gradient(#FFF6D6,#FFE27A)}
+  .styTr{width:84%;height:16px;border-radius:999px;background:linear-gradient(90deg,transparent,var(--e) 30%,var(--m) 70%,var(--c));box-shadow:0 0 10px var(--m);position:relative}.styTr i{position:absolute;right:-4px;top:-3px;width:22px;height:22px;border-radius:50%;background:#fff;border:2.5px solid #050A14}
+  .styBat{height:60px}.styIcon{max-height:62px;max-width:86%;object-fit:contain;filter:drop-shadow(0 3px 2px rgba(0,0,0,.45))}.styShopArt .styIcon{max-height:84px}.styEv{color:#FFB36B !important;font-size:9px !important}
+  .styCel{font-size:46px;line-height:1;color:#FFE27A;text-shadow:0 2px 0 #050A14,0 0 12px rgba(255,214,74,.8)}.styCel.confetti{font-size:30px;color:#FF4FA3}.styCel.firework{color:#5AC8FF}.styCel.bunting{font-size:22px;color:#ff4fa3;letter-spacing:-2px}.styCel.goldrain{color:#FFC93A}.styCel.supernova{font-size:40px}
+  .styNote{font:11px system-ui,sans-serif;color:#8fa6cf;text-align:center;margin:10px 2px 0}
+  .styShopArt{display:flex;align-items:center;justify-content:center;width:100%;height:100%}.styShopArt .styBat{height:70px}
+  .styShopSub{display:flex;justify-content:space-between;align-items:center;margin:2px 4px -4px;font:12px 'Lilita One','Arial Black',Arial,sans-serif;color:#cfe0ff;letter-spacing:.06em}.styShopSub em{font-style:normal;color:#8fa6cf}.styShopSub b{color:#FFE27A;font-weight:400}
+  .gcGrid.two{grid-template-columns:repeat(2,1fr)}
+  .kbSortB{margin-left:8px;height:22px;border-radius:7px;border:2px solid #050A14;background:#7CF29A;color:#0b3a1c;font:11px 'Lilita One','Arial Black',Arial,sans-serif;padding:0 7px;vertical-align:1px;cursor:pointer}
+  .gcLink{background:none;border:0;color:#7fd0ff;font:inherit;font-size:12px;letter-spacing:.04em;padding:0;cursor:pointer;text-decoration:underline}
+  .celFx.confetti i{position:absolute;bottom:-10px;width:8px;height:13px;border-radius:2px;animation:celCf 2.6s cubic-bezier(.2,.7,.3,1) forwards}
+  @keyframes celCf{0%{transform:translate(0,0) rotate(0)}55%{transform:translate(calc(var(--dx)*.8),var(--dy)) rotate(calc(var(--r)*.6))}100%{transform:translate(var(--dx),110vh) rotate(var(--r))}}
+  .celFx.stars i,.celFx.supernova i{position:absolute;font-style:normal;font-size:22px;opacity:0;text-shadow:0 0 8px currentColor;animation:celSt 1.4s ease-out forwards}
+  @keyframes celSt{0%{opacity:1;transform:translate(0,0) scale(.4)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.3)}}
+  .celFx .snRing{position:absolute;left:50%;top:32%;width:20px;height:20px;margin:-10px;border-radius:50%;border:6px solid #FFE27A;box-shadow:0 0 30px #FFC93A;animation:snR 1s ease-out forwards}.celFx .snRing.two{animation-delay:.25s;border-color:#fff}
+  @keyframes snR{to{transform:scale(22);opacity:0}}
+  .celFx .snSix{position:absolute;left:50%;top:30%;transform:translate(-50%,-50%) scale(.2);font:64px 'Lilita One','Arial Black',Arial,sans-serif;color:#FFE27A;-webkit-text-stroke:4px #050A14;font-weight:400;animation:snS 1.6s cubic-bezier(.2,1.6,.4,1) forwards}
+  @keyframes snS{40%{transform:translate(-50%,-50%) scale(1.15)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-60%) scale(1)}}
+  .celFx.goldrain i{position:absolute;top:-20px;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFF2B0,#FFC93A 55%,#C98A0C);border:2px solid #7a4a00;animation:celGr linear forwards}
+  @keyframes celGr{to{transform:translateY(110vh) rotateY(720deg)}}
+  .celFx .bt{position:absolute;left:-5%;width:110%;display:flex;justify-content:space-between;transform:translateY(-120%);animation:celBt 2.8s ease-out forwards}.celFx .bt i{width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:22px solid}
+  @keyframes celBt{15%{transform:translateY(0)}85%{transform:translateY(0)}100%{transform:translateY(-140%)}}
+  .celFx.prev{position:absolute;inset:0;z-index:5}
+  .drChat{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}.drChat button{position:relative;background:linear-gradient(#ffffff,#dfe8f6);color:#14284a;border:3px solid #050A14;border-radius:12px;padding:5px 9px 6px;font:12px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer;box-shadow:0 3px 0 #050A14,inset 0 2px 0 rgba(255,255,255,.9)}.drChat button:active{transform:translateY(2px);box-shadow:0 1px 0 #050A14}
+  .drBub{position:absolute;bottom:100%;left:50%;transform:translate(-50%,-6px);white-space:nowrap;background:#fff;color:#11213f;border:2.5px solid #050A14;border-radius:12px;padding:5px 9px;font:14px/1.1 'Lilita One','Arial Black',Arial,sans-serif !important;-webkit-text-stroke:0 !important;text-shadow:none !important;animation:drBub 2.4s ease forwards;z-index:3}
+  @keyframes drBub{0%{opacity:0;transform:translate(-50%,4px) scale(.6)}12%{opacity:1;transform:translate(-50%,-6px) scale(1)}85%{opacity:1}100%{opacity:0}}
+  #adCalBtn{position:absolute;z-index:3;width:46px;height:46px;border-radius:50%;border:3px solid #050A14;background:linear-gradient(#8a4ff0,#5b2bb8);box-shadow:0 3px 0 #050A14;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  #adCalBtn svg{width:26px;height:26px}#adCalBadge{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:10px;background:#ff3b3b;border:2px solid #050A14;color:#fff;font:13px 'Lilita One','Arial Black',Arial,sans-serif;display:flex;align-items:center;justify-content:center}
+  #adCal{position:fixed;inset:0;z-index:9300;background:rgba(3,8,18,.72);display:none;align-items:center;justify-content:center;padding:14px}#adCal.show{display:flex}
+  #adCal .acCard{position:relative;width:min(350px,100%);max-height:calc(100% - 10px);overflow:auto;border-radius:22px;border:3px solid #050A14;background:#0E1C38;box-shadow:0 0 0 3px #FFC93A,0 14px 40px rgba(0,0,0,.6);padding:0 12px 12px;font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff;text-align:center;animation:dpIn .3s cubic-bezier(.2,1.6,.4,1) both}
+  #adCal .acX{position:absolute;top:8px;right:8px;z-index:2;width:34px;height:34px;border-radius:50%;border:3px solid #050A14;background:#14203a;color:#fff;font-size:15px;cursor:pointer;box-shadow:0 2px 0 #050A14}
+  #adCal .acTitle{margin:0 -12px 10px;padding:10px 40px 8px;background:linear-gradient(#ffe27a,#d99a00);border-bottom:3px solid #050A14}#adCal .acTitle b{font-weight:400;font-size:24px;text-shadow:0 3px 0 #050A14}
+  #adCal .acTime{font-size:14px;color:#B4C2DD}#adCal .acTime b{color:#FFE27A;font-weight:400}#adCal .acSub{font-size:12px;color:#fff;margin:2px 0 10px}
+  #adCal .acGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  #adCal .acC{display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:14px;border:2px solid #050A14;background:#14203a;padding:6px 3px 0;overflow:hidden;min-height:124px;box-shadow:inset 0 0 0 2px #24365c}
+  #adCal .acC.now{box-shadow:inset 0 0 0 3px #FFC93A,0 0 12px rgba(255,201,58,.45);background:linear-gradient(#22345a,#14203a)}
+  #adCal .acC.bonus{grid-column:span 2;background:linear-gradient(#3a1a6a,#14203a);box-shadow:inset 0 0 0 2px #8a3df0}
+  #adCal .acD{color:#FFE27A;font-size:12px;letter-spacing:.06em}
+  #adCal .acA{height:52px;display:flex;align-items:center;justify-content:center}#adCal .acA img{max-height:52px;max-width:64px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.45))}#adCal .acA .gcImg{width:52px;height:52px}
+  #adCal .acC small{font-size:10px;line-height:1.1;color:#B4C2DD;padding:0 2px}
+  #adCal .acS,#adCal .acGo{margin-top:auto;width:100%;padding:6px 0;background:#0a1428;color:#6f82a8;font-size:11px;letter-spacing:.04em}
+  #adCal .acGo{border:0;border-top:2px solid #050A14;border-radius:0;background:linear-gradient(#3ee07a,#1aa34f);color:#fff;font-size:13px;height:auto;text-shadow:0 2px 0 rgba(0,0,0,.35)}
+  #adCal .acC.got .acS{background:#14402a;color:#7CF29A}#adCal .acC.miss{opacity:.55}
+  #adCal .acNote{font:11px system-ui,sans-serif;color:#8195bd;margin:10px 4px 0}
+  .upArt{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%}.upArt .gcImg{width:72%;height:72%}
+  .upLv{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:#050A14;color:#FFE27A;border-radius:999px;padding:1px 8px;font-weight:400;font-size:13px;white-space:nowrap}.upLv i{font-style:normal;color:#7CF29A;margin:0 3px}
+  .upRow{font-size:12px;color:#ffe9d6}
+  .t3Bonus{background:linear-gradient(#8a6aff,#5b3fd0) !important}.t3Bonus span small{display:block;font:11px system-ui,sans-serif;opacity:.85;margin-top:2px}.t3Bonus.done{filter:saturate(.6)}
+  .dpBonus{display:block;margin:8px auto 0;border:3px solid #050A14;border-radius:12px;background:linear-gradient(#8a6aff,#5b3fd0);color:#fff;font:14px 'Lilita One','Arial Black',Arial,sans-serif;padding:8px 12px;box-shadow:0 3px 0 #050A14;cursor:pointer}
+  .soCar{display:flex;align-items:stretch;gap:6px}.soNav{width:34px;border-radius:12px;border:3px solid #050A14;background:linear-gradient(#3ee07a,#1aa34f);color:#fff;font:26px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
+  .soCard{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 10px 10px;border-radius:16px;border:3px solid #050A14;background:linear-gradient(#ffb44a,#e8701a 45%,#b3460e);box-shadow:0 4px 0 #050A14;color:#fff;text-align:center}
+  .soCard b{font-weight:400;font-size:20px;text-shadow:0 2px 0 #050A14}.soCard small{font:12px system-ui,sans-serif;color:#fff3e6}.soArt{height:74px;max-width:120px;object-fit:contain}
+  .soNew{position:absolute;left:-6px;top:8px;transform:rotate(-12deg);background:#ff3b3b;border:2.5px solid #050A14;border-radius:8px;padding:2px 8px;font-size:14px}
+  .soPct{position:absolute;right:-4px;top:-4px;width:58px;height:58px;border-radius:50%;background:radial-gradient(#ff5a5a,#c8102e);border:3px solid #050A14;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;line-height:.9;transform:rotate(12deg)}.soPct small{font:11px 'Lilita One',Arial,sans-serif;color:#fff}
+  .soEnd{font-size:12px;color:#fff3e6}.soEnd b{font-weight:400;color:#FFE27A}
+  `; document.head.appendChild(css); })();
+</script>
+
 </body>
 </html>
