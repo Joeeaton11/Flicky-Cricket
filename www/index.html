@@ -27,6 +27,56 @@ window._imgPending = new Set(); window._imgSeen = 0;
     set(v) { d.set.call(this, v); if (!this.complete) { const im = this; window._imgPending.add(im); window._imgSeen++; const done = () => window._imgPending.delete(im);
       im.addEventListener('load', done, { once: true }); im.addEventListener('error', done, { once: true }); } } }); })();
 </script>
+<script src="assets/themes/packs.js"></script>
+<script>
+// ═══ GROUND PACKS (Nov 16, Joe: "make the download smaller"). The app ships leagues 0–3's grounds; every other league's
+// grounds are a download pack (tools/make_packs.py) fetched from flickycricket.com/play when a player gets near that
+// league and kept on the phone (Capacitor Filesystem). Until a pack is on the phone, that league's matches use a ground
+// that is (never a half-drawn one). On the web every ground is on the server already, so nothing changes there.
+const FlickyPacks = window.FlickyPacks = (function () {
+  const M = window.FC_PACKS || { packs: [], bundled: 99 }, owner = {}, inPack = {}, sceneLg = {};
+  M.packs.forEach(p => { p.items.forEach(it => { if (owner[it] == null) owner[it] = p.league; (inPack[it] = inPack[it] || []).push(p.league); });
+    p.scenes.forEach(k => { if (sceneLg[k] == null) sceneLg[k] = p.league; }); });
+  const native = () => !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  const FS = () => window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem || null;
+  let ready = {}; try { ready = JSON.parse(localStorage.getItem('flickyPacksReady') || '{}') || {}; } catch (e) {}
+  let base = null, busy = null; const queue = [];
+  const itemLocal = it => (owner[it] != null && owner[it] <= M.bundled) || (inPack[it] || []).some(l => ready[l] === M.version);
+  const P = {
+    manifest: M, ready,
+    on() { return native() && !!FS() && M.packs.length > 0; },
+    leagueReady(l) { return !this.on() || l <= M.bundled || ready[l] === M.version; },
+    sceneReady(k) { const l = sceneLg[k]; return l == null || this.leagueReady(l); },
+    resolve(v) {   // assets/themes/<item>/... → bundled file, downloaded copy, or (not yet downloaded) the server
+      if (typeof v !== 'string' || !this.on()) return v; const m = v.match(/^(?:\.\/)?assets\/themes\/([^/]+)(\/.*)?$/); if (!m) return v;
+      const it = m[1]; if (owner[it] == null || owner[it] <= M.bundled) return v;
+      if (itemLocal(it) && base) return window.Capacitor.convertFileSrc(base + '/' + v.replace(/^\.\//, '').slice('assets/themes/'.length));
+      return M.base + v.replace(/^\.\//, '').slice('assets/themes/'.length);
+    },
+    async init() { if (!this.on()) return; try { const r = await FS().getUri({ directory: 'DATA', path: 'packs' }); base = r.uri; } catch (e) {} },
+    // fetch one league's pack; resolves true when it's on the phone
+    ensure(l) { if (this.leagueReady(l) || l < 0 || l >= M.packs.length) return Promise.resolve(true);
+      if (!queue.includes(l)) queue.push(l); return this._run(); },
+    _run() { if (busy) return busy; busy = (async () => { while (queue.length) { const l = queue[0];
+        try { await this._get(l); ready[l] = M.version; localStorage.setItem('flickyPacksReady', JSON.stringify(ready)); try { track('pack_ready', { league: l }); } catch (e) {} }
+        catch (e) { try { track('pack_error', { league: l, msg: String(e && e.message || e).slice(0, 60) }); } catch (er) {} queue.length = 0; break; }
+        queue.shift(); } busy = null; return true; })(); return busy; },
+    async _get(l) { const p = M.packs[l], fs = FS(), files = p.files.slice(); let i = 0;
+      const one = async () => { while (i < files.length) { const [rel] = files[i++];
+        const r = await fetch(M.base + rel, { cache: 'no-store' }); if (!r.ok) throw new Error('http ' + r.status);
+        const b64 = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; r.blob().then(bl => fr.readAsDataURL(bl), rej); });
+        await fs.writeFile({ path: 'packs/' + rel, data: b64, directory: 'DATA', recursive: true }); } };
+      await Promise.all([one(), one(), one(), one()]); },
+    // keep the packs a player is about to need on the phone: their league and the next two
+    prefetch(from) { if (!this.on()) return; for (let l = Math.max(M.bundled + 1, from); l <= Math.min(M.packs.length - 1, from + 2); l++) this.ensure(l); },
+  };
+  P.init().then(() => setTimeout(() => { try { P.prefetch(Math.max(currentLeagueIdx(), highestLeagueIdx())); } catch (e) {} }, 6000));
+  return P;
+})();
+(function () { const d = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+  Object.defineProperty(HTMLImageElement.prototype, 'src', { configurable: true, get() { return d.get.call(this); },
+    set(v) { const r = FlickyPacks.resolve(v); if (r !== v && /^https:/.test(r)) this.crossOrigin = 'anonymous'; d.set.call(this, r); } }); })();
+</script>
 <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js?v=5');</script>
 <link rel="icon" type="image/png" href="data:image/png;base64,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">
 
@@ -6491,6 +6541,12 @@ function rollStadiumConditions() {
   } else {
     currentTimeOfDay = leagueGround();   // Nov 7 (Joe): nets / no league picked → one of your current league's painted grounds, never an old one
   }
+  try { if (!FlickyPacks.sceneReady(currentTimeOfDay.key)) {   // Nov 16: that league's grounds are still downloading → one that's on the phone
+      const lg = THEMED_LEAGUES[window._activeLeagueIdx] || null, own = lg && (lg.scenes || []).filter(k => FlickyPacks.sceneReady(k));
+      const pool = own && own.length ? own : [].concat(...THEMED_LEAGUES.slice(1, FlickyPacks.manifest.bundled + 1).map(L => L.scenes || [L.sceneKey])).filter(Boolean);
+      const k = pool[Math.floor(Math.random() * pool.length)], t = TIME_OF_DAY.find(x => x.key === k) || PREVIEW_SCENES.find(x => x.key === k); if (t) currentTimeOfDay = t;
+      try { FlickyPacks.ensure(window._activeLeagueIdx || currentLeagueIdx()); } catch (e) {} } } catch (e) {}
+  try { FlickyPacks.prefetch(Math.max(currentLeagueIdx(), highestLeagueIdx())); } catch (e) {}
   currentGroundScheme = GROUND_SCHEMES[Math.floor(Math.random()*GROUND_SCHEMES.length)];
   if (typeof gullyLoadArt === 'function') gullyLoadArt();
   if (typeof floodPlateKey === 'function') floodPlateKey(currentTimeOfDay.key) && floodPlate(currentTimeOfDay.key); // kick off preload
