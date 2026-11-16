@@ -3925,7 +3925,6 @@ window._imgPending = new Set(); window._imgSeen = 0;
 </style>
 <div class="bsRays"></div>
 <img class="bsWm" alt="Flicky Cricket" src="assets/ui/ui_1002_2b08ec41.webp">
-<img class="bsFl" alt="" src="assets/ui/flicky_splash.webp">
 <div class="bsBar"><i id="bootBar"></i></div>
 <canvas class="cmSpin" width="144" height="144" aria-label="Loading"></canvas>
 </div>
@@ -24793,6 +24792,10 @@ const Mates = window.Mates = {
     SAVE.save(); if (got.length) { track('mates_claim', { tiers: s.claimed, friends: s.friends }); showMessage('+ ' + got.join(' · '), '#FFC93A', 2800); } this.badge(); this.render(); },
   canRedeem() { const s = this.st(); return !s.used && (Date.now() - s.first < MATES_CFG.redeemDays * 864e5 || (career.matchesPlayed || 0) < MATES_CFG.redeemMatches); },
   async redeem(raw) {
+    // Nov 16: Web Starter pack for players who came from the free web version (code shown in the web teaser)
+    if (this.clean(raw) === 'WEBBAT') { const s = this.st(); if (s.webStarter) { showMessage('WEB STARTER ALREADY CLAIMED', '#ff6b6b', 1800); return false; }
+      s.webStarter = Date.now(); SAVE.save(); this.give({ gems: 100, coins: 1000, bag: 'silver', label: '100 GEMS + 1,000 COINS + SILVER BAG' });
+      track('web_starter_redeem', {}); showMessage('WEB STARTER! +100 GEMS, 1,000 COINS & A SILVER BAG', '#FFC93A', 3200); return true; }
     const c = this.clean(raw); if (!this.valid(c)) { showMessage('THAT CODE ISN\'T RIGHT · 6 LETTERS/NUMBERS', '#ff6b6b', 2000); return false; }
     if (c === this.code()) { showMessage('THAT\'S YOUR OWN CODE!', '#ff6b6b', 1800); return false; }
     if (!this.canRedeem()) { showMessage('CODES ARE FOR NEW PLAYERS', '#ff6b6b', 1800); return false; }
@@ -24915,6 +24918,143 @@ Mates.maybeOfferCode = function () { const s = this.st(); if (s.used || s.offere
     () => { if (s.pending) Mates.redeem(s.pending); else Mates.render(); }, { yes: s.pending ? 'CLAIM' : 'ENTER CODE', no: 'NO THANKS', noCost: true }); };
 setTimeout(() => { try { const s = Mates.st(); if (s.pending && typeof state !== 'undefined' && state === 'menu') Mates.maybeOfferCode(); Mates.register().catch(() => {}); Mates.postMate().catch(() => {}); Mates.refresh().catch(() => {}); } catch (e) {} }, 6500);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) try { Mates.refresh().catch(() => {}); } catch (e) {} });
+</script>
+<script>
+// ════════════════════════════════════════════════════════════════════════════════════════
+// WEB TEASER MODE (Nov 16, Joe): the free browser game at flickycricket.com/play is a taster, not the full game.
+// Free: swipe batting, Gully Cup (League 1) on its first 3 grounds, the Daily Challenge, sharing.
+// Shown but locked (tap = "get the app" card): other leagues, duels, cups, kit bags, shop, events, purchases.
+// Soft cap: 5 matches a day (Daily Challenge doesn't count). Store links go via flickycricket.com/get/.
+// Never on in the app. Test locally with ?teaser=1 (off again with ?teaser=0).
+// ════════════════════════════════════════════════════════════════════════════════════════
+const TEASER_CFG = {
+  league: 1, grounds: 3, dailyCap: 5,
+  codeAfter: 2,            // show the Web Starter code after this many web matches
+  code: 'WEBBAT',          // redeem in the app (Mates → enter code) for the Web Starter pack
+  getUrl: 'https://flickycricket.com/get/',
+  launch: '12 DECEMBER',
+};
+const TEASER_ON = (function () {
+  try {
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return false;
+    if (isDevHost()) { const q = new URLSearchParams(location.search).get('teaser');
+      if (q === '1') SAVE.setItem('flickyTeaserTest', '1'); else if (q === '0') SAVE.removeItem('flickyTeaserTest');
+      return SAVE.getItem('flickyTeaserTest') === '1'; }
+    return true;
+  } catch (e) { return false; }
+})();
+window.TEASER_ON = TEASER_ON;
+if (TEASER_ON) (function () {
+  document.body.classList.add('teaser');
+  const st = () => { const s = SAVE.section('teaser'); const d = (typeof todayKey === 'function') ? todayKey() : new Date().toDateString();
+    if (s.day !== d) { s.day = d; s.today = 0; } s.total = s.total || 0; return s; };
+  const plat = () => { const ua = navigator.userAgent || ''; return /Android/i.test(ua) ? 'android' : (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && 'ontouchend' in document)) ? 'ios' : 'desktop'; };
+  const getLink = src => TEASER_CFG.getUrl + '?src=' + encodeURIComponent('web_' + src);
+
+  // ── 1. League 1 on its first 3 grounds
+  try { const L = THEMED_LEAGUES[TEASER_CFG.league]; if (L && L.scenes) L.scenes = L.scenes.slice(0, TEASER_CFG.grounds); } catch (e) {}
+  // Daily Challenge shows in Events after the first web match (app: after 4)
+  try { if (FEATURE_UNLOCKS.compete) FEATURE_UNLOCKS.compete.when = () => (career.matchesPlayed || 0) >= 1; } catch (e) {}
+
+  // ── 2. the "get the app" card
+  const CARDS = {
+    league: ['26 MORE LEAGUES', 'Climb from the Gully Cup to the Eternal Cup across 120+ grounds in the full game.'],
+    duel:   ['1V1 DUELS', 'Same 12 balls, head to head with real players. Winner takes the pot.'],
+    cup:    ['KNOCKOUT CUPS', '32 players. Win and go on, lose and you\'re out.'],
+    bags:   ['KIT BAGS', 'Win bags in every match and open them for new bats, kit and coins.'],
+    shop:   ['THE SHOP', 'Bats, kit, coins and gems live in the app.'],
+    events: ['EVENTS & THE PASS', 'Seasonal cups, the Christmas Cup and Pass rewards are in the app.'],
+    mode:   ['MORE WAYS TO PLAY', 'Tournaments and Endless are in the full game.'],
+    buy:    ['APP ONLY', 'Purchases are only in the iPhone and Android app.'],
+    cap:    ['DAILY NETS OVER', `That's your ${TEASER_CFG.dailyCap} free web matches for today. Play unlimited in the app, or come back tomorrow. The Daily Challenge is still open.`],
+    home:   ['THE FULL GAME', '27 leagues, 120+ grounds, duels, cups, kit bags and events.'],
+  };
+  const css = document.createElement('style');
+  css.textContent = `
+  #tzCard{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(3,8,20,.72);padding:20px}
+  #tzCard.show{display:flex}
+  #tzCard .tzBox{width:min(92vw,360px);background:linear-gradient(#13254a,#0a1530);border:3px solid #050A14;border-radius:22px;box-shadow:0 0 0 2px #2f4a85 inset,0 18px 40px rgba(0,0,0,.6);padding:22px 18px 16px;text-align:center;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;position:relative}
+  #tzCard .tzLock{width:54px;height:54px;object-fit:contain;margin:-48px auto 4px;display:block;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5))}
+  #tzCard h3{margin:2px 0 6px;font-size:26px;letter-spacing:.5px;color:#FFC93A;text-shadow:0 3px 0 #050A14}
+  #tzCard p{margin:0 0 14px;font:600 15px/1.35 Arial,sans-serif;color:#d6e2ff}
+  #tzCard .tzGo{display:block;width:100%;height:54px;border:3px solid #050A14;border-radius:16px;background:linear-gradient(#ffb43c,#e2701a);color:#1a0e00;font:inherit;font-size:21px;box-shadow:0 4px 0 #050A14;cursor:pointer;text-decoration:none;line-height:48px}
+  #tzCard .tzQr{display:none;margin:4px auto 10px;width:150px;height:150px;border-radius:12px;border:6px solid #fff;image-rendering:pixelated}
+  #tzCard.desk .tzQr{display:block}
+  #tzCard .tzSmall{margin-top:10px;font:600 13px Arial,sans-serif;color:#9fb3e0}
+  #tzCard .tzCode{display:inline-block;margin-top:4px;padding:4px 10px;border:2px dashed #FFC93A;border-radius:8px;color:#FFC93A;font-size:20px;letter-spacing:2px}
+  #tzCard .tzX{position:absolute;right:10px;top:8px;width:36px;height:36px;border:0;background:none;color:#9fb3e0;font-size:26px;cursor:pointer}
+  #tzPill{position:absolute;left:50%;transform:translateX(-50%);top:-36px;z-index:5;padding:5px 12px;border-radius:999px;border:2px solid #050A14;background:rgba(10,21,48,.88);color:#FFC93A;font:13px 'Lilita One','Arial Black',Arial,sans-serif;letter-spacing:.4px;cursor:pointer;white-space:nowrap;display:none}
+  body.teaser.tzHome #tzPill{display:block}
+  #tzRes{margin:12px auto 0;width:min(92%,380px);padding:10px 12px;border-radius:14px;border:2px solid #FFC93A;background:rgba(10,21,48,.92);color:#fff;font:600 14px/1.3 Arial,sans-serif;text-align:center;cursor:pointer}
+  #tzRes b{color:#FFC93A;font-family:'Lilita One','Arial Black',Arial,sans-serif;font-weight:400;font-size:17px;display:block}`;
+  document.head.appendChild(css);
+  const card = document.createElement('div'); card.id = 'tzCard'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); document.body.appendChild(card);
+  function openCard(kind, opt) {
+    const c = CARDS[kind] || CARDS.home, p = plat(), s = st();
+    const live = false;   // store buttons say "coming" until launch; /get/ decides where each phone goes
+    const btn = p === 'desktop' ? 'SCAN TO GET THE APP' : live ? 'GET THE FULL GAME' : `GET THE APP · ${TEASER_CFG.launch}`;
+    const code = s.total >= TEASER_CFG.codeAfter ? `<div class="tzSmall">Web Starter bonus in the app:<br><span class="tzCode">${TEASER_CFG.code}</span></div>` : '';
+    card.className = 'show' + (p === 'desktop' ? ' desk' : '');
+    card.innerHTML = `<div class="tzBox"><button class="tzX" data-tzx aria-label="Close">×</button><img class="tzLock" alt="" src="assets/ui/pass_padlock.webp">
+      <h3>${c[0]}</h3><p>${c[1]}</p><img class="tzQr" alt="QR code to get the app" src="assets/ui/get_qr.webp">
+      <a class="tzGo" data-tzgo href="${getLink(kind)}" target="_blank" rel="noopener">${btn}</a>${code}
+      <div class="tzSmall">Free on iPhone &amp; Android</div></div>`;
+    if (code) track('teaser_code_shown', { from: kind });
+    track('teaser_lock', { what: kind, plat: p, today: s.today, total: s.total });
+    try { playUiTap(); } catch (e) {}
+  }
+  window.teaserCard = openCard;
+  card.addEventListener('click', e => {
+    if (e.target === card || e.target.closest('[data-tzx]')) { card.className = ''; return; }
+    if (e.target.closest('[data-tzgo]')) track('teaser_store_tap', { from: (card.querySelector('h3') || {}).textContent || '', plat: plat() });
+  });
+
+  // ── 3. lock the app-only parts (wrap by name: every caller goes through these)
+  const lock = (name, kind, allow) => { const f = window[name]; if (typeof f !== 'function') return;
+    window[name] = function () { if (allow && allow.apply(this, arguments)) return f.apply(this, arguments); openCard(kind); }; };
+  lock('openShop', 'shop'); lock('openGemShop', 'shop');
+  lock('openChest', 'bags'); lock('openDuelTables', 'duel'); lock('playDuel', 'duel'); lock('startDuelMatch', 'duel');
+  lock('openCupDraw', 'cup'); lock('playCup', 'cup'); lock('openEventShop', 'events'); lock('openEventShopSheet', 'events');
+  lock('buyRealMoney', 'buy');
+  { const _pm = window.playMode; window.playMode = function (k) { if (k === 'challenge') return _pm.apply(this, arguments); openCard(k === 'duel' ? 'duel' : k === 'cup' ? 'cup' : 'mode'); }; }
+  { const _pl = window.playLeague; window.playLeague = function (idx) { if (idx > TEASER_CFG.league) { openCard('league'); return; } if (!capOk()) return; return _pl.apply(this, arguments); }; }
+  // the chests tab is wired with its own click handler, so stop it before it runs
+  window.addEventListener('click', e => { const t = e.target && e.target.closest ? e.target : null; if (!t) return;
+    if (t.closest('#chestsMenuBtn')) { e.stopImmediatePropagation(); e.preventDefault(); openCard('bags'); }
+    else if (t.closest('[data-openpass]')) { e.stopImmediatePropagation(); e.preventDefault(); openCard('events'); }
+    else if (t.closest('#startBtn')) { let m = 'league'; try { m = localStorage.getItem('flickyPlayMode') || 'league'; } catch (err) {}
+      if (m === 'duel' || m === 'cup') { e.stopImmediatePropagation(); e.preventDefault(); openCard(m); } }
+    else if (t.closest('#competePanel .evGo, #competePanel [data-play]')) { const k = (t.closest('[data-pk],[data-play],[data-mode]') || {}).dataset || {};
+      const m = k.pk || k.play || k.mode || ''; if (/duel|cup|tourney|endless/.test(m)) { e.stopImmediatePropagation(); e.preventDefault(); openCard(/duel/.test(m) ? 'duel' : /cup/.test(m) ? 'cup' : 'mode'); } }
+    else if (t.closest('#tzPill')) { e.stopImmediatePropagation(); openCard('home'); }
+    else if (t.closest('#tzRes')) { e.stopImmediatePropagation(); openCard(st().today >= TEASER_CFG.dailyCap ? 'cap' : 'home'); }
+  }, true);
+
+  // ── 4. the daily soft cap (Daily Challenge free; never stops a match half way)
+  function capOk() { const s = st(); if (s.today < TEASER_CFG.dailyCap) return true; openCard('cap'); track('teaser_cap', { total: s.total }); return false; }
+  const _start = window.startGame;
+  window.startGame = function () { const m = window.chase && window.chase.mode;
+    if (m !== 'challenge' && m !== 'preview') { const s = st();
+      if (s.today >= TEASER_CFG.dailyCap) { openCard('cap'); track('teaser_cap', { total: s.total }); try { showNav('league'); } catch (e) {} return; }
+      s.today++; s.total++; SAVE.save(); }
+    return _start.apply(this, arguments); };
+
+  // ── 5. nudges: a pill on Home, a strip on the result screen
+  const pill = document.createElement('button'); pill.id = 'tzPill'; pill.textContent = 'FREE WEB VERSION · GET THE FULL GAME';
+  { const row = document.getElementById('homePlayRow'); if (row) { if (getComputedStyle(row).position === 'static') row.style.position = 'relative'; row.appendChild(pill); } else document.body.appendChild(pill); }
+  const home = document.getElementById('overlay');
+  const syncPill = () => document.body.classList.toggle('tzHome', !!home && !home.classList.contains('hidden'));
+  if (home) { new MutationObserver(syncPill).observe(home, { attributes: true, attributeFilter: ['class'] }); syncPill(); }
+  const _res = window.showResultScreen;
+  window.showResultScreen = function (d) { const r = _res.apply(this, arguments);
+    try { const rs = document.getElementById('resultScreen'); let b = document.getElementById('tzRes');
+      if (!b) { b = document.createElement('div'); b.id = 'tzRes'; (document.getElementById('r2Wrap') || rs).appendChild(b); }
+      const s = st(), left = Math.max(0, TEASER_CFG.dailyCap - s.today);
+      b.innerHTML = d && d.beatTarget ? `<b>KEEP THE RUN GOING IN THE APP</b>26 more leagues, duels and kit bags. ${left ? left + ' free web match' + (left > 1 ? 'es' : '') + ' left today.' : 'Free web matches done for today.'}`
+        : `<b>${left ? left + ' FREE WEB MATCH' + (left > 1 ? 'ES' : '') + ' LEFT TODAY' : 'FREE WEB MATCHES DONE TODAY'}</b>Unlimited matches in the app${s.total >= TEASER_CFG.codeAfter ? ` · bonus code <b style="display:inline;font-size:15px">${TEASER_CFG.code}</b>` : ''}.`;
+    } catch (e) {}
+    return r; };
+})();
 </script>
 </body>
 </html>
