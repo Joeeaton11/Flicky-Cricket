@@ -4435,7 +4435,7 @@ const GAME_CONFIG = {
       { free: true, r: { bag: 'gold', coins: 600 } } ] },
     gemPacks: [ { price: 0.99, gems: 80 }, { price: 4.99, gems: 450 }, { price: 9.99, gems: 1000, tag: 'MOST POPULAR' }, { price: 19.99, gems: 2200 }, { price: 49.99, gems: 6000 } ],
     firstBuyDoubled: true, maxPopupOffersPerSession: 1,
-    ads: { interstitialEvery: 3, noInterstitialFirstMatches: 3, rewardedGemsPerDay: 3, rewardedGems: 5 },
+    ads: { interstitialEvery: 3, noInterstitialFirstMatches: 3, interstitialMaxPerDay: 99, rewardedGemsPerDay: 3, rewardedGems: 5, rewardedCoinsPerDay: 3 },
   },
   season: {                                                                                            // sprint 8
     dailyChallenge: { freeAttempts: 1, extraAttemptGems: 10, streakBagAt: 3 },
@@ -4474,6 +4474,31 @@ function _deepMerge(into, from) {
   return into;
 }
 // Not called yet (sprint 7+): fetch a JSON of overrides and merge it over GAME_CONFIG.
+// ═══ REMOTE SETTINGS (Nov 16, Joe): https://flickycricket.com/live/config.json changes game numbers without an app update.
+// Only settings that already exist can change, and only to a value of the same kind (number for number, list for list),
+// so a typo can't break the game. The last good copy is kept on the phone and applied at start; a new copy is fetched in
+// the background and used from the next launch (and straight away for anything read later, e.g. ad frequency, prices).
+const REMOTE_CONFIG_URL = 'https://flickycricket.com/live/config.json';
+function _safeMerge(into, from, path, out) {
+  for (const k in from) { if (!(k in into)) { out.skipped.push(path + k); continue; }
+    const a = into[k], b = from[k];
+    if (a && typeof a === 'object' && !Array.isArray(a)) { if (b && typeof b === 'object' && !Array.isArray(b)) _safeMerge(a, b, path + k + '.', out); else out.skipped.push(path + k); }
+    else if (Array.isArray(a) ? Array.isArray(b) : typeof a === typeof b && !(typeof b === 'number' && !isFinite(b))) { into[k] = b; out.changed.push(path + k); }
+    else out.skipped.push(path + k); }
+  return out;
+}
+function applyRemoteConfig(cfg) { if (!cfg || typeof cfg !== 'object' || !cfg.settings) return null;
+  const r = _safeMerge(GAME_CONFIG, cfg.settings, '', { changed: [], skipped: [] }); window._remoteCfg = { version: cfg.version || 0, changed: r.changed.length, skipped: r.skipped }; return r; }
+(function remoteConfig() {
+  try { const c = JSON.parse(localStorage.getItem('flickyRemoteCfg') || 'null'); if (c) applyRemoteConfig(c); } catch (e) {}
+  if (!window.fetch) return;
+  const ctl = window.AbortController ? new AbortController() : null, to = setTimeout(() => { try { ctl && ctl.abort(); } catch (e) {} }, 5000);
+  fetch(REMOTE_CONFIG_URL, { cache: 'no-store', signal: ctl ? ctl.signal : undefined }).then(r => r.ok ? r.json() : null).then(cfg => { clearTimeout(to);
+    if (!cfg || !cfg.settings) return; const r = applyRemoteConfig(cfg); if (!r) return;
+    try { localStorage.setItem('flickyRemoteCfg', JSON.stringify(cfg)); } catch (e) {}
+    setTimeout(() => { try { track('remote_config', { v: cfg.version || 0, changed: r.changed.length, skipped: r.skipped.length }); } catch (e) {} }, 3000);
+  }).catch(() => clearTimeout(to));
+})();
 async function loadRemoteConfig(url) {
   try { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) return false; _deepMerge(GAME_CONFIG, await r.json()); track('config_loaded', { version: GAME_CONFIG.version }); return true; }
   catch (e) { return false; }
@@ -5242,8 +5267,11 @@ async function initAds() {
 
 async function showInterstitialIfDue() {
   if (adsRemoved || !window._admob) return;
+  const A = GAME_CONFIG.shop.ads;   // Nov 16: all three can be changed remotely (live/config.json)
+  if ((career && career.matchesPlayed || 0) < A.noInterstitialFirstMatches) return;
   gamesPlayedSinceAd++;
-  if (gamesPlayedSinceAd < AD_FREQUENCY) return;
+  if (gamesPlayedSinceAd < A.interstitialEvery) return;
+  { const d = SAVE.section('adsday'); if (d.day !== todayKey()) { d.day = todayKey(); d.n = 0; } if (d.n >= A.interstitialMaxPerDay) return; d.n++; SAVE.save(); }
   gamesPlayedSinceAd = 0;
   try {
     await window._admob.showInterstitial();
@@ -5287,8 +5315,8 @@ const IAP_REMOVE_ADS_GEMS_ID = 'remove_ads_gems_bundle';
 const GEM_ENTRY_COST = 15;  // gems to pay a league entry when coins short
 const GEM_COIN_TOPUP_COST = 30;   // gems for 500 coins
 const GEM_COIN_TOPUP_AMOUNT = 500;
-const GEM_AD_REWARD = 5;          // gems per rewarded video
-const GEM_AD_DAILY_MAX = 3;
+let GEM_AD_REWARD = 5;          // gems per rewarded video
+let GEM_AD_DAILY_MAX = 3;
 const GEM_EXTRA_SLOT_COST = 200;
 const FIRST_WIN_GEM_REWARD = 5;
 
@@ -25241,7 +25269,8 @@ function adCalShelf(wide) { const s = adCalState(), n = s.got.filter(Boolean).le
   return wide({ attr: ' data-shelf="adcal"', tint: '#6a5cf0', art: `<span class="upArt">${adCalArt(r)}</span>`, timer: `DAY ${adCalDay() + 1} ENDS IN <b>${fmtLeft(mid - _nowDate())}</b>`, name: '12TH MAN CALENDAR',
     mid: `<div class="gcBar purple"><i style="width:${n / 7 * 100}%"></i><span>${n} / 7 THIS WEEK · ALL 7 = GOLD BAG</span></div>`, sub: 'Watch a short video each day for that day\'s reward', btn: adCalReady() ? '▶ WATCH' : 'OPEN', btnAttr: ' data-act="adcal"' }); }
 // ═══ WATCH AN AD FOR COINS (Shop): 3 a day, sized to your league ═══
-const AD_COINS_PER_DAY = 3;
+let AD_COINS_PER_DAY = 3;
+GEM_AD_REWARD = GAME_CONFIG.shop.ads.rewardedGems; GEM_AD_DAILY_MAX = GAME_CONFIG.shop.ads.rewardedGemsPerDay; AD_COINS_PER_DAY = GAME_CONFIG.shop.ads.rewardedCoinsPerDay;
 function adCoinsState() { const s = SAVE.section('adcoins'); if (s.day !== todayKey()) { s.day = todayKey(); s.n = 0; SAVE.save(); } return s; }
 function adCoinsAmount() { const lg = THEMED_LEAGUES[Math.max(1, currentLeagueIdx())]; return Math.max(400, Math.round(lg.entry * 0.6 / 50) * 50); }
 function watchAdForCoins(after) { const s = adCoinsState(); if (s.n >= AD_COINS_PER_DAY) { showMessage('Daily limit reached. Come back tomorrow!', '#ff6b6b', 1800); return; }
