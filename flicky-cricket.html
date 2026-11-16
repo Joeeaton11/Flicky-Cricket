@@ -21451,6 +21451,8 @@ function renderToday() {
       <span class="lgPill"><i class="hIco hi-coin"></i><span>${career.coins.toLocaleString()}</span></span><span class="lgPill"><i class="hIco hi-gem"></i><span>${gems.toLocaleString()}</span></span></div>
     <div class="sh2 sh3 bgA t3">
       ${calReady ? `<button class="t3Cal" data-dailypop>${t3RewardArt(cal[d.calDay % cal.length])}<span>DAY ${d.calDay % cal.length + 1} REWARD WAITING</span><b>CLAIM ›</b></button>` : ''}
+      ${(() => { try { const a = adCalState(), n = a.got.filter(Boolean).length, rd = adCalReady(), r = adCalReward(adCalDay());
+        return `<button class="t3Cal t3Bonus${rd ? '' : ' done'}" data-adcalopen>${t3RewardArt(r)}<span>${rd ? "TODAY'S BONUS · WATCH A VIDEO" : 'BONUS COLLECTED TODAY'}<small>${n} / 7 THIS WEEK · ALL 7 = GOLD BAG</small></span><b>${rd ? '▶ WATCH' : 'VIEW ›'}</b></button>`; } catch (e) { return ''; } })()}
       <div class="t3Bag${all && !m.dailyBag ? ' ready' : ''}${m.dailyBag ? ' got' : ''}"><div class="gcArt"><img class="gcPic" alt="" src="${CHEST_IMG_SRC[bagT]}"></div>
         <div class="t"><span class="gcTimer">NEW MISSIONS IN <b>${fmtLeft(toMid)}</b></span><b>DAILY ${bagNm(bagT)} BAG</b><small>Finish all 3 missions</small>
           <div class="segs">${list.map(x => `<i class="${x.claimed ? 'on' : ''}"></i>`).join('')}</div></div>
@@ -21472,7 +21474,7 @@ function showDailyPop(force) {
   const strip = cal.map((x, i) => `<span class="${i < cur ? 'done' : i === cur ? 'now' : ''}${i === cal.length - 1 ? ' big' : ''}"><em>${t3RewardArt(x)}</em><small>${i < cur ? '✓' : 'DAY ' + (i + 1)}</small></span>`).join('');
   p.innerHTML = `<div class="c"><span class="dk">DAILY REWARD</span><b class="dn">DAY ${cur + 1}</b>
     <div class="art">${t3RewardArt(r)}</div><b class="rn">${t3RewardText(r)}</b>
-    <button class="gcBuy" id="dpClaim">CLAIM</button><div class="strip">${strip}</div>
+    <button class="gcBuy" id="dpClaim">CLAIM</button>${(() => { try { return adCalReady() ? `<button class="dpBonus" data-adcalopen>▶ + WATCH A VIDEO FOR TODAY'S BONUS</button>` : ''; } catch (e) { return ''; } })()}<div class="strip">${strip}</div>
     <small class="nx">${cur < cal.length - 1 ? `Tomorrow: ${t3RewardText(cal[cur + 1])}` : 'Day 7! A new week starts tomorrow.'} · missed days wait for you</small></div>`;
   p.classList.add('show'); window._dailyPopShown = true; return true;
 }
@@ -21485,6 +21487,7 @@ function maybeDailyPop() {
 document.addEventListener('click', e => {
   const t = e.target && e.target.closest ? e.target : null; if (!t) return;
   if (t.closest('[data-dailypop]')) { showDailyPop(true); return; }
+  if (t.closest('[data-adcalopen]')) { e.stopImmediatePropagation(); const dp = document.getElementById('dailyPop'); if (dp && dp.classList.contains('show')) { const l = claimCalendar(); dp.classList.remove('show'); if (l) showMessage('+ ' + l, '#FFC93A', 2000); } openAdCal(); return; }
   if (t.closest('#dpClaim')) { const l = claimCalendar(); document.getElementById('dailyPop').classList.remove('show'); setTimeout(() => { try { maybeOfferPopup(); } catch (err) {} }, 900); if (l) { showMessage('+ ' + l, '#FFC93A', 2200); try { hapticBig(); playAchievementChime(); } catch (err) {} }
     try { updateTodayBadge(); updateMenuHUD(); } catch (err) {} if (document.getElementById('todayPanel').classList.contains('show')) renderToday(); return; }
   if (t.id === 'dailyPop') { t.classList.remove('show'); window._dailyPopSkipped = true; setTimeout(() => { try { maybeOfferPopup(); } catch (err) {} }, 900); return; }
@@ -22154,16 +22157,14 @@ function renderShopV2(container) {
     deal += wide({ attr: ' data-shelf="gift"', tint: '#22c55e', art: `<img alt="" style="width:100%;height:100%;object-fit:contain;padding:10px;box-sizing:border-box" src="${g.gems ? REWARD_HEAP_ART.gems_s : g.bag && typeof CHEST_IMG_SRC !== 'undefined' ? CHEST_IMG_SRC[g.bag] : REWARD_HEAP_ART.coins_s}">`, name: 'FREE DAILY GIFT', sub: gr ? `Today: ${gl}` : `Next gift in ${hh}h ${mm}m`,
       btn: gr ? 'CLAIM' : 'CLAIMED', btnCls: gr ? '' : 'goal', btnAttr: gr ? ' data-act="gift"' : ' disabled' }); } catch (e) {}
   // Nov 16 (Joe, Golf Clash review): the 12th Man Calendar, the upgrade offer and the offers carousel
-  try { deal += adCalShelf(wide); } catch (e) {}
   try { deal += upOfferShelf(wide); } catch (e) {}
-  try { deal += specialOffersShelf(hd); } catch (e) {}
   const ds = dsActive();
   if (off || featureOn('pass') || ds) {
     deal += hd('FEATURED');
-    if (ds && !window._soOn) { const D = GAME_CONFIG.shop.dealStreak, x = D.steps[ds.step];
+    if (ds) { const D = GAME_CONFIG.shop.dealStreak, x = D.steps[ds.step];
       deal += wide({ attr: ' data-shelf="so"', tint: '#2a62d6', art: `<img class="soArt" alt="" src="${SO_CARD_ART}">`, timer: `ENDS IN <b>${fmtLeft(dsLeft())}</b>`, name: 'SUPER OVER',
         sub: `Ball ${ds.step + 1} of ${D.steps.length} · ${x.free ? 'FREE HIT waiting!' : 'play on to the free balls'}`, btn: x.free ? 'FREE HIT' : 'OPEN', btnAttr: ' data-act="dstreak"' }); }
-    if (off && !window._soOn) deal += wide({ attr: ' data-shelf="offer"', tint: '#8a3df0', art: img(REWARD_HEAP_ART.gems_l), timer: `OFFER ENDS IN <b>${fmtLeft(off.until - Date.now())}</b>`, name: off.title, sub: off.label, btn: `${storePrice(storeIdFor('offer_' + off.id, off.price), off.price)}`, btnAttr: ' data-act="offer"' });
+    if (off) deal += wide({ attr: ' data-shelf="offer"', tint: '#8a3df0', art: img(REWARD_HEAP_ART.gems_l), timer: `OFFER ENDS IN <b>${fmtLeft(off.until - Date.now())}</b>`, name: off.title, sub: off.label, btn: `${storePrice(storeIdFor('offer_' + off.id, off.price), off.price)}`, btnAttr: ' data-act="offer"' });
     if (featureOn('pass')) { const P = GAME_CONFIG.season.pass, t = passTier(), into = passState().xp - t * P.xpPerTier;
       deal += wide({ attr: ' data-shelf="pass"', tint: '#e8a21a', art: img(CHEST_IMG_SRC.gold), timer: `ENDS IN <b>${passDaysLeft()} DAY${passDaysLeft() === 1 ? '' : 'S'}</b>`, name: `FLICKY PASS · ${PASS_MONTH_NAMES[_nowDate().getMonth()]}`,
         mid: `<div class="gcBar"><i style="width:${t >= P.tiers ? 100 : Math.max(4, into / P.xpPerTier * 100)}%"></i><span>TIER ${t} / ${P.tiers}</span></div>`,
@@ -23439,7 +23440,7 @@ function openEventShopSheet() {
     <div class="esGrid">${items.map(({ it, i }) => { const own = shopOwned(it), eq = own && shopEquipped(it);
       const btn = own ? `<button data-esbuy="${i}" class="${eq ? 'on' : ''}">${eq ? 'EQUIPPED' : 'EQUIP'}</button>` : it.price.cur ? `<button data-esbuy="${i}">${cur}${it.price.cur}</button>` : `<button data-esbuy="${i}" class="gem"><i class="hIco hi-gem"></i>${it.price.gems}</button>`;
       return `<div class="esItem${own ? ' own' : ''}"><div class="esArt">${prev(it)}</div><b>${it.name}</b><small>${it.kind === 'bat' ? 'BAT WRAP' : it.kind === 'celeb' ? 'SIX CELEBRATION' : it.kind === 'trail' ? 'BALL TRAIL' : it.kind === 'trim' ? 'KIT TRIM' : it.kind === 'hat' ? 'HEADWEAR' : it.kind === 'reward' ? 'BUY AS OFTEN AS YOU LIKE' : 'KIT'}${it.alt ? ' · OR GEMS' : ''}</small>${btn}</div>`; }).join('')}</div>
-    <p class="esNote">Looks only — nothing here changes your stats. Shop items leave when the event ends on ${new Date(ev.end + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}.</p></div>`;
+    <p class="esNote">Looks only — nothing here changes your stats. Equip them any time in Player › Style. Shop items leave when the event ends on ${new Date(ev.end + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}.</p></div>`;
   el.classList.add('show');
 }
 document.addEventListener('click', e => { const t = e.target && e.target.closest ? e.target : null; if (!t) return;
@@ -24978,8 +24979,15 @@ Object.assign(TRAIL_STYLES, {
   gilded: { core: '#FFFDF0', mid: '#FFD54A', edge: '#C98A0C', sparks: ['#FFF2B0', '#FFFFFF', '#FFC93A'] },
 });
 STYLE_ITEMS.forEach(it => { if (it.kind === 'bat') EVENT_BATS[it.id] = it.look; });
-function styItem(id) { return STYLE_ITEMS.find(x => x.id === id) || null; }
+function styEventItems() { const out = [], seen = {};
+  const add = (it, from) => { const id = it.id || it.cos; if (!id || seen[id] || !['celeb', 'trail', 'bat'].includes(it.kind)) return; seen[id] = 1;
+    out.push({ id, kind: it.kind, name: it.name || it.label || id.toUpperCase(), rarity: 'epic', ev: from, fx: it.fx, trail: it.trail, look: it.look || EVENT_BATS[id], icon: it.icon, gems: 0 }); };
+  (GAME_CONFIG.season.events || []).forEach(ev => (ev.shop || []).concat(ev.track || []).forEach(it => add(it, ev.name)));
+  ((GAME_CONFIG.trails || {}).items || []).forEach(it => add(it, 'SPECIAL')); return out; }
+function styAll() { return STYLE_ITEMS.concat(styEventItems()); }
+function styItem(id) { return styAll().find(x => x.id === id) || null; }
 function styOwned(it) { return !!(it.free || ownedCos.includes(it.id + ':' + it.kind)); }
+function styFx(it) { return it.fx || 'firework'; }
 function styChat() { const L = curLook(); const own = STYLE_ITEMS.filter(x => x.kind === 'chat' && styOwned(x)); const pick = (L.chat || []).filter(id => { const it = styItem(id); return it && styOwned(it); });
   return (pick.length ? pick : own.slice(0, 6).map(x => x.id)).slice(0, 6); }
 function styEquipped(it) { const L = curLook(); return it.kind === 'chat' ? styChat().includes(it.id) : it.kind === 'celeb' ? L.celeb === it.id : it.kind === 'trail' ? L.trail === it.id : L.batWrap === it.id; }
@@ -25003,8 +25011,8 @@ function styBuy(it, after) {
 }
 // six celebrations + trails: the permanent STYLE items join the event ones
 { const _cf = celebFx; celebFx = function () { const L = curLook(), it = L.celeb && styItem(L.celeb);
-    if (!it) return _cf.apply(this, arguments); if (!styOwned(it)) return; styCelebrate(it.fx); }; }
-{ const _ti = trailItem; trailItem = function (id) { const it = styItem(id); return it && it.kind === 'trail' ? it : _ti(id); }; }
+    if (!it || it.ev) return _cf.apply(this, arguments); if (!styOwned(it)) return; styCelebrate(it.fx); }; }
+{ const _ti = trailItem; trailItem = function (id) { const it = STYLE_ITEMS.find(x => x.id === id); return it && it.kind === 'trail' ? it : _ti(id); }; }
 function styCelebrate(fx, inBox) {
   const box = document.createElement('div'); box.className = 'celFx ' + fx + (inBox ? ' prev' : ''); let h = ''; const R = Math.random;
   const C = ['#FFD54A', '#FF4FA3', '#4CE06A', '#5AC8FF', '#FF7A1A', '#B48CFF'];
@@ -25021,6 +25029,7 @@ function styCelebrate(fx, inBox) {
 }
 // small previews drawn in code: a bubble, a burst, a streak, a bat
 function styPreview(it) {
+  if (it.ev && it.icon) return `<img class="styIcon" alt="" src="${it.icon}">`;
   if (it.kind === 'chat') return `<span class="styBub">${it.name}</span>`;
   if (it.kind === 'trail') { const S = TRAIL_STYLES[it.trail] || TRAIL_STYLES.comet; return `<span class="styTr" style="--e:${S.edge};--m:${S.mid};--c:${S.core}"><i></i></span>`; }
   if (it.kind === 'bat') { const k = it.look; return `<svg class="styBat" viewBox="0 0 40 100" aria-hidden="true"><rect x="16.5" y="2" width="7" height="34" rx="3.5" fill="${k.a}" stroke="#050A14" stroke-width="2.5"/><path d="M12 36h16l2 56q0 6-10 6t-10-6z" fill="${k.c}" stroke="#050A14" stroke-width="2.5"/><path d="M14 46h12v14H14z" fill="${k.s}" opacity=".9"/><path d="M15 40l1 52" stroke="#fff" stroke-width="2.5" opacity=".35"/></svg>`; }
@@ -25030,7 +25039,7 @@ function styPreview(it) {
 // ── the STYLE tab (Player screen) ──
 let styKind = 'chat', stySort = 'collected';
 function renderStyleTab(body) {
-  const items = STYLE_ITEMS.filter(x => x.kind === styKind), RO = { common: 0, rare: 1, epic: 2, legendary: 3 };
+  const items = styAll().filter(x => x.kind === styKind && (!x.ev || styOwned(x) || (activeEvent() && activeEvent().name === x.ev))), RO = { common: 0, rare: 1, epic: 2, legendary: 3 };
   const got = items.filter(styOwned).length, perk = stylePerkCoins();
   const sorted = items.slice().sort((a, b) => stySort === 'rarity' ? RO[b.rarity] - RO[a.rarity] : stySort === 'perk' ? (b.perk || 0) - (a.perk || 0) : (styOwned(b) - styOwned(a)) || (RO[a.rarity] - RO[b.rarity]));
   const sel = styKind === 'chat' ? `<div class="plLbl"><span>IN YOUR DUEL CHAT</span><span>${styChat().length} / 6</span></div><div class="styChatSel">${styChat().map(id => `<span class="styBub on">${styItem(id).name}</span>`).join('')}</div>` : '';
@@ -25040,12 +25049,13 @@ function renderStyleTab(body) {
     <div class="styGrid">${sorted.map(it => { const own = styOwned(it), eq = own && styEquipped(it);
       return `<button class="styIt${own ? '' : ' lk'}${eq ? ' eq' : ''}" data-sty="${it.id}" style="--rc:${rarityColor(it.rarity)}"><span class="styArt">${styPreview(it)}</span>
         ${it.kind === 'chat' ? '' : `<b>${it.name}</b>`}${it.perk ? `<em>+${it.perk}% COINS</em>` : ''}
-        <span class="styFoot">${eq ? (it.kind === 'chat' ? 'IN CHAT' : 'EQUIPPED') : own ? (it.kind === 'chat' ? 'ADD' : 'EQUIP') : `<i class="hIco hi-gem"></i>${it.gems}`}</span></button>`; }).join('')}</div>
-    <p class="styNote">Looks only — plus the small coin bonus. Sixes play on every six; trails follow every shot; chat lines appear on duel results.</p>`;
+        ${it.ev ? `<em class="styEv">${it.ev}</em>` : ''}<span class="styFoot">${eq ? (it.kind === 'chat' ? 'IN CHAT' : 'EQUIPPED') : own ? (it.kind === 'chat' ? 'ADD' : 'EQUIP') : it.ev ? 'EVENT SHOP' : `<i class="hIco hi-gem"></i>${it.gems}`}</span></button>`; }).join('')}</div>
+    <p class="styNote">Everything you own lives here, event items too. Looks only — plus the small coin bonus. Sixes play on every six; trails follow every shot; chat lines appear on duel results.</p>`;
   body.querySelectorAll('[data-styk]').forEach(b => b.onclick = () => { try { playUiTap(); } catch (e) {} styKind = b.dataset.styk; renderStyleTab(body); });
   const sb = body.querySelector('[data-stys]'); if (sb) sb.onclick = () => { try { playUiTap(); } catch (e) {} stySort = { collected: 'rarity', rarity: 'perk', perk: 'collected' }[stySort]; renderStyleTab(body); };
   body.querySelectorAll('[data-sty]').forEach(b => b.onclick = () => { const it = styItem(b.dataset.sty); try { playUiTap(); hapticTap(); } catch (e) {}
-    if (styOwned(it)) { styEquip(it); if (it.kind === 'celeb' && styEquipped(it)) styCelebrate(it.fx); renderStyleTab(body); try { refreshPlayerArt(); } catch (e) {} return; }
+    if (styOwned(it)) { styEquip(it); if (it.kind === 'celeb' && styEquipped(it)) { if (it.ev) celebFx(); else styCelebrate(it.fx); } renderStyleTab(body); try { refreshPlayerArt(); } catch (e) {} return; }
+    if (it.ev) { showMessage(`Get ${it.name} in the ${it.ev} shop`, '#7fd0ff', 2000); return; }
     if (it.kind === 'celeb') styCelebrate(it.fx);   // try it before buying
     styBuy(it, () => { renderStyleTab(body); try { renderPlayerScreen(); } catch (e) {} }); });
 }
@@ -25094,14 +25104,14 @@ function openAdCal() {
       ${st === 'now' ? '<button class="gcBuy acGo" data-acgo>▶ WATCH</button>' : `<span class="acS">${st === 'got' ? '✔ COLLECTED' : st === 'miss' ? 'MISSED' : 'LOCKED'}</span>`}</div>`; };
   const allGot = s.got.every(Boolean), bonusLost = s.got.some((g, i) => !g && i < today);
   el.innerHTML = `<div class="acCard"><button class="acX" data-acx aria-label="Close">✕</button>
-    <div class="acTitle"><small>THE</small>12TH MAN<br>CALENDAR</div>
+    <div class="acTitle"><small>DAILY BONUS</small>12TH MAN<br>VIDEOS</div>
     <div class="acTime">DAY ${today + 1} ENDS IN <b>${fmtLeft(mid - _nowDate())}</b></div><div class="acSub">WATCH A SHORT VIDEO EACH DAY FOR THAT DAY'S REWARD</div>
     <div class="acGrid">${[0, 1, 2, 3, 4, 5, 6].map(cell).join('')}
       <div class="acC bonus ${s.bonus ? 'got' : bonusLost ? 'miss' : ''}"><span class="acD">BONUS</span><span class="acA">${adCalArt(ADCAL_BONUS)}</span><small>COLLECT ALL 7 FOR A GOLD BAG</small>
         ${s.bonus ? '<span class="acS">✔ COLLECTED</span>' : allGot ? '<button class="gcBuy acGo" data-acbonus>CLAIM</button>' : `<span class="acS">${bonusLost ? 'MISSED' : `${s.got.filter(Boolean).length} / 7`}</span>`}</div></div>
     <p class="acNote">Optional videos — they still work with No Ads. A new calendar starts every Monday.</p></div>`;
   el.classList.add('show');
-  el.onclick = e => { if (e.target === el || e.target.closest('[data-acx]')) { el.classList.remove('show'); try { updateMenuHUD(); } catch (er) {} return; }
+  el.onclick = e => { if (e.target === el || e.target.closest('[data-acx]')) { el.classList.remove('show'); try { updateMenuHUD(); if (document.getElementById('todayPanel').classList.contains('show')) renderToday(); } catch (er) {} return; }
     if (e.target.closest('[data-acgo]')) { const i = adCalDay(); if (s.got[i]) return; try { playUiTap(); } catch (er) {}
       showRewardedVideo(() => { const st = adCalState(); if (st.got[i]) return; st.got[i] = 1; SAVE.save(); const l = grantReward(adCalReward(i)); showMessage('+ ' + l, '#FFC93A', 2200);
         track('adcal_claim', { day: i + 1 }); try { hapticBig(); playAchievementChime(); } catch (er) {} openAdCal(); });
@@ -25110,6 +25120,7 @@ function openAdCal() {
 }
 // Home button (above Invite mates), with a "!" while today's video is waiting
 (function adCalHome() {
+  return;   // Nov 16 (Joe): merged into the Today calendar — no separate Home button
   const home = document.getElementById('overlay'); if (!home) return;
   const b = document.createElement('button'); b.id = 'adCalBtn'; b.setAttribute('aria-label', '12th Man Calendar');
   b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3" fill="#fff"/><rect x="3" y="5" width="18" height="5" rx="2" fill="#FF5A5A"/><rect x="7" y="2.5" width="2.4" height="5" rx="1.2" fill="#FFC93A"/><rect x="14.6" y="2.5" width="2.4" height="5" rx="1.2" fill="#FFC93A"/><path d="M10 12.6v6l5-3z" fill="#7a3dd8"/></svg><span id="adCalBadge">!</span>';
@@ -25212,7 +25223,7 @@ document.addEventListener('click', e => { const t = e.target && e.target.closest
   .styBub:after{content:'';position:absolute;left:12px;bottom:-8px;border:5px solid transparent;border-top-color:#050A14}
   .styBub.on{background:#FFF6D6}
   .styTr{width:84%;height:16px;border-radius:999px;background:linear-gradient(90deg,transparent,var(--e) 30%,var(--m) 70%,var(--c));box-shadow:0 0 10px var(--m);position:relative}.styTr i{position:absolute;right:-4px;top:-3px;width:22px;height:22px;border-radius:50%;background:#fff;border:2.5px solid #050A14}
-  .styBat{height:60px}
+  .styBat{height:60px}.styIcon{max-height:58px;max-width:80%;object-fit:contain}.styEv{color:#FFB36B !important;font-size:9px !important}
   .styCel{font-size:46px;line-height:1;color:#FFE27A;text-shadow:0 2px 0 #050A14,0 0 12px rgba(255,214,74,.8)}.styCel.confetti{font-size:30px;color:#FF4FA3}.styCel.firework{color:#5AC8FF}.styCel.bunting{font-size:22px;color:#ff4fa3;letter-spacing:-2px}.styCel.goldrain{color:#FFC93A}.styCel.supernova{font-size:40px}
   .styNote{font:11px system-ui,sans-serif;color:#8fa6cf;text-align:center;margin:10px 2px 0}
   .styShopArt{display:flex;align-items:center;justify-content:center;width:100%;height:100%}.styShopArt .styBat{height:70px}
@@ -25255,6 +25266,8 @@ document.addEventListener('click', e => { const t = e.target && e.target.closest
   .upArt{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%}.upArt .gcImg{width:72%;height:72%}
   .upLv{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:#050A14;color:#FFE27A;border-radius:999px;padding:1px 8px;font-weight:400;font-size:13px;white-space:nowrap}.upLv i{font-style:normal;color:#7CF29A;margin:0 3px}
   .upRow{font-size:12px;color:#ffe9d6}
+  .t3Bonus{background:linear-gradient(#8a6aff,#5b3fd0) !important}.t3Bonus span small{display:block;font:11px system-ui,sans-serif;opacity:.85;margin-top:2px}.t3Bonus.done{filter:saturate(.6)}
+  .dpBonus{display:block;margin:8px auto 0;border:3px solid #050A14;border-radius:12px;background:linear-gradient(#8a6aff,#5b3fd0);color:#fff;font:14px 'Lilita One','Arial Black',Arial,sans-serif;padding:8px 12px;box-shadow:0 3px 0 #050A14;cursor:pointer}
   .soCar{display:flex;align-items:stretch;gap:6px}.soNav{width:34px;border-radius:12px;border:3px solid #050A14;background:linear-gradient(#3ee07a,#1aa34f);color:#fff;font:26px 'Lilita One','Arial Black',Arial,sans-serif;cursor:pointer}
   .soCard{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 10px 10px;border-radius:16px;border:3px solid #050A14;background:linear-gradient(#ffb44a,#e8701a 45%,#b3460e);box-shadow:0 4px 0 #050A14;color:#fff;text-align:center}
   .soCard b{font-weight:400;font-size:20px;text-shadow:0 2px 0 #050A14}.soCard small{font:12px system-ui,sans-serif;color:#fff3e6}.soArt{height:74px;max-width:120px;object-fit:contain}
