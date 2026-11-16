@@ -1,0 +1,41 @@
+rules_version = '2';
+// Flicky Cricket — online duels and leaderboards (Nov 16). Every player signs in anonymously.
+// To ban a player: create a document banned/{their uid} in the Firestore console (any content).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null && !exists(/databases/$(database)/documents/banned/$(request.auth.uid)); }
+    function okName(n) { return n is string && n.size() >= 1 && n.size() <= 14 && n.matches("^[A-Z0-9 _.'-]+$"); }
+    function okLook(d) { return okName(d.name) && d.flag is string && d.flag.size() <= 16 && d.shirt is string && d.shirt.size() <= 20 && d.g in ['m', 'f']; }
+
+    // a player's duel innings at one table: 12 balls (+ up to 8 sudden-death balls); other players chase it
+    match /tables/{li}/innings/{id} {
+      allow read: if signedIn() && request.query.limit <= 50;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'flag', 'shirt', 'g', 'trophies', 'log', 'sd', 'runs', 'wk', 't', 'at'])
+        && request.resource.data.uid == request.auth.uid && okLook(request.resource.data)
+        && request.resource.data.log is list && request.resource.data.log.size() == 12 && request.resource.data.log.hasOnly([0, 1, 2, 3, 4, 5, 6, 'W'])
+        && request.resource.data.sd is list && request.resource.data.sd.size() <= 8 && request.resource.data.sd.hasOnly([0, 1, 2, 3, 4, 5, 6, 'W'])
+        && request.resource.data.runs is int && request.resource.data.runs >= 0 && request.resource.data.runs <= 160
+        && request.resource.data.wk is int && request.resource.data.trophies is int && request.resource.data.trophies >= 0 && request.resource.data.trophies < 100000
+        && request.resource.data.t is int && request.resource.data.at == request.time;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // leaderboards: one entry per player per board, and it can only go up
+    match /boards/{key}/scores/{uid} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'flag', 'shirt', 'g', 'score', 'at'])
+        && request.resource.data.uid == uid && okLook(request.resource.data)
+        && request.resource.data.score is int && request.resource.data.score >= 0 && request.resource.data.score <= 5000
+        && request.resource.data.at == request.time
+        && (resource == null || request.resource.data.score > resource.data.score);
+    }
+
+    // reports of offensive names (read them in the Firebase console)
+    match /reports/{id} {
+      allow create: if signedIn() && request.resource.data.by == request.auth.uid
+        && request.resource.data.keys().hasOnly(['by', 'uid', 'name', 'why', 't', 'at']);
+    }
+  }
+}

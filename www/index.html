@@ -4545,6 +4545,7 @@ const GAME_CONFIG = {
     firstBuyDoubled: true, maxPopupOffersPerSession: 1,
     ads: { interstitialEvery: 3, noInterstitialFirstMatches: 3, interstitialMaxPerDay: 99, rewardedGemsPerDay: 3, rewardedGems: 5, rewardedCoinsPerDay: 3 },
   },
+  online: { firebase: { apiKey: '', authDomain: '', projectId: '', appId: '' } },   // Nov 16: real rivals + boards (public web keys)
   season: {                                                                                            // sprint 8
     dailyChallenge: { freeAttempts: 1, extraAttemptGems: 10, streakBagAt: 3 },
     tournament: { bands: [[1, 8], [9, 18], [19, 28]], rewards: { top1: { bag: 'gold', gems: 200 }, top10: { bag: 'gold' }, top50: { bag: 'silver' }, all: { bag: 'bronze' } } },
@@ -22987,7 +22988,7 @@ function duelVersus(rival, extra, go) {
   el.innerHTML = `<div class="vsHead">${head}</div>
     <div class="vsSide me"><canvas width="10" height="10"></canvas><b>${(me.name || 'YOU').slice(0, 14)}</b><small>${flagHtml(me.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(d.trophies)].name}</span> · <i class="hIco hi-trophy"></i>${d.trophies}</small></div>
     <div class="vsMid"><img alt="" src="assets/ui/icon_duel.webp"><span>VS</span></div>
-    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(rival.trophies || 0)].name}</span> · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small>${PRACTICE() && !extra.friend ? '<em class="pracTag">PRACTICE RIVAL</em>' : ''}</div>
+    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(rival.trophies || 0)].name}</span> · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small>${rival.practice && !extra.friend && !extra.cup ? '<em class="pracTag">PRACTICE RIVAL</em>' : ''}</div>
     <div class="vsFoot">${prize}<em>${GAME_CONFIG.season.duel.balls} BALLS EACH · SAME BALLS</em></div><i class="vsFlash"></i>`;
   const cv = el.querySelectorAll('canvas');
   try { paintPlayerTo(cv[0], me); paintPlayerTo(cv[1], Object.assign({}, me, { shirt: rival.shirt || 'maroon', g: rival.g || 'm', name: rival.name })); } catch (e) {}
@@ -23297,7 +23298,7 @@ function playCup() {
     track('cup_enter', { table: li, entry: e });
   }
   const C = GAME_CONFIG.season.cup, mm = cupBracket(run)[run.round][0], opp = run.names[mm.b] || run.names[1];
-  const rival = BACKEND.duelRival(run.li, run.seed + ':r' + run.round, C.step * run.round); rival.name = opp;
+  const rival = BACKEND.duelRival(run.li, run.seed + ':r' + run.round, C.step * run.round, { local: true }); rival.name = opp;
   run.next = rival.name; SAVE.save();
   startDuelMatch(run.li, rival, { cup: true, cupRound: run.round });
 }
@@ -23390,14 +23391,14 @@ function modeEnd() {
     SAVE.save();
   } else if (c.mode === 'tourney') {
     BACKEND.submit(c.board, runs); try { FlickyCloud.submit('weekly', runs); } catch (e) {} const st = tourneyStats(c.leagueIdx), rk = BACKEND.rank(c.board, st.mean, st.sd);
-    title = 'TOURNAMENT'; line = `${runs} runs · your best ${rk.best} · ${PRACTICE() ? 'practice ' : ''}rank #${rk.rank} of ${rk.of}`; extra = `Ends in ${passDaysLeftWeek()} day${passDaysLeftWeek() === 1 ? '' : 's'} · top 1% gold bag + 200 gems`;
+    title = 'TOURNAMENT'; line = `${runs} runs · your best ${rk.best} · ${rk.online ? '' : 'practice '}rank #${rk.rank} of ${rk.of}`; extra = `Ends in ${passDaysLeftWeek()} day${passDaysLeftWeek() === 1 ? '' : 's'} · top 1% gold bag + 200 gems`;
   } else if (c.mode === 'duel') {
     const r = duelEnd(c); title = r.title; line = r.line; extra = r.extra; c._duelRes = r.res; c._duelAgain = r.again; if (r.cup) c.mode = 'cup'; else if (r.ui) window._duelUi = Object.assign(r.ui, { again: r.again });
   } else if (c.mode === 'endless') {
     BACKEND.submit(c.board, runs); try { FlickyCloud.submit('endless', runs); } catch (e) {} const st = endlessStats(), rk = BACKEND.rank(c.board, st.mean, st.sd);
     const ms = GAME_CONFIG.season.endless.milestones.filter(m => runs >= m), s = seasonState(); s.endlessBadges = s.endlessBadges || {};
     const fresh = ms.filter(m => !s.endlessBadges[m]); fresh.forEach(m => { s.endlessBadges[m] = Date.now(); }); SAVE.save();
-    title = 'ENDLESS'; line = `${runs} runs · best ${rk.best} · ${PRACTICE() ? 'practice ' : ''}rank #${rk.rank} of ${rk.of}`; if (fresh.length) extra = `BADGE: ${fresh.map(m => m + ' RUNS').join(' · ')}`;
+    title = 'ENDLESS'; line = `${runs} runs · best ${rk.best} · ${rk.online ? '' : 'practice '}rank #${rk.rank} of ${rk.of}`; if (fresh.length) extra = `BADGE: ${fresh.map(m => m + ' RUNS').join(' · ')}`;
   }
   track('match_end', { mode: c.mode, runs, won, ballsUsed: c.used || 0 });
   window.chase = null; window._modeScene = null; window._activeLeagueIdx = null; window._modeEndAt = Date.now();
@@ -24018,8 +24019,8 @@ function buyEventBundle() { const ev = activeEvent(); if (!ev) return; const st 
 })();
 function boardHtml(rk) {
   if (!rk) return '<small>No score yet this week.</small>';
-  const rows = rk.top.slice(0, 3).map((s, i) => `<span>${i + 1}</span><span>${BOARD_NAMES[(i * 7 + rk.top.length) % BOARD_NAMES.length]}</span><span>${s}</span>`).join('');
-  return `${PRACTICE() ? '<em class="pracTag">PRACTICE BOARD · ONLINE SOON</em>' : ''}<div class="cpBoard">${rows}<span class="me">${rk.rank}</span><span class="me">${curLook().name} (YOU)</span><span class="me">${rk.best}</span></div>`;
+  const rows = rk.top.slice(0, 3).map((s, i) => `<span>${i + 1}</span><span>${rk.online ? (rk.names[i] || curLook().name + ' (YOU)') : BOARD_NAMES[(i * 7 + rk.top.length) % BOARD_NAMES.length]}</span><span>${s}</span>`).join('');
+  return `${!rk.online ? '<em class="pracTag">PRACTICE BOARD · ONLINE SOON</em>' : ''}<div class="cpBoard">${rows}${rk.online && rk.rank <= 3 ? '' : `<span class="me">${rk.rank}</span><span class="me">${curLook().name} (YOU)</span><span class="me">${rk.best}</span>`}</div>`;
 }
 function renderCompete() {
   if (window.EVENTS_V2 !== false) return renderCompeteV2();   // Events v4 posters (Joe signed off Oct 30); EVENTS_V2 = false shows the old sheet
@@ -25535,5 +25536,124 @@ document.addEventListener('click', e => { const t = e.target && e.target.closest
 <script>
 document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-lang]'); if (!b) return; e.stopPropagation(); try { playUiTap(); } catch (er) {} if (b.dataset.lang !== FlickyLang.lang) FlickyLang.set(b.dataset.lang); }, true);
 </script>
+<script>
+// ═══ ONLINE PLAY (Nov 16, Joe: "real rivals"): duels against other players' real innings, and real leaderboards ═══
+// Backend is Firebase (anonymous sign-in + Firestore). The keys in GAME_CONFIG.online.firebase are public web keys;
+// empty = offline, and everything keeps working with practice rivals exactly as before. Rules: backend/firestore.rules.
+// Duels stay async (the Golf Clash way): your innings is saved, and later players at that table chase it.
+const FlickyOnline = window.FlickyOnline = (function () {
+  const O = { on: false, uid: null, F: null, db: null, pool: {}, ranks: {}, busy: {}, last: {} };
+  const cfg = () => (GAME_CONFIG.online || {}).firebase || {};
+  const S = () => { const s = SAVE.section('online'); s.blocked = s.blocked || []; return s; };
+  // names other players will see: letters, numbers, a few marks; anything rude becomes PLAYER + 4 digits
+  const BAD = /(fuck|fuk|shit|cunt|bitch|bastard|dick|cock|pussy|nigg|nigga|fag|whore|slut|rape|porn|sex|penis|vagina|twat|wank|prick|retard|nazi|hitler|isis|madarch|behench|bhench|bhenchod|chutiy|chutia|gaand|gandu|lund|lauda|loda|randi|haram|kutt?a|harami|kamina|bsdk|mc\b|bc\b)/i;
+  O.cleanName = n => { n = String(n || '').toUpperCase().replace(/[^A-Z0-9 _.'-]/g, '').trim().slice(0, 14);
+    const flat = n.replace(/[^A-Z]/g, '').replace(/0/g, 'O');
+    if (!n || BAD.test(n) || BAD.test(flat)) n = 'PLAYER' + String(Math.abs((O.uid || 'x').split('').reduce((a, c) => a * 31 + c.charCodeAt(0) | 0, 7)) % 10000).padStart(4, '0');
+    return n; };
+  const me = () => { const L = curLook(); return { name: O.cleanName(L.name), flag: String(L.flag || '').slice(0, 16), shirt: String(L.shirt || '').slice(0, 20), g: L.g === 'f' ? 'f' : 'm' }; };
+  const rid = () => { const a = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; let s = ''; for (let i = 0; i < 20; i++) s += a[Math.floor(Math.random() * a.length)]; return s; };
+  const loadSdk = () => new Promise((ok, no) => { if (window.FBX) return ok(); const s = document.createElement('script'); s.src = 'assets/firebase.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+  O.init = async function () {
+    const c = cfg(); if (!c.apiKey || !c.projectId) return;
+    try {
+      await loadSdk(); const F = O.F = window.FBX;
+      const app = F.initializeApp({ apiKey: c.apiKey, authDomain: c.authDomain || c.projectId + '.firebaseapp.com', projectId: c.projectId, appId: c.appId });
+      const auth = F.initializeAuth(app, { persistence: [F.indexedDBLocalPersistence, F.browserLocalPersistence] });
+      O.db = F.getFirestore(app);
+      if (window.FC_EMU) { F.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true }); F.connectFirestoreEmulator(O.db, '127.0.0.1', 8080); }
+      const cred = auth.currentUser ? { user: auth.currentUser } : await F.signInAnonymously(auth);
+      O.uid = cred.user.uid; O.on = true; BACKEND.mode = 'online';
+      track('online_ready', {});
+      O.refreshBoards(); duelTables().forEach((li, i) => { if (i < 4) O.fill(li); });
+    } catch (e) { O.on = false; BACKEND.mode = 'local'; track('online_error', { where: 'init', msg: String(e && e.message || e).slice(0, 80) }); }
+  };
+  // ---------- duels: a small pool of real innings per table, filled in the background ----------
+  O.fill = async function (li) {
+    if (!O.on || O.busy['t' + li]) return; O.busy['t' + li] = 1;
+    try { const F = O.F, col = F.collection(O.db, 'tables', String(li), 'innings'), blk = S().blocked, mine = duelState().trophies, now = Date.now();
+      let snap = await F.getDocs(F.query(col, F.where(F.documentId(), '>=', rid()), F.limit(30)));
+      let docs = snap.docs; if (docs.length < 8) { snap = await F.getDocs(F.query(col, F.limit(30))); docs = docs.concat(snap.docs); }
+      const seen = new Set(), got = [];
+      docs.forEach(d => { const x = d.data(); if (seen.has(d.id) || x.uid === O.uid || blk.includes(x.uid) || !Array.isArray(x.log) || now - (x.t || 0) > 21 * 864e5) return; seen.add(d.id); got.push(Object.assign({ id: d.id }, x)); });
+      got.sort((a, b) => Math.abs((a.trophies || 0) - mine) - Math.abs((b.trophies || 0) - mine));
+      O.pool[li] = got.slice(0, 12).sort(() => Math.random() - 0.5);
+    } catch (e) { track('online_error', { where: 'fill', msg: String(e && e.message || e).slice(0, 80) }); }
+    O.busy['t' + li] = 0;
+  };
+  O.take = function (li) { const p = O.pool[li]; const r = p && p.length ? p.shift() : null; if (!p || p.length < 3) O.fill(li); return r; };
+  O.postInnings = function (li, runs, wk, log) {
+    if (!O.on) return; const D = GAME_CONFIG.season.duel, F = O.F, m = me();
+    const L = (log || []).slice(0, D.balls); while (L.length < D.balls) L.push(0);
+    F.addDoc(F.collection(O.db, 'tables', String(li), 'innings'), Object.assign(m, { uid: O.uid, trophies: Math.round(duelState().trophies || 0), log: L, sd: (log || []).slice(D.balls, D.balls + D.suddenDeathMax), runs: Math.round(runs || 0), wk: Math.round(wk || 0), t: Date.now(), at: F.serverTimestamp() }))
+      .catch(e => track('online_error', { where: 'innings', msg: String(e && e.message || e).slice(0, 80) }));
+  };
+  // ---------- leaderboards: weekly tournament + endless, one entry per player (their best) ----------
+  O.submit = async function (key, score) {
+    if (!O.on) return; const F = O.F, ref = F.doc(O.db, 'boards', key, 'scores', O.uid);
+    try { const cur = await F.getDoc(ref); score = Math.round(score);
+      if (!cur.exists() || score > (cur.data().score || 0)) await F.setDoc(ref, Object.assign(me(), { uid: O.uid, score, at: F.serverTimestamp() }));
+      await O.rankOf(key); } catch (e) { track('online_error', { where: 'submit', msg: String(e && e.message || e).slice(0, 80) }); }
+  };
+  O.rankOf = async function (key) {
+    if (!O.on) return null; const F = O.F, col = F.collection(O.db, 'boards', key, 'scores');
+    const e = (SAVE.section('season').boards || {})[key]; if (!e) return null;
+    try {
+      const [top, above, all] = await Promise.all([F.getDocs(F.query(col, F.orderBy('score', 'desc'), F.limit(5))), F.getCount(F.query(col, F.where('score', '>', e.best))), F.getCount(col)]);
+      const blk = S().blocked, t = top.docs.map(d => d.data()).filter(x => !blk.includes(x.uid));
+      const of = Math.max(1, all.data().count), rank = above.data().count + 1;
+      O.ranks[key] = { rank, of, pct: rank / of, best: e.best, top: t.map(x => x.score), names: t.map(x => x.uid === O.uid ? null : O.cleanName(x.name)), online: true, at: Date.now() };
+      return O.ranks[key];
+    } catch (err) { track('online_error', { where: 'rank', msg: String(err && err.message || err).slice(0, 80) }); return null; }
+  };
+  O.refreshBoards = function () { if (!O.on) return; try { const cur = Math.max(1, currentLeagueIdx()); [tourneyKey(cur), endlessKey()].forEach(k => O.rankOf(k)); } catch (e) {} };
+  // ---------- report + block (App Store 1.2: players can report a name and never meet that player again) ----------
+  O.report = function (rv) {
+    const s = S(); if (rv.ouid && !s.blocked.includes(rv.ouid)) s.blocked.push(rv.ouid); SAVE.save();
+    Object.keys(O.pool).forEach(k => O.pool[k] = (O.pool[k] || []).filter(x => x.uid !== rv.ouid));
+    if (O.on) O.F.addDoc(O.F.collection(O.db, 'reports'), { by: O.uid, uid: rv.ouid || '', name: String(rv.name || '').slice(0, 20), why: 'name', t: Date.now(), at: O.F.serverTimestamp() }).catch(() => {});
+    showMessage('REPORTED · YOU WON\'T BE MATCHED AGAIN', '#22c55e', 2200);
+  };
+  return O;
+})();
+// local rivals stay as the fallback (no signal, empty table, cups); a real innings is used when one is ready
+{ const _local = BACKEND.duelRival;
+  BACKEND.duelRival = function (li, seed, boost, opts) {
+    const r = _local.call(this, li, seed, boost); r.practice = true;
+    if (opts && opts.local) return r;
+    const x = FlickyOnline.on && FlickyOnline.take(li); if (!x) return r;
+    const D = GAME_CONFIG.season.duel, log = x.log.slice(0, D.balls).map(v => v === 'W' ? 'W' : Math.max(0, Math.min(6, +v || 0)));
+    while (log.length < D.balls) log.push(0);
+    const sd = (x.sd || []).map(v => v === 'W' ? 'W' : Math.max(0, Math.min(6, +v || 0))).concat(r.sd).slice(0, D.suddenDeathMax);   // balls they never had to face come from the practice rival
+    return Object.assign(r, { name: FlickyOnline.cleanName(x.name), flag: x.flag || r.flag, log, sd, trophies: Math.max(0, x.trophies || 0), g: x.g === 'f' ? 'f' : 'm',
+      shirt: x.shirt && x.shirt !== curLook().shirt && PLAYER_SHIRTS.some(s => s.id === x.shirt) ? x.shirt : r.shirt, practice: false, online: true, ouid: x.uid });
+  };
+  const _sub = BACKEND.duelSubmit;
+  BACKEND.duelSubmit = function (li, runs, wk, log) { _sub.apply(this, arguments); FlickyOnline.postInnings(li, runs, wk, log); };
+  const _bs = BACKEND.submit;
+  BACKEND.submit = function (key, score) { const e = _bs.apply(this, arguments); FlickyOnline.submit(key, score); return e; };
+  const _rk = BACKEND.rank;
+  BACKEND.rank = function (key, mean, sd) { const o = FlickyOnline.ranks[key], e = (SAVE.section('season').boards || {})[key];
+    if (o && e) { o.best = Math.max(o.best, e.best); return o; } return _rk.call(this, key, mean, sd); };
+}
+// report button on the result of a duel against a real player
+{ const _sdr = window.showDuelResult;
+  if (typeof _sdr === 'function') window.showDuelResult = function (u) { _sdr.apply(this, arguments);
+    try { if (!u.rv || !u.rv.online) return; const el = document.getElementById('duelRes'), card = el && el.querySelector('.drCard'); if (!card) return;
+      const b = document.createElement('button'); b.className = 'drReport'; b.textContent = 'REPORT NAME'; card.appendChild(b);
+      b.onclick = () => bagConfirm(0, `Report ${u.rv.name}'s name as offensive? You won't be matched with them again.`, () => { FlickyOnline.report(u.rv); b.remove(); }, { yes: 'REPORT', no: 'CANCEL', noCost: true });
+    } catch (e) {} }; }
+// opening Events refreshes the real boards, then redraws once they arrive
+{ const _rc = window.renderCompete;
+  if (typeof _rc === 'function') window.renderCompete = function () { const r = _rc.apply(this, arguments);
+    if (FlickyOnline.on && Date.now() - (FlickyOnline.last.rc || 0) > 30000) { FlickyOnline.last.rc = Date.now(); const cur = Math.max(1, currentLeagueIdx());
+      Promise.all([tourneyKey(cur), endlessKey()].map(k => FlickyOnline.rankOf(k))).then(() => { const p = document.getElementById('competePanel'); if (p && p.classList.contains('show')) try { _rc(); } catch (e) {} }); }
+    return r; }; }
+setTimeout(() => { try { FlickyOnline.init(); } catch (e) {} }, 2500);
+</script>
+<style>
+  .drReport { display:block; margin:10px auto 0; background:none; border:0; color:rgba(255,255,255,.55); font:12px 'Lilita One',sans-serif; letter-spacing:.08em; text-decoration:underline; cursor:pointer; }
+</style>
+
 </body>
 </html>
