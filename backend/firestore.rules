@@ -37,5 +37,53 @@ service cloud.firestore {
       allow create: if signedIn() && request.resource.data.by == request.auth.uid
         && request.resource.data.keys().hasOnly(['by', 'uid', 'name', 'why', 't', 'at']);
     }
+
+    // CLUBS (Nov 16): up to 30 players; the member count only moves by one, together with that member's own document
+    function okClub(n) { return n is string && n.size() >= 3 && n.size() <= 16 && n.matches("^[A-Z0-9 _.'-]+$"); }
+    function clubPath(cd) { return /databases/$(database)/documents/clubs/$(cd); }
+    function memPath(cd, u) { return /databases/$(database)/documents/clubs/$(cd)/members/$(u); }
+    match /clubs/{cd} {
+      allow get: if signedIn();
+      allow list: if signedIn() && request.query.limit <= 50;
+      allow create: if signedIn() && cd.matches("^[A-Z0-9]{6}$")
+        && request.resource.data.keys().hasOnly(['name', 'nameU', 'c', 's', 'owner', 'members', 't'])
+        && okClub(request.resource.data.name) && request.resource.data.nameU == request.resource.data.name
+        && request.resource.data.c is int && request.resource.data.c >= 0 && request.resource.data.c < 8
+        && request.resource.data.s is int && request.resource.data.s >= 0 && request.resource.data.s < 6
+        && request.resource.data.owner == request.auth.uid && request.resource.data.members == 1
+        && existsAfter(memPath(cd, request.auth.uid));
+      allow update: if signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+        && ((request.resource.data.members == resource.data.members + 1 && request.resource.data.members <= 30
+              && !exists(memPath(cd, request.auth.uid)) && existsAfter(memPath(cd, request.auth.uid)))
+          || (request.resource.data.members == resource.data.members - 1 && request.resource.data.members >= 0 && exists(memPath(cd, request.auth.uid))));
+      match /members/{u} {
+        allow get: if signedIn();
+        allow list: if signedIn() && request.query.limit <= 50;
+        allow create: if signedIn() && u == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'flag', 'week', 'pts', 'joined'])
+          && request.resource.data.uid == u && okName(request.resource.data.name) && request.resource.data.flag is string && request.resource.data.flag.size() <= 16
+          && request.resource.data.pts == 0 && request.resource.data.week is string
+          && (getAfter(clubPath(cd)).data.members == (exists(clubPath(cd)) ? get(clubPath(cd)).data.members + 1 : 1));
+        allow update: if signedIn() && u == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'flag', 'week', 'pts', 'joined'])
+          && request.resource.data.uid == u && okName(request.resource.data.name) && request.resource.data.flag is string && request.resource.data.flag.size() <= 16
+          && request.resource.data.pts is int && request.resource.data.week is string
+          && ((request.resource.data.week == resource.data.week && request.resource.data.pts > resource.data.pts && request.resource.data.pts <= resource.data.pts + 5)
+            || (request.resource.data.week != resource.data.week && request.resource.data.pts >= 0 && request.resource.data.pts <= 5));
+        // leave (yourself) or removed by the captain; the club's count drops by one in the same write
+        allow delete: if signedIn() && (u == request.auth.uid || get(clubPath(cd)).data.owner == request.auth.uid)
+          && getAfter(clubPath(cd)).data.members == get(clubPath(cd)).data.members - 1;
+      }
+    }
+    // weekly club totals (the TOP CLUBS board); only a member can add, at most 5 points a write
+    match /clubweeks/{w}/clubs/{cd} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && exists(memPath(cd, request.auth.uid))
+        && request.resource.data.keys().hasOnly(['pts', 'name', 'c', 's'])
+        && okClub(request.resource.data.name) && request.resource.data.c is int && request.resource.data.s is int
+        && request.resource.data.pts is int
+        && request.resource.data.pts <= (resource == null ? 0 : resource.data.pts) + 5
+        && request.resource.data.pts > (resource == null ? 0 : resource.data.pts);
+    }
   }
 }

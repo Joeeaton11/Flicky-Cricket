@@ -24095,7 +24095,7 @@ function renderCompeteV2() {
     cup: '<i class="xmIco ev-cup"></i>',
     endless: '<i class="xmIco ev-endless"></i>',
     pass: '<i class="xmIco ev-pass"></i>',
-    event: '<i class="xmIco ev-event"></i>' };
+    event: '<i class="xmIco ev-event"></i>', club: typeof clubCrest === 'function' ? clubCrest(1, 3, 20) : '' };
   const nodeArt = r => r.img ? `<img alt="" src="${r.img}">` : r.bag ? bag(r.bag) : r.gems ? `<img alt="" src="${REWARD_HEAP_ART.gems_s}">` : r.coins ? `<img alt="" src="${REWARD_HEAP_ART.coins_s}">`
     : r.booster ? '<i class="bIco bo-lucky_grip evNodeIco"></i>' : r.cos ? `<canvas class="kitCrop" data-kitcrop="${r.kind === 'trim' ? 'trim' : 'shirt'}" data-shirt="${r.kind === 'shirt' && typeof r.cos === 'string' && PLAYER_SHIRTS.find(x => x.id === r.cos) ? r.cos : 'pass' + passSeasonKey().replace('-', '')}"></canvas>`
     : r.medal ? `<span class="evMedal m${r.medal}">${r.medal}</span>` : '';
@@ -24142,6 +24142,7 @@ function renderCompeteV2() {
         road: track(nodes, at < 0 ? 0 : Math.min(100, Math.max(0, at - 2) / 3 * 100)),
         rules: `A 32-player draw, FA Cup style, every weekend (Friday to Sunday). Every round is a duel: win and you're in the next round's draw, lose and you're out. Prizes: quarter-finals ${fmt(C.prize[2])}, semi-finals ${fmt(C.prize[3])}, runner-up ${fmt(C.prize[4])}, winner ${fmt(C.champion)}.${path}`,
         btn: !run && !cupOpenNow() ? `<button class="gcBuy evGo goal" disabled>${cupOpensLabel()}</button>` : (run ? `<button class="gcBuy evGo" data-mode="cup">PLAY ${cupShort(run.round)}</button>` : `<button class="gcBuy evGo" data-mode="cup">ENTER · ${E.toLocaleString()}<i class="hIco hi-coin"></i></button>`) })); }
+    try { if (window.FlickyOnline && FlickyOnline.on && window.clubPoster) posters.push(poster(clubPoster())); } catch (e) {}   // Nov 16: clubs
     posters.push(poster({ k: 'daily', ico: 'daily', col: '#2BB3A0', lg: d.leagueIdx, timer: `NEW IN <b>${fmtLeft(toMid)}</b>`, name: 'DAILY CHALLENGE', tag: `${sceneName(d.scene)} · SAME FOR EVERYONE`,
       goal: `NEED <em>${d.target}</em> OFF <em>${d.balls}</em> BALLS`,
       road: track([1, 2, 3].map(n => ({ r: n === 3 ? { bag: 'silver' } : { medal: 'win' }, label: `DAY ${n}`, sub: n === 3 ? 'SILVER BAG' : 'WIN', done: n <= st, next: n === st + 1 })), st / 2 * 100),
@@ -24182,7 +24183,7 @@ function renderCompeteV2() {
         rules: 'Earn the event currency in league matches and climb its reward track. The last reward is an exclusive kit.', btn: '<button class="gcBuy evGo goal" disabled>COMING SOON</button>' })); } }
   function cur() { return Math.max(1, currentLeagueIdx()); }
   const keys = [...posters.join('').matchAll(/data-pk="(\w+)"/g)].map(m => m[1]);
-  const LBL = { duel: 'DUELS', cup: 'CUP', daily: 'DAILY', tourney: 'WEEKLY', endless: 'ENDLESS', pass: 'PASS', event: (() => { const e = activeEvent() || nextEvent(); return e ? e.name.split(' ')[0] : 'EVENT'; })() };
+  const LBL = { club: 'CLUB', duel: 'DUELS', cup: 'CUP', daily: 'DAILY', tourney: 'WEEKLY', endless: 'ENDLESS', pass: 'PASS', event: (() => { const e = activeEvent() || nextEvent(); return e ? e.name.split(' ')[0] : 'EVENT'; })() };
   if (todo.endless) todo.tourney = true;
   const chips = `<div class="evChips">${keys.filter(k => k !== 'endless').map(k => `<button class="evChip" data-pjump="${k}">${SVG[k === 'tourney' ? 'tourney' : k]}<span>${LBL[k] || k.toUpperCase()}</span>${todo[k] ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>`;
   const seasonStrip = on ? `<div class="evSeasonBar">${bag('silver')}<span>SEASON ${seasonNumber()} ENDS IN <b>${passDaysLeft()} DAY${passDaysLeft() === 1 ? '' : 'S'}</b> · your best league's bag + gems</span></div>` : '';
@@ -25654,6 +25655,210 @@ setTimeout(() => { try { FlickyOnline.init(); } catch (e) {} }, 2500);
 <style>
   .drReport { display:block; margin:10px auto 0; background:none; border:0; color:rgba(255,255,255,.55); font:12px 'Lilita One',sans-serif; letter-spacing:.08em; text-decoration:underline; cursor:pointer; }
 </style>
+
+<script>
+// ═══ CLUBS (Nov 16, Joe): join a club of up to 30 players; every match earns club points; the club's weekly total
+// opens reward bags for every member who played their part. Lives in Firestore next to online duels (backend/firestore.rules).
+const CLUB = { max: 30, createCost: 1000, myMin: 5, ptsMatch: 1, ptsWin: 2,
+  track: [{ at: 50, bag: 'bronze' }, { at: 150, bag: 'silver' }, { at: 400, bag: 'gold' }],
+  colors: ['#E8463A', '#2F6FE0', '#2BB3A0', '#FFC93A', '#8A5CF6', '#F28C1C', '#ff7ad9', '#1d2a44'],
+  marks: ['ball', 'bat', 'stumps', 'star', 'crown', 'bolt'] };
+function clubCrest(c, s, size) {
+  c = CLUB.colors[c] || CLUB.colors[0]; const m = CLUB.marks[s] || 'ball', z = size || 44;
+  const W = '#fff', K = '#050A14';
+  const mark = { ball: `<circle cx="24" cy="25" r="9" fill="#c8222c" stroke="${K}" stroke-width="2"/><path d="M18 19q6 6 0 12M30 19q-6 6 0 12" fill="none" stroke="${W}" stroke-width="1.6" stroke-dasharray="2 1.6"/>`,
+    bat: `<path d="M27 12l5 3-9 16-5-3z" fill="#f2d39b" stroke="${K}" stroke-width="2" stroke-linejoin="round"/><path d="M18 28l5 3-3 5-5-3z" fill="#7a4a22" stroke="${K}" stroke-width="2" stroke-linejoin="round"/>`,
+    stumps: `<path d="M17 15v20M24 15v20M31 15v20" stroke="${W}" stroke-width="3.4" stroke-linecap="round"/><path d="M15 14h18" stroke="#FFC93A" stroke-width="3" stroke-linecap="round"/>`,
+    star: `<path d="M24 12l3.6 7.4 8.1 1.2-5.9 5.7 1.4 8.1L24 30.6l-7.2 3.8 1.4-8.1-5.9-5.7 8.1-1.2z" fill="#FFC93A" stroke="${K}" stroke-width="2" stroke-linejoin="round"/>`,
+    crown: `<path d="M13 32l-2-14 7 6 6-9 6 9 7-6-2 14z" fill="#FFC93A" stroke="${K}" stroke-width="2" stroke-linejoin="round"/>`,
+    bolt: `<path d="M27 10l-11 16h7l-3 12 12-17h-7z" fill="#FFC93A" stroke="${K}" stroke-width="2" stroke-linejoin="round"/>` }[m];
+  return `<svg class="clubCrest" viewBox="0 0 48 52" width="${z}" height="${z * 52 / 48}" aria-hidden="true"><path d="M24 3l19 6v15c0 12-8 21-19 26C13 45 5 36 5 24V9z" fill="${c}" stroke="${K}" stroke-width="3" stroke-linejoin="round"/><path d="M24 7l15 5v12c0 9-6 16-15 21" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2"/>${mark}</svg>`;
+}
+const FlickyClub = window.FlickyClub = (function () {
+  const C = { club: null, members: [], week: null, top: [], list: [], busy: false };
+  const S = () => { const s = SAVE.section('club'); s.claimed = s.claimed || {}; return s; };
+  const O = () => window.FlickyOnline, F = () => O().F, db = () => O().db;
+  const wk = () => weekKey();
+  const code = () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 6; i++) s += a[Math.floor(Math.random() * a.length)]; return s; };
+  const cleanClub = n => { n = String(n || '').toUpperCase().replace(/[^A-Z0-9 _.'-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16); return n.length >= 3 && O().cleanName(n) === n.slice(0, 14) ? n : ''; };
+  C.mine = () => S().code || null;
+  C.myPts = () => { const s = S(); return s.week === wk() ? (s.pts || 0) : 0; };
+  // ---------- reading ----------
+  C.load = async function () {
+    if (!O().on || !C.mine()) { C.club = null; return; }
+    const f = F(), cd = C.mine();
+    const [club, mem, w] = await Promise.all([f.getDoc(f.doc(db(), 'clubs', cd)), f.getDocs(f.query(f.collection(db(), 'clubs', cd, 'members'), f.limit(40))), f.getDoc(f.doc(db(), 'clubweeks', wk(), 'clubs', cd))]);
+    if (!club.exists() || !mem.docs.some(d => d.id === O().uid)) { S().code = null; SAVE.save(); C.club = null; return; }   // removed, or the club is gone
+    C.club = Object.assign({ code: cd }, club.data());
+    C.members = mem.docs.map(d => d.data()).map(x => Object.assign(x, { wpts: x.week === wk() ? x.pts || 0 : 0 })).sort((a, b) => b.wpts - a.wpts);
+    C.week = w.exists() ? w.data() : { pts: 0 };
+  };
+  C.loadTop = async function () { if (!O().on) return; const f = F();
+    const q = await f.getDocs(f.query(f.collection(db(), 'clubweeks', wk(), 'clubs'), f.orderBy('pts', 'desc'), f.limit(20)));
+    C.top = q.docs.map(d => Object.assign({ code: d.id }, d.data())); };
+  C.browse = async function (txt) { if (!O().on) return; const f = F(), col = f.collection(db(), 'clubs'); txt = String(txt || '').toUpperCase().trim();
+    const q = txt.length === 6 && !txt.includes(' ') ? null : txt ? f.query(col, f.where('nameU', '>=', txt), f.where('nameU', '<', txt + ''), f.orderBy('nameU'), f.limit(20))
+      : f.query(col, f.where('members', '<', CLUB.max), f.orderBy('members', 'desc'), f.limit(20));
+    let docs = q ? (await f.getDocs(q)).docs : [];
+    if (txt.length === 6) { const d = await f.getDoc(f.doc(db(), 'clubs', txt)); if (d.exists()) docs = [d].concat(docs); }
+    const blk = SAVE.section('online').blocked || [];
+    C.list = docs.map(d => Object.assign({ code: d.id }, d.data())).filter(x => x.members > 0 && !blk.includes('club:' + x.code)); };
+  // ---------- joining, creating, leaving ----------
+  const meDoc = () => { const L = curLook(); return { uid: O().uid, name: O().cleanName(L.name), flag: String(L.flag || '').slice(0, 16), week: wk(), pts: 0, joined: Date.now() }; };
+  C.join = async function (cd) {
+    const f = F(), cref = f.doc(db(), 'clubs', cd), mref = f.doc(db(), 'clubs', cd, 'members', O().uid);
+    await f.runTransaction(db(), async t => { const c = await t.get(cref); if (!c.exists()) throw new Error('gone'); const n = c.data().members || 0; if (n >= CLUB.max) throw new Error('full');
+      t.update(cref, { members: n + 1 }); t.set(mref, meDoc()); });
+    const s = S(); s.code = cd; s.week = wk(); s.pts = 0; SAVE.save(); track('club_join', {});
+  };
+  C.create = async function (name, col, mark) {
+    const f = F(), cd = code(), cref = f.doc(db(), 'clubs', cd), mref = f.doc(db(), 'clubs', cd, 'members', O().uid);
+    await f.runTransaction(db(), async t => { const c = await t.get(cref); if (c.exists()) throw new Error('taken');
+      t.set(cref, { name, nameU: name, c: col, s: mark, owner: O().uid, members: 1, t: Date.now() }); t.set(mref, meDoc()); });
+    const s = S(); s.code = cd; s.week = wk(); s.pts = 0; SAVE.save(); track('club_create', {});
+  };
+  C.leave = async function (uid) {   // yourself, or (club owner) a member who has to go
+    const f = F(), cd = C.mine(), cref = f.doc(db(), 'clubs', cd), mref = f.doc(db(), 'clubs', cd, 'members', uid || O().uid);
+    await f.runTransaction(db(), async t => { const c = await t.get(cref), m = await t.get(mref); if (!m.exists()) return; t.update(cref, { members: Math.max(0, (c.data().members || 1) - 1) }); t.delete(mref); });
+    if (!uid || uid === O().uid) { S().code = null; SAVE.save(); C.club = null; }
+  };
+  // ---------- points: every match counts for the club ----------
+  C.addPts = function (n) {
+    if (!O().on || !C.mine() || !(n > 0)) return; n = Math.min(5, Math.round(n)); const s = S(), w = wk();
+    if (s.week !== w) { s.week = w; s.pts = 0; } s.pts += n; SAVE.save();
+    const f = F(), cd = C.mine(), L = curLook();
+    f.setDoc(f.doc(db(), 'clubs', cd, 'members', O().uid), { uid: O().uid, name: O().cleanName(L.name), flag: String(L.flag || '').slice(0, 16), week: w, pts: s.pts, joined: s.joined || Date.now() })
+      .then(() => f.setDoc(f.doc(db(), 'clubweeks', w, 'clubs', cd), { pts: f.increment(n), name: (C.club && C.club.name) || s.name || 'CLUB', c: (C.club && C.club.c) || 0, s: (C.club && C.club.s) || 0 }, { merge: true }))
+      .catch(e => track('online_error', { where: 'clubpts', msg: String(e && e.message || e).slice(0, 80) }));
+  };
+  C.claimable = function () { if (!C.club || !C.week) return []; const got = S().claimed[wk()] || [];
+    return CLUB.track.map((r, i) => i).filter(i => (C.week.pts || 0) >= CLUB.track[i].at && C.myPts() >= CLUB.myMin && !got.includes(i)); };
+  C.claim = function (i) { const s = S(), w = wk(); s.claimed[w] = s.claimed[w] || []; if (s.claimed[w].includes(i)) return; s.claimed[w].push(i);
+    Object.keys(s.claimed).forEach(k => { if (k !== w) delete s.claimed[k]; }); SAVE.save(); const b = grantReward({ bag: CLUB.track[i].bag }); track('club_claim', { tier: i }); return b; };
+  return C;
+})();
+// ---------- the Club screen ----------
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `
+  #clubPanel{position:fixed;inset:0;z-index:310;display:none;background:#01162C;font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #clubPanel.show{display:flex;justify-content:center}
+  #clubPanel .sheet{width:min(440px,100%);height:100%;overflow:auto;box-sizing:border-box;background:radial-gradient(ellipse 120% 60% at 50% 0%,#14306a,#0a1b3c 55%,#01162C);padding:calc(var(--hdrTop,8px) + 2px) 12px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px}
+  .clCard{border-radius:18px;background:linear-gradient(#1a2e5a,#13224a);border:3px solid #050A14;box-shadow:0 4px 0 #050A14,inset 0 2px 0 rgba(255,255,255,.08);padding:12px;display:flex;flex-direction:column;gap:8px}
+  .clHead{display:flex;align-items:center;gap:12px}
+  .clHead .nm{flex:1;min-width:0}.clHead .nm b{display:block;font-size:20px;font-weight:400;text-shadow:0 2px 0 #050A14;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .clHead .nm small{color:#B4C2DD;font-size:12.5px;letter-spacing:.04em}
+  .clCode{border:2px solid #FFC93A;border-radius:10px;padding:3px 8px;color:#FFC93A;background:rgba(255,201,58,.08);font:13px 'Lilita One',sans-serif;cursor:pointer}
+  .clLbl{display:flex;justify-content:space-between;color:#9fb3da;font-size:12.5px;letter-spacing:.08em}
+  .clPts{font-size:30px;text-align:center;text-shadow:0 2px 0 #050A14}.clPts small{display:block;font-size:12px;color:#B4C2DD;letter-spacing:.06em}
+  .clTrack{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .clTier{border-radius:14px;border:2.5px solid #050A14;background:#0d1a36;padding:6px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
+  .clTier img{width:58px;height:46px;object-fit:contain}.clTier b{font-weight:400;font-size:14px}.clTier small{font-size:11px;color:#9fb3da}
+  .clTier.done{border-color:#7CF29A}.clTier.got{opacity:.55}
+  .clTier .gcBuy{height:34px;min-width:0;padding:0 12px;font-size:15px;margin-top:4px}
+  .clList{display:flex;flex-direction:column;gap:6px}
+  .clRow{display:grid;grid-template-columns:26px auto 1fr auto;align-items:center;gap:8px;border-radius:12px;background:#0d1a36;border:2px solid #050A14;padding:6px 10px;font-size:16px}
+  .clRow.me{border-color:#FFC93A;background:#1c2c55}
+  .clRow i{font-style:normal;color:#9fb3da;font-size:13px;text-align:center}
+  .clRow span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .clRow em{font-style:normal;color:#FFC93A}
+  .clRow .kick{background:none;border:0;color:rgba(255,255,255,.45);font:11px 'Lilita One',sans-serif;text-decoration:underline;cursor:pointer;padding:0 0 0 6px}
+  .clClub{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;border-radius:14px;background:#0d1a36;border:2.5px solid #050A14;padding:8px 10px}
+  .clClub b{font-weight:400;font-size:17px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.clClub small{color:#9fb3da;font-size:12px}
+  .clClub .gcBuy{height:38px;min-width:0;padding:0 14px;font-size:16px;margin:0}
+  .clTabs{display:flex;gap:6px;background:#050C1A;border-radius:14px;padding:4px}
+  .clTabs button{flex:1;height:38px;border:0;border-radius:11px;background:none;color:#B4C2DD;font:16px 'Lilita One',sans-serif;cursor:pointer}
+  .clTabs button.on{background:linear-gradient(#FFD75A,#F5A915);color:#4a2a00;box-shadow:0 3px 0 #a86a00}
+  .clIn{height:46px;border-radius:12px;border:3px solid #050A14;background:#050C1A;color:#fff;font:20px 'Lilita One',sans-serif;letter-spacing:.05em;padding:0 12px;text-transform:uppercase;width:100%;box-sizing:border-box}
+  .clPick{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+  .clPick button{width:36px;height:36px;border-radius:12px;border:3px solid #050A14;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;background:#0d1a36}
+  .clPick button.on{border-color:#FFC93A;box-shadow:0 0 0 2px #FFC93A}
+  .clNote{color:#B4C2DD;font-size:13px;text-align:center;line-height:1.35}
+  .clLeave{align-self:center;background:none;border:0;color:rgba(255,255,255,.5);font:13px 'Lilita One',sans-serif;text-decoration:underline;cursor:pointer;margin-top:4px}
+  .clBig .clubCrest{filter:drop-shadow(0 4px 0 #050A14)}
+  .evPlain .clubCrest{width:96px;height:auto;margin-top:6px;filter:drop-shadow(0 5px 0 #050A14)}
+  `;
+  document.head.appendChild(css);
+  const p = document.createElement('div'); p.id = 'clubPanel'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', 'Club'); p.innerHTML = '<div class="sheet"></div>'; document.body.appendChild(p);
+  let tab = 'join', pickC = 1, pickS = 0, query = '';
+  const top = t => `<div class="evTop"><button class="evBack" data-clx aria-label="Back"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><b>${t}</b><span class="lgPill"><i class="hIco hi-coin"></i><span>${career.coins.toLocaleString()}</span></span></div>`;
+  const bagImg = b => (typeof CHEST_IMG_SRC !== 'undefined' && CHEST_IMG_SRC[b]) ? `<img alt="" src="${CHEST_IMG_SRC[b]}">` : '';
+  const topClubs = (mine) => { const T = FlickyClub.top; if (!T.length) return '<div class="clNote">No club points yet this week. Be the first.</div>';
+    return `<div class="clList">${T.slice(0, 10).map((x, i) => `<div class="clRow${x.code === mine ? ' me' : ''}"><i>${i + 1}</i>${clubCrest(x.c, x.s, 22)}<span>${O_clean(x.name)}</span><em>${(x.pts || 0).toLocaleString()}</em></div>`).join('')}</div>`; };
+  const O_clean = n => String(n || '').toUpperCase().replace(/[^A-Z0-9 _.'-]/g, '').slice(0, 16);
+  function render() {
+    const sh = p.querySelector('.sheet'), C = FlickyClub, on = window.FlickyOnline && FlickyOnline.on;
+    if (!on) { sh.innerHTML = top('CLUBS') + `<div class="clCard"><div class="clNote">Clubs need an internet connection. Connect and open this again.</div></div>`; return; }
+    if (C.club) { const c = C.club, me = FlickyOnline.uid, owner = c.owner === me, wp = (C.week && C.week.pts) || 0, can = C.claimable(), got = (SAVE.section('club').claimed || {})[weekKey()] || [];
+      sh.innerHTML = top('MY CLUB') + `<div class="clCard"><div class="clHead clBig">${clubCrest(c.c, c.s, 58)}<div class="nm"><b>${O_clean(c.name)}</b><small>${c.members} / ${CLUB.max} PLAYERS</small></div><button class="clCode" data-clcode="${c.code}">CODE ${c.code}</button></div></div>
+        <div class="clCard"><div class="clPts">${wp.toLocaleString()}<small>CLUB POINTS THIS WEEK · YOURS ${C.myPts()}</small></div>
+          <div class="clTrack">${CLUB.track.map((r, i) => { const done = wp >= r.at, g = got.includes(i);
+            return `<div class="clTier${done ? ' done' : ''}${g ? ' got' : ''}">${bagImg(r.bag)}<b>${r.at} POINTS</b><small>${bagNm(r.bag)} BAG</small>${can.includes(i) ? `<button class="gcBuy" data-clclaim="${i}">CLAIM</button>` : g ? '<small>CLAIMED ✓</small>' : ''}</div>`; }).join('')}</div>
+          <div class="clNote">Every match you play earns ${CLUB.ptsMatch} point, a win ${CLUB.ptsMatch + CLUB.ptsWin}. Score ${CLUB.myMin}+ yourself this week to claim the club's bags.${C.myPts() < CLUB.myMin ? ` You're on ${C.myPts()}.` : ''}</div></div>
+        <div class="clCard"><div class="clLbl"><span>PLAYERS THIS WEEK</span><span>POINTS</span></div><div class="clList">${C.members.map((m, i) => `<div class="clRow${m.uid === me ? ' me' : ''}"><i>${i + 1}</i>${flagHtml(m.flag)}<span>${FlickyOnline.cleanName(m.name)}${m.uid === c.owner ? ' · CAPTAIN' : ''}${owner && m.uid !== me ? `<button class="kick" data-clkick="${m.uid}" data-nm="${FlickyOnline.cleanName(m.name)}">REMOVE</button>` : ''}</span><em>${m.wpts}</em></div>`).join('')}</div></div>
+        <div class="clCard"><div class="clLbl"><span>TOP CLUBS THIS WEEK</span><span>POINTS</span></div>${topClubs(c.code)}</div>
+        <button class="clLeave" data-clleave>LEAVE CLUB</button>`;
+      return; }
+    sh.innerHTML = top('CLUBS') + `<div class="clTabs"><button data-cltab="join" class="${tab === 'join' ? 'on' : ''}">JOIN</button><button data-cltab="create" class="${tab === 'create' ? 'on' : ''}">CREATE</button><button data-cltab="top" class="${tab === 'top' ? 'on' : ''}">TOP CLUBS</button></div>` +
+      (tab === 'join' ? `<div class="clCard"><input class="clIn" id="clSearch" maxlength="16" placeholder="CLUB NAME OR CODE" value="${query}" autocomplete="off" spellcheck="false" data-noi18n><div class="clNote">Up to ${CLUB.max} players. Every match you play earns points; the club's weekly total opens bags for everyone.</div></div>
+        <div class="clList">${FlickyClub.list.length ? FlickyClub.list.map(x => `<div class="clClub">${clubCrest(x.c, x.s, 40)}<div><b>${O_clean(x.name)}</b><small>${x.members} / ${CLUB.max} PLAYERS</small></div>${x.members >= CLUB.max ? '<small>FULL</small>' : `<button class="gcBuy" data-cljoin="${x.code}">JOIN</button>`}</div>`).join('') : `<div class="clNote">${query ? 'No clubs found.' : 'No clubs yet. Create the first one!'}</div>`}</div>`
+      : tab === 'create' ? `<div class="clCard"><div class="clHead clBig" style="justify-content:center">${clubCrest(pickC, pickS, 76)}</div>
+        <input class="clIn" id="clName" maxlength="16" placeholder="CLUB NAME" autocomplete="off" spellcheck="false" data-noi18n>
+        <div class="clLbl"><span>COLOUR</span></div><div class="clPick">${CLUB.colors.map((c, i) => `<button data-clc="${i}" class="${i === pickC ? 'on' : ''}" style="background:${c}" aria-label="Colour ${i + 1}"></button>`).join('')}</div>
+        <div class="clLbl"><span>BADGE</span></div><div class="clPick">${CLUB.marks.map((m, i) => `<button data-cls="${i}" class="${i === pickS ? 'on' : ''}" aria-label="${m}">${clubCrest(pickC, i, 28)}</button>`).join('')}</div>
+        <button class="gcBuy" data-clmake style="align-self:center;height:50px;padding:0 26px;font-size:20px">CREATE · ${CLUB.createCost.toLocaleString()}<i class="hIco hi-coin"></i></button>
+        <div class="clNote">You'll be the captain. Share the club code with your mates.</div></div>`
+      : `<div class="clCard"><div class="clLbl"><span>TOP CLUBS THIS WEEK</span><span>POINTS</span></div>${topClubs('')}</div>`);
+  }
+  let busy = false;
+  const run = async (fn, okMsg) => { if (busy) return; busy = true; try { await fn(); if (okMsg) showMessage(okMsg, '#22c55e', 1800); } catch (e) {
+      const m = String(e && e.message || e); showMessage(m.includes('full') ? 'THAT CLUB IS FULL' : m.includes('gone') ? 'THAT CLUB HAS CLOSED' : 'NO CONNECTION · TRY AGAIN', '#ff6b6b', 2000);
+      track('online_error', { where: 'club', msg: m.slice(0, 80) }); }
+    busy = false; await refresh(); };
+  async function refresh() { try { await FlickyClub.load(); if (FlickyClub.club) await FlickyClub.loadTop(); else if (tab === 'top') await FlickyClub.loadTop(); else if (tab === 'join') await FlickyClub.browse(query); } catch (e) {} if (p.classList.contains('show')) render(); }
+  window.openClub = function () { p.classList.add('show'); render(); refresh(); try { playUiTap(); } catch (e) {} };
+  let qT = 0;
+  p.addEventListener('input', e => { if (e.target.id === 'clSearch') { query = e.target.value.toUpperCase(); clearTimeout(qT); qT = setTimeout(async () => { await FlickyClub.browse(query); const el = document.getElementById('clSearch'), pos = el && el.selectionStart; render(); const n = document.getElementById('clSearch'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {} } }, 450); } });
+  p.addEventListener('click', e => { const t = e.target.closest('button'); if (!t) return; const d = t.dataset;
+    if ('clx' in d) { p.classList.remove('show'); try { renderCompete(); } catch (x) {} return; }
+    if (d.cltab) { tab = d.cltab; render(); refresh(); return; }
+    if (d.clc) { pickC = +d.clc; const n = (document.getElementById('clName') || {}).value || ''; render(); const i = document.getElementById('clName'); if (i) i.value = n; return; }
+    if (d.cls) { pickS = +d.cls; const n = (document.getElementById('clName') || {}).value || ''; render(); const i = document.getElementById('clName'); if (i) i.value = n; return; }
+    if (d.cljoin) return run(() => FlickyClub.join(d.cljoin), 'WELCOME TO THE CLUB!');
+    if ('clmake' in d) { const raw = (document.getElementById('clName') || {}).value || '', nm = String(raw).toUpperCase().replace(/[^A-Z0-9 _.'-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
+      if (nm.length < 3) { showMessage('NAME NEEDS 3+ LETTERS', '#ff6b6b', 1600); return; }
+      if (FlickyOnline.cleanName(nm) !== nm.slice(0, 14)) { showMessage('PICK ANOTHER NAME', '#ff6b6b', 1600); return; }
+      if (career.coins < CLUB.createCost) { showMessage('Not enough coins!', '#ff6b6b', 1500); return; }
+      return run(async () => { await FlickyClub.create(nm, pickC, pickS); career.coins -= CLUB.createCost; saveCareerStats(); }, 'CLUB CREATED!'); }
+    if ('clleave' in d) return bagConfirm(0, 'Leave your club? Your points this week stay with the club.', () => run(() => FlickyClub.leave(), 'YOU LEFT THE CLUB'), { yes: 'LEAVE', no: 'STAY', noCost: true });
+    if (d.clkick) return bagConfirm(0, `Remove ${d.nm} from the club?`, () => run(() => FlickyClub.leave(d.clkick), 'PLAYER REMOVED'), { yes: 'REMOVE', no: 'CANCEL', noCost: true });
+    if (d.clclaim) { FlickyClub.claim(+d.clclaim); saveCareerStats(); render(); showMessage('BAG ADDED · OPEN IT IN BAGS', '#22c55e', 2000); try { updateMenuHUD(); } catch (x) {} return; }
+    if (d.clcode) { try { navigator.clipboard.writeText(d.clcode); showMessage('CLUB CODE COPIED · ' + d.clcode, '#22c55e', 2000); } catch (x) { showMessage('CLUB CODE · ' + d.clcode, '#FFC93A', 2400); } return; }
+  });
+  // points from matches: league + daily challenge (match_end) and duels (their result screen)
+  const _tr = window.track;
+  window.track = function (name, data) { const r = _tr.apply(this, arguments);
+    try { if (name === 'match_end' && data && data.mode !== 'preview' && data.mode !== 'nets') FlickyClub.addPts(CLUB.ptsMatch + (data.won ? CLUB.ptsWin : 0)); } catch (e) {}
+    return r; };
+  const _sdr = window.showDuelResult;
+  if (typeof _sdr === 'function') window.showDuelResult = function (u) { const r = _sdr.apply(this, arguments); try { FlickyClub.addPts(CLUB.ptsMatch + (u.res === 'win' ? CLUB.ptsWin : 0)); } catch (e) {} return r; };
+  // load my club once online is up (for the Events poster)
+  const wait = setInterval(() => { if (window.FlickyOnline && FlickyOnline.on) { clearInterval(wait); FlickyClub.load().catch(() => {}); } }, 1500);
+  setTimeout(() => clearInterval(wait), 60000);
+})();
+// the Clubs poster in Events
+window.clubPoster = function () {
+  const C = FlickyClub, c = C.club, wp = c && C.week ? C.week.pts || 0 : 0, nx = CLUB.track.find(r => wp < r.at);
+  return { k: 'club', ico: 'tourney', noBadge: true, col: '#2F6FE0', big: c ? clubCrest(c.c, c.s, 150) : clubCrest(1, 3, 150),
+    timer: c ? `<b>${wp.toLocaleString()} POINTS</b> THIS WEEK` : '<b>PLAY TOGETHER</b>', name: c ? String(c.name) : 'CLUBS', tag: c ? `${c.members} / ${CLUB.max} PLAYERS · CODE ${c.code}` : `UP TO ${CLUB.max} PLAYERS · BAGS FOR EVERYONE`,
+    goal: c ? (nx ? `NEXT BAG AT <em>${nx.at}</em> POINTS` : 'EVERY BAG OPENED THIS WEEK!') : 'JOIN A CLUB OR START YOUR OWN',
+    road: (() => { const T = CLUB.track, f = Math.min(100, wp <= T[0].at ? wp / T[0].at * 0 : wp >= T[2].at ? 100 : wp >= T[1].at ? 50 + (wp - T[1].at) / (T[2].at - T[1].at) * 50 : (wp - T[0].at) / (T[1].at - T[0].at) * 50);
+      return `<div class="evRoad"><div class="evRoadLine"><i style="width:${f}%"></i></div>${T.map((r, i) => `<div class="evNode${wp >= r.at ? ' done' : ''}${nx === r ? ' next' : ''}"><div class="evNodeArt"><img alt="" src="${CHEST_IMG_SRC[r.bag]}">${wp >= r.at ? '<b class="tick">✓</b>' : ''}</div><span>${r.at} POINTS</span><small>${bagNm(r.bag)} BAG</small></div>`).join('')}</div>`; })(),
+    rules: `Every match you play earns your club ${CLUB.ptsMatch} point, a win ${CLUB.ptsMatch + CLUB.ptsWin}. The club's weekly total opens a bronze bag at ${CLUB.track[0].at}, silver at ${CLUB.track[1].at} and gold at ${CLUB.track[2].at} for every player who scored ${CLUB.myMin}+ that week. Points reset every Monday.`,
+    btn: `<button class="gcBuy evGo" data-openclub>${c ? 'OPEN CLUB' : 'FIND A CLUB'}${c && C.claimable().length ? `<span class="evBadgeN">${C.claimable().length}</span>` : ''}</button>` };
+};
+document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-openclub]'); if (b) openClub(); });
+</script>
 
 </body>
 </html>
