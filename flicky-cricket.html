@@ -24931,8 +24931,9 @@ const TEASER_CFG = {
   league: 1, grounds: 3, dailyCap: 5,
   codeAfter: 2,            // show the Web Starter code after this many web matches
   code: 'WEBBAT',          // redeem in the app (Mates → enter code) for the Web Starter pack
-  getUrl: 'https://flickycricket.com/get/',
-  launch: '12 DECEMBER',
+  getUrl: 'https://flickycricket.com/get/',   // desktop QR → this page, which sends each phone to its store
+  ios: 'https://apps.apple.com/app/id1090760276',
+  android: 'https://play.google.com/store/apps/details?id=com.flickycricket.app',
 };
 const TEASER_ON = (function () {
   try {
@@ -24949,7 +24950,9 @@ if (TEASER_ON) (function () {
   const st = () => { const s = SAVE.section('teaser'); const d = (typeof todayKey === 'function') ? todayKey() : new Date().toDateString();
     if (s.day !== d) { s.day = d; s.today = 0; } s.total = s.total || 0; return s; };
   const plat = () => { const ua = navigator.userAgent || ''; return /Android/i.test(ua) ? 'android' : (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && 'ontouchend' in document)) ? 'ios' : 'desktop'; };
-  const getLink = src => TEASER_CFG.getUrl + '?src=' + encodeURIComponent('web_' + src);
+  const getLink = (src, p) => p === 'ios' ? TEASER_CFG.ios + '?ct=' + encodeURIComponent('web_' + src)
+    : p === 'android' ? TEASER_CFG.android + '&referrer=' + encodeURIComponent('utm_source=web&utm_campaign=' + src)
+    : TEASER_CFG.getUrl + '?src=' + encodeURIComponent('web_' + src);
 
   // ── 1. League 1 on its first 3 grounds
   try { const L = THEMED_LEAGUES[TEASER_CFG.league]; if (L && L.scenes) L.scenes = L.scenes.slice(0, TEASER_CFG.grounds); } catch (e) {}
@@ -24991,13 +24994,13 @@ if (TEASER_ON) (function () {
   const card = document.createElement('div'); card.id = 'tzCard'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-modal', 'true'); document.body.appendChild(card);
   function openCard(kind, opt) {
     const c = CARDS[kind] || CARDS.home, p = plat(), s = st();
-    const live = false;   // store buttons say "coming" until launch; /get/ decides where each phone goes
-    const btn = p === 'desktop' ? 'SCAN TO GET THE APP' : live ? 'GET THE FULL GAME' : `GET THE APP · ${TEASER_CFG.launch}`;
+    const btn = p === 'ios' ? 'GET IT ON THE APP STORE' : p === 'android' ? 'GET IT ON GOOGLE PLAY' : 'SCAN WITH YOUR PHONE';
+    const desk = p === 'desktop' ? `<div class="tzSmall"><a href="${TEASER_CFG.ios}" target="_blank" rel="noopener" style="color:#FFC93A">App Store</a> · <a href="${TEASER_CFG.android}" target="_blank" rel="noopener" style="color:#FFC93A">Google Play</a></div>` : '';
     const code = s.total >= TEASER_CFG.codeAfter ? `<div class="tzSmall">Web Starter bonus in the app:<br><span class="tzCode">${TEASER_CFG.code}</span></div>` : '';
     card.className = 'show' + (p === 'desktop' ? ' desk' : '');
     card.innerHTML = `<div class="tzBox"><button class="tzX" data-tzx aria-label="Close">×</button><img class="tzLock" alt="" src="assets/ui/pass_padlock.webp">
       <h3>${c[0]}</h3><p>${c[1]}</p><img class="tzQr" alt="QR code to get the app" src="assets/ui/get_qr.webp">
-      <a class="tzGo" data-tzgo href="${getLink(kind)}" target="_blank" rel="noopener">${btn}</a>${code}
+      <a class="tzGo" data-tzgo href="${getLink(kind, p)}" target="_blank" rel="noopener">${btn}</a>${desk}${code}
       <div class="tzSmall">Free on iPhone &amp; Android</div></div>`;
     if (code) track('teaser_code_shown', { from: kind });
     track('teaser_lock', { what: kind, plat: p, today: s.today, total: s.total });
