@@ -37,3 +37,20 @@ Example: gentler ads for new players (the simulator's suggestion)
     "shop": { "ads": { "interstitialEvery": 4, "noInterstitialFirstMatches": 8 } }
   }
 }
+
+## Code drops (Nov 17)
+Post a code on Instagram/TikTok, then add it here. Players type it in Settings → ENTER A CODE (or the Mates code box).
+Each player can use a code once. Caps: 500 gems, 10,000 coins, bag up to gold.
+
+    "settings": { "codes": { "drops": [
+      { "code": "SIXES50", "gems": 50, "until": "2026-11-30" },
+      { "code": "GOLDWEEK", "bag": "gold", "from": "2026-12-01", "until": "2026-12-07" }
+    ] } }
+
+## Referral boost (Nov 17)
+Double the gems and coins for both sides of a referral until a date:
+
+    "settings": { "mates": { "boost": 2, "boostUntil": "2026-11-30" } }
+
+## Social links
+    "settings": { "socials": { "youtube": "https://www.youtube.com/@yourhandle" } }

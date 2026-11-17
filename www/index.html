@@ -4546,7 +4546,9 @@ const GAME_CONFIG = {
     firstBuyDoubled: true, maxPopupOffersPerSession: 1,
     ads: { interstitialEvery: 3, noInterstitialFirstMatches: 3, interstitialMaxPerDay: 99, rewardedGemsPerDay: 3, rewardedGems: 5, rewardedCoinsPerDay: 3 },
   },
-  mates: { boost: 1, boostUntil: '' },   // Nov 17: referral rewards ×boost until the date (YYYY-MM-DD), set from live settings
+  mates: { boost: 1, boostUntil: '' },
+  socials: { instagram: 'https://www.instagram.com/flickycricket', tiktok: 'https://www.tiktok.com/@flicky.cricket', youtube: '', x: '' },   // Nov 17: FOLLOW FLICKY buttons (live settings can fill YouTube/X)
+  codes: { drops: [] },   // Nov 17: code drops posted on socials · live settings: [{ code, gems, coins, bag, until: 'YYYY-MM-DD' }]   // Nov 17: referral rewards ×boost until the date (YYYY-MM-DD), set from live settings
   online: { firebase: { apiKey: 'AIzaSyBsuZhpZg46O7btzpvHGR4zPSMYVKWR0CQ', authDomain: 'flicky-cricket.firebaseapp.com', projectId: 'flicky-cricket', appId: '1:538979259298:web:35fac29e5172e2966e58fb' } },   // Nov 16: real rivals + boards (public web keys)
   season: {                                                                                            // sprint 8
     dailyChallenge: { freeAttempts: 1, extraAttemptGems: 10, streakBagAt: 3 },
@@ -26121,6 +26123,88 @@ const MatesPlus = window.MatesPlus = (function () {
 }
 </script>
 <style>.mtBoost{text-align:center;border-radius:12px;background:linear-gradient(#FFD75A,#F5A915);color:#4a2a00;border:3px solid #050A14;padding:4px 8px}.mtBoost b{font-weight:400;font-size:20px;letter-spacing:.06em}.mtBoost small{display:block;font-size:12px;letter-spacing:.1em}</style>
+
+<script>
+// ═══ SOCIALS + CODE DROPS (Nov 17, Joe) ═══
+// We never reward a follow (Apple 3.2.2 / Meta rules). Instead codes are posted on Instagram/TikTok/YouTube, and anyone
+// can type one in for a small reward. New codes go in site/live/config.json → settings.codes.drops (no app update):
+//   { "code": "SIXES50", "gems": 50, "coins": 0, "bag": "", "until": "2026-11-30" }
+const SOCIAL_ICONS = {
+  instagram: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="#fff" stroke-width="2.4"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="#fff" stroke-width="2.4"/><circle cx="17.4" cy="6.6" r="1.4" fill="#fff"/></svg>',
+  tiktok: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3v11.2a3.6 3.6 0 1 1-3.6-3.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><path d="M14 3c.4 2.8 2.2 4.6 5 4.8" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>',
+  youtube: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="4" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M10 9.2v5.6l4.8-2.8z" fill="#fff"/></svg>',
+  x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l16 16M20 4L4 20" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>' };
+const SOCIAL_BG = { instagram: 'linear-gradient(135deg,#f9a03f,#e1306c 55%,#833ab4)', tiktok: 'linear-gradient(135deg,#25f4ee,#111 40%,#111 60%,#fe2c55)', youtube: 'linear-gradient(#ff3b3b,#c4161c)', x: 'linear-gradient(#333,#000)' };
+const SOCIAL_NAMES = { instagram: 'INSTAGRAM', tiktok: 'TIKTOK', youtube: 'YOUTUBE', x: 'X' };
+const FlickyCodes = window.FlickyCodes = {
+  socials() { const S = GAME_CONFIG.socials || {}; return Object.keys(SOCIAL_NAMES).filter(k => /^https:\/\//.test(S[k] || '')).map(k => ({ k, url: S[k] })); },
+  open(k) { const s = this.socials().find(x => x.k === k); if (!s) return; track('social_open', { net: k }); try { window.open(s.url, '_blank', 'noopener'); } catch (e) { location.href = s.url; } },
+  btns() { return `<div class="fcSoc">${this.socials().map(s => `<button data-social="${s.k}" style="background:${SOCIAL_BG[s.k]}" aria-label="${SOCIAL_NAMES[s.k]}">${SOCIAL_ICONS[s.k]}<span>${SOCIAL_NAMES[s.k]}</span></button>`).join('')}</div>`; },
+  st() { const s = SAVE.section('codes'); s.used = s.used || {}; return s; },
+  iso() { const d = _nowDate(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); },
+  find(c) { const L = ((GAME_CONFIG.codes || {}).drops) || []; return L.find(d => d && String(d.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '') === c) || null; },
+  // returns true if handled (a drop code, good or bad), false if it isn't one (let Mates try)
+  redeem(raw) {
+    const c = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); const d = this.find(c); if (!d) return false;
+    const s = this.st(); if (s.used[c]) { showMessage('YOU\'VE ALREADY USED THAT CODE', '#ff6b6b', 1800); return true; }
+    if (d.until && this.iso() > String(d.until)) { showMessage('THAT CODE HAS EXPIRED · FOLLOW US FOR THE NEXT ONE', '#ff6b6b', 2400); return true; }
+    if (d.from && this.iso() < String(d.from)) { showMessage('THAT CODE ISN\'T LIVE YET', '#ff6b6b', 1800); return true; }
+    const r = {}, gm = Math.max(0, Math.min(500, Math.round(+d.gems || 0))), co = Math.max(0, Math.min(10000, Math.round(+d.coins || 0)));
+    if (gm) r.gems = gm; if (co) r.coins = co; if (['wooden', 'bronze', 'silver', 'gold'].includes(d.bag)) r.bag = d.bag;
+    if (!r.gems && !r.coins && !r.bag) return false;
+    s.used[c] = Date.now(); SAVE.save(); const got = grantReward(r); saveCareerStats(); track('code_drop', { code: c });
+    try { hapticBig(); } catch (e) {} showMessage('CODE ACCEPTED! + ' + got, '#FFC93A', 3000); return true; },
+  // the "enter a code" box: drop codes, a mate's code, or WEBBAT
+  ask() {
+    let el = document.getElementById('codePop'); if (el) el.remove(); el = document.createElement('div'); el.id = 'codePop';
+    el.innerHTML = `<div class="cpBox"><div class="cpTop"><b>ENTER A CODE</b><button class="cpX" aria-label="Close">✕</button></div>
+      <small>We post free codes on our socials. Follow so you don't miss one.</small>
+      <div class="cpRow"><input class="cpIn" maxlength="14" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" data-noi18n><button class="gcBuy cpGo">GO</button></div>${this.btns()}</div>`;
+    document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('show'));
+    const go = async () => { const v = el.querySelector('.cpIn').value; if (!v.trim()) return;
+      if (this.redeem(v)) { el.remove(); return; }
+      if (window.Mates) { const ok = await Mates.redeem(v); if (ok) el.remove(); } };
+    el.querySelector('.cpGo').onclick = go; el.querySelector('.cpIn').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+    el.addEventListener('click', e => { if (e.target === el || e.target.closest('.cpX')) el.remove(); });
+    setTimeout(() => { try { el.querySelector('.cpIn').focus(); } catch (e) {} }, 200); },
+};
+document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-social]'); if (b) { e.preventDefault(); FlickyCodes.open(b.dataset.social); } });
+// a mate's code box also takes drop codes
+if (window.Mates) { const _r = Mates.redeem.bind(Mates); Mates.redeem = async function (raw) { if (FlickyCodes.redeem(raw)) { try { Mates.render(); } catch (e) {} return true; } return _r(raw); }; }
+// Settings: FOLLOW FLICKY + ENTER A CODE
+{ const _rs = window.renderSettings; if (typeof _rs === 'function') window.renderSettings = function () { const r = _rs.apply(this, arguments);
+    try { const sh = document.querySelector('#settingsPanel .sheet'), lang = sh && sh.querySelector('.stLang'), card = lang && lang.closest('.stCard'); if (card && !sh.querySelector('.stSocial')) {
+      const c = document.createElement('div'); c.className = 'stCard stSocial';
+      c.innerHTML = `<div class="stRow" style="flex-direction:column;align-items:stretch;gap:8px"><div class="setLbl"><i class="stIco" style="display:flex;align-items:center;justify-content:center;font-size:20px">📣</i><div><b>FOLLOW FLICKY</b><small>Free gem codes, new grounds first, and the best sixes</small></div></div>${FlickyCodes.btns()}</div>
+        <button class="stLink" data-codes><span class="setLbl"><i class="stIco" style="display:flex;align-items:center;justify-content:center;font-size:20px">🎁</i>ENTER A CODE</span><span>›</span></button>`;
+      card.after(c); c.querySelector('[data-codes]').onclick = () => FlickyCodes.ask(); } } catch (e) {}
+    return r; }; }
+// one gentle nudge, once ever, after the 3rd match: where the codes come from
+{ const _eg = window.endGame; if (typeof _eg === 'function') window.endGame = function () { const r = _eg.apply(this, arguments);
+    setTimeout(() => { try { const s = FlickyCodes.st(); if (s.nudged || (career.matchesPlayed || 0) < 3 || !FlickyCodes.socials().length || document.getElementById('matesAsk') || document.querySelector('#bagConfirmOv.show')) return;
+      s.nudged = Date.now(); SAVE.save(); track('social_nudge', {});
+      let el = document.createElement('div'); el.id = 'socNudge';
+      el.innerHTML = `<b>FREE GEM CODES</b><span>We drop codes on our socials. Follow Flicky so you don't miss one.</span>${FlickyCodes.btns()}<button class="snX" aria-label="Close">✕</button>`;
+      document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('show'));
+      el.addEventListener('click', e => { if (e.target.closest('.snX') || e.target.closest('[data-social]')) { el.classList.remove('show'); setTimeout(() => el.remove(), 400); } });
+      setTimeout(() => { try { el.classList.remove('show'); setTimeout(() => el.remove(), 400); } catch (e) {} }, 12000); } catch (e) {} }, 3400);
+    return r; }; }
+</script>
+<style>
+  .fcSoc{display:flex;gap:8px}.fcSoc button{flex:1;height:42px;border-radius:12px;border:3px solid #050A14;box-shadow:0 3px 0 #050A14;color:#fff;font:13px 'Lilita One','Arial Black',Arial,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;padding:0 6px}
+  .fcSoc svg{width:20px;height:20px;flex:none}
+  #codePop{position:fixed;inset:0;z-index:9500;background:rgba(5,10,20,.7);display:flex;align-items:center;justify-content:center;font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff;opacity:0;transition:opacity .2s}
+  #codePop.show{opacity:1}
+  .cpBox{width:min(360px,calc(100% - 32px));border-radius:20px;border:3px solid #050A14;background:linear-gradient(#1a2e5a,#13224a);box-shadow:0 6px 0 #050A14;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .cpTop{display:flex;justify-content:space-between;align-items:center;font-size:22px}.cpTop b{font-weight:400;letter-spacing:.06em}
+  .cpX{width:36px;height:36px;border-radius:50%;border:2px solid #050A14;background:#0d1a36;color:#fff;cursor:pointer}
+  .cpBox small{font:14px/1.35 system-ui,Arial,sans-serif;color:#cdd8f0}
+  .cpRow{display:flex;gap:8px}.cpIn{flex:1;min-width:0;height:46px;border-radius:12px;border:3px solid #050A14;background:#fff;color:#0b1630;font:22px 'Lilita One',sans-serif;letter-spacing:.14em;text-align:center;text-transform:uppercase}
+  .cpGo{height:46px;padding:0 20px;font-size:20px;margin:0}
+  #socNudge{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translate(-50%,140%);transition:transform .35s cubic-bezier(.2,1.3,.4,1);z-index:9400;width:min(360px,calc(100% - 24px));box-sizing:border-box;border-radius:18px;border:3px solid #050A14;background:linear-gradient(#1a2e5a,#13224a);box-shadow:0 6px 0 #050A14;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-family:'Lilita One','Arial Black',Arial,sans-serif;color:#fff}
+  #socNudge.show{transform:translate(-50%,0)}#socNudge b{font-weight:400;font-size:20px;color:#FFC93A}#socNudge>span{font:14px/1.35 system-ui,Arial,sans-serif;color:#dfe7f8}
+  .snX{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;border:2px solid #050A14;background:#0d1a36;color:#fff;cursor:pointer}
+</style>
 
 </body>
 </html>
