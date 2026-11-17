@@ -4546,6 +4546,7 @@ const GAME_CONFIG = {
     firstBuyDoubled: true, maxPopupOffersPerSession: 1,
     ads: { interstitialEvery: 3, noInterstitialFirstMatches: 3, interstitialMaxPerDay: 99, rewardedGemsPerDay: 3, rewardedGems: 5, rewardedCoinsPerDay: 3 },
   },
+  mates: { boost: 1, boostUntil: '' },   // Nov 17: referral rewards ×boost until the date (YYYY-MM-DD), set from live settings
   online: { firebase: { apiKey: 'AIzaSyBsuZhpZg46O7btzpvHGR4zPSMYVKWR0CQ', authDomain: 'flicky-cricket.firebaseapp.com', projectId: 'flicky-cricket', appId: '1:538979259298:web:35fac29e5172e2966e58fb' } },   // Nov 16: real rivals + boards (public web keys)
   season: {                                                                                            // sprint 8
     dailyChallenge: { freeAttempts: 1, extraAttemptGems: 10, streakBagAt: 3 },
@@ -24842,7 +24843,7 @@ const FlickyInbox = window.FlickyInbox = {
 // Backend: Firebase (project flicky-cricket) over REST, anonymous sign-in + Firestore (rules in tools/referrals).
 // Until MATES_CFG.apiKey is set the friend side still works (code checked for format only) and your count waits.
 const MATES_CFG = {
-  apiKey: '',                       // Firebase Web API key (Project settings → Your apps → Web app). Public by design.
+  apiKey: 'AIzaSyBsuZhpZg46O7btzpvHGR4zPSMYVKWR0CQ',   // Firebase Web API key (Project settings → Your apps → Web app). Public by design.
   project: 'flicky-cricket',
   welcome: { gems: 150, coins: 1000, bag: 'gold', cos: ['mates_bat:bat'] },     // for the friend who joins with a code
   tiers: [                                                                      // for you, by mates who've played a match
@@ -24854,7 +24855,7 @@ const MATES_CFG = {
   ],
   every: { gems: 75, label: '75 GEMS' },          // each mate after the last tier
   redeemDays: 14, redeemMatches: 40,              // a code can be entered in your first 2 weeks / 40 matches
-  askGapH: 20, askFromMatch: 3,                   // high-point prompt: not before match 3, at most once per 20 h
+  askGapH: 20, askFromMatch: 2,                   // high-point prompt: not before match 3, at most once per 20 h
 };
 // exclusive cosmetics (looks only)
 EVENT_BATS.mates_bat = { c: '#1f7a3a', a: '#f2b632', s: '#ffffff' };
@@ -25880,13 +25881,14 @@ const FlickyClub = window.FlickyClub = (function () {
   C.join = async function (cd) {
     const f = F(), cref = f.doc(db(), 'clubs', cd), mref = f.doc(db(), 'clubs', cd, 'members', O().uid);
     await f.runTransaction(db(), async t => { const c = await t.get(cref); if (!c.exists()) throw new Error('gone'); const n = c.data().members || 0; if (n >= CLUB.max) throw new Error('full');
-      t.update(cref, { members: n + 1 }); t.set(mref, meDoc()); });
+      t.update(cref, { members: n + 1 }); t.set(mref, meDoc()); C.club = Object.assign({ code: cd }, c.data(), { members: n + 1 }); });
     const s = S(); s.code = cd; s.week = wk(); s.pts = 0; SAVE.save(); track('club_join', {});
   };
   C.create = async function (name, col, mark) {
     const f = F(), cd = code(), cref = f.doc(db(), 'clubs', cd), mref = f.doc(db(), 'clubs', cd, 'members', O().uid);
     await f.runTransaction(db(), async t => { const c = await t.get(cref); if (c.exists()) throw new Error('taken');
       t.set(cref, { name, nameU: name, c: col, s: mark, owner: O().uid, members: 1, t: Date.now() }); t.set(mref, meDoc()); });
+    C.club = { code: cd, name, nameU: name, c: col, s: mark, owner: O().uid, members: 1 };
     const s = S(); s.code = cd; s.week = wk(); s.pts = 0; SAVE.save(); track('club_create', {});
   };
   C.leave = async function (uid) {   // yourself, or (club owner) a member who has to go
@@ -26031,6 +26033,94 @@ window.clubPoster = function () {
 };
 document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-openclub]'); if (b) openClub(); });
 </script>
+
+<script>
+// ═══ MATES+ (Nov 17, Joe: Hormozi-style referrals, "build all of these in") ═══
+// 1) a second, bigger reward on BOTH sides when the friend sticks (5th match, or back 2+ days after starting);
+// 2) your referral code carries your club: a friend who joins with it is offered your club, and you both get club points;
+// 3) double rewards for a launch window, switched on from live settings (GAME_CONFIG.mates.boost / boostUntil).
+MATES_CFG.stick = { matches: 5, days: 2, friend: { gems: 50, bag: 'silver', label: '50 GEMS + SILVER BAG' }, inviter: { gems: 50, bag: 'silver', label: '50 GEMS + SILVER BAG' } };
+const MatesPlus = window.MatesPlus = (function () {
+  const M = {};
+  const iso = () => { const d = _nowDate(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  M.boost = () => { const c = GAME_CONFIG.mates || {}; return c.boost > 1 && (!c.boostUntil || iso() <= c.boostUntil) ? Math.min(3, Math.round(c.boost)) : 1; };
+  // ---- double rewards: scale gems and coins (bags and kit stay as they are)
+  M.applyBoost = function () { const b = M.boost(); if (b === 1 || M._boosted) return; M._boosted = b;
+    const lab = l => String(l || '').replace(/(\d[\d,]*) (GEMS|COINS)/g, (m, n, u) => (parseInt(n.replace(/,/g, ''), 10) * b).toLocaleString() + ' ' + u);
+    const W = MATES_CFG.welcome; W.gems *= b; W.coins *= b;
+    MATES_CFG.tiers.forEach(t => { if (t.gems) t.gems *= b; t.label = lab(t.label); });
+    MATES_CFG.every.gems *= b; MATES_CFG.every.label = lab(MATES_CFG.every.label);
+    [MATES_CFG.stick.friend, MATES_CFG.stick.inviter].forEach(t => { t.gems *= b; t.label = lab(t.label); }); };
+  // ---- Firestore REST helpers (same anonymous sign-in as Mates)
+  const patch = (p, fields, mask, extra) => Mates.req('PATCH', p, { fields }, '?' + mask.map(f => 'updateMask.fieldPaths=' + f).join('&') + (extra || ''));
+  // ---- the friend's side: "stuck with it"
+  M.checkStick = async function () { const s = Mates.st(), S = MATES_CFG.stick; if (!s.used || s.stuck) return;
+    s.days = s.days || {}; s.days[todayKey()] = 1; const dayN = Object.keys(s.days).length; SAVE.save();
+    const far = Date.now() - (s.first || Date.now()) >= S.days * 864e5 && dayN >= 2;
+    if ((career.matchesPlayed || 0) < S.matches && !far) return;
+    s.stuck = Date.now(); SAVE.save();
+    const l = Mates.give(Object.assign({}, S.friend)); showMessage(`YOU'RE A REGULAR! + ${l}`, '#FFC93A', 3000); track('mates_stick', { code: s.used });
+    if (!Mates.on()) return; try { await Mates.auth(); await patch(`refs/${s.used}/mates/${s.uid}`, { q: { booleanValue: true } }, ['q'], '&currentDocument.exists=true'); s.stuckPosted = true; SAVE.save(); } catch (e) {} };
+  // ---- the inviter's side: count friends who stuck, reward each one
+  M.refreshStick = async function () { if (!Mates.on()) return; const s = Mates.st(); let q = 0, tok = '';
+    for (let i = 0; i < 10; i++) { const r = await Mates.req('GET', `refs/${Mates.code()}/mates`, null, '?pageSize=300' + (tok ? '&pageToken=' + tok : '')); if (!r.ok) return;
+      (r.j.documents || []).forEach(d => { if (d.fields && d.fields.q && d.fields.q.booleanValue) q++; }); tok = r.j.nextPageToken; if (!tok) break; }
+    s.stuckN = q; s.stuckClaimed = s.stuckClaimed || 0; SAVE.save(); };
+  M.stickClaimable = () => { const s = Mates.st(); return Math.max(0, (s.stuckN || 0) - (s.stuckClaimed || 0)); };
+  M.claimStick = function () { const s = Mates.st(), n = M.stickClaimable(); if (!n) return; const got = [];
+    for (let i = 0; i < n; i++) got.push(Mates.give(Object.assign({}, MATES_CFG.stick.inviter)));
+    s.stuckClaimed = (s.stuckClaimed || 0) + n; SAVE.save(); track('mates_stick_claim', { n }); showMessage(`${n} MATE${n === 1 ? '' : 'S'} STUCK WITH IT! + ${got[0]}${n > 1 ? ' ×' + n : ''}`, '#FFC93A', 3000); Mates.badge(); Mates.render(); };
+  // ---- clubs: your code remembers your club
+  M.syncClub = async function () { if (!Mates.on() || !window.FlickyClub) return; const s = Mates.st(), cd = FlickyClub.mine() || '';
+    if (!s.reg || s.refClub === cd) return;
+    try { const r = await patch('refs/' + Mates.code(), { club: { stringValue: cd } }, ['club']); if (r.ok) { s.refClub = cd; SAVE.save(); } } catch (e) {} };
+  M.clubOf = async function (code) { try { const r = await Mates.req('GET', 'refs/' + code); const f = r.ok && r.j.fields; return (f && f.club && f.club.stringValue) || ''; } catch (e) { return ''; } };
+  M.offerClub = async function (code) {
+    if (!window.FlickyOnline || !FlickyOnline.on || !window.FlickyClub || FlickyClub.mine()) return;
+    const cd = await M.clubOf(code); if (!/^[A-Z0-9]{6}$/.test(cd)) return;
+    let c = null; try { const f = FlickyOnline.F, d = await f.getDoc(f.doc(FlickyOnline.db, 'clubs', cd)); if (d.exists()) c = d.data(); } catch (e) {}
+    if (!c || (c.members || 0) >= CLUB.max) return;
+    const nm = String(c.name || 'CLUB').toUpperCase().replace(/[^A-Z0-9 _.'-]/g, '');
+    bagConfirm(0, `${clubCrest(c.c, c.s, 54)}<br>Your mate plays for <b style="color:#FFC93A">${nm}</b>. Join their club? Every match you play earns points for both of you.`, async () => {
+      try { await FlickyClub.join(cd); FlickyClub.addPts(5); showMessage('WELCOME TO ' + nm + '!', '#22c55e', 2200); track('mates_club_join', {}); } catch (e) { showMessage('COULDN\'T JOIN · TRY FROM CLUBS', '#ff6b6b', 2000); } },
+      { yes: 'JOIN CLUB', no: 'NOT NOW', noCost: true }); };
+  return M;
+})();
+// wire it in
+{ const _redeem = Mates.redeem.bind(Mates);
+  Mates.redeem = async function (raw) { const ok = await _redeem(raw); if (ok) { const c = Mates.st().used; if (c) setTimeout(() => MatesPlus.offerClub(c).catch(() => {}), 3600); } return ok; };
+  const _refresh = Mates.refresh.bind(Mates);
+  Mates.refresh = async function () { const was = Mates.st().friends; await _refresh(); const s = Mates.st();
+    try { await MatesPlus.refreshStick(); } catch (e) {} MatesPlus.syncClub().catch(() => {});
+    if (was != null && s.friends > was && window.FlickyClub && FlickyClub.mine()) FlickyClub.addPts(3);   // a new mate: points for your club
+    Mates.badge(); };
+  const _claimable = Mates.claimable.bind(Mates); Mates.claimable = () => _claimable() || MatesPlus.stickClaimable() > 0;
+  const _claim = Mates.claim.bind(Mates); Mates.claim = function () { if (_claimable()) _claim(); if (MatesPlus.stickClaimable()) MatesPlus.claimStick(); };
+  const _badge = Mates.badge.bind(Mates); Mates.badge = function () { _badge(); try { const b = document.getElementById('matesBadge'), n = MatesPlus.stickClaimable(); if (b && n) { b.style.display = ''; const k = parseInt(b.textContent, 10); b.textContent = (isNaN(k) ? 0 : k) + n; } } catch (e) {} };
+  const _render = Mates.render.bind(Mates);
+  Mates.render = function () { _render(); const el = document.getElementById('matesPanel'), card = el && el.querySelector('.mtCard'); if (!card) return;
+    const b = MatesPlus.boost(), s = Mates.st(), S = MATES_CFG.stick, top = card.querySelector('.mtTop');
+    if (b > 1 && top) { const ban = document.createElement('div'); ban.className = 'mtBoost'; const u = (GAME_CONFIG.mates || {}).boostUntil; ban.innerHTML = `<b>${b === 2 ? 'DOUBLE' : 'TRIPLE'} REWARDS</b>${u ? `<small>UNTIL ${new Date(u + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase()}</small>` : ''}`; top.after(ban); }
+    const lad = card.querySelector('.mtLadder');
+    if (lad) { const row = document.createElement('div'); const n = s.stuckN || 0, ready = MatesPlus.stickClaimable();
+      row.className = 'mtTier' + (ready ? ' ready' : ''); row.innerHTML = `<i>★</i><span>EVERY MATE WHO STICKS WITH IT (${S.matches} MATCHES): ${S.inviter.label}</span><b>${ready ? 'READY' : n ? n + ' ✓' : ''}</b>`; lad.appendChild(row); }
+    if (Mates.claimable() && !card.querySelector('.mtClaim') && lad) { const c = document.createElement('button'); c.className = 'mtClaim gcBuy'; c.textContent = 'CLAIM REWARDS'; lad.after(c); }
+    const hero = card.querySelector('.mtHero small'); if (hero) hero.insertAdjacentHTML('beforeend', ` Once they've played ${S.matches} matches, you <b>both</b> get another ${S.friend.label.toLowerCase().replace(' + ', ' and a ')}.`);
+    if (window.FlickyClub && FlickyClub.club && hero) hero.insertAdjacentHTML('beforeend', ` They'll be offered a place in <b>${String(FlickyClub.club.name)}</b>.`);
+  };
+  // invite button on My Club
+  const _cl = window.openClub; window.openClub = function () { _cl.apply(this, arguments); };
+  const addClubInvite = () => { const sh = document.querySelector('#clubPanel.show .sheet'); if (!sh || !window.FlickyClub || !FlickyClub.club || sh.querySelector('.clInvite')) return;
+    const leave = sh.querySelector('.clLeave'); if (!leave) return; const b = document.createElement('button'); b.className = 'gcBuy clInvite'; b.style.cssText = 'align-self:center;height:48px;padding:0 22px;font-size:18px;background:linear-gradient(#3ee07a,#1aa34f)';
+    b.textContent = 'INVITE MATES TO THE CLUB'; b.onclick = () => { MatesPlus.syncClub().catch(() => {}); Mates.share('wa', { why: 'club', line: `Join my club ${FlickyClub.club.name} in Flicky Cricket!` }); };
+    leave.before(b); };
+  new MutationObserver(addClubInvite).observe(document.body, { childList: true, subtree: true });
+  // friend's "stuck with it" check after matches and on each day's first open
+  const _eg = window.endGame; if (typeof _eg === 'function') window.endGame = function () { const r = _eg.apply(this, arguments); setTimeout(() => MatesPlus.checkStick().catch(() => {}), 3200); return r; };
+  setTimeout(() => { MatesPlus.applyBoost(); MatesPlus.checkStick().catch(() => {}); }, 900);
+}
+</script>
+<style>.mtBoost{text-align:center;border-radius:12px;background:linear-gradient(#FFD75A,#F5A915);color:#4a2a00;border:3px solid #050A14;padding:4px 8px}.mtBoost b{font-weight:400;font-size:20px;letter-spacing:.06em}.mtBoost small{display:block;font-size:12px;letter-spacing:.1em}</style>
 
 </body>
 </html>

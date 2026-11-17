@@ -85,5 +85,24 @@ service cloud.firestore {
         && request.resource.data.pts <= (resource == null ? 0 : resource.data.pts) + 5
         && request.resource.data.pts > (resource == null ? 0 : resource.data.pts);
     }
+
+    // MATES referrals (Nov 13, merged Nov 17). refs/{code}: owner = the inviter's anonymous uid, club = their club code.
+    // refs/{code}/mates/{uid}: one per friend, written by that friend after their first match; q = they stuck with it.
+    match /refs/{code} {
+      allow get: if signedIn();
+      allow create: if signedIn() && code.matches('^[A-HJ-NP-Z2-9]{6}$')
+        && request.resource.data.owner == request.auth.uid && request.resource.data.keys().hasOnly(['owner', 'at', 'club']);
+      allow update: if signedIn() && resource.data.owner == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['club'])
+        && request.resource.data.club is string && request.resource.data.club.size() <= 6;
+      match /mates/{uid} {
+        allow list: if signedIn() && get(/databases/$(database)/documents/refs/$(code)).data.owner == request.auth.uid;
+        allow create: if signedIn() && uid == request.auth.uid
+          && get(/databases/$(database)/documents/refs/$(code)).data.owner != request.auth.uid
+          && request.resource.data.keys().hasOnly(['at', 'n']) && request.resource.data.n is string && request.resource.data.n.size() <= 14;
+        allow update: if signedIn() && uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['q']) && request.resource.data.q == true;
+      }
+    }
   }
 }
