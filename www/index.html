@@ -4544,7 +4544,7 @@ const GAME_CONFIG = {
       { free: true, r: { bag: 'gold', coins: 600 } } ] },
     gemPacks: [ { price: 0.99, gems: 80 }, { price: 4.99, gems: 450 }, { price: 9.99, gems: 1000, tag: 'MOST POPULAR' }, { price: 19.99, gems: 2200 }, { price: 49.99, gems: 6000 } ],
     firstBuyDoubled: true, maxPopupOffersPerSession: 1,
-    ads: { interstitialEvery: 3, noInterstitialFirstMatches: 5, noAdAfterLoss: true, interstitialMaxPerDay: 99, rewardedGemsPerDay: 3, rewardedGems: 5, rewardedCoinsPerDay: 3 },
+    ads: { interstitialEvery: 3, noInterstitialFirstMatches: 5, noAdAfterLoss: true, minGapSec: 180, afterRewardedGapSec: 120, noAdsForPayers: true, interstitialMaxPerDay: 6, rewardedGemsPerDay: 3, rewardedGems: 5, rewardedCoinsPerDay: 3 },
   },
   mates: { boost: 1, boostUntil: '' },
   socials: { instagram: 'https://www.instagram.com/flickycricket', tiktok: 'https://www.tiktok.com/@flicky.cricket', youtube: '', x: '' },   // Nov 17: FOLLOW FLICKY buttons (live settings can fill YouTube/X)
@@ -5382,8 +5382,12 @@ async function showInterstitialIfDue() {
   if (adsRemoved || !window._admob) return;
   const A = GAME_CONFIG.shop.ads;   // Nov 16: all three can be changed remotely (live/config.json)
   if ((career && career.matchesPlayed || 0) < A.noInterstitialFirstMatches) return;
+  // Nov 18 (ad research): payers never see interstitials; at least minGapSec between them; none just after a rewarded video
+  if (A.noAdsForPayers && ((SAVE.data && SAVE.data.purchases) || []).some(p => !p.test)) return;
   gamesPlayedSinceAd++;
   if (gamesPlayedSinceAd < A.interstitialEvery) return;
+  { const now = Date.now(); if (now - (window._lastInterstitialAt || 0) < (A.minGapSec || 0) * 1000) return;
+    if (now - (window._lastRewardedAt || 0) < (A.afterRewardedGapSec || 0) * 1000) return; window._lastInterstitialAt = now; }
   { const d = SAVE.section('adsday'); if (d.day !== todayKey()) { d.day = todayKey(); d.n = 0; } if (d.n >= A.interstitialMaxPerDay) return; d.n++; SAVE.save(); }
   gamesPlayedSinceAd = 0;
   try {
@@ -26229,5 +26233,9 @@ const StuckHelp = window.StuckHelp = {
 </script>
 <style>.pracTag.live{background:rgba(124,242,154,.16);border-color:rgba(124,242,154,.6);color:#9ff5b4}</style>
 
+<script>
+// Nov 18: remember when a rewarded video was watched, so an interstitial never follows straight after it
+{ const _rv = window.showRewardedVideo; if (typeof _rv === 'function') window.showRewardedVideo = function (onReward, onFail) { window._lastRewardedAt = Date.now(); return _rv.call(this, onReward, onFail); }; }
+</script>
 </body>
 </html>
