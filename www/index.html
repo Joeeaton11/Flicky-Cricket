@@ -4544,7 +4544,7 @@ const GAME_CONFIG = {
       { free: true, r: { bag: 'gold', coins: 600 } } ] },
     gemPacks: [ { price: 0.99, gems: 80 }, { price: 4.99, gems: 450 }, { price: 9.99, gems: 1000, tag: 'MOST POPULAR' }, { price: 19.99, gems: 2200 }, { price: 49.99, gems: 6000 } ],
     firstBuyDoubled: true, maxPopupOffersPerSession: 1,
-    ads: { interstitialEvery: 3, noInterstitialFirstMatches: 3, interstitialMaxPerDay: 99, rewardedGemsPerDay: 3, rewardedGems: 5, rewardedCoinsPerDay: 3 },
+    ads: { interstitialEvery: 3, noInterstitialFirstMatches: 5, noAdAfterLoss: true, interstitialMaxPerDay: 99, rewardedGemsPerDay: 3, rewardedGems: 5, rewardedCoinsPerDay: 3 },
   },
   mates: { boost: 1, boostUntil: '' },
   socials: { instagram: 'https://www.instagram.com/flickycricket', tiktok: 'https://www.tiktok.com/@flicky.cricket', youtube: '', x: '' },   // Nov 17: FOLLOW FLICKY buttons (live settings can fill YouTube/X)
@@ -10139,7 +10139,7 @@ function playLeague(idx) {
   const go = () => {
     setSelectedLeague(idx);
     window._activeLeagueIdx = idx;
-    target = leagueTarget(lg);
+    target = leagueTarget(lg); try { if (window.StuckHelp) target = StuckHelp.target(idx, target); } catch (e) {}
     window._leagueTargetFloor = target;
     setupChase('league', idx);
     boostersConsume();
@@ -13640,7 +13640,7 @@ function endGame() {
   shareBtn.classList.add('hidden');
 
   muteBtn.classList.remove('hidden');
-  showInterstitialIfDue();
+  if (beatTarget || !GAME_CONFIG.shop.ads.noAdAfterLoss) showInterstitialIfDue();   // Nov 18: never an ad straight after a loss
 
   const _chaseDone = window.chase; window.chase = null;
   if (_chaseDone && _chaseDone.mode === 'league') { try { offerTriggers({ won: beatTarget, newLeague: window._newLeagueUnlocked }); } catch (e) {} }
@@ -22992,7 +22992,7 @@ function duelVersus(rival, extra, go) {
   el.innerHTML = `<div class="vsHead">${head}</div>
     <div class="vsSide me"><canvas width="10" height="10"></canvas><b>${(me.name || 'YOU').slice(0, 14)}</b><small>${flagHtml(me.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(d.trophies)].name}</span> · <i class="hIco hi-trophy"></i>${d.trophies}</small></div>
     <div class="vsMid"><img alt="" src="assets/ui/icon_duel.webp"><span>VS</span></div>
-    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(rival.trophies || 0)].name}</span> · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small>${rival.practice && !extra.friend && !extra.cup ? '<em class="pracTag">PRACTICE RIVAL</em>' : ''}</div>
+    <div class="vsSide them"><canvas width="10" height="10"></canvas><b>${rival.name}</b><small>${flagHtml(rival.flag)} <span class="rk">${GAME_CONFIG.season.duel.ranks[duelRank(rival.trophies || 0)].name}</span> · <i class="hIco hi-trophy"></i>${rival.trophies || 0}</small>${rival.practice && !extra.friend && !extra.cup ? '<em class="pracTag">PRACTICE RIVAL</em>' : rival.online ? '<em class="pracTag live">LIVE PLAYER</em>' : ''}</div>
     <div class="vsFoot">${prize}<em>${GAME_CONFIG.season.duel.balls} BALLS EACH · SAME BALLS</em></div><i class="vsFlash"></i>`;
   const cv = el.querySelectorAll('canvas');
   try { paintPlayerTo(cv[0], me); paintPlayerTo(cv[1], Object.assign({}, me, { shirt: rival.shirt || 'maroon', g: rival.g || 'm', name: rival.name })); } catch (e) {}
@@ -25750,9 +25750,11 @@ const FlickyOnline = window.FlickyOnline = (function () {
     try { const F = O.F, col = F.collection(O.db, 'tables', String(li), 'innings'), blk = S().blocked, mine = duelState().trophies, now = Date.now();
       let snap = await F.getDocs(F.query(col, F.where(F.documentId(), '>=', rid()), F.limit(30)));
       let docs = snap.docs; if (docs.length < 8) { snap = await F.getDocs(F.query(col, F.limit(30))); docs = docs.concat(snap.docs); }
+      if (docs.length < 6) for (const nb of [li - 1, li + 1]) { if (nb < 1 || !THEMED_LEAGUES[nb]) continue;   // Nov 18: a quiet table borrows from the tables either side
+        try { const q2 = await F.getDocs(F.query(F.collection(O.db, 'tables', String(nb), 'innings'), F.limit(20))); docs = docs.concat(q2.docs.map(d => ({ id: d.id, data: () => Object.assign({}, d.data(), { nb }) }))); } catch (e) {} }
       const seen = new Set(), got = [];
-      docs.forEach(d => { const x = d.data(); if (seen.has(d.id) || x.uid === O.uid || blk.includes(x.uid) || !Array.isArray(x.log) || now - (x.t || 0) > 21 * 864e5) return; seen.add(d.id); got.push(Object.assign({ id: d.id }, x)); });
-      got.sort((a, b) => Math.abs((a.trophies || 0) - mine) - Math.abs((b.trophies || 0) - mine));
+      docs.forEach(d => { const x = d.data(); if (seen.has(d.id) || x.uid === O.uid || blk.includes(x.uid) || !Array.isArray(x.log) || now - (x.t || 0) > 60 * 864e5) return; seen.add(d.id); got.push(Object.assign({ id: d.id }, x)); });
+      got.sort((a, b) => ((a.nb ? 1 : 0) - (b.nb ? 1 : 0)) || Math.abs((a.trophies || 0) - mine) - Math.abs((b.trophies || 0) - mine));
       O.pool[li] = got.slice(0, 12).sort(() => Math.random() - 0.5);
     } catch (e) { track('online_error', { where: 'fill', msg: String(e && e.message || e).slice(0, 80) }); }
     O.busy['t' + li] = 0;
@@ -26205,6 +26207,27 @@ if (window.Mates) { const _r = Mates.redeem.bind(Mates); Mates.redeem = async fu
   #socNudge.show{transform:translate(-50%,0)}#socNudge b{font-weight:400;font-size:20px;color:#FFC93A}#socNudge>span{font:14px/1.35 system-ui,Arial,sans-serif;color:#dfe7f8}
   .snX{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;border:2px solid #050A14;background:#0d1a36;color:#fff;cursor:pointer}
 </style>
+
+<script>
+// ═══ STUCK HELP (Nov 18, Joe: retention fixes) ═══
+// Three league losses in a row at the same league: the target drops 10% until you win it, and a free POWER BAT
+// booster arrives once per league. Players stuck on a wall were the biggest early drop-off in the 1,000-player model.
+const StuckHelp = window.StuckHelp = {
+  cfg: { after: 3, ease: 0.9 },
+  st() { const s = SAVE.section('stuck'); s.lg = s.lg || {}; return s; },
+  on(idx) { const e = this.st().lg[idx]; return !!e && e.fails >= this.cfg.after; },
+  target(idx, t) { if (!this.on(idx)) return t; const n = Math.max(1, Math.round(t * this.cfg.ease));
+    setTimeout(() => { try { showMessage(`HELPING HAND · TARGET ${t} → ${n}`, '#7fd0ff', 2600); } catch (e) {} }, 900); track('stuck_ease', { league: idx, fails: this.st().lg[idx].fails }); return n; },
+  result(idx, won) { if (!idx) return; const s = this.st(), e = s.lg[idx] = s.lg[idx] || { fails: 0, gift: 0 };
+    if (won) { if (e.fails >= this.cfg.after) track('stuck_beaten', { league: idx, fails: e.fails }); e.fails = 0; SAVE.save(); return; }
+    e.fails++; SAVE.save();
+    if (e.fails === this.cfg.after) setTimeout(() => { try {
+      let gift = ''; if (!e.gift) { e.gift = 1; SAVE.save(); boosterAdd('power_bat', 1); gift = ' + A FREE POWER BAT'; }
+      showMessage(`TOUGH ONE! NEXT TRY: TARGET -10%${gift}`, '#7fd0ff', 3200); track('stuck_help', { league: idx }); } catch (x) {} }, 2800); } };
+{ const _tr = window.track; window.track = function (name, data) { const r = _tr.apply(this, arguments);
+    try { if (name === 'match_end' && data && data.mode === 'league' && data.league) StuckHelp.result(data.league, !!data.won); } catch (e) {} return r; }; }
+</script>
+<style>.pracTag.live{background:rgba(124,242,154,.16);border-color:rgba(124,242,154,.6);color:#9ff5b4}</style>
 
 </body>
 </html>
