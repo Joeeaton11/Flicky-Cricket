@@ -25283,6 +25283,7 @@ if (TEASER_ON) (function () {
   #tzCard h3{margin:2px 0 6px;font-size:26px;letter-spacing:.5px;color:#FFC93A;text-shadow:0 3px 0 #050A14}
   #tzCard p{margin:0 0 14px;font:600 15px/1.35 Arial,sans-serif;color:#d6e2ff}
   #tzCard .tzGo{display:block;width:100%;height:54px;border:3px solid #050A14;border-radius:16px;background:linear-gradient(#ffb43c,#e2701a);color:#1a0e00;font:inherit;font-size:21px;box-shadow:0 4px 0 #050A14;cursor:pointer;text-decoration:none;line-height:48px}
+  #tzCard .tzIcon{width:64px;height:64px;border-radius:15px;border:3px solid #050A14;box-shadow:0 4px 0 #050A14;margin:-52px auto 6px}
   #tzCard .tzBadges{display:flex;gap:10px;justify-content:center;align-items:center;margin:2px 0 4px}
   #tzCard .tzBadge{display:block;height:48px;flex:0 0 auto}#tzCard .tzBadge img{height:48px;width:auto;display:block}
   #tzCard .tzBadge:active{transform:scale(.97)}
@@ -25307,7 +25308,7 @@ if (TEASER_ON) (function () {
     const desk = p === 'desktop' ? `<div class="tzSmall"><a href="${TEASER_CFG.ios}" target="_blank" rel="noopener" style="color:#FFC93A">App Store</a> · <a href="${TEASER_CFG.android}" target="_blank" rel="noopener" style="color:#FFC93A">Google Play</a></div>` : '';
     const code = s.total >= TEASER_CFG.codeAfter ? `<div class="tzSmall">Web Starter bonus in the app:<br><span class="tzCode">${TEASER_CFG.code}</span></div>` : '';
     card.className = 'show' + (p === 'desktop' ? ' desk' : '');
-    card.innerHTML = `<div class="tzBox"><button class="tzX" data-tzx aria-label="Close">×</button><img class="tzLock" alt="" src="assets/ui/pass_padlock.webp">
+    card.innerHTML = `<div class="tzBox"><button class="tzX" data-tzx aria-label="Close">×</button><img class="tzLock${kind === 'home' || kind === 'cap' ? ' tzIcon' : ''}" alt="" src="${kind === 'home' || kind === 'cap' ? 'assets/ui/badges/app_icon.webp' : 'assets/ui/pass_padlock.webp'}">
       <h3>${c[0]}</h3><p>${c[1]}</p><img class="tzQr" alt="QR code to get the app" src="assets/ui/get_qr.webp">
       ${(() => { const A = `<a class="tzBadge" data-tzgo data-store="ios" href="${getLink(kind, 'ios')}" target="_blank" rel="noopener"><img alt="Download on the App Store" src="assets/ui/badges/app_store.svg"></a>`, G = `<a class="tzBadge" data-tzgo data-store="android" href="${getLink(kind, 'android')}" target="_blank" rel="noopener"><img alt="Get it on Google Play" src="assets/ui/badges/google_play.png"></a>`; return `<div class="tzBadges">${p === 'android' ? G + A : A + G}</div>`; })()}${code}
       <div class="tzSmall">Free on iPhone &amp; Android</div></div>`;
@@ -25346,7 +25347,7 @@ if (TEASER_ON) (function () {
   function capOk() { const s = st(); if (s.today < TEASER_CFG.dailyCap) return true; openCard('cap'); track('teaser_cap', { total: s.total }); return false; }
   const _start = window.startGame;
   window.startGame = function () { const m = window.chase && window.chase.mode;
-    if (m !== 'challenge' && m !== 'preview') { const s = st();
+    if (m !== 'challenge' && m !== 'preview' && (career.matchesPlayed || 0) > 0) { const s = st();
       if (s.today >= TEASER_CFG.dailyCap) { openCard('cap'); track('teaser_cap', { total: s.total }); try { showNav('league'); } catch (e) {} return; }
       s.today++; s.total++; SAVE.save(); }
     return _start.apply(this, arguments); };
@@ -25359,8 +25360,9 @@ if (TEASER_ON) (function () {
     setInterval(() => { let on = false; try { on = typeof state !== 'undefined' && ['ready', 'ballcoming', 'hit'].includes(state) && !!window.chase; } catch (x) {} hb.classList.toggle('on', on && !card.classList.contains('show')); }, 400); }
   { const _sr = window.showResultScreen; let firstDone = false;
     window.showResultScreen = function (d) { const r = _sr.apply(this, arguments);
-      try { const s = st(); if (!s.firstCard && s.total >= 1 && !firstDone) { firstDone = true; s.firstCard = Date.now(); SAVE.save(); setTimeout(() => openCard('home'), 2600); } } catch (e) {}
+      try { const s = st(); if (!s.firstCard && (career.matchesPlayed || 0) >= 1 && !firstDone) { firstDone = true; s.firstCard = Date.now(); SAVE.save(); setTimeout(() => openCard('home'), 2600); } } catch (e) {}
       return r; }; }
+  setTimeout(() => { try { if (window.Mates) { Mates.maybeOfferCode = function () {}; Mates.ask = function () {}; } } catch (e) {} }, 0);
   // ── 5. nudges: a pill on Home, a strip on the result screen
   const pill = document.createElement('button'); pill.id = 'tzPill'; pill.innerHTML = '<b>GET THE FREE APP</b><small>27 leagues · duels · clubs · kit bags</small>';
   { const row = document.getElementById('homePlayRow'); if (row) { if (getComputedStyle(row).position === 'static') row.style.position = 'relative'; row.appendChild(pill); } else document.body.appendChild(pill); }
@@ -26205,7 +26207,7 @@ if (window.Mates) { const _r = Mates.redeem.bind(Mates); Mates.redeem = async fu
     return r; }; }
 // one gentle nudge, once ever, after the 3rd match: where the codes come from
 { const _eg = window.endGame; if (typeof _eg === 'function') window.endGame = function () { const r = _eg.apply(this, arguments);
-    setTimeout(() => { try { const s = FlickyCodes.st(); if (s.nudged || (career.matchesPlayed || 0) < 3 || !FlickyCodes.socials().length || document.getElementById('matesAsk') || document.querySelector('#bagConfirmOv.show')) return;
+    setTimeout(() => { try { const s = FlickyCodes.st(); if (window.TEASER_ON || s.nudged || (career.matchesPlayed || 0) < 3 || !FlickyCodes.socials().length || document.getElementById('matesAsk') || document.querySelector('#bagConfirmOv.show')) return;
       s.nudged = Date.now(); SAVE.save(); track('social_nudge', {});
       let el = document.createElement('div'); el.id = 'socNudge';
       el.innerHTML = `<b>FREE GEM CODES</b><span>We drop codes on our socials. Follow Flicky so you don't miss one.</span>${FlickyCodes.btns()}<button class="snX" aria-label="Close">✕</button>`;
