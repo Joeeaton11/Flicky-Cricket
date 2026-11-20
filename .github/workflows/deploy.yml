@@ -33,3 +33,12 @@ jobs:
           path: _site
       - uses: actions/deploy-pages@v4
         id: deployment
+      - name: Tell Bing and other IndexNow engines about the pages (Nov 20, SEO)
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          sleep 30
+          KEY=$(ls site | grep -E '^[0-9a-f]{32}\.txt$' | head -1 | sed 's/\.txt$//')
+          URLS=$(grep -o '<loc>[^<]*</loc>' site/sitemap.xml | sed 's/<[^>]*>//g' | python3 -c 'import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')
+          curl -s -o /dev/null -w "IndexNow %{http_code}\n" -X POST https://api.indexnow.org/indexnow -H 'Content-Type: application/json; charset=utf-8' \
+            -d "{\"host\":\"flickycricket.com\",\"key\":\"$KEY\",\"keyLocation\":\"https://flickycricket.com/$KEY.txt\",\"urlList\":$URLS}"
