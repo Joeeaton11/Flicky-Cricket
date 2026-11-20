@@ -25252,6 +25252,7 @@ window.FCSound = FCSound;
 const TEASER_CFG = {
   league: 1, grounds: 3, dailyCap: 3,   // Nov 19 (Joe): 3 free web matches a day
   codeAfter: 2,            // show the Web Starter code after this many web matches
+  resultDesign: 'A',       // Nov 20: web result screen look, 'A' stadium + rewards or 'B' the app on a phone
   code: 'WEBBAT',          // redeem in the app (Mates → enter code) for the Web Starter pack
   getUrl: 'https://flickycricket.com/get/',   // desktop QR → this page, which sends each phone to its store
   ios: 'https://apps.apple.com/app/id1090760276',
@@ -25380,7 +25381,7 @@ if (TEASER_ON) (function () {
     setInterval(() => { let on = false; try { on = typeof state !== 'undefined' && ['ready', 'ballcoming', 'hit'].includes(state) && !!window.chase; } catch (x) {} hb.classList.toggle('on', on && !card.classList.contains('show')); }, 400); }
   { const _sr = window.showResultScreen; let firstDone = false;
     window.showResultScreen = function (d) { const r = _sr.apply(this, arguments);
-      try { const s = st(); if (!s.firstCard && (career.matchesPlayed || 0) >= 1 && !firstDone) { firstDone = true; s.firstCard = Date.now(); SAVE.save(); setTimeout(() => openCard('home'), 2600); } } catch (e) {}
+      try { const s = st(); /* Nov 20: the web result screen now carries the store badges, so no extra pop-up after the first match */ } catch (e) {}
       return r; }; }
   setTimeout(() => { try { if (window.Mates) { Mates.maybeOfferCode = function () {}; Mates.ask = function () {}; } } catch (e) {} }, 0);
   // ── 5. nudges: a pill on Home, a strip on the result screen
@@ -26277,5 +26278,103 @@ const StuckHelp = window.StuckHelp = {
 // Nov 18: remember when a rewarded video was watched, so an interstitial never follows straight after it
 { const _rv = window.showRewardedVideo; if (typeof _rv === 'function') window.showRewardedVideo = function (onReward, onFail) { window._lastRewardedAt = Date.now(); return _rv.call(this, onReward, onFail); }; }
 </script>
+<script>
+// ═══ WEB RESULT SCREEN (Nov 20, Joe: "a water tower doesn't scream cricket", a random player that isn't you, and no
+// app prompt after a win). On the free web game the result is its own screen: a floodlit stadium, the score, what you'd
+// keep in the app, the store badges and PLAY AGAIN. Two looks: 'A' stadium + rewards, 'B' the app on a phone.
+if (window.TEASER_ON) (function () {
+  const DESIGN = () => { try { const q = new URLSearchParams(location.search).get('rd'); if (q && isDevHost()) return q.toUpperCase(); } catch (e) {} return (TEASER_CFG.resultDesign || 'A'); };
+  const plat = () => { const ua = navigator.userAgent || ''; return /iPhone|iPad|iPod/.test(ua) ? 'ios' : /Android/.test(ua) ? 'android' : 'desktop'; };
+  const link = (store, src) => store === 'ios' ? TEASER_CFG.ios + '?ct=' + encodeURIComponent('web_' + src) : TEASER_CFG.android + '&referrer=' + encodeURIComponent('utm_source=web&utm_campaign=' + src);
+  const badges = src => { const A = `<a class="tzrBadge" data-tzgo data-store="ios" href="${link('ios', src)}" target="_blank" rel="noopener"><img alt="Download on the App Store" src="assets/ui/badges/app_store.svg"></a>`,
+    G = `<a class="tzrBadge" data-tzgo data-store="android" href="${link('android', src)}" target="_blank" rel="noopener"><img alt="Get it on Google Play" src="assets/ui/badges/google_play.png"></a>`;
+    return `<div class="tzrBadges">${plat() === 'android' ? G + A : A + G}</div>`; };
+  const left = () => { const s = SAVE.section('teaser'); return Math.max(0, TEASER_CFG.dailyCap - (s.today || 0)); };
+  const css = document.createElement('style');
+  css.textContent = `
+  #tzR{position:fixed;inset:0;z-index:8800;display:none;overflow:auto;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;background:#071022}
+  #tzR.show{display:block}
+  #tzR .bg{position:fixed;inset:0;background:url(assets/ui/web/hero.webp) center 30%/cover;filter:saturate(1.1)}
+  #tzR .bg:after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(7,16,34,.05),rgba(7,16,34,.35) 38%,rgba(7,16,34,.94) 66%)}
+  #tzR .in{position:relative;min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 18px);max-width:440px;margin:0 auto}
+  .tzrTag{padding:4px 12px;border-radius:999px;background:rgba(5,10,20,.7);border:2px solid rgba(255,201,58,.6);color:#FFC93A;font-size:13px;letter-spacing:.08em}
+  .tzrHead{font-size:54px;line-height:.95;text-shadow:0 5px 0 #050A14,0 0 30px rgba(0,0,0,.4);margin-top:6px}
+  .tzrHead.win{color:#7CF29A}.tzrHead.lose{color:#ff6b5e}
+  .tzrRuns{font-size:92px;line-height:.9;text-shadow:0 6px 0 #050A14}.tzrRuns small{font-size:22px;letter-spacing:.12em;margin-left:6px;color:#dfe7ff}
+  .tzrLine{font-size:20px;text-shadow:0 3px 0 #050A14}
+  .tzrChips{display:flex;gap:8px}.tzrChips span{padding:5px 10px;border-radius:10px;background:rgba(5,10,20,.65);border:2px solid #050A14;font-size:15px}
+  .tzrStars{font-size:40px;letter-spacing:4px;color:#FFC93A;text-shadow:0 3px 0 #050A14;line-height:1}.tzrStars i{font-style:normal;color:rgba(255,255,255,.18)}
+  .tzrCard{width:100%;box-sizing:border-box;border-radius:20px;border:3px solid #050A14;background:linear-gradient(#1a2e5a,#101c3a);box-shadow:0 5px 0 #050A14,inset 0 2px 0 rgba(255,255,255,.08);padding:14px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center}
+  .tzrCard h4{margin:0;font-weight:400;font-size:20px;color:#FFC93A;letter-spacing:.04em}
+  .tzrCard p{margin:0;font:600 14px/1.35 Arial,sans-serif;color:#cdd8f0}
+  .tzrRew{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+  .tzrRew div{border-radius:14px;background:#0b1530;border:2px solid #050A14;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .tzrRew img{height:40px;width:auto}.tzrRew b{font-weight:400;font-size:20px}.tzrRew small{font-size:11px;color:#9fb3da;letter-spacing:.06em}
+  .tzrApp{display:flex;align-items:center;gap:12px;width:100%;text-align:left}.tzrApp img{width:58px;height:58px;border-radius:14px;border:2.5px solid #050A14}
+  .tzrApp b{font-weight:400;font-size:20px;display:block}.tzrApp small{font:600 13px Arial,sans-serif;color:#cdd8f0}
+  .tzrBadges{display:flex;gap:10px;justify-content:center}.tzrBadge img{height:48px;width:auto;display:block}
+  .tzrCode{font:600 13px Arial,sans-serif;color:#9fb3e0}.tzrCode b{font-family:'Lilita One',sans-serif;font-weight:400;color:#FFC93A;border:2px dashed #FFC93A;border-radius:8px;padding:2px 8px;margin-left:4px;letter-spacing:.1em}
+  .tzrPlay{width:100%;height:62px;border-radius:18px;border:3px solid #050A14;background:linear-gradient(#FFD75A,#F5A915);color:#3a2000;font:24px 'Lilita One',sans-serif;box-shadow:0 5px 0 #a86a00,0 8px 0 #050A14;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+  .tzrPlay small{font-size:12px;letter-spacing:.06em;margin-top:3px;opacity:.8}
+  .tzrPlay.dim{background:linear-gradient(#2a3d6b,#1a2a50);color:#fff;box-shadow:0 5px 0 #0b1530,0 8px 0 #050A14;height:52px;font-size:20px}
+  .tzrHome{background:none;border:0;color:rgba(255,255,255,.55);font:14px 'Lilita One',sans-serif;text-decoration:underline;cursor:pointer}
+  /* design B: the app on a phone */
+  .tzrPhoneWrap{position:relative;width:100%;display:flex;justify-content:center;margin:4px 0 -4px}
+  .tzrPhone{width:46%;border-radius:22px;border:5px solid #050A14;box-shadow:0 10px 0 rgba(0,0,0,.35),0 0 0 2px #2f4a85;transform:rotate(-5deg);background:#000}
+  .tzrPhone.b{position:absolute;left:52%;top:18px;width:38%;transform:rotate(7deg);opacity:.95}
+  .tzrMini{display:flex;align-items:baseline;gap:10px;justify-content:center}.tzrMini .tzrHead{font-size:40px}.tzrMini .tzrRuns{font-size:54px}`;
+  document.head.appendChild(css);
+  const el = document.createElement('div'); el.id = 'tzR'; el.innerHTML = '<div class="bg"></div><div class="in"></div>'; document.body.appendChild(el);
+  el.addEventListener('click', e => {
+    const g = e.target.closest('[data-tzgo]'); if (g) { track('teaser_store_tap', { from: 'result_' + DESIGN(), store: g.dataset.store || '', win: el.dataset.win }); return; }
+    if (e.target.closest('[data-tzr="again"]')) { el.className = ''; const b = document.getElementById('rs-playAgainBtn'); if (b) b.click(); return; }
+    if (e.target.closest('[data-tzr="home"]')) { el.className = ''; const b = document.getElementById('rs-menuBtn'); if (b) b.click(); }
+  });
+  function render(d) {
+    const win = !!d.beatTarget, L = left(), short = Math.max(0, d.target - d.runs), s = SAVE.section('teaser');
+    const stars = win ? '★'.repeat(d.stars || 1) + '<i>' + '★'.repeat(Math.max(0, 3 - (d.stars || 1))) + '</i>' : '';
+    const head = `<div class="tzrHead ${win ? 'win' : 'lose'}">${win ? 'YOU WON!' : d.nearMiss ? 'SO CLOSE!' : 'OUT!'}</div>`;
+    const runs = `<div class="tzrRuns">${d.runs}<small>RUNS</small></div>`;
+    const line = `<div class="tzrLine">${win ? `TARGET ${d.target} ✓${d.ballsSpare ? ` · ${d.ballsSpare} BALL${d.ballsSpare === 1 ? '' : 'S'} SPARE` : ''}` : `TARGET ${d.target} · ${short} SHORT`}</div>`;
+    const chips = `<div class="tzrChips"><span>${d.fours || 0} FOURS</span><span>${d.sixes || 0} SIXES</span><span>${d.balls || 0} BALLS</span></div>`;
+    const play = (dim) => L > 0 ? `<button class="tzrPlay${dim ? ' dim' : ''}" data-tzr="again">${win ? 'PLAY AGAIN' : 'TRY AGAIN'}<small>${L} FREE WEB MATCH${L === 1 ? '' : 'ES'} LEFT TODAY</small></button>`
+      : `<button class="tzrPlay dim" data-tzr="home">BACK TO THE NETS<small>FREE WEB MATCHES DONE FOR TODAY</small></button>`;
+    const code = (s.total || 0) >= TEASER_CFG.codeAfter ? `<div class="tzrCode">Bonus in the app: <b>${TEASER_CFG.code}</b> · 100 gems, 1,000 coins & a silver bag</div>` : '';
+    const app = (title, sub) => `<div class="tzrCard"><div class="tzrApp"><img alt="" src="assets/ui/badges/app_icon.webp"><div><b>${title}</b><small>${sub}</small></div></div>${badges(win ? 'result_win' : 'result_lose')}${code}</div>`;
+    let h;
+    if (DESIGN() === 'B') {
+      h = `<div class="tzrTag">FREE WEB NETS</div><div class="tzrMini">${head}${runs}</div>${line}
+        <div class="tzrPhoneWrap"><img class="tzrPhone" alt="" src="assets/ui/web/phone1.webp"><img class="tzrPhone b" alt="" src="assets/ui/web/phone2.webp"></div>
+        <div class="tzrCard"><h4>${win ? 'THAT WAS JUST THE NETS' : 'GET UNLIMITED GOES IN THE APP'}</h4><p>27 leagues, 120+ grounds, duels against real players, clubs with your mates and kit bags to open. Free on iPhone and Android.</p>${badges(win ? 'result_win' : 'result_lose')}${code}</div>
+        ${play(true)}<button class="tzrHome" data-tzr="home">Home</button>`;
+    } else if (win) {
+      const bag = d.earnedChestType && CHEST_IMG_SRC[d.earnedChestType];
+      h = `<div class="tzrTag">FREE WEB NETS</div>${head}${runs}<div class="tzrStars">${stars}</div>${line}${chips}
+        <div class="tzrCard"><h4>KEEP YOUR WINNINGS IN THE APP</h4>
+          <div class="tzrRew"><div><img alt="" src="${REWARD_HEAP_ART.coins_s}"><b>+${d.coinsEarned || 0}</b><small>COINS</small></div>
+          <div><img alt="" src="${bag || CHEST_IMG_SRC.bronze}"><b>${bag ? bagNm(d.earnedChestType) : 'BAG'}</b><small>TO OPEN</small></div>
+          <div><i class="hIco hi-trophy" style="width:40px;height:40px"></i><b>+${d.trophyDelta || 0}</b><small>TROPHIES</small></div></div>
+          <p>Open your bag, climb 27 leagues and take on real players in duels.</p>${badges('result_win')}${code}</div>
+        ${play(true)}<button class="tzrHome" data-tzr="home">Home</button>`;
+    } else {
+      h = `<div class="tzrTag">FREE WEB NETS</div>${head}${runs}${line}${chips}
+        <div class="tzrLine" style="font-size:16px;color:#cdd8f0">TIP · ${d.nearMiss ? 'So close! Wait for the ball to reach you, then swipe' : 'Swipe as the ball reaches you, not before'}</div>
+        ${play(false)}
+        ${app('NO LIMITS IN THE APP', 'Unlimited matches, 27 leagues and duels against real players. Free.')}
+        <button class="tzrHome" data-tzr="home">Home</button>`;
+    }
+    el.dataset.win = win ? 1 : 0;
+    el.querySelector('.in').innerHTML = h; el.className = 'show'; el.scrollTop = 0;
+    track('teaser_result', { design: DESIGN(), win: win ? 1 : 0, left: L });
+  }
+  const _sr = window.showResultScreen;
+  window.showResultScreen = function (d) { const r = _sr.apply(this, arguments); try { render(d); } catch (e) {} return r; };
+  // the old strip and the auto pop-up after the first match are replaced by this screen
+  const kill = () => { const b = document.getElementById('tzRes'); if (b) b.remove(); };
+  setInterval(kill, 1000);
+  window.tzResultPreview = render;
+})();
+</script>
+
 </body>
 </html>
