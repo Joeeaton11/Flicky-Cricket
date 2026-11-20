@@ -4710,7 +4710,7 @@ function setNavActive(tab) {
   }
 }
 function setNavBack(show) { const b = document.getElementById('navBackBtn'); if (b) b.classList.toggle('hidden', !show); }
-function showNav(tab) { if (window._scenePreview) return; if (bottomNav) { bottomNav.classList.remove('hidden'); setNavActive(tab || ''); } setNavBack(!!tab && tab !== 'league');
+function showNav(tab) { if (window._scenePreview) return; { const ps = document.getElementById('playerScreen'); if (ps && ps.classList.contains('create') && !ps.classList.contains('hidden')) return; } if (bottomNav) { bottomNav.classList.remove('hidden'); setNavActive(tab || ''); } setNavBack(!!tab && tab !== 'league');
   if (window._pendingBagFly) { const t = window._pendingBagFly; window._pendingBagFly = null;
     if (tab !== 'chests' && typeof flyBagToTab === 'function') setTimeout(() => flyBagToTab(t), 450); } }
 function hideNav()    { if (bottomNav) bottomNav.classList.add('hidden'); setNavBack(false); }
@@ -25288,6 +25288,7 @@ if (TEASER_ON) (function () {
     duel:   ['1V1 DUELS', 'Same 12 balls, head to head with real players. Winner takes the pot.'],
     cup:    ['KNOCKOUT CUPS', '32 players. Win and go on, lose and you\'re out.'],
     bags:   ['KIT BAGS', 'Win bags in every match and open them for new bats, kit and coins.'],
+    bagNext:['YOUR NEXT BAG IS IN THE APP', 'Nice pull! Keep winning bags every match and open them all in the app.'],
     shop:   ['THE SHOP', 'Bats, kit, coins and gems live in the app.'],
     events: ['EVENTS & THE PASS', 'Seasonal cups, the Christmas Cup and Pass rewards are in the app.'],
     mode:   ['MORE WAYS TO PLAY', 'Tournaments and Endless are in the full game.'],
@@ -25295,8 +25296,14 @@ if (TEASER_ON) (function () {
     cap:    ['DAILY NETS OVER', `That's your ${TEASER_CFG.dailyCap} free web matches for today. Play unlimited in the app, or come back tomorrow. The Daily Challenge is still open.`],
     home:   ['THE FULL GAME', '27 leagues, 120+ grounds, duels against real players, clubs, cups, kit bags and events. Free on iPhone and Android.'],
   };
+  // Nov 20 (Joe: "the use of a lock?"): each card shows what you get, not a padlock
+  const TZ_ART = { league: 'assets/ui/leagues/lg_27_cup.webp', duel: 'assets/ui/icon_duel.webp', cup: 'assets/ui/cup_trophy.webp',
+    bags: 'assets/inline/a0752272b3ad.webp', bagNext: 'assets/inline/a0752272b3ad.webp', shop: 'assets/inline/c1bf861e8fae.webp', buy: 'assets/inline/c1bf861e8fae.webp',
+    events: 'assets/ui/events/ev_xmas.webp', mode: 'assets/ui/ev_weekly.webp', home: 'assets/ui/cup_trophy.webp' };
   const css = document.createElement('style');
   css.textContent = `
+  #tzCard .tzArt{width:96px;height:96px;object-fit:contain;margin:-70px auto 0;display:block;filter:drop-shadow(0 6px 8px rgba(0,0,0,.55))}
+  #tzCard .tzTag{display:inline-block;margin:2px 0 4px;padding:3px 12px;border-radius:999px;border:2px solid #050A14;background:linear-gradient(#ffb43c,#e2701a);color:#1a0e00;font-size:13px;letter-spacing:.08em}
   #tzCard{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(3,8,20,.72);padding:20px}
   #tzCard.show{display:flex}
   #tzCard .tzBox{width:min(92vw,360px);background:linear-gradient(#13254a,#0a1530);border:3px solid #050A14;border-radius:22px;box-shadow:0 0 0 2px #2f4a85 inset,0 18px 40px rgba(0,0,0,.6);padding:22px 18px 16px;text-align:center;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;position:relative}
@@ -25329,7 +25336,7 @@ if (TEASER_ON) (function () {
     const desk = p === 'desktop' ? `<div class="tzSmall"><a href="${TEASER_CFG.ios}" target="_blank" rel="noopener" style="color:#FFC93A">App Store</a> · <a href="${TEASER_CFG.android}" target="_blank" rel="noopener" style="color:#FFC93A">Google Play</a></div>` : '';
     const code = s.total >= TEASER_CFG.codeAfter ? `<div class="tzSmall">Web Starter bonus in the app:<br><span class="tzCode">${TEASER_CFG.code}</span></div>` : '';
     card.className = 'show' + (p === 'desktop' ? ' desk' : '');
-    card.innerHTML = `<div class="tzBox"><button class="tzX" data-tzx aria-label="Close">×</button><img class="tzLock${kind === 'home' || kind === 'cap' ? ' tzIcon' : ''}" alt="" src="${kind === 'home' || kind === 'cap' ? 'assets/ui/badges/app_icon.webp' : 'assets/ui/pass_padlock.webp'}">
+    card.innerHTML = `<div class="tzBox"><button class="tzX" data-tzx aria-label="Close">×</button>${kind === 'home' || kind === 'cap' ? '<img class="tzLock tzIcon" alt="" src="assets/ui/badges/app_icon.webp">' : `<img class="tzArt" alt="" src="${TZ_ART[kind] || TZ_ART.home}"><div class="tzTag">IN THE APP</div>`}
       <h3>${c[0]}</h3><p>${c[1]}</p><img class="tzQr" alt="QR code to get the app" src="assets/ui/get_qr.webp">
       ${(() => { const A = `<a class="tzBadge" data-tzgo data-store="ios" href="${getLink(kind, 'ios')}" target="_blank" rel="noopener"><img alt="Download on the App Store" src="assets/ui/badges/app_store.svg"></a>`, G = `<a class="tzBadge" data-tzgo data-store="android" href="${getLink(kind, 'android')}" target="_blank" rel="noopener"><img alt="Get it on Google Play" src="assets/ui/badges/google_play.png"></a>`; return `<div class="tzBadges">${p === 'android' ? G + A : A + G}</div>`; })()}${code}
       <div class="tzSmall">Free on iPhone &amp; Android</div></div>`;
@@ -25347,14 +25354,23 @@ if (TEASER_ON) (function () {
   const lock = (name, kind, allow) => { const f = window[name]; if (typeof f !== 'function') return;
     window[name] = function () { if (allow && allow.apply(this, arguments)) return f.apply(this, arguments); openCard(kind); }; };
   lock('openShop', 'shop'); lock('openGemShop', 'shop');
-  lock('openChest', 'bags'); lock('openDuelTables', 'duel'); lock('playDuel', 'duel'); lock('startDuelMatch', 'duel');
+  const bagUsed = () => !!st().bagDone;
+  lock('openChest', 'bags', () => !bagUsed());
+  { const _oc = window.openChest; window.openChest = function () { const r = _oc.apply(this, arguments);
+      if (r && r.rewards && !bagUsed()) { const s = st(); s.bagDone = 1; SAVE.save(); window._tzBagJust = 1; track('teaser_bag_open', {}); } return r; }; }
+  { const _sa = window.showChestOpenAnimation; if (typeof _sa === 'function') window.showChestOpenAnimation = function (t, r, done) {
+      return _sa.call(this, t, r, function () { try { done && done.apply(this, arguments); } catch (e) {}
+        if (window._tzBagJust) { window._tzBagJust = 0; let n = 0; const wait = () => { const w = document.getElementById('nkWow'); if (w && w.classList.contains('show') && n++ < 600) return setTimeout(wait, 300); setTimeout(() => openCard('bagNext'), 350); }; setTimeout(wait, 400); } }); }; }
+  const webBagReady = () => { try { if (bagUsed()) return false; const i = chestSlots.findIndex(c => c); if (i === -1) return false;
+      const c = chestSlots[i], cfg = CHEST_TYPES[c.type] || {}; c.openingStarted = Date.now() - (cfg.openTime || 0) * 1000 - 1000; delete c.queued; saveChestSlots(); return true; } catch (e) { return false; } };
+  lock('openDuelTables', 'duel'); lock('playDuel', 'duel'); lock('startDuelMatch', 'duel');
   lock('openCupDraw', 'cup'); lock('playCup', 'cup'); lock('openEventShop', 'events'); lock('openEventShopSheet', 'events');
   lock('buyRealMoney', 'buy');
   { const _pm = window.playMode; window.playMode = function (k) { if (k === 'challenge') return _pm.apply(this, arguments); openCard(k === 'duel' ? 'duel' : k === 'cup' ? 'cup' : 'mode'); }; }
   { const _pl = window.playLeague; window.playLeague = function (idx) { if (idx > TEASER_CFG.league) { openCard('league'); return; } if (!capOk()) return; return _pl.apply(this, arguments); }; }
   // the chests tab is wired with its own click handler, so stop it before it runs
   window.addEventListener('click', e => { const t = e.target && e.target.closest ? e.target : null; if (!t) return;
-    if (t.closest('#chestsMenuBtn')) { e.stopImmediatePropagation(); e.preventDefault(); openCard('bags'); }
+    if (t.closest('#chestsMenuBtn')) { if (webBagReady()) return; e.stopImmediatePropagation(); e.preventDefault(); openCard('bags'); }
     else if (t.closest('[data-openpass]')) { e.stopImmediatePropagation(); e.preventDefault(); openCard('events'); }
     else if (t.closest('#startBtn')) { let m = 'league'; try { m = localStorage.getItem('flickyPlayMode') || 'league'; } catch (err) {}
       if (m === 'duel' || m === 'cup') { e.stopImmediatePropagation(); e.preventDefault(); openCard(m); } }
