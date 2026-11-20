@@ -24,8 +24,19 @@
     window.scrollTo({ top: t, behavior: 'smooth' });
   }
   addEventListener('wheel', function (e) { if (e.deltaY < -2) go(e); }, { passive: false });
-  addEventListener('touchstart', function (e) { touchY = e.touches[0].clientY; }, { passive: true });
-  addEventListener('touchmove', function (e) { if (touchY == null) return; var dy = e.touches[0].clientY - touchY;
-    if (dy > 12) { touchY = null; go(e); } else if (dy < -12) touchY = null; }, { passive: false });
+  // Nov 20 (Joe, iPhone: still swiping back frame by frame): phones decide on the very first finger movement, while the
+  // browser still lets us cancel its own scroll (after that iOS ignores preventDefault and its momentum wins)
+  var decided = false, hold = false;
+  addEventListener('touchstart', function (e) { touchY = e.touches[0].clientY; decided = false; hold = false; }, { passive: true });
+  addEventListener('touchmove', function (e) {
+    if (touchY == null) return;
+    if (hold) { if (e.cancelable) e.preventDefault(); return; }   // keep the page still until the finger lifts
+    if (decided) return;
+    var dy = e.touches[0].clientY - touchY;
+    if (Math.abs(dy) < 3) return;
+    decided = true;
+    if (dy > 0 && target() != null && e.cancelable) { hold = true; go(e); }
+  }, { passive: false });
+  addEventListener('touchend', function () { touchY = null; hold = false; }, { passive: true });
   addEventListener('keydown', function (e) { if (e.key === 'ArrowUp' || e.key === 'PageUp') go(e); });
 })();
