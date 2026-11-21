@@ -24544,6 +24544,12 @@ function renderSettings() {
   #modeChips button{flex:1;max-width:76px;height:32px;border-radius:12px;border:3px solid #050A14;background:linear-gradient(#24365c,#14203a);color:#c9d6f0;font:13px 'Lilita One','Arial Black',Arial,sans-serif;letter-spacing:.04em;cursor:pointer;box-shadow:0 3px 0 #050A14;padding:0}
   #modeChips button.on{background:linear-gradient(#ffd75a,#f0a21a);color:#3a2300}
   #modeChips button.lock{opacity:.55}
+  #modeChips button.gone{display:none}
+  #modeChips.few button{max-width:150px}
+  #modeChips button{position:relative}
+  #modeChips button.new{animation:mcNew .6s cubic-bezier(.3,1.7,.5,1) both}
+  #modeChips button.new::after{content:'NEW';position:absolute;top:-9px;right:-6px;padding:1px 5px;border-radius:7px;border:2px solid #050A14;background:#ff4d4d;color:#fff;font-size:10px;letter-spacing:.04em}
+  @keyframes mcNew{from{transform:scale(0)}}
   #modeCard{display:none;position:relative;width:100%;height:68px;border-radius:16px;border:3px solid #050A14;overflow:hidden;background:#14203a center/cover;box-shadow:0 4px 0 #050A14;text-align:left;cursor:pointer;padding:0;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif}
   #modeCard::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,10,20,.85) 30%,rgba(5,10,20,.2))}
   #modeCard b{position:absolute;left:14px;top:9px;font-size:21px;font-weight:400;letter-spacing:.03em;text-shadow:0 2px 0 #000}
@@ -24565,7 +24571,18 @@ function renderSettings() {
   let cur = 'league'; try { cur = localStorage.getItem('flickyPlayMode') || 'league'; } catch (e) {}
   const poster = pk => { const cpn = document.getElementById('competePanel'); if (!(cpn && cpn.classList.contains('show'))) { try { renderCompete(); } catch (e) {} } return document.querySelector(`#competePanel article[data-pk="${pk}"]`); };
   const label = start.querySelector('span');
+  // Nov 21 (Joe: five buttons, three greyed out): locked modes stay hidden, then pop in with NEW when they unlock
+  const modesOpen = () => { try { return typeof featureOn === 'function' ? !!featureOn('compete') : true; } catch (e) { return true; } };
+  const hideLocked = () => { const open = modesOpen(), ms = SAVE.section('modes');
+    chips.querySelectorAll('button').forEach(b => { const mm = MODES.find(x => x.k === b.dataset.pm); b.classList.toggle('gone', !!mm.pk && !open); });
+    chips.classList.toggle('few', !open);
+    if (!open && MODES.find(x => x.k === cur).pk) { cur = 'league'; try { localStorage.setItem('flickyPlayMode', cur); } catch (e) {} }
+    if (open && !ms.shown && (career.matchesPlayed || 0) > 8) { ms.shown = 1; SAVE.save(); }   // long-time players: no NEW badges
+    if (open && !ms.shown) { ms.shown = 1; ms.fresh = { duel: 1, cup: 1, challenge: 1 }; SAVE.save();
+      setTimeout(() => { try { showMessage('NEW: DUELS · CUP · DAILY', '#FFC93A', 2600); FCSound.play('levelup'); } catch (e) {} }, 700); }
+    const fr = ms.fresh || {}; chips.querySelectorAll('button').forEach(b => b.classList.toggle('new', !!fr[b.dataset.pm])); };
   const paint = () => {
+    hideLocked();
     const m = MODES.find(x => x.k === cur) || MODES[0];
     chips.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.pm === cur));
     row.classList.toggle('mode', cur !== 'league');
@@ -24584,7 +24601,8 @@ function renderSettings() {
   };
   window.refreshModePicker = paint;
   chips.addEventListener('click', e => { const b = e.target.closest('[data-pm]'); if (!b) return; e.stopPropagation(); try { playUiTap(); hapticTap(); } catch (err) {}
-    cur = b.dataset.pm; try { localStorage.setItem('flickyPlayMode', cur); } catch (err) {} paint(); });
+    cur = b.dataset.pm; try { localStorage.setItem('flickyPlayMode', cur); } catch (err) {}
+    { const ms = SAVE.section('modes'); if (ms.fresh && ms.fresh[cur]) { delete ms.fresh[cur]; SAVE.save(); } } paint(); });
   mc.addEventListener('click', e => { e.stopPropagation(); if (cur === 'nets') return; document.getElementById('eventsNavBtn').click(); });
   // PLAY runs the chosen mode; League keeps the original button behaviour
   start.addEventListener('click', e => {
@@ -26411,5 +26429,81 @@ if (window.TEASER_ON) (function () {
 })();
 </script>
 
+<script>
+// ═══ Nov 21 (Joe: "I won and it felt like nothing happened"): Home shows the progress you just made.
+// The trophy bar counts up with trophies flying in, then says what's next; crossing into a new league gets a full unlock moment.
+(function () {
+  const css = document.createElement('style');
+  css.textContent = `
+  .rdFly{position:fixed;z-index:9500;width:34px;height:34px;pointer-events:none;background:url(assets/inline/7cae0f596ea0.webp) center/contain no-repeat;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5));transition:transform .75s cubic-bezier(.5,-.3,.7,1),opacity .2s}
+  .rdPlus{position:fixed;z-index:9501;pointer-events:none;font:30px 'Lilita One','Arial Black',sans-serif;color:#FFC93A;-webkit-text-stroke:5px #050A14;paint-order:stroke fill;text-shadow:0 4px 0 #050A14;transform:translate(-50%,0) scale(.3);opacity:0;transition:transform .35s cubic-bezier(.3,1.7,.5,1),opacity .25s}
+  .rdPlus.on{transform:translate(-50%,-30px) scale(1);opacity:1}
+  .rdNext{position:fixed;z-index:9501;left:50%;pointer-events:none;transform:translate(-50%,10px);opacity:0;padding:7px 16px;border-radius:999px;border:3px solid #050A14;background:rgba(10,21,48,.95);color:#fff;font:15px 'Lilita One','Arial Black',sans-serif;letter-spacing:.04em;white-space:nowrap;box-shadow:0 4px 0 #050A14;transition:all .3s}
+  .rdNext b{color:#FFC93A;font-weight:400}.rdNext.on{transform:translate(-50%,0);opacity:1}
+  #homeLeagueCard.rdPulse{animation:rdPulse .5s ease}
+  @keyframes rdPulse{40%{transform:scale(1.05)}}
+  #rdUnlock{position:fixed;inset:0;z-index:9600;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle,rgba(20,40,90,.92),rgba(3,8,20,.97));color:#fff;font-family:'Lilita One','Arial Black',sans-serif;text-align:center;overflow:hidden}
+  #rdUnlock.show{display:flex}
+  #rdUnlock .rays{position:absolute;left:50%;top:42%;width:1400px;height:1400px;margin:-700px 0 0 -700px;background:repeating-conic-gradient(rgba(255,214,90,.14) 0 9deg,transparent 9deg 18deg);animation:rdSpin 14s linear infinite}
+  @keyframes rdSpin{to{transform:rotate(360deg)}}
+  #rdUnlock .tag{position:relative;padding:6px 16px;border-radius:999px;background:linear-gradient(#ffd75a,#f0a21a);color:#3a2300;border:3px solid #050A14;font-size:18px;letter-spacing:.08em;animation:rdIn .4s .1s both cubic-bezier(.3,1.6,.5,1)}
+  #rdUnlock img{position:relative;width:min(62vw,250px);height:min(62vw,250px);object-fit:contain;filter:drop-shadow(0 10px 14px rgba(0,0,0,.6));animation:rdIn .6s .25s both cubic-bezier(.3,1.6,.5,1)}
+  #rdUnlock h2{position:relative;margin:0;font-weight:400;font-size:40px;color:#FFC93A;-webkit-text-stroke:6px #050A14;paint-order:stroke fill;text-shadow:0 5px 0 #050A14;animation:rdIn .4s .5s both cubic-bezier(.3,1.6,.5,1)}
+  #rdUnlock p{position:relative;margin:0 24px;font:600 15px/1.4 Arial,sans-serif;color:#d6e2ff;animation:rdIn .4s .7s both}
+  #rdUnlock button{position:relative;margin-top:10px;width:min(80vw,300px);height:58px;border-radius:18px;border:3px solid #050A14;background:linear-gradient(#FFD75A,#F5A915);color:#3a2000;font:24px 'Lilita One',sans-serif;box-shadow:0 5px 0 #a86a00,0 8px 0 #050A14;cursor:pointer;animation:rdIn .4s .9s both}
+  @keyframes rdIn{from{transform:scale(.2);opacity:0}}
+  .rdConf{position:absolute;top:-20px;width:9px;height:14px;border-radius:2px;animation:rdFall linear forwards}
+  @keyframes rdFall{to{transform:translateY(110vh) rotate(720deg)}}`;
+  document.head.appendChild(css);
+  const st = () => { const s = SAVE.section('road'); return s; };
+  const home = () => { const o = document.getElementById('overlay'); return o && !o.classList.contains('hidden'); };
+  const snd = (n, o) => { try { FCSound.play(n, o || {}); } catch (e) {} };
+  let busy = false;
+  function unlockMoment(lg) {
+    let el = document.getElementById('rdUnlock'); if (!el) { el = document.createElement('div'); el.id = 'rdUnlock'; document.body.appendChild(el); }
+    const P = (typeof PAINTED_LEAGUE !== 'undefined' && PAINTED_LEAGUE[lg.name]) || {};
+    el.innerHTML = `<div class="rays"></div><div class="tag">NEW LEAGUE UNLOCKED!</div><img alt="" src="${P.trophy || ''}"><h2>${lg.name}</h2><p>${(lg.subtitle || '').split('·')[0].trim()}${lg.subtitle ? ' · ' : ''}bigger targets, bigger prizes</p><button data-rdgo>LET'S GO</button>`;
+    for (let i = 0; i < 60; i++) { const c = document.createElement('i'); c.className = 'rdConf'; c.style.left = Math.random() * 100 + '%'; c.style.background = ['#FFC93A', '#7CF29A', '#ff6b5e', '#7fd0ff', '#fff'][i % 5]; c.style.animationDuration = (2 + Math.random() * 2) + 's'; c.style.animationDelay = (Math.random() * .8) + 's'; el.appendChild(c); }
+    el.className = 'show'; snd('levelup'); snd('sting4', { delay: 300 }); try { haptic && haptic(40); } catch (e) {}
+    el.querySelector('[data-rdgo]').onclick = () => { el.className = ''; snd('ui_tap'); };
+    try { track('home_league_unlock', { league: lg.name }); } catch (e) {}
+  }
+  function animate(from, to, base, goal, next) {
+    const card = document.getElementById('homeLeagueCard'), fill = document.getElementById('homeRoadFill'), txt = document.getElementById('homeRoadTxt'); if (!card || !fill) return;
+    busy = true; const r = (fill.closest('.lcTrack') || fill).getBoundingClientRect();
+    const pct = v => Math.max(0, Math.min(1, (v - base) / Math.max(1, goal - base))) * 100;
+    fill.style.transition = 'none'; fill.style.width = pct(from) + '%'; txt.textContent = `${from} / ${goal}`;
+    const up = to > from, n = Math.min(Math.abs(to - from), 8);
+    if (up) for (let i = 0; i < n; i++) setTimeout(() => { const f = document.createElement('i'); f.className = 'rdFly';
+      f.style.left = (innerWidth / 2 - 17 + (Math.random() - .5) * 120) + 'px'; f.style.top = (innerHeight * .42 + (Math.random() - .5) * 80) + 'px'; document.body.appendChild(f);
+      requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transform = `translate(${r.left + 10 - parseFloat(f.style.left)}px,${r.top + r.height / 2 - 17 - parseFloat(f.style.top)}px) scale(.55)`; }));
+      setTimeout(() => { f.style.opacity = 0; setTimeout(() => f.remove(), 250); }, 760); }, 250 + i * 120);
+    if (up) { const pl = document.createElement('div'); pl.className = 'rdPlus'; pl.textContent = `+${to - from} 🏆`; pl.style.left = (r.left + r.width / 2) + 'px'; pl.style.top = (r.top - 14) + 'px'; document.body.appendChild(pl);
+      setTimeout(() => pl.classList.add('on'), 900); setTimeout(() => { pl.classList.remove('on'); setTimeout(() => pl.remove(), 400); }, 2400); }
+    const steps = Math.max(1, Math.abs(to - from)), t0 = up ? 950 : 300, dt = Math.min(140, 900 / steps);
+    for (let k = 1; k <= steps; k++) setTimeout(() => { const v = from + (up ? k : -k); fill.style.transition = 'width .14s ease-out'; fill.style.width = pct(v) + '%'; txt.textContent = `${v} / ${goal}`;
+      if (up) { snd('tick', { gap: 60 }); card.classList.remove('rdPulse'); void card.offsetWidth; card.classList.add('rdPulse'); } }, t0 + k * dt);
+    setTimeout(() => { busy = false;
+      if (up && next) { const left = Math.max(0, goal - to); const nx = document.createElement('div'); nx.className = 'rdNext';
+        nx.innerHTML = left ? `<b>${left}</b> MORE TO UNLOCK <b>${next.name}</b>` : `<b>${next.name}</b> UNLOCKED!`;
+        nx.style.top = (r.bottom + 14) + 'px'; document.body.appendChild(nx); requestAnimationFrame(() => nx.classList.add('on')); setTimeout(() => { nx.classList.remove('on'); setTimeout(() => nx.remove(), 400); }, 2600); } }, t0 + steps * dt + 200);
+  }
+  const _u = window.updateHomeLeagueCard; if (typeof _u !== 'function') return;
+  window.updateHomeLeagueCard = function (lg, nextLg, trophies) {
+    const r = _u.apply(this, arguments);
+    try { const s = st(), li = THEMED_LEAGUES.indexOf(lg);
+      if (s.t == null) { s.t = trophies; s.li = li; SAVE.save(); return r; }
+      if (busy || !home() || (trophies === s.t && li === s.li)) return r;
+      const pt = s.t, pli = s.li; s.t = trophies; s.li = li; SAVE.save();
+      setTimeout(() => { try {
+        if (li > pli) { unlockMoment(lg); return; }
+        if (nextLg && li === pli) animate(pt, trophies, THEMED_LEAGUES[currentLeagueIdx()].unlock, nextLg.unlock, nextLg);
+      } catch (e) {} }, 450);
+    } catch (e) {}
+    return r; };
+  window.homeRoadPreview = (from, to) => { const li = currentLeagueIdx(), lg = THEMED_LEAGUES[li], nx = THEMED_LEAGUES[li + 1]; animate(from, to, lg.unlock, nx.unlock, nx); };
+  window.homeUnlockPreview = i => unlockMoment(THEMED_LEAGUES[i]);
+})();
+</script>
 </body>
 </html>
