@@ -54,7 +54,7 @@
   function finalTarget(i) { return Math.round(leagueTarget(LG[i]) * 1.25); }
   { const _tc = window.trophyChangeFor; window.trophyChangeFor = function (li, beat, by) {
       const d = _tc.apply(this, arguments);
-      try { if (window.chase && window.chase.final != null) return 0;
+      try { if (TEASER) return d; if (window.chase && window.chase.final != null) return 0;
         const i = currentLeagueIdx(), nx = LG[i + 1]; if (i < 1 || !nx || finalWon(i) || li < i) return d;
         if (finalReady(i)) return 0;
         const cap = nx.unlock - 1;
@@ -112,7 +112,7 @@
   .v2o .bgx{position:absolute;inset:-20px;background:url(assets/ui/web/hero.webp) center/cover;filter:blur(5px) brightness(.5)}
   .v2top{position:relative;display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 12px) 12px 0}
   .v2top .bk{width:42px;height:42px;border-radius:50%;border:3px solid #FFC93A;background:#14203a;color:#fff;font:30px/1 'Lilita One',sans-serif;cursor:pointer;flex:none}
-  .v2top h1{flex:1;margin:0;font-weight:400;font-size:24px;letter-spacing:.04em;text-shadow:0 3px 0 #050A14}
+  .v2top h1{flex:1;min-width:0;margin:0;font-weight:400;font-size:clamp(16px,5.2vw,24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.04em;text-shadow:0 3px 0 #050A14}
   .v2top .pill{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:14px;border:3px solid #050A14;background:#14203a;font-size:16px}.v2top .pill img{height:20px}
   .v2rail{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 70px);bottom:calc(env(safe-area-inset-bottom,0px) + 34px);display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:56px 9vw 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .v2rail::-webkit-scrollbar{display:none}
@@ -194,7 +194,8 @@
   #v2evB{left:10px;background:linear-gradient(#ff7a59,#c8261c)}#v2alB{left:10px;background:linear-gradient(#3ec7a0,#178a68)}
   .v2dot{position:absolute;top:-8px;right:-6px;min-width:20px;height:20px;border-radius:10px;background:#ff3b3b;border:2px solid #050A14;font-size:12px;line-height:16px}
   #v2flame{position:absolute;z-index:46;right:12px;display:none;padding:3px 9px;border-radius:12px;border:3px solid #050A14;background:linear-gradient(#ffb43c,#e2501a);font:13px 'Lilita One',sans-serif;color:#fff;box-shadow:0 3px 0 #050A14}
-  #v2flame.on{display:block}`;
+  #v2flame.on{display:block}
+  @media (max-height:760px){.tcard{padding-top:78px;gap:6px}.tcard .post{display:none}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
   // ── overlay helpers
@@ -364,7 +365,7 @@
   function rwIcon(r) { if (!r) return ART.trophy; if (r.bag) return ART.bag(r.bag); if (r.gems) return ART.gemS; return ART.coinS; }
   function layoutHome() {
     try {
-      const top = document.querySelector('#overlay .menuTopBar, #menuTopBar, #homeTop') ; const logoB = 190;
+      const top = document.querySelector('#overlay .menuTopBar, #menuTopBar, #homeTop') ; const logoB = Math.round(Math.min(190, innerHeight * 0.225));
       passB.style.top = logoB + 'px'; const showA = alB.classList.contains('on'); alB.style.top = (logoB + 56) + 'px'; evB.style.top = (logoB + (showA ? 140 : 56)) + 'px'; flame.style.top = (logoB + 56) + 'px';
     } catch (e) {}
   }
@@ -419,7 +420,8 @@
     if (_pages[li]) return _pages[li];
     const lg = LG[li], out = [];
     (lg.scenes || []).slice(0, 6).forEach(k => out.push({ id: `g${li}_${k}`, kind: 'g', name: (() => { try { return sceneName(k); } catch (e) { return k.toUpperCase(); } })(), img: (typeof RESULT_ART !== 'undefined' && RESULT_ART[k]) || PAINT(li).bg }));
-    let n = 0; while (out.length < 8 && KIT.length) { const id = KIT[(li * 5 + n * 7) % KIT.length]; n++; if (out.some(s => s.id === 'k' + li + '_' + id)) continue;
+    let n = 0; while (out.length < 8 && KIT.length && n < 200) { const id = KIT[(li * 5 + n * 7) % KIT.length]; n++; if (out.some(s => s.id === 'k' + li + '_' + id)) continue;
+      const nm = (() => { try { const it = (typeof equipItemById === 'function') ? equipItemById(id) : null; return it ? it.name : id.split('_').slice(1).join(' ').toUpperCase(); } catch (e) { return id.toUpperCase(); } })(); if (out.some(s => s.name === nm)) continue;
       out.push({ id: `k${li}_${id}`, kind: 'k', name: (() => { try { const it = (typeof equipItemById === 'function') ? equipItemById(id) : null; return it ? it.name : id.split('_').slice(1).join(' ').toUpperCase(); } catch (e) { return id.toUpperCase(); } })(), img: EQUIP_ART[id] }); }
     out.push({ id: `c${li}`, kind: 'c', name: lg.name, img: PAINT(li).trophy, gold: 1 });
     return (_pages[li] = out);
@@ -467,7 +469,7 @@
       <div style="font:600 12px Arial;color:#9fb3e0;text-align:center">Stickers drop from every kit bag and sometimes from league wins. Gold stickers are rare. ${pagesDone} page${pagesDone === 1 ? '' : 's'} complete.</div></div>`;
     o.classList.add('show'); trk('album_open', { page: alPage });
   }
-  window.openFlickyAlbum = openAlbum;
+  window.openFlickyAlbum = openAlbum; window.v2AlbumPage = page;
   function albumNav(d) { alPage = Math.max(1, Math.min(LG.length - 1, alPage + (d === 'next' ? 1 : -1))); openAlbum(alPage); }
   function albumSwap(li) { li = +li; const a = A(); const miss = page(li).filter(s => !a.have[s.id]); if (!miss.length) return;
     let need = 5; for (const k of Object.keys(a.have)) { while (a.have[k] > 1 && need > 0) { a.have[k]--; need--; } if (!need) break; }
