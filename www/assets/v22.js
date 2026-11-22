@@ -18,12 +18,12 @@
   // ── 1. RIVAL CAPTAINS: one per league, drawn with the game's own player art (bespoke portraits can replace `img` later)
   const SIG = { spin: 'turns sharply after pitching', pace: 'arrives much quicker than you expect', swing: 'swings late and wide', slow: 'floats up slower than it looks', yorker: 'lands right on your toes', bouncer: 'rears up short and fast' };
   const RIVALS = [null,
-    { n: 'SKY SHAH', t: 'The back-street spin queen. Never lost at home.', look: { g: 'f', face: 2, shirt: 'teal', trim: 'gold', pants: 'navy', hair: 'black' }, ball: ['THE DOOSRA', 'spin'], flag: '🇮🇳' },
-    { n: 'DEX OKAFOR', t: 'Loves the lights. Bowls thunderbolts after dark.', look: { g: 'm', face: 1, shirt: 'black', trim: 'silver', pants: 'black', hair: 'black' }, ball: ['THE THUNDERBOLT', 'pace'], flag: '🇿🇦' },
-    { n: 'MARINA COLE', t: 'Reads the sea breeze like a map.', look: { g: 'f', face: 4, shirt: 'royal', trim: 'cream', pants: 'white', hair: 'blonde' }, ball: ['THE SEA BREEZE', 'swing'], flag: '🇦🇺' },
-    { n: 'BARNEY PRICE', t: 'The showman. Every ball is a trick.', look: { g: 'm', face: 3, shirt: 'purple', trim: 'gold', pants: 'black', hair: 'ginger' }, ball: ['THE BIG TOP', 'slow'], flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-    { n: 'REX HARTLEY', t: 'Old-school captain. Never gives an inch.', look: { g: 'm', face: 0, shirt: 'maroon', trim: 'gold', pants: 'white', hair: 'brown' }, ball: ['THE TOE CRUSHER', 'yorker'], flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-    { n: 'RAJ VERMA', t: 'Express pace. Fire in the run-up.', look: { g: 'm', face: 2, shirt: 'orange', trim: 'red', pants: 'navy', hair: 'black' }, ball: ['THE BLAZE', 'bouncer'], flag: '🇮🇳' }];
+    { n: 'SKY SHAH', t: 'The back-street spin queen. Never lost at home.', look: { g: 'f', face: 2, shirt: 'teal', trim: 'gold', pants: 'navy', hair: 'black' }, ball: ['THE DOOSRA', 'spin'], img: 'assets/ui/rivals/r1.webp', flag: '🇮🇳' },
+    { n: 'DEX OKAFOR', t: 'Loves the lights. Bowls thunderbolts after dark.', look: { g: 'm', face: 1, shirt: 'black', trim: 'silver', pants: 'black', hair: 'black' }, ball: ['THE THUNDERBOLT', 'pace'], img: 'assets/ui/rivals/r2.webp', flag: '🇿🇦' },
+    { n: 'MARINA COLE', t: 'Reads the sea breeze like a map.', look: { g: 'f', face: 4, shirt: 'royal', trim: 'cream', pants: 'white', hair: 'blonde' }, ball: ['THE SEA BREEZE', 'swing'], img: 'assets/ui/rivals/r3.webp', flag: '🇦🇺' },
+    { n: 'BARNEY PRICE', t: 'The showman. Every ball is a trick.', look: { g: 'm', face: 3, shirt: 'purple', trim: 'gold', pants: 'black', hair: 'ginger' }, ball: ['THE BIG TOP', 'slow'], img: 'assets/ui/rivals/r4.webp', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+    { n: 'REX HARTLEY', t: 'Old-school captain. Never gives an inch.', look: { g: 'm', face: 0, shirt: 'maroon', trim: 'gold', pants: 'white', hair: 'brown' }, ball: ['THE TOE CRUSHER', 'yorker'], img: 'assets/ui/rivals/r5.webp', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+    { n: 'RAJ VERMA', t: 'Express pace. Fire in the run-up.', look: { g: 'm', face: 2, shirt: 'orange', trim: 'red', pants: 'navy', hair: 'black' }, ball: ['THE BLAZE', 'bouncer'], img: 'assets/ui/rivals/r6.webp', flag: '🇮🇳' }];
   const FN = ['ZARA', 'KOFI', 'NINA', 'LEO', 'AMARA', 'JONTY', 'PRIYA', 'MAX', 'TALIA', 'OMAR', 'ISLA', 'SAM', 'MEERA', 'FINN', 'ROSA', 'DEV', 'IVY', 'KAI', 'NOOR', 'BEN', 'LILA'];
   const SN = ['QUINN', 'MENSAH', 'FORDE', 'BAXTER', 'KHAN', 'RHODES', 'NAIR', 'COOPER', 'REID', 'MALIK', 'WEST', 'ORTIZ', 'DAS', 'HALE', 'MOORE', 'SINGH', 'LANE', 'PATEL', 'BLAKE', 'ROSS', 'GRANT'];
   const SH = ['green', 'navy', 'maroon', 'teal', 'purple', 'royal', 'orange', 'black'], TR = ['gold', 'cream', 'red', 'blue', 'green', 'silver'], BT = ['spin', 'pace', 'swing', 'slow', 'yorker', 'bouncer'];
@@ -38,6 +38,7 @@
   const _face = {};
   function rivalFace(i, kind) {   // head (or upper body) crop of the rival's art, as a data URL
     const key = i + '|' + (kind || 'h'); if (_face[key]) return Promise.resolve(_face[key]);
+    if (i !== 'me' && RIVALS[i] && RIVALS[i].img) return Promise.resolve(RIVALS[i].img);
     const L = i === 'me' ? curLook() : Object.assign({ name: '', flag: '' }, rival(i).look);
     return renderPlayer(L).then(src => { const c = document.createElement('canvas'), up = kind === 'u';
       c.width = 240; c.height = up ? 300 : 240; const g = c.getContext('2d'), sw = src.width * (up ? 0.86 : 0.55), sx = src.width * (up ? 0.07 : 0.22);
@@ -114,18 +115,20 @@
   .v2top .bk{width:42px;height:42px;border-radius:50%;border:3px solid #FFC93A;background:#14203a;color:#fff;font:30px/1 'Lilita One',sans-serif;cursor:pointer;flex:none}
   .v2top h1{flex:1;min-width:0;margin:0;font-weight:400;font-size:clamp(16px,5.2vw,24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.04em;text-shadow:0 3px 0 #050A14}
   .v2top .pill{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:14px;border:3px solid #050A14;background:#14203a;font-size:16px}.v2top .pill img{height:20px}
-  .v2rail{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 70px);bottom:calc(env(safe-area-inset-bottom,0px) + 34px);display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:56px 9vw 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .v2rail{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 70px);bottom:calc(env(safe-area-inset-bottom,0px) + 34px);display:flex;gap:14px;overflow-x:auto;overflow-y:auto;scroll-snap-type:x mandatory;padding:14px 9vw 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .v2rail::-webkit-scrollbar{display:none}
   .v2dots{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);display:flex;justify-content:center;gap:6px}
   .v2dots i{width:7px;height:7px;border-radius:50%;background:#55607a}.v2dots i.on{width:18px;border-radius:4px;background:#FFC93A}
   .tcard{position:relative;flex:0 0 82vw;max-width:400px;scroll-snap-align:center;align-self:flex-start;border-radius:24px;border:4px solid #050A14;
     background:linear-gradient(color-mix(in srgb,var(--a) 55%,#14203a),#101a33 42%);box-shadow:0 0 0 3px color-mix(in srgb,var(--a) 70%,#fff) inset,0 8px 0 #050A14;
-    padding:86px 12px 14px;display:flex;flex-direction:column;gap:8px;align-items:center}
-  .tcard .crest{position:absolute;left:0;right:0;top:-48px;display:flex;flex-direction:column;align-items:center}
+    padding:0 12px 14px;display:flex;flex-direction:column;gap:8px;align-items:center;overflow:hidden}
+  .tcard .hero{position:relative;width:calc(100% + 24px);margin:0 -12px;height:clamp(150px,24vh,220px);background:center 45%/cover;border-bottom:4px solid #050A14}
+  .tcard .hero::after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(5,10,20,0) 45%,rgba(5,10,20,.55))}
+  .tcard .crest{position:relative;width:100%;margin-top:-62px;z-index:2;display:flex;flex-direction:column;align-items:center}
   .tcard .crest .cup{height:84px;filter:drop-shadow(0 6px 6px rgba(0,0,0,.5));z-index:2}
   .tcard .ban{margin-top:-12px;max-width:94%;padding:5px 14px 3px;border-radius:12px;border:4px solid #050A14;background:linear-gradient(var(--a),color-mix(in srgb,var(--a) 60%,#000));font-size:clamp(17px,6vw,25px);letter-spacing:.03em;text-shadow:0 3px 0 #050A14;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tcard .rib{margin-top:-3px;padding:1px 12px;border-radius:8px;border:3px solid #050A14;background:linear-gradient(#3b82f6,#1d4ed8);font-size:12px;letter-spacing:.08em}
-  .tcard .post{width:100%;height:clamp(64px,12vh,96px);border-radius:14px;border:3px solid #050A14;background:center 40%/cover;margin-top:10px}
+  .tcard .post{display:none}
   .v2stk{width:100%;display:flex;align-items:center;gap:6px;padding:5px;border-radius:14px;background:#0a1226;border:2px solid #050A14}
   .v2stk .w,.v2stk .l{width:52px;text-align:center;font-size:11px;line-height:1.1}.v2stk b{display:block;font-weight:400;font-size:16px}
   .v2stk .w b{color:#7CF29A}.v2stk .l b{color:#ff8a80}
@@ -144,8 +147,8 @@
   .v2go img{height:24px}.v2go.red{background:linear-gradient(#ff7a59,#e0352b);box-shadow:0 5px 0 #8a1a10,0 8px 0 #050A14;text-shadow:0 2px 0 #5a0a00}
   .v2go.gold{background:linear-gradient(#FFD75A,#F5A915);color:#3a2000;text-shadow:none;box-shadow:0 5px 0 #a86a00,0 8px 0 #050A14}
   .v2go.dim{background:linear-gradient(#2a3d6b,#1a2a50);box-shadow:0 5px 0 #0b1530,0 8px 0 #050A14}
-  .tcard.locked .post,.tcard.locked .v2stk,.tcard.locked .v2prz{filter:saturate(.35) brightness(.72)}
-  .tcard .lockx{position:absolute;left:0;right:0;top:150px;bottom:80px;pointer-events:none;overflow:hidden}
+  .tcard.locked .hero,.tcard.locked .v2stk,.tcard.locked .v2prz{filter:saturate(.35) brightness(.72)}
+  .tcard .lockx{position:absolute;left:0;right:0;top:0;bottom:70px;pointer-events:none;overflow:hidden}
   .tcard .lockx .st{position:absolute;left:50%;top:42%;width:150%;height:20px;margin-left:-75%;border-radius:10px;border:3px solid #050A14;background:repeating-linear-gradient(90deg,#e9d8a6 0 26px,#c9a96a 26px 30px);box-shadow:0 4px 8px rgba(0,0,0,.5)}
   .tcard .lockx .s1{transform:rotate(36deg)}.tcard .lockx .s2{transform:rotate(-36deg)}
   .tcard .lockx .bd{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:66px;height:66px;border-radius:18px;border:4px solid #050A14;background:linear-gradient(#ffd75a,#f0a21a);display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 6px 0 #050A14}
@@ -158,7 +161,7 @@
   .v2o .tag{font-size:13px;color:#FFC93A;letter-spacing:.1em}
   .v2pan{width:100%;box-sizing:border-box;border-radius:16px;border:3px solid #050A14;background:rgba(10,18,38,.9);padding:10px;box-shadow:0 4px 0 #050A14}
   .v2vsrow{position:relative;width:100%;display:flex;justify-content:space-between;margin-top:10px}
-  .v2vsrow .p{width:46%;text-align:center}.v2vsrow .p .pic{width:100%;aspect-ratio:.8;border-radius:20px;border:4px solid #050A14;background:#24365c center top/cover;box-shadow:0 5px 0 #050A14}
+  .v2vsrow .p{width:46%;text-align:center}.v2vsrow .p .pic{width:100%;aspect-ratio:.8;background-position:center top !important;border-radius:20px;border:4px solid #050A14;background:#24365c center top/cover;box-shadow:0 5px 0 #050A14}
   .v2vsrow .p.me .pic{background-color:#1d3a78}.v2vsrow .p.riv .pic{background-color:#7a1d1d}
   .v2vsrow .p b{display:block;font-weight:400;font-size:18px;margin-top:6px}.v2vsrow .p small{font-size:12px;color:#9fb3e0}
   .v2vsrow .vx{position:absolute;left:50%;top:34%;transform:translateX(-50%);width:70px;height:70px;border-radius:50%;border:4px solid #050A14;background:linear-gradient(#ff7a59,#c8261c);display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 5px 0 #050A14}
@@ -178,7 +181,7 @@
   .mcard{position:relative;flex:0 0 78vw;max-width:380px;scroll-snap-align:center;align-self:flex-start;border-radius:24px;border:4px solid #050A14;background:linear-gradient(color-mix(in srgb,var(--a) 50%,#14203a),#101a33 48%);box-shadow:0 0 0 3px color-mix(in srgb,var(--a) 70%,#fff) inset,0 8px 0 #050A14;padding:12px;display:flex;flex-direction:column;gap:8px;align-items:center}
   .mcard .ico{height:86px;filter:drop-shadow(0 6px 6px rgba(0,0,0,.5))}.mcard .ico.e{font-size:64px;height:auto;line-height:1}
   .mcard h4{margin:0;font-weight:400;font-size:32px;text-shadow:0 4px 0 #050A14;text-align:center;line-height:1}.mcard .sub{font-size:12px;color:#FFC93A;letter-spacing:.06em;text-align:center}
-  .mcard .post{width:100%;height:clamp(80px,16vh,130px);border-radius:14px;border:3px solid #050A14;background:center/cover}
+  .mcard .post{width:100%;height:clamp(110px,22vh,190px);border-radius:14px;border:3px solid #050A14;background:center/cover}
   .mcard .now{width:100%;box-sizing:border-box;text-align:center;border-radius:14px;background:rgba(5,10,20,.55);padding:8px;display:flex;flex-direction:column;gap:5px;font-size:14px}
   .mcard .now small{font:600 12px/1.3 Arial,sans-serif;color:#9fb3e0}
   .mcard.locked .post,.mcard.locked .ico{filter:grayscale(.8) brightness(.6)}
@@ -195,7 +198,7 @@
   .v2dot{position:absolute;top:-8px;right:-6px;min-width:20px;height:20px;border-radius:10px;background:#ff3b3b;border:2px solid #050A14;font-size:12px;line-height:16px}
   #v2flame{position:absolute;z-index:46;right:12px;display:none;padding:3px 9px;border-radius:12px;border:3px solid #050A14;background:linear-gradient(#ffb43c,#e2501a);font:13px 'Lilita One',sans-serif;color:#fff;box-shadow:0 3px 0 #050A14}
   #v2flame.on{display:block}
-  @media (max-height:760px){.tcard{padding-top:78px;gap:6px}.tcard .post{display:none}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
+  @media (max-height:760px){.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
   // ── overlay helpers
@@ -233,7 +236,7 @@
       foot = `<div class="lockx"><div class="st s1"></div><div class="st s2"></div><div class="bd">🔒</div></div><div class="need">${prevPending ? `WIN THE <b>${esc(LG[hi].name)}</b> FINAL TO UNLOCK` : `WIN <b>${Math.max(0, lg.unlock - trophyState.count)}</b> MORE 🏆 TO UNLOCK`}</div>`; }
     else if (ready) foot = `<div class="v2tgt">FINAL: CHASE <b>${finalTarget(i)}</b> OFF <b>${band.balls}</b> · FREE ENTRY</div><button class="v2go red" data-final="${i}">⚔ PLAY THE FINAL</button>`;
     else foot = `<div class="v2tgt">NEED <b>${leagueTarget(lg)}</b> OFF <b>${band.balls}</b> BALLS · ${band.wickets} WKT${band.wickets === 1 ? '' : 'S'}</div><button class="v2go" data-play="${i}">PLAY · <img src="${ART.coinS}">${fmt(lg.entry)}</button>`;
-    return `<div class="tcard ${open ? (won ? 'done' : 'cur') : 'locked'}" style="--a:${lg.accentColor || '#f0a21a'}"><div class="crest"><img class="cup" src="${P.trophy || ART.trophy}" alt=""><div class="ban">${esc(lg.name)}</div><div class="rib">LEAGUE ${i}</div></div>
+    return `<div class="tcard ${open ? (won ? 'done' : 'cur') : 'locked'}" style="--a:${lg.accentColor || '#f0a21a'}"><div class="hero" style="background-image:url(${P.bg || ''})"></div><div class="crest"><img class="cup" src="${P.trophy || ART.trophy}" alt=""><div class="ban">${esc(lg.name)}</div><div class="rib">LEAGUE ${i}</div></div>
       <div class="post" style="background-image:url(${P.bg || ''})"></div>${body}${foot}</div>`;
   }
   function openDeck(focus) {
