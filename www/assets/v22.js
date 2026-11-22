@@ -18,12 +18,12 @@
   // ── 1. RIVAL CAPTAINS: one per league, drawn with the game's own player art (bespoke portraits can replace `img` later)
   const SIG = { spin: 'turns sharply after pitching', pace: 'arrives much quicker than you expect', swing: 'swings late and wide', slow: 'floats up slower than it looks', yorker: 'lands right on your toes', bouncer: 'rears up short and fast' };
   const RIVALS = [null,
-    { n: 'SKY SHAH', t: 'The back-street spin queen. Never lost at home.', look: { g: 'f', face: 2, shirt: 'teal', trim: 'gold', pants: 'navy', hair: 'black' }, ball: ['THE DOOSRA', 'spin'], img: 'assets/ui/rivals/r1.webp', flag: '🇮🇳' },
-    { n: 'DEX OKAFOR', t: 'Loves the lights. Bowls thunderbolts after dark.', look: { g: 'm', face: 1, shirt: 'black', trim: 'silver', pants: 'black', hair: 'black' }, ball: ['THE THUNDERBOLT', 'pace'], img: 'assets/ui/rivals/r2.webp', flag: '🇿🇦' },
-    { n: 'MARINA COLE', t: 'Reads the sea breeze like a map.', look: { g: 'f', face: 4, shirt: 'royal', trim: 'cream', pants: 'white', hair: 'blonde' }, ball: ['THE SEA BREEZE', 'swing'], img: 'assets/ui/rivals/r3.webp', flag: '🇦🇺' },
-    { n: 'BARNEY PRICE', t: 'The showman. Every ball is a trick.', look: { g: 'm', face: 3, shirt: 'purple', trim: 'gold', pants: 'black', hair: 'ginger' }, ball: ['THE BIG TOP', 'slow'], img: 'assets/ui/rivals/r4.webp', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-    { n: 'REX HARTLEY', t: 'Old-school captain. Never gives an inch.', look: { g: 'm', face: 0, shirt: 'maroon', trim: 'gold', pants: 'white', hair: 'brown' }, ball: ['THE TOE CRUSHER', 'yorker'], img: 'assets/ui/rivals/r5.webp', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-    { n: 'RAJ VERMA', t: 'Express pace. Fire in the run-up.', look: { g: 'm', face: 2, shirt: 'orange', trim: 'red', pants: 'navy', hair: 'black' }, ball: ['THE BLAZE', 'bouncer'], img: 'assets/ui/rivals/r6.webp', flag: '🇮🇳' }];
+    { n: 'SKY SHAH', t: 'The back-street spin queen. Never lost at home.', look: { g: 'f', face: 2, shirt: 'teal', trim: 'gold', pants: 'navy', hair: 'black' }, ball: ['THE DOOSRA', 'spin'], img: 'assets/ui/rivals/r1', flag: '🇮🇳' },
+    { n: 'DEX OKAFOR', t: 'Loves the lights. Bowls thunderbolts after dark.', look: { g: 'm', face: 1, shirt: 'black', trim: 'silver', pants: 'black', hair: 'black' }, ball: ['THE THUNDERBOLT', 'pace'], img: 'assets/ui/rivals/r2', flag: '🇿🇦' },
+    { n: 'MARINA COLE', t: 'Reads the sea breeze like a map.', look: { g: 'f', face: 4, shirt: 'royal', trim: 'cream', pants: 'white', hair: 'blonde' }, ball: ['THE SEA BREEZE', 'swing'], img: 'assets/ui/rivals/r3', flag: '🇦🇺' },
+    { n: 'BARNEY PRICE', t: 'The showman. Every ball is a trick.', look: { g: 'm', face: 3, shirt: 'purple', trim: 'gold', pants: 'black', hair: 'ginger' }, ball: ['THE BIG TOP', 'slow'], img: 'assets/ui/rivals/r4', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+    { n: 'REX HARTLEY', t: 'Old-school captain. Never gives an inch.', look: { g: 'm', face: 0, shirt: 'maroon', trim: 'gold', pants: 'white', hair: 'brown' }, ball: ['THE TOE CRUSHER', 'yorker'], img: 'assets/ui/rivals/r5', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+    { n: 'RAJ VERMA', t: 'Express pace. Fire in the run-up.', look: { g: 'm', face: 2, shirt: 'orange', trim: 'red', pants: 'navy', hair: 'black' }, ball: ['THE BLAZE', 'bouncer'], img: 'assets/ui/rivals/r6', flag: '🇮🇳' }];
   const FN = ['ZARA', 'KOFI', 'NINA', 'LEO', 'AMARA', 'JONTY', 'PRIYA', 'MAX', 'TALIA', 'OMAR', 'ISLA', 'SAM', 'MEERA', 'FINN', 'ROSA', 'DEV', 'IVY', 'KAI', 'NOOR', 'BEN', 'LILA'];
   const SN = ['QUINN', 'MENSAH', 'FORDE', 'BAXTER', 'KHAN', 'RHODES', 'NAIR', 'COOPER', 'REID', 'MALIK', 'WEST', 'ORTIZ', 'DAS', 'HALE', 'MOORE', 'SINGH', 'LANE', 'PATEL', 'BLAKE', 'ROSS', 'GRANT'];
   const SH = ['green', 'navy', 'maroon', 'teal', 'purple', 'royal', 'orange', 'black'], TR = ['gold', 'cream', 'red', 'blue', 'green', 'silver'], BT = ['spin', 'pace', 'swing', 'slow', 'yorker', 'bouncer'];
@@ -38,7 +38,7 @@
   const _face = {};
   function rivalFace(i, kind) {   // head (or upper body) crop of the rival's art, as a data URL
     const key = i + '|' + (kind || 'h'); if (_face[key]) return Promise.resolve(_face[key]);
-    if (i !== 'me' && RIVALS[i] && RIVALS[i].img) return Promise.resolve(RIVALS[i].img);
+    if (i !== 'me' && RIVALS[i] && RIVALS[i].img) return Promise.resolve(RIVALS[i].img + (kind === 'u' ? '' : 'h') + '.webp');
     const L = i === 'me' ? curLook() : Object.assign({ name: '', flag: '' }, rival(i).look);
     return renderPlayer(L).then(src => { const c = document.createElement('canvas'), up = kind === 'u';
       c.width = 240; c.height = up ? 300 : 240; const g = c.getContext('2d'), sw = src.width * (up ? 0.86 : 0.55), sx = src.width * (up ? 0.07 : 0.22);
