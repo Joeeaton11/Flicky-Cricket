@@ -346,7 +346,7 @@
   .tcard.pt.locked .lockx.st::after{display:none}
   .tcard.pt.locked .lockx.st .lock{left:28%!important;right:28%!important;width:44%!important}
   .tcard.pt.locked{overflow:visible!important}
-  .tcard.pt.locked .lockx.st{top:calc(var(--ins,9px) + var(--u) * (60 + var(--pp,270) - 30))!important;z-index:8!important}
+  .tcard.pt.locked .lockx.st{top:calc(var(--ins,9px) + var(--u) * (60 + var(--pp,270) + 150))!important;z-index:8!important}
   .tcard.pt.locked .lockx.st .stk{aspect-ratio:768/1376!important;width:auto!important}
   .tcard.pt.locked .lockx.st .lock{left:0!important;right:0!important;width:100%!important}
   .tcard.pt.locked .crest .ban{visibility:visible!important}
