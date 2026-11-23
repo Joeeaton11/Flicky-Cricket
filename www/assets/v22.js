@@ -324,12 +324,14 @@
   .tcard.pt.locked .lockx.st::after{content:'';position:absolute;left:50%;bottom:-2%;width:52%;height:9%;margin-left:-26%;border-radius:50%;background:radial-gradient(rgba(0,0,0,.45),transparent 70%);z-index:-1}
   .tcard.pt.locked .hero,.tcard.pt.locked .v2stk,.tcard.pt.locked .v2prz{filter:none}
   .tcard.pt.locked::before{background:linear-gradient(rgba(8,14,32,0) 28%,rgba(8,14,32,.35) 40%,rgba(8,14,32,.7) 58%,rgba(8,14,32,.85)),var(--pc) center calc(var(--u) * -60)/100% auto no-repeat,#0b1226!important;filter:saturate(.6) brightness(.85)!important}
-  .v2lockp{width:100%;border-radius:14px;background:rgba(6,12,28,.62);border:2px solid rgba(255,215,120,.35);padding:8px 8px 7px;text-align:center;display:flex;flex-direction:column;gap:6px}
+  .v2lockp{width:100%;border-radius:14px;background:rgba(10,18,38,.94);box-shadow:0 6px 14px rgba(0,0,0,.45);border:2px solid rgba(255,215,120,.35);padding:8px 8px 7px;text-align:center;display:flex;flex-direction:column;gap:6px}
   .v2lockp .need{font-size:17px;line-height:1.15;color:#fff;text-shadow:0 2px 0 #000}.v2lockp .need b{font-weight:400;color:#ffd75a}
   .v2lockp .v2bar{flex:none;height:26px}.v2lockp .v2bar span{line-height:22px;font-size:15px}
   .v2lockp h5{margin:2px 0 0;font-weight:400;font-size:11px;color:#9fb3e0;letter-spacing:.08em}.v2lockp .row{display:flex;justify-content:space-evenly}.v2lockp .row span{display:flex;flex-direction:column;align-items:center;font-size:11.5px}.v2lockp .row img{height:26px}
   .tcard.pt.locked .ptcup{filter:drop-shadow(0 0 14px rgba(255,215,90,.9)) drop-shadow(0 6px 6px rgba(0,0,0,.5))!important}
   .tcard.pt.locked .crest .ban{visibility:hidden}.v2lockp .lnm{font-size:13px;letter-spacing:.06em;color:#ffd75a;margin-bottom:-2px}
+  .tcard.pt.locked{overflow:visible}.tcard.pt.locked .lockx.st{z-index:2}.tcard.pt.locked .v2lockp{position:relative;z-index:5}
+  .tcard.pt.locked .lockx.st .stk{filter:drop-shadow(0 8px 5px rgba(0,0,0,.5))}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}#v2deck .v2rail{padding-top:52px!important}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
@@ -392,7 +394,7 @@
   }
   window.v2UnlockFx = i => { const c = document.querySelector(`#v2deck .tcard[data-lg="${i}"]`); unlockFx(c); };
   // focus effect, pager, landing sounds for the league cards
-  function fitLocks(o) { o.querySelectorAll('.tcard.pt.locked').forEach(c => { const lx = c.querySelector('.lockx.st'), pn = c.querySelector('.v2lockp'); if (!lx || !pn) return; const h = pn.offsetTop - lx.offsetTop - 2; if (h > 40) lx.style.height = h + 'px'; }); }
+  function fitLocks(o) { o.querySelectorAll('.tcard.pt.locked').forEach(c => { const lx = c.querySelector('.lockx.st'); if (!lx) return; const h = c.offsetHeight - lx.offsetTop + Math.round(c.offsetWidth * 0.2); if (h > 40) lx.style.height = h + 'px'; }); }
   function deckFocus(o, n) { requestAnimationFrame(() => fitLocks(o)); setTimeout(() => fitLocks(o), 400);
     const rail = o.querySelector('.v2rail'), pg = o.querySelector('.v2pager'); let last = -1, settle = 0, ready = 0;
     const upd = () => { const mid = rail.scrollLeft + rail.clientWidth / 2; let best = 0, bd = 1e9;
