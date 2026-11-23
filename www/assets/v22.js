@@ -291,6 +291,7 @@
   #v2flame{position:absolute;z-index:46;right:12px;display:none;padding:3px 9px;border-radius:12px;border:3px solid #050A14;background:linear-gradient(#ffb43c,#e2501a);font:13px 'Lilita One',sans-serif;color:#fff;box-shadow:0 3px 0 #050A14}
   #v2flame.on{display:block}
   @media (max-height:620px){.tcard.pt{--ph:84}.tcard.pt .v2prz .row:last-child{display:none}.tcard.pt .v2prz h5:nth-of-type(2){display:none}}
+  #v2deck .v2pz2 .row span{font-size:12.5px}#v2deck .v2pz2 h5{font-size:11px;white-space:nowrap;letter-spacing:.03em}#v2deck .v2pz2 .row img{height:25px}#v2deck .v2pz2 em{font-size:12px}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
