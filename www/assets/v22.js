@@ -155,6 +155,14 @@
   .tcard.pt::before{content:'';position:absolute;inset:0;background:linear-gradient(rgba(8,14,32,0) 28%,rgba(8,14,32,.3) 40%,rgba(8,14,32,.62) 58%,rgba(8,14,32,.8));pointer-events:none;z-index:0}
   .tcard.pt::after{content:'';position:absolute;inset:0;border:30px solid transparent;border-image:url(assets/ui/card_frame.webp) 150 / 30px / 0 round;pointer-events:none;z-index:6}
   .tcard.pt>*{position:relative;z-index:1}
+  body:has(#v2deck.show) #bottomNav{background:linear-gradient(rgba(255,255,255,0),rgba(30,90,40,.35) 35%,rgba(20,70,30,.6));backdrop-filter:blur(6px)}
+  body:has(#v2deck.show) #bottomNav .navTile{background:linear-gradient(rgba(255,255,255,.38),rgba(255,255,255,.16));border-color:rgba(255,255,255,.6);box-shadow:0 3px 0 rgba(0,0,0,.25)}
+  #v2deck .v2top .pill{background:rgba(255,255,255,.26);border:2px solid rgba(255,255,255,.7);backdrop-filter:blur(8px);text-shadow:0 2px 0 rgba(0,0,0,.45)}
+  #v2deck .v2top .bk{background:linear-gradient(#ffd75a,#f0a21a);color:#3a2000;border-color:#fff;text-shadow:none}
+  #v2deck .v2top h1{text-shadow:0 2px 0 #0b3a66,0 0 8px rgba(0,0,0,.35)}
+  #v2deck .bgx{background-size:auto 116%!important;background-position:center var(--bgy,0px)!important}
+  .v2pz2 h5{font-size:11.5px}.v2pz2 .row span{font-size:12.5px}.v2pz2 .row img{height:26px}.v2pz2 em{font-size:12px}.v2pz2 em img{height:14px!important}.v2pz2 .row{gap:6px}
+  .tcard.pt.tf.nopto .pto{background:var(--frb) bottom center/auto 34px no-repeat}
   .v2pz2{display:flex;gap:0;padding:4px 4px 5px}.v2pz2 .g{flex:0 0 38%;text-align:center}.v2pz2 .g.f{flex:1;border-left:2px solid rgba(255,215,120,.25)}
   .v2pz2 h5{margin:1px 0 3px;font-size:10px}.v2pz2 .row{gap:8px;margin:0}.v2pz2 .row span{font-size:10.5px;white-space:nowrap}.v2pz2 .row img{height:30px}
   .v2pz2 em{font-style:normal;display:flex;align-items:center;gap:1px;font-size:10px;color:#e6c8ff}.v2pz2 em img{height:13px!important}
@@ -244,7 +252,7 @@
   #v2flame{position:absolute;z-index:46;right:12px;display:none;padding:3px 9px;border-radius:12px;border:3px solid #050A14;background:linear-gradient(#ffb43c,#e2501a);font:13px 'Lilita One',sans-serif;color:#fff;box-shadow:0 3px 0 #050A14}
   #v2flame.on{display:block}
   @media (max-height:620px){.tcard.pt{--ph:84}.tcard.pt .v2prz .row:last-child{display:none}.tcard.pt .v2prz h5:nth-of-type(2){display:none}}
-  @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:66%}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
+  @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
   // ── overlay helpers
@@ -281,14 +289,14 @@
       foot = `<div class="lockx ch"><div class="st s1"></div><div class="st s2"></div><div class="bd">🔒</div></div><div class="need">${prevPending ? `WIN THE <b>${esc(LG[hi].name)}</b> FINAL TO UNLOCK` : `WIN <b>${Math.max(0, lg.unlock - trophyState.count)}</b> MORE 🏆 TO UNLOCK`}</div>`; }
     else if (ready) foot = `<div class="v2tgt">FINAL: CHASE <b>${finalTarget(i)}</b> OFF <b>${band.balls}</b> · FREE ENTRY</div><button class="v2go red" data-final="${i}">⚔ PLAY THE FINAL</button>`;
     else foot = `<div class="v2tgt">NEED <b>${leagueTarget(lg)}</b> OFF <b>${band.balls}</b> BALLS · ${band.wickets} WKT${band.wickets === 1 ? '' : 'S'}</div><button class="v2go" data-play="${i}">PLAY · <img src="${ART.coinS}">${fmt(lg.entry)}</button>`;
-    return `<div class="tcard pt${FRAMES.has(i) ? ' tf' : ''} ${open ? (won ? 'done' : 'cur') : 'locked'}" style="--a:${lg.accentColor || '#f0a21a'};--pc:url(assets/ui/leagues/lg_${i}_tall.webp)${FRAMES.has(i) ? `;--fr:url(assets/ui/frames/fr${i}.webp);--frt:url(assets/ui/frames/frt${i}.webp);--frb:url(assets/ui/frames/frb${i}.webp)` : ''}${({3:280,8:300,11:308,13:296})[i] ? ';--pp:' + ({3:280,8:300,11:308,13:296})[i] : ''}">${FRAMES.has(i) ? '<i class="pto"></i>' : ''}<div class="hero" style="background-image:url(${P.bg || ''})"></div><div class="crest"><img class="cup" src="${P.trophy || ART.trophy}" alt=""><img class="ptcup" src="${P.trophy || ART.trophy}" alt="">${BADGES.has(i) ? `<div class="ban bimg"><img src="assets/ui/badges/lb${i}.webp" alt="${esc(lg.name)}"></div>` : `<div class="ban">${esc(lg.name)}</div>`}<div class="rib">LEAGUE ${i}</div></div>
+    return `<div class="tcard pt${FRAMES.has(i) ? ' tf' : ''}${i === 6 ? ' nopto' : ''} ${open ? (won ? 'done' : 'cur') : 'locked'}" style="--a:${lg.accentColor || '#f0a21a'};--pc:url(assets/ui/leagues/lg_${i}_tall.webp)${FRAMES.has(i) ? `;--fr:url(assets/ui/frames/fr${i}.webp);--frt:url(assets/ui/frames/frt${i}.webp);--frb:url(assets/ui/frames/frb${i}.webp)` : ''}${({3:280,8:300,11:308,13:296})[i] ? ';--pp:' + ({3:280,8:300,11:308,13:296})[i] : ''}">${FRAMES.has(i) ? '<i class="pto"></i>' : ''}<div class="hero" style="background-image:url(${P.bg || ''})"></div><div class="crest"><img class="cup" src="${P.trophy || ART.trophy}" alt=""><img class="ptcup" src="${P.trophy || ART.trophy}" alt="">${BADGES.has(i) ? `<div class="ban bimg"><img src="assets/ui/badges/lb${i}.webp" alt="${esc(lg.name)}"></div>` : `<div class="ban">${esc(lg.name)}</div>`}<div class="rib">LEAGUE ${i}</div></div>
       <div class="post" style="background-image:url(${P.bg || ''})"></div>${body}${foot}</div>`;
   }
   function openDeck(focus) {
     const o = ov('v2deck'), n = LG.length - 1;
     o.innerHTML = `<div class="bgx"></div>${topBar('LEAGUES')}<div class="v2rail">${Array.from({ length: n }, (_, k) => leagueCard(k + 1)).join('')}</div><div class="v2dots"></div>`;
     o.classList.add('show'); fillFaces(o); railDots(o);
-    { const rail = o.querySelector('.v2rail'), bg = o.querySelector('.bgx'); const setBg = () => { const w = rail.children[0] ? rail.children[0].getBoundingClientRect().width + 14 : 1, c = rail.children[Math.round(rail.scrollLeft / w)]; if (c) bg.style.setProperty('--dk', c.style.getPropertyValue('--pc')); };
+    { const rail = o.querySelector('.v2rail'), bg = o.querySelector('.bgx'); const setBg = () => { const w = rail.children[0] ? rail.children[0].getBoundingClientRect().width + 14 : 1, c = rail.children[Math.round(rail.scrollLeft / w)]; if (c) { bg.style.setProperty('--dk', c.style.getPropertyValue('--pc')); const r = c.getBoundingClientRect(), bh = bg.clientHeight * 1.16, sc = bh / 1376, cr = 1047 * sc; bg.style.setProperty('--bgy', Math.round(r.bottom - 6 - cr) + 'px'); } };
       rail.addEventListener('scroll', () => requestAnimationFrame(setBg), { passive: true }); setTimeout(setBg, 60); }
     if (!window._v2NavHook) { window._v2NavHook = 1; const bn = document.getElementById('bottomNav'); if (bn) bn.addEventListener('click', () => { const d = document.getElementById('v2deck'); if (d) d.classList.remove('show'); }, true); }
     const f = focus != null ? focus : selectedLeagueIdx(); requestAnimationFrame(() => scrollTo(o, Math.max(0, f - 1)));
