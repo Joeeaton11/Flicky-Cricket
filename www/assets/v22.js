@@ -69,7 +69,7 @@
     rivalFace(v === 'me' ? 'me' : +v, k).then(u => { if (u) el.style.backgroundImage = `url(${u})`; }); });
 
   // ── 2. FINALS: a full league bar unlocks that league's Final; winning it lifts the cup and opens the next league
-  const FRAMES = new Set([6, 16]), BADGES = new Set([6, 16]), FDIM = { 6: [0.2616, 0.2616], 16: [0.2241, 0.2241] };
+  const FRAMES = new Set([6, 16]), BADGES = new Set([6, 16]), FDIM = { 6: [0.3037, 0.2653], 16: [0.2241, 0.2241] };
   function F() { const f = sec('finals'); if (!f.won) { f.won = {}; f.ready = {}; const hi = highestLeagueIdx(); for (let i = 1; i < hi; i++) f.won[i] = 1; save(); } return f; }
   const finalWon = i => !!F().won[i], finalReady = i => !!F().ready[i] && !F().won[i];
   const cupsWon = () => Object.keys(F().won).filter(k => +k >= 1).length;
@@ -293,7 +293,7 @@
   @media (max-height:620px){.tcard.pt{--ph:84}.tcard.pt .v2prz .row:last-child{display:none}.tcard.pt .v2prz h5:nth-of-type(2){display:none}}
   #v2deck .v2pz2 .row span{font-size:12.5px}#v2deck .v2pz2 h5{font-size:11px;white-space:nowrap;letter-spacing:.03em}#v2deck .v2pz2 .row img{height:25px}#v2deck .v2pz2 em{font-size:12px}
   .tcard.pt.tf::after{border:0!important;border-image:none!important;--fw:calc(100cqw + 2 * var(--pad,22px));background:var(--ft) center top/100% auto no-repeat,var(--fb) center bottom/100% auto no-repeat,var(--fm) center calc(var(--fw) * var(--fr1))/100% calc(100% - var(--fw) * (var(--fr1) + var(--fr2))) no-repeat}
-  .tcard.pt.tf{overflow:visible}.tcard.pt.tf::after{top:calc(var(--fw) * -.06);bottom:calc(var(--fw) * -.06)}.tcard.pt.tf{padding-bottom:34px}.tcard.pt.tf[data-lg="6"]{--pad:36px}.tcard.pt.tf[data-lg="16"]{--pad:31px}.v2go.gold{white-space:nowrap;font-size:clamp(14px,4.6vw,20px);padding:0 6px}.v2go.gold img{height:20px}
+  .tcard.pt.tf{overflow:visible}.tcard.pt.tf::after{top:calc(var(--fw) * var(--ftop,-.06) + 3px);bottom:calc(var(--fw) * var(--fbot,-.06) + 3px)}.tcard.pt.tf{padding-bottom:34px}.tcard.pt.tf[data-lg="6"]{--pad:35px;--ftop:-.14;--fbot:-.035}.tcard.pt.tf[data-lg="16"]{--pad:31px;--ftop:-.102;--fbot:-.03}.v2go.gold{white-space:nowrap;font-size:clamp(14px,4.6vw,20px);padding:0 6px}.v2go.gold img{height:20px}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
