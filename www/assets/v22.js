@@ -346,11 +346,12 @@
   .tcard.pt.locked .lockx.st::after{display:none}
   .tcard.pt.locked .lockx.st .lock{left:28%!important;right:28%!important;width:44%!important}
   .tcard.pt.locked{overflow:visible!important}
-  .tcard.pt.locked .lockx.st{top:calc(var(--ins,9px) + var(--u) * (60 + var(--pp,270) + 150))!important;z-index:8!important}
+  .tcard.pt.locked .lockx.st{top:var(--lt,calc(var(--ins,9px) + var(--u) * (60 + var(--pp,270) + 280)))!important;z-index:8!important}
   .tcard.pt.locked .lockx.st .stk{aspect-ratio:768/1376!important;width:auto!important}
   .tcard.pt.locked .lockx.st .lock{left:0!important;right:0!important;width:100%!important}
   .tcard.pt.locked .crest .ban{visibility:visible!important}
   .tcard.pt.locked .need{position:relative;z-index:9}
+  .tcard.pt .v2stk.lkneed{justify-content:center;min-height:38px}.v2stk.lkneed .need{font-size:15px;line-height:1.1;text-align:center;color:#fff;text-shadow:0 2px 0 #000}.v2stk.lkneed .need b{font-weight:400;color:#ffd75a;display:inline;font-size:inherit}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}#v2deck .v2rail{padding-top:52px!important}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
@@ -391,7 +392,9 @@
     if (won) tags += `<div class="v2stamp">CHAMPIONS</div>`;
     let foot = '';
     if (!open) { const prevPending = i === hi + 1 && LG[hi + 1] && !finalWon(hi);
-      foot = `${lockStumps()}<div class="need">${prevPending ? `WIN THE <b>${esc(LG[hi].name)}</b> FINAL TO UNLOCK` : `WIN <b>${Math.max(0, lg.unlock - trophyState.count)}</b> MORE 🏆 TO UNLOCK`}</div>`; }
+      const needTx = prevPending ? `WIN THE <b>${esc(LG[hi].name)}</b> FINAL TO UNLOCK` : `WIN <b>${Math.max(0, lg.unlock - trophyState.count)}</b> MORE 🏆 TO UNLOCK`;
+      body = body.replace(/<div class="v2stk">[\s\S]*?<\/div><\/div>(?=\s*<div class="v2prz)/, `<div class="v2stk lkneed"><div class="need">${needTx}</div></div>`);
+      foot = lockStumps(); }
     else if (ready) foot = `<div class="v2tgt">FINAL: CHASE <b>${finalTarget(i)}</b> OFF <b>${band.balls}</b> · FREE ENTRY</div><button class="v2go red" data-final="${i}">⚔ PLAY THE FINAL</button>`;
     else foot = `${short ? `<button class="v2go gold" data-short="${i}">NEED <img src="${ART.coinS}">${fmt(lg.entry - (career.coins || 0))} MORE</button>` : `<button class="v2go" data-play="${i}">PLAY · <img src="${ART.coinS}">${fmt(lg.entry)}</button>`}`;
     return `<div data-lg="${i}" class="tcard pt${FRAMES.has(i) ? ' tf' : ''}${i === 6 ? ' nopto' : ''}${ready ? ' fready' : ''}${isCur ? ' iscur' : ''} ${open ? (won ? 'done' : 'cur') : 'locked'}" style="--a:${lg.accentColor || '#f0a21a'};--pc:url(assets/ui/leagues/lg_${i}_tall.webp)${FRAMES.has(i) ? `;--ft:url(assets/ui/frames/f${i}t.webp);--fm:url(assets/ui/frames/f${i}m.webp);--fb:url(assets/ui/frames/f${i}b.webp);--fr1:${FDIM[i][0]};--fr2:${FDIM[i][1]}` : ''}${({3:280,8:300,11:308,13:296})[i] ? ';--pp:' + ({3:280,8:300,11:308,13:296})[i] : ''}">${tags}<div class="hero" style="background-image:url(${P.bg || ''})"></div><div class="crest"><img class="cup" src="${P.trophy || ART.trophy}" alt=""><img class="ptcup" src="${P.trophy || ART.trophy}" alt="">${BADGES.has(i) ? `<div class="ban bimg" style="--bm:url(assets/ui/badges/lb${i}.webp)"><img src="assets/ui/badges/lb${i}.webp" alt="${esc(lg.name)}"></div>` : `<div class="ban">${esc(lg.name)}</div>`}<div class="rib">LEAGUE ${i}</div></div>
@@ -409,7 +412,7 @@
   }
   window.v2UnlockFx = i => { const c = document.querySelector(`#v2deck .tcard[data-lg="${i}"]`); unlockFx(c); };
   // focus effect, pager, landing sounds for the league cards
-  function fitLocks(o) { o.querySelectorAll('.tcard.pt.locked').forEach(c => { const lx = c.querySelector('.lockx.st'); if (!lx) return; const h = Math.round(c.offsetHeight * 0.97 - 64); if (h > 40) lx.style.height = h + 'px'; }); }
+  function fitLocks(o) { o.querySelectorAll('.tcard.pt.locked').forEach(c => { const lx = c.querySelector('.lockx.st'); if (!lx) return; const h = Math.round(c.offsetHeight * 0.97 - 64); if (h > 40) lx.style.height = h + 'px'; const nd = c.querySelector('.v2stk.lkneed'); if (nd) lx.style.setProperty('--lt', (nd.offsetTop + nd.offsetHeight + 2) + 'px'); }); }
   function deckFocus(o, n) { requestAnimationFrame(() => fitLocks(o)); setTimeout(() => fitLocks(o), 400);
     const rail = o.querySelector('.v2rail'), pg = o.querySelector('.v2pager'); let last = -1, settle = 0, ready = 0;
     const upd = () => { const mid = rail.scrollLeft + rail.clientWidth / 2; let best = 0, bd = 1e9;
