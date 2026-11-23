@@ -155,6 +155,10 @@
   .tcard.pt::before{content:'';position:absolute;inset:0;background:linear-gradient(rgba(8,14,32,0) 28%,rgba(8,14,32,.3) 40%,rgba(8,14,32,.62) 58%,rgba(8,14,32,.8));pointer-events:none;z-index:0}
   .tcard.pt::after{content:'';position:absolute;inset:0;border:30px solid transparent;border-image:url(assets/ui/card_frame.webp) 150 / 30px / 0 round;pointer-events:none;z-index:6}
   .tcard.pt>*{position:relative;z-index:1}
+  .tcard.pt .crest::after{display:none}
+  .tcard.pt .ban::after{animation-duration:9s}
+  .tcard.pt .rib{display:none}
+  .v2pz2{position:relative}.v2info2{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.85);background:#1d2c52;color:#fff;font:700 13px/1 Georgia,serif;font-style:italic;z-index:2}
   #v2deck .tcard{transform:scale(calc(1 - .08 * var(--f,0)));filter:brightness(calc(1 - .28 * var(--f,0)));transform-origin:50% 60%}
   #v2deck .tcard.land{animation:v2land .38s cubic-bezier(.3,1.6,.5,1)}@keyframes v2land{0%{transform:scale(.97)}60%{transform:scale(1.025)}100%{transform:scale(1)}}
   .tcard.pt .ptcup{animation:v2bob 3.2s ease-in-out infinite}@keyframes v2bob{50%{transform:translateX(-50%) translateY(-4px)}}
@@ -311,12 +315,12 @@
     else if (nx) { lbl = `0 / ${nx.unlock}`; } else lbl = 'TOP LEAGUE';
     const R = rival(i), fr = finalReward(i), wins = nx && open && !won && !ready ? Math.ceil(Math.max(0, nx.unlock - trophyState.count) / (wT + 1)) : 0;
     let body = `<div class="v2stk"><div class="w">WIN<b>+${won || ready ? 0 : wT}🏆</b></div><div class="v2bar ${cls}"><i style="width:${pct}%"></i><span>${lbl}</span></div><div class="l">LOSS<b>${lossT ? '−' + lossT : '0'}🏆</b></div></div>
-      <div class="v2prz v2pz2"><div class="g"><h5>EVERY WIN</h5><div class="row"><span><img src="${ART.coin}">${fmt(lg.winCoins)}</span><span><img src="${ART.bag(lg.winChest || 'bronze')}">${bagNm(lg.winChest || 'bronze')}</span></div></div>${nx ? `<div class="g f"><h5>WIN THE FINAL</h5><div class="row"><span><img src="${ART.coin}">${fmt(fr.coins)}<em><img src="${ART.gemS}">${fr.gems}</em></span><span><img src="${ART.bag(fr.bag)}">${bagNm(fr.bag)}</span><span><img src="${P.trophy || ART.trophy}">CUP</span></div></div>` : ''}</div>`;
+      <div class="v2prz v2pz2"><button class="v2info2" data-info="${i}">i</button><div class="g"><h5>EVERY WIN</h5><div class="row"><span><img src="${ART.coin}">${fmt(lg.winCoins)}</span><span><img src="${ART.bag(lg.winChest || 'bronze')}">${bagNm(lg.winChest || 'bronze')}</span></div></div>${nx ? `<div class="g f"><h5>WIN THE FINAL</h5><div class="row"><span><img src="${ART.coin}">${fmt(fr.coins)}<em><img src="${ART.gemS}">${fr.gems}</em></span><span><img src="${ART.bag(fr.bag)}">${bagNm(fr.bag)}</span><span><img src="${P.trophy || ART.trophy}">CUP</span></div></div>` : ''}</div>`;
     if (false) body += `<div class="v2road"><div class="tx">${ready ? `<b style="font-weight:400;color:#ff8a65">THE FINAL IS ON!</b><small>Beat ${esc(R.n)} to lift the ${esc(lg.name)}</small>` : `THE ROAD TO THE FINAL<small>About ${wins} more win${wins === 1 ? '' : 's'} to face ${esc(R.n)}</small>`}</div><div class="v2face" data-face="${i}"></div></div>`;
     if (won) body += `<div class="v2road"><span class="donepill">🏆 CUP WON</span><div class="tx"><small>Beat ${esc(R.n)} · no trophies lost here · play any time for coins and bags</small></div></div>`;
     const isCur = open && !won && i === cur, short = open && !ready && (career.coins || 0) < (lg.entry || 0);
-    let tags = `<button class="v2info" data-info="${i}">i</button>`;
-    if (nx) tags += `<div class="v2rv"><div class="v2face" data-face="${i}"></div><span>FINAL vs<b>${esc(R.n)}</b></span></div>`;
+    let tags = '';
+    if (nx && ready) tags += `<div class="v2rv"><div class="v2face" data-face="${i}"></div><span>FINAL vs<b>${esc(R.n)}</b></span></div>`;
     if (isCur && !ready) tags += `<div class="v2rib here">YOU ARE HERE</div>`;
     if (ready) tags += `<div class="v2rib fin">⚔ FINAL READY</div>`;
     if (won) tags += `<div class="v2stamp">CHAMPIONS</div>`;
@@ -324,7 +328,7 @@
     if (!open) { const prevPending = i === hi + 1 && LG[hi + 1] && !finalWon(hi);
       foot = `<div class="lockx ch"><div class="st s1"></div><div class="st s2"></div><div class="bd">🔒</div></div><div class="need">${prevPending ? `WIN THE <b>${esc(LG[hi].name)}</b> FINAL TO UNLOCK` : `WIN <b>${Math.max(0, lg.unlock - trophyState.count)}</b> MORE 🏆 TO UNLOCK`}</div>`; }
     else if (ready) foot = `<div class="v2tgt">FINAL: CHASE <b>${finalTarget(i)}</b> OFF <b>${band.balls}</b> · FREE ENTRY</div><button class="v2go red" data-final="${i}">⚔ PLAY THE FINAL</button>`;
-    else foot = `<div class="v2tgt">NEED <b>${leagueTarget(lg)}</b> OFF <b>${band.balls}</b> BALLS · ${band.wickets} WKT${band.wickets === 1 ? '' : 'S'}</div>${short ? `<button class="v2go gold" data-short="${i}">NEED <img src="${ART.coinS}">${fmt(lg.entry - (career.coins || 0))} MORE</button>` : `<button class="v2go" data-play="${i}">PLAY · <img src="${ART.coinS}">${fmt(lg.entry)}</button>`}`;
+    else foot = `${short ? `<button class="v2go gold" data-short="${i}">NEED <img src="${ART.coinS}">${fmt(lg.entry - (career.coins || 0))} MORE</button>` : `<button class="v2go" data-play="${i}">PLAY · <img src="${ART.coinS}">${fmt(lg.entry)}</button>`}`;
     return `<div data-lg="${i}" class="tcard pt${FRAMES.has(i) ? ' tf' : ''}${i === 6 ? ' nopto' : ''}${ready ? ' fready' : ''}${isCur ? ' iscur' : ''} ${open ? (won ? 'done' : 'cur') : 'locked'}" style="--a:${lg.accentColor || '#f0a21a'};--pc:url(assets/ui/leagues/lg_${i}_tall.webp)${FRAMES.has(i) ? `;--fr:url(assets/ui/frames/fr${i}.webp);--frt:url(assets/ui/frames/frt${i}.webp);--frb:url(assets/ui/frames/frb${i}.webp)` : ''}${({3:280,8:300,11:308,13:296})[i] ? ';--pp:' + ({3:280,8:300,11:308,13:296})[i] : ''}">${FRAMES.has(i) ? '<i class="pto"></i>' : ''}${tags}<div class="hero" style="background-image:url(${P.bg || ''})"></div><div class="crest"><img class="cup" src="${P.trophy || ART.trophy}" alt=""><img class="ptcup" src="${P.trophy || ART.trophy}" alt="">${BADGES.has(i) ? `<div class="ban bimg" style="--bm:url(assets/ui/badges/lb${i}.webp)"><img src="assets/ui/badges/lb${i}.webp" alt="${esc(lg.name)}"></div>` : `<div class="ban">${esc(lg.name)}</div>`}<div class="rib">LEAGUE ${i}</div></div>
       <div class="post" style="background-image:url(${P.bg || ''})"></div>${body}${foot}</div>`;
   }
