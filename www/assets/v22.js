@@ -319,6 +319,17 @@
   .lockx.st.open .ball{animation:bFly .45s cubic-bezier(.3,.1,.6,1) forwards,bOut .6s .45s ease-in forwards}@keyframes bOut{to{opacity:0;transform:translate(260%,-60%) scale(.8)}}
   .tcard.unlocking .need{transition:opacity .4s 1.2s}.tcard.unlocking .lockx.open~.need{opacity:0}
   .tcard.unlocking{filter:none}
+  .tcard.pt.locked .lockx.st{top:calc(var(--ins,9px) + var(--u) * (60 + var(--pp,270) - 8));height:calc(var(--u) * 330);bottom:auto;align-items:flex-start;z-index:3}
+  .tcard.pt.locked .lockx.st .stk{filter:drop-shadow(0 10px 6px rgba(0,0,0,.55))}
+  .tcard.pt.locked .lockx.st::after{content:'';position:absolute;left:50%;bottom:-2%;width:52%;height:9%;margin-left:-26%;border-radius:50%;background:radial-gradient(rgba(0,0,0,.45),transparent 70%);z-index:-1}
+  .tcard.pt.locked .hero,.tcard.pt.locked .v2stk,.tcard.pt.locked .v2prz{filter:none}
+  .tcard.pt.locked::before{background:linear-gradient(rgba(8,14,32,0) 28%,rgba(8,14,32,.35) 40%,rgba(8,14,32,.7) 58%,rgba(8,14,32,.85)),var(--pc) center calc(var(--u) * -60)/100% auto no-repeat,#0b1226!important;filter:saturate(.6) brightness(.85)!important}
+  .v2lockp{width:100%;border-radius:14px;background:rgba(6,12,28,.62);border:2px solid rgba(255,215,120,.35);padding:8px 8px 7px;text-align:center;display:flex;flex-direction:column;gap:6px}
+  .v2lockp .need{font-size:17px;line-height:1.15;color:#fff;text-shadow:0 2px 0 #000}.v2lockp .need b{font-weight:400;color:#ffd75a}
+  .v2lockp .v2bar{flex:none;height:26px}.v2lockp .v2bar span{line-height:22px;font-size:15px}
+  .v2lockp h5{margin:2px 0 0;font-weight:400;font-size:11px;color:#9fb3e0;letter-spacing:.08em}.v2lockp .row{display:flex;justify-content:space-evenly}.v2lockp .row span{display:flex;flex-direction:column;align-items:center;font-size:11.5px}.v2lockp .row img{height:26px}
+  .tcard.pt.locked .ptcup{filter:drop-shadow(0 0 14px rgba(255,215,90,.9)) drop-shadow(0 6px 6px rgba(0,0,0,.5))!important}
+  .tcard.pt.locked .crest .ban{visibility:hidden}.v2lockp .lnm{font-size:13px;letter-spacing:.06em;color:#ffd75a;margin-bottom:-2px}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}#v2deck .v2rail{padding-top:52px!important}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
@@ -359,7 +370,11 @@
     if (won) tags += `<div class="v2stamp">CHAMPIONS</div>`;
     let foot = '';
     if (!open) { const prevPending = i === hi + 1 && LG[hi + 1] && !finalWon(hi);
-      foot = `${lockStumps()}<div class="need">${prevPending ? `WIN THE <b>${esc(LG[hi].name)}</b> FINAL TO UNLOCK` : `WIN <b>${Math.max(0, lg.unlock - trophyState.count)}</b> MORE 🏆 TO UNLOCK`}</div>`; }
+      const pl = LG[i - 1] || lg, base = (LG[hi] || pl).unlock || 0, lp = prevPending ? 100 : Math.max(0, Math.min(100, (trophyState.count - base) / Math.max(1, lg.unlock - base) * 100));
+      body = `<div class="v2lockp"><div class="lnm">${esc(lg.name)}</div><div class="need">${prevPending ? `WIN THE <b>${esc(LG[hi].name)}</b> FINAL TO UNLOCK` : `WIN <b>${Math.max(0, lg.unlock - trophyState.count)}</b> MORE 🏆 TO UNLOCK`}</div>
+        <div class="v2bar"><i style="width:${lp}%"></i><span>${prevPending ? 'FINAL FIRST' : `${fmt(trophyState.count)} / ${fmt(lg.unlock)}`}</span></div>
+        ${nx ? `<h5>WIN THE FINAL</h5><div class="row"><span><img src="${ART.coin}">${fmt(fr.coins)}</span><span><img src="${ART.gemS}">${fr.gems}</span><span><img src="${ART.bag(fr.bag)}">${bagNm(fr.bag)}</span><span><img src="${P.trophy || ART.trophy}">CUP</span></div>` : ''}</div>`;
+      foot = lockStumps(); }
     else if (ready) foot = `<div class="v2tgt">FINAL: CHASE <b>${finalTarget(i)}</b> OFF <b>${band.balls}</b> · FREE ENTRY</div><button class="v2go red" data-final="${i}">⚔ PLAY THE FINAL</button>`;
     else foot = `${short ? `<button class="v2go gold" data-short="${i}">NEED <img src="${ART.coinS}">${fmt(lg.entry - (career.coins || 0))} MORE</button>` : `<button class="v2go" data-play="${i}">PLAY · <img src="${ART.coinS}">${fmt(lg.entry)}</button>`}`;
     return `<div data-lg="${i}" class="tcard pt${FRAMES.has(i) ? ' tf' : ''}${i === 6 ? ' nopto' : ''}${ready ? ' fready' : ''}${isCur ? ' iscur' : ''} ${open ? (won ? 'done' : 'cur') : 'locked'}" style="--a:${lg.accentColor || '#f0a21a'};--pc:url(assets/ui/leagues/lg_${i}_tall.webp)${FRAMES.has(i) ? `;--ft:url(assets/ui/frames/f${i}t.webp);--fm:url(assets/ui/frames/f${i}m.webp);--fb:url(assets/ui/frames/f${i}b.webp);--fr1:${FDIM[i][0]};--fr2:${FDIM[i][1]}` : ''}${({3:280,8:300,11:308,13:296})[i] ? ';--pp:' + ({3:280,8:300,11:308,13:296})[i] : ''}">${tags}<div class="hero" style="background-image:url(${P.bg || ''})"></div><div class="crest"><img class="cup" src="${P.trophy || ART.trophy}" alt=""><img class="ptcup" src="${P.trophy || ART.trophy}" alt="">${BADGES.has(i) ? `<div class="ban bimg" style="--bm:url(assets/ui/badges/lb${i}.webp)"><img src="assets/ui/badges/lb${i}.webp" alt="${esc(lg.name)}"></div>` : `<div class="ban">${esc(lg.name)}</div>`}<div class="rib">LEAGUE ${i}</div></div>
@@ -377,7 +392,8 @@
   }
   window.v2UnlockFx = i => { const c = document.querySelector(`#v2deck .tcard[data-lg="${i}"]`); unlockFx(c); };
   // focus effect, pager, landing sounds for the league cards
-  function deckFocus(o, n) {
+  function fitLocks(o) { o.querySelectorAll('.tcard.pt.locked').forEach(c => { const lx = c.querySelector('.lockx.st'), pn = c.querySelector('.v2lockp'); if (!lx || !pn) return; const h = pn.offsetTop - lx.offsetTop - 2; if (h > 40) lx.style.height = h + 'px'; }); }
+  function deckFocus(o, n) { requestAnimationFrame(() => fitLocks(o)); setTimeout(() => fitLocks(o), 400);
     const rail = o.querySelector('.v2rail'), pg = o.querySelector('.v2pager'); let last = -1, settle = 0, ready = 0;
     const upd = () => { const mid = rail.scrollLeft + rail.clientWidth / 2; let best = 0, bd = 1e9;
       [...rail.children].forEach((c, k) => { const cx = c.offsetLeft + c.offsetWidth / 2, d = Math.min(1, Math.abs(cx - mid) / (c.offsetWidth + 14)); c.style.setProperty('--f', d.toFixed(3)); c.classList.toggle('foc', d < 0.35); if (Math.abs(cx - mid) < bd) { bd = Math.abs(cx - mid); best = k; } });
