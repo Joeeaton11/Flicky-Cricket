@@ -151,8 +151,8 @@
   .tcard .ban{margin-top:-12px;max-width:94%;padding:5px 14px 3px;border-radius:12px;border:4px solid #050A14;background:linear-gradient(var(--a),color-mix(in srgb,var(--a) 60%,#000));font-size:clamp(17px,6vw,25px);letter-spacing:.03em;text-shadow:0 3px 0 #050A14;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tcard .rib{margin-top:-3px;padding:1px 12px;border-radius:8px;border:3px solid #050A14;background:linear-gradient(#3b82f6,#1d4ed8);font-size:12px;letter-spacing:.08em}
   .tcard .post{display:none}
-  .tcard.pt{background:var(--pc) center top/100% auto no-repeat,linear-gradient(color-mix(in srgb,var(--a) 40%,#14203a),#0b1226)!important;border:0;border-radius:26px;padding:0 22px 26px;box-shadow:0 0 22px color-mix(in srgb,var(--a) 75%,transparent),0 8px 0 #050A14}
-  .tcard.pt::before{content:'';position:absolute;inset:0;background:linear-gradient(rgba(8,14,32,0) 28%,rgba(8,14,32,.3) 40%,rgba(8,14,32,.62) 58%,rgba(8,14,32,.8));pointer-events:none;z-index:0}
+  .tcard.pt{background:none!important;border:0;border-radius:26px;padding:0 22px 26px;box-shadow:none!important;--ins:9px}
+  .tcard.pt::before{content:'';position:absolute;inset:var(--ins);border-radius:16px;pointer-events:none;z-index:0;background:linear-gradient(rgba(8,14,32,0) 28%,rgba(8,14,32,.3) 40%,rgba(8,14,32,.62) 58%,rgba(8,14,32,.8)),var(--pc) center calc(var(--u) * -60)/100% auto no-repeat,linear-gradient(color-mix(in srgb,var(--a) 40%,#14203a),#0b1226)}
   .tcard.pt::after{content:'';position:absolute;inset:0;border:30px solid transparent;border-image:url(assets/ui/card_frame.webp) 150 / 30px / 0 round;pointer-events:none;z-index:6}
   .tcard.pt>*{position:relative;z-index:1}
   .tcard.pt .crest::after{display:none}
@@ -174,13 +174,13 @@
   .v2rv .v2face{width:30px;height:30px;border-radius:50%;border:2px solid #FFC93A}.v2rv span{font:9px/1.1 'Lilita One',sans-serif;color:#ffd75a;letter-spacing:.04em}.v2rv b{display:block;font-weight:400;font-size:11px;color:#fff;letter-spacing:0;max-width:92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tcard.pt>.v2rib{position:absolute;z-index:10;top:72px;left:-8px;padding:4px 14px 4px 12px;font-size:13px;letter-spacing:.06em;border:3px solid #050A14;border-left:0;border-radius:0 12px 12px 0;box-shadow:0 3px 0 #050A14}
   .v2rib.here{background:linear-gradient(#5be0ff,#1f8fd6)}.v2rib.fin{background:linear-gradient(#ff7a59,#e0352b);animation:v2pulse 1.2s infinite}@keyframes v2pulse{50%{transform:scale(1.06)}}
-  .tcard.pt>.v2stamp{position:absolute;z-index:10;top:150px;right:16px;transform:rotate(14deg);padding:4px 10px;border:4px solid #ffd75a;border-radius:10px;color:#ffd75a;font-size:20px;letter-spacing:.08em;background:rgba(40,20,0,.55);text-shadow:0 2px 0 #000;box-shadow:0 0 0 2px #050A14}
+  .tcard.pt>.v2stamp{position:absolute;z-index:10;top:44px;right:26px;transform:rotate(14deg);padding:4px 10px;border:4px solid #ffd75a;border-radius:10px;color:#ffd75a;font-size:20px;letter-spacing:.08em;background:rgba(40,20,0,.55);text-shadow:0 2px 0 #000;box-shadow:0 0 0 2px #050A14}
   .tcard.locked .ptcup{filter:drop-shadow(0 0 12px rgba(255,215,90,.95)) brightness(1.05)!important;animation:none}
   .tcard.locked .lockx.shake{animation:v2shake .45s}.tcard.locked .need.shake{animation:v2pulse .45s 2;color:#ffd75a}
   @keyframes v2shake{20%{transform:translateX(-7px) rotate(-2deg)}40%{transform:translateX(6px) rotate(2deg)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
   .v2go.gold img{height:22px}
   #v2deck .v2top .pill.tro{color:#fff}#v2deck .v2top .pill.tro~.pill+.pill{display:none}.tcard.pt .v2stk .v2bar.fin span::before,.tcard.pt .v2stk .v2bar.done span::before{content:''}
-  .v2pager{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 80px);display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:14px;border:2px solid rgba(255,255,255,.7);background:rgba(10,30,20,.45);backdrop-filter:blur(6px);color:#fff;font:13px 'Lilita One',sans-serif;letter-spacing:.05em;z-index:5}
+  .v2pager{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 98px);display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:14px;border:2px solid rgba(255,255,255,.7);background:rgba(10,30,20,.45);backdrop-filter:blur(6px);color:#fff;font:13px 'Lilita One',sans-serif;letter-spacing:.05em;z-index:5}
   .v2pager b{font-weight:400;white-space:nowrap}.v2pager .pbar{width:70px;height:8px;border-radius:4px;background:rgba(0,0,0,.4);overflow:hidden}.v2pager .pbar i{display:block;height:100%;background:linear-gradient(90deg,#ffd75a,#f0a21a)}.v2pager em{font-style:normal;font-size:16px}
   .v2grid,.v2sheet{position:absolute;inset:0;z-index:50;background:rgba(5,12,28,.7);backdrop-filter:blur(6px);opacity:0;transition:opacity .2s;display:flex;align-items:flex-end}
   .v2grid.on,.v2sheet.on{opacity:1}
@@ -203,7 +203,7 @@
   .tcard.pt .v2stk .v2bar{height:34px;border-color:#ffd75a}.tcard.pt .v2stk .v2bar span{line-height:30px;font-size:19px}
   .tcard.pt .v2stk .v2bar span::before{content:'🏆 ';font-size:15px}
   body:has(#v2deck.show) #bottomNav{z-index:9500}
-  #v2deck .v2rail{bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}#v2deck .v2dots{bottom:calc(env(safe-area-inset-bottom,0px) + 82px)}
+  #v2deck .v2rail{bottom:calc(env(safe-area-inset-bottom,0px) + 128px)}#v2deck .v2dots{bottom:calc(env(safe-area-inset-bottom,0px) + 82px)}
   #v2deck .bgx{background:url(assets/ui/deck_sunny.webp) center bottom/cover;filter:none;inset:0}
   .tcard.pt .ban.bimg{background:none!important;border:0!important;padding:0;max-width:none;width:84%;height:auto;margin-top:0}.tcard.pt .ban.bimg img{width:100%;display:block;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5))}
   .tcard.pt .lockx.ch .st,.tcard.pt .lockx.ch .bd{display:none}.tcard.pt .need{position:relative;z-index:9}.tcard.pt .lockx.ch{bottom:58px;top:6px;left:6px;right:6px;background:url(assets/ui/lock_chains.webp) center 38%/100% auto no-repeat;z-index:8}
@@ -211,11 +211,11 @@
   .tcard.pt.tf .pto{position:absolute;inset:0;z-index:7;pointer-events:none;background:var(--frt) top center/auto 34px no-repeat,var(--frb) bottom center/auto 34px no-repeat}
   .tcard.pt{container-type:inline-size}
   .tcard .ptcup{display:none}
-  .tcard.pt{--u:calc((100cqw + 44px) / 768)}.tcard.pt .crest{position:static;margin-top:-10px}.tcard.pt .crest .cup{display:none}
-  .tcard.pt .ptcup{display:block;position:absolute;z-index:2;left:50%;transform:translateX(-50%);height:84px;filter:drop-shadow(0 6px 6px rgba(0,0,0,.5));top:calc(var(--u) * (120 + var(--pp,270)) - 84px + var(--sink,4px))}
-  .tcard.pt .hero{background:none!important;border-bottom:0;width:calc(100% + 44px);margin:0 -22px;height:calc(var(--u) * (120 + var(--pp,270) + var(--ph,100)))}.tcard.pt .hero::after{display:none}
+  .tcard.pt{--u:calc((100cqw + 44px - 2 * var(--ins,9px)) / 768)}.tcard.pt .crest{position:static;margin-top:-10px}.tcard.pt .crest .cup{display:none}
+  .tcard.pt .ptcup{display:block;position:absolute;z-index:2;left:50%;transform:translateX(-50%);height:84px;filter:drop-shadow(0 6px 6px rgba(0,0,0,.5));top:calc(var(--ins,9px) + var(--u) * (60 + var(--pp,270)) - 84px + var(--sink,4px))}
+  .tcard.pt .hero{background:none!important;border-bottom:0;width:calc(100% + 44px);margin:0 -22px;height:calc(var(--ins,9px) + var(--u) * (60 + var(--pp,270) + var(--ph,100)))}.tcard.pt .hero::after{display:none}
   .tcard.pt .v2stk,.tcard.pt .v2prz,.tcard.pt .v2road{background:rgba(6,12,28,.6);backdrop-filter:blur(5px);border-color:rgba(255,215,120,.35)}
-  .tcard.pt.locked::before{background:linear-gradient(rgba(8,14,32,.35),rgba(8,14,32,.9));backdrop-filter:saturate(.35)}
+  .tcard.pt.locked::before{background:linear-gradient(rgba(8,14,32,.35),rgba(8,14,32,.9)),var(--pc) center calc(var(--u) * -60)/100% auto no-repeat,#0b1226;filter:saturate(.45)}
   .v2stk{width:100%;display:flex;align-items:center;gap:6px;padding:5px;border-radius:14px;background:#0a1226;border:2px solid #050A14}
   .v2stk .w,.v2stk .l{width:52px;text-align:center;font-size:11px;line-height:1.1}.v2stk b{display:block;font-weight:400;font-size:16px}
   .v2stk .w b{color:#7CF29A}.v2stk .l b{color:#ff8a80}
