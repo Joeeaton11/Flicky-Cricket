@@ -373,6 +373,15 @@
   @keyframes pbSwing{15%{transform:rotate(8deg)}35%{transform:rotate(-6deg)}55%{transform:rotate(3deg)}75%{transform:rotate(-1deg)}100%{transform:rotate(0)}}
   .lockx.st.shake img.padb{animation:pbJig .5s!important}@keyframes pbJig{20%{transform:translateY(3%) rotate(-7deg)}45%{transform:translateY(-1%) rotate(6deg)}70%{transform:rotate(-2deg)}}
   .lockx.st.open img.padb{animation:lkDrop .9s .42s cubic-bezier(.5,0,.8,.6) forwards!important}
+  .tcard .lockx.st .chn{position:absolute;inset:0;transform-origin:50% 12%;animation:lkSway 3.4s ease-in-out infinite}
+  .tcard .lockx.st .chn img{animation:none!important}
+  #v2deck .tcard.land .lockx.st .chn{animation:lkSwing 1.5s ease-out,lkSway 3.4s ease-in-out 1.5s infinite}
+  .lockx.st.shake .chn{animation:lkJig .5s!important}
+  .tcard.pt.locked .lockx.st.open .chn,.lockx.st.open .chn{animation:chDrop .9s .42s cubic-bezier(.5,0,.8,.6) forwards!important}
+  @keyframes chDrop{25%{transform:translateY(-3%) rotate(-6deg)}100%{transform:translateY(60%) rotate(18deg);opacity:0}}
+  .tcard.pt.locked .lockx.st.open .bail_l{animation:blOff .9s .42s cubic-bezier(.2,.6,.4,1) forwards!important}.tcard.pt.locked .lockx.st.open .bail_r{animation:brOff .9s .42s cubic-bezier(.2,.6,.4,1) forwards!important}
+  .tcard .lockx.st .ball,.tcard.pt.locked .lockx.st .ball{width:24%!important;left:38%!important;top:40%!important;background:radial-gradient(circle at 35% 30%,#fff,#f1efe6 45%,#b9b4a6)!important;box-shadow:0 3px 6px rgba(0,0,0,.35)}
+  .tcard .lockx.st .ball::after{border-left-color:rgba(60,60,70,.55)!important}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}#v2deck .v2rail{padding-top:52px!important}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
@@ -424,7 +433,7 @@
 
 
   const LK = n => `<img class="${n}" src="assets/ui/lock/${n}.webp" alt="">`;
-  const lockStumps = () => `<div class="lockx st"><div class="stk">${LK('stump_l')}${LK('stump_r')}${LK('stump_m')}${LK('bail_l')}${LK('bail_r')}${LK('lock')}<img class="padb" src="assets/ui/lock/padbody.webp" alt=""><i class="ball"></i><i class="ext"></i></div></div>`;
+  const lockStumps = () => `<div class="lockx st"><div class="stk">${LK('stump_l')}${LK('stump_r')}${LK('stump_m')}${LK('bail_l')}${LK('bail_r')}<div class="chn">${LK('lock')}<img class="padb" src="assets/ui/lock/padbody.webp" alt=""></div><i class="ball"></i><i class="ext"></i></div></div>`;
   function unlockFx(card, done) {
     if (!card) return done && done();
     let lx = card.querySelector('.lockx.st'); if (!lx) { card.insertAdjacentHTML('beforeend', lockStumps()); lx = card.querySelector('.lockx.st'); card.classList.add('unlocking'); }
