@@ -155,6 +155,7 @@
   .tcard.pt::before{content:'';position:absolute;inset:var(--ins);border-radius:16px;pointer-events:none;z-index:0;background:linear-gradient(rgba(8,14,32,0) 28%,rgba(8,14,32,.3) 40%,rgba(8,14,32,.62) 58%,rgba(8,14,32,.8)),var(--pc) center calc(var(--u) * -60)/100% auto no-repeat,linear-gradient(color-mix(in srgb,var(--a) 40%,#14203a),#0b1226)}
   .tcard.pt::after{content:'';position:absolute;inset:0;border:30px solid transparent;border-image:url(assets/ui/card_frame.webp) 150 / 30px / 0 round;pointer-events:none;z-index:6}
   .tcard.pt>*{position:relative;z-index:1}
+  #v2deck .v2top::before{content:'';position:absolute;left:0;right:0;top:0;height:calc(env(safe-area-inset-top,0px) + 22px);background:linear-gradient(rgba(6,34,80,.75),rgba(6,34,80,.35) 55%,rgba(6,34,80,0));pointer-events:none}
   #v2deck .v2pz2{min-width:0;width:100%;box-sizing:border-box}#v2deck .v2pz2 .g{min-width:0}#v2deck .v2pz2 .g:first-child h5{padding-right:0}#v2deck .v2pz2 .row span{min-width:0}#v2deck .tcard.pt .v2tgt{font-size:12px;white-space:normal;text-align:center}#v2deck .tcard.pt .v2tgt b{font-size:16px}
   #v2deck .v2pz2{padding:4px 2px 5px}#v2deck .v2pz2 .g{flex-basis:36%}#v2deck .v2pz2 .row{gap:3px;justify-content:space-evenly}#v2deck .v2pz2 .row img{height:23px}#v2deck .v2pz2 .row span{font-size:11px}#v2deck .v2pz2 h5{font-size:10.5px;padding-right:16px}#v2deck .v2info2{width:19px;height:19px;font-size:11px;top:3px;right:3px}
   #v2deck .tcard{flex-basis:73vw;max-width:350px;align-self:center}#v2deck .v2rail{padding-left:13.5vw;padding-right:13.5vw;padding-top:6px}
