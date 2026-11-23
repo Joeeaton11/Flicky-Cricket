@@ -294,19 +294,19 @@
   #v2deck .v2pz2 .row span{font-size:12.5px}#v2deck .v2pz2 h5{font-size:11px;white-space:nowrap;letter-spacing:.03em}#v2deck .v2pz2 .row img{height:25px}#v2deck .v2pz2 em{font-size:12px}
   .tcard.pt.tf::after{border:0!important;border-image:none!important;--fw:calc(100cqw + 2 * var(--pad,22px));background:var(--ft) center top/100% auto no-repeat,var(--fb) center bottom/100% auto no-repeat,var(--fm) center calc(var(--fw) * var(--fr1))/100% calc(100% - var(--fw) * (var(--fr1) + var(--fr2))) no-repeat}
   .tcard.pt.tf{overflow:visible}.tcard.pt.tf::after{top:calc(var(--fw) * var(--ftop,-.06) + 3px);bottom:calc(var(--fw) * var(--fbot,-.06) + 3px)}.tcard.pt.tf{padding-bottom:34px}.tcard.pt.tf[data-lg="6"]{--pad:30px;--ftop:-.151;--fbot:-.038}.tcard.pt.tf[data-lg="16"]{--pad:31px;--ftop:-.102;--fbot:-.03}.v2go.gold{white-space:nowrap;font-size:clamp(14px,4.6vw,20px);padding:0 6px}.v2go.gold img{height:20px}
-  .tcard .lockx.st{position:absolute;left:0;right:0;top:3%;bottom:64px;display:flex;justify-content:center;pointer-events:none;z-index:8}
-  .tcard .lockx.st .stk{position:relative;height:100%;aspect-ratio:768/1376;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45))}
+  .tcard .lockx.st{position:absolute;left:0;right:0;top:4%;height:32%;display:flex;justify-content:center;pointer-events:none;z-index:8}
+  .tcard .lockx.st .stk{position:relative;height:100%;aspect-ratio:896/1200;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45))}
   .tcard .lockx.st img{position:absolute;inset:0;width:100%;height:100%}
-  .lockx.st .lock{transform-origin:50% 14.5%;animation:lkSway 3.4s ease-in-out infinite}
-  .lockx.st .bail_l{transform-origin:12% 14%}.lockx.st .bail_r{transform-origin:88% 14%}
+  .lockx.st .lock{transform-origin:50% 13%;animation:lkSway 3.4s ease-in-out infinite}
+  .lockx.st .bail_l{transform-origin:8% 15%}.lockx.st .bail_r{transform-origin:92% 15%}
   .lockx.st .stump_l,.lockx.st .stump_m,.lockx.st .stump_r{transform-origin:50% 100%}
-  @keyframes lkSway{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+  @keyframes lkSway{0%,100%{transform:rotate(-1.2deg) scaleY(1)}50%{transform:rotate(1.2deg) scaleY(1.012)}}
   #v2deck .tcard.land .lockx.st .lock{animation:lkSwing 1.5s ease-out,lkSway 3.4s ease-in-out 1.5s infinite}
-  @keyframes lkSwing{0%{transform:rotate(0)}15%{transform:rotate(14deg)}35%{transform:rotate(-10deg)}55%{transform:rotate(6deg)}75%{transform:rotate(-3deg)}100%{transform:rotate(0)}}
+  @keyframes lkSwing{0%{transform:rotate(0)}15%{transform:rotate(6deg) scaleY(1.03)}35%{transform:rotate(-4.5deg) scaleY(.98)}55%{transform:rotate(2.5deg)}75%{transform:rotate(-1deg)}100%{transform:rotate(0)}}
   .lockx.st.shake{animation:none!important}.lockx.st.shake .lock{animation:lkJig .5s}.lockx.st.shake .bail_l{animation:blJig .4s}.lockx.st.shake .bail_r{animation:brJig .4s}
-  @keyframes lkJig{20%{transform:rotate(-12deg)}45%{transform:rotate(10deg)}70%{transform:rotate(-5deg)}100%{transform:rotate(0)}}
+  @keyframes lkJig{20%{transform:translateY(3%) rotate(-4deg)}45%{transform:translateY(-1%) rotate(3deg)}70%{transform:translateY(1%) rotate(-1.5deg)}100%{transform:rotate(0)}}
   @keyframes blJig{30%{transform:translateY(-4%) rotate(-6deg)}60%{transform:translateY(0) rotate(3deg)}}@keyframes brJig{30%{transform:translateY(-4%) rotate(6deg)}60%{transform:translateY(0) rotate(-3deg)}}
-  .lockx.st .ball{position:absolute;width:17%;aspect-ratio:1;left:41.5%;top:30%;border-radius:50%;opacity:0;background:radial-gradient(circle at 35% 30%,#ff8a7a,#c8161b 45%,#6e0508);box-shadow:inset 0 0 0 2px rgba(0,0,0,.15)}
+  .lockx.st .ball{position:absolute;width:15%;aspect-ratio:1;left:42.5%;top:42%;border-radius:50%;opacity:0;background:radial-gradient(circle at 35% 30%,#ff8a7a,#c8161b 45%,#6e0508);box-shadow:inset 0 0 0 2px rgba(0,0,0,.15)}
   .lockx.st .ball::after{content:'';position:absolute;inset:0;border-radius:50%;border-left:2px dashed rgba(255,240,220,.9);transform:translateX(42%)}
   .lockx.st.open .ball{animation:bFly .45s cubic-bezier(.3,.1,.6,1) forwards}
   @keyframes bFly{0%{opacity:1;transform:translate(-320%,180%) scale(.6)}100%{opacity:1;transform:translate(0,0) scale(1)}}
