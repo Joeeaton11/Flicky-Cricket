@@ -352,7 +352,7 @@
   .tcard.pt.locked .crest .ban{visibility:visible!important}
   .tcard.pt.locked .need{position:relative;z-index:9}
   .tcard.pt .v2stk.lkneed{justify-content:center;min-height:38px}.v2stk.lkneed .need{font-size:15px;line-height:1.1;text-align:center;color:#fff;text-shadow:0 2px 0 #000}.v2stk.lkneed .need b{font-weight:400;color:#ffd75a;display:inline;font-size:inherit}
-  #v2deck .tcard.pt.locked{translate:0 -46px}
+  #v2deck .tcard.pt{translate:0 -46px}
   .tcard.pt.locked .lockx.st .stk{aspect-ratio:896/1200!important;width:auto!important}
   .tcard.pt.locked .lockx.st .lock{transform-origin:50% 13%!important;animation:lkSway 3.4s ease-in-out infinite!important;left:0!important;right:0!important;width:100%!important}
   .tcard.pt.locked .lockx.st .bail_l{transform-origin:8% 15%!important}.tcard.pt.locked .lockx.st .bail_r{transform-origin:92% 15%!important}
@@ -382,6 +382,22 @@
   .tcard.pt.locked .lockx.st.open .bail_l{animation:blOff .9s .42s cubic-bezier(.2,.6,.4,1) forwards!important}.tcard.pt.locked .lockx.st.open .bail_r{animation:brOff .9s .42s cubic-bezier(.2,.6,.4,1) forwards!important}
   .tcard .lockx.st .ball,.tcard.pt.locked .lockx.st .ball{width:24%!important;left:38%!important;top:40%!important;background:radial-gradient(circle at 35% 30%,#fff,#f1efe6 45%,#b9b4a6)!important;box-shadow:0 3px 6px rgba(0,0,0,.35)}
   .tcard .lockx.st .ball::after{border-left-color:rgba(60,60,70,.55)!important}
+  /* clean unlock sequence */
+  .tcard .lockx.st.open .stk>*,.tcard .lockx.st.open .chn,.tcard .lockx.st.open .ext{animation:none!important}
+  .tcard .lockx.st.open .ball{animation:bHit .38s cubic-bezier(.35,.05,.65,1) forwards,bDrop .5s .38s ease-in forwards!important}
+  @keyframes bHit{0%{opacity:1;transform:translate(-300%,60%) scale(.7)}100%{opacity:1;transform:translate(0,0) scale(1)}}
+  @keyframes bDrop{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(70%,160%)}}
+  .tcard .lockx.st.open .bail_l{animation:uBl .55s .38s cubic-bezier(.2,.7,.4,1) forwards!important}
+  .tcard .lockx.st.open .bail_r{animation:uBr .55s .38s cubic-bezier(.2,.7,.4,1) forwards!important}
+  @keyframes uBl{100%{transform:translate(-22%,-18%) rotate(-160deg);opacity:0}}@keyframes uBr{100%{transform:translate(22%,-20%) rotate(170deg);opacity:0}}
+  .tcard .lockx.st.open .stump_m{transform-origin:50% 100%!important;animation:uSm .5s .38s ease-out forwards!important}
+  .tcard .lockx.st.open .stump_l{transform-origin:50% 100%!important;animation:uSl .5s .42s ease-out forwards!important}
+  .tcard .lockx.st.open .stump_r{transform-origin:50% 100%!important;animation:uSr .5s .42s ease-out forwards!important}
+  @keyframes uSm{100%{transform:rotate(9deg);opacity:0}}@keyframes uSl{100%{transform:rotate(-12deg);opacity:0}}@keyframes uSr{100%{transform:rotate(12deg);opacity:0}}
+  .tcard .lockx.st.open .ext{animation:uFade .35s .4s ease-out forwards!important}@keyframes uFade{to{opacity:0}}
+  .tcard .lockx.st.open .chn{animation:uCh .55s .38s ease-in forwards!important}@keyframes uCh{100%{transform:translateY(35%);opacity:0}}
+  .tcard .lockx.st.open .stk{filter:none!important}
+  .tcard .lockx.st.open .chn img.padb,.lockx.st.open img.padb{animation:none!important}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}#v2deck .v2rail{padding-top:52px!important}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
@@ -438,7 +454,7 @@
     if (!card) return done && done();
     let lx = card.querySelector('.lockx.st'); if (!lx) { card.insertAdjacentHTML('beforeend', lockStumps()); lx = card.querySelector('.lockx.st'); card.classList.add('unlocking'); }
     snd('whoosh'); setTimeout(() => { snd('stumps'); try { hapticTap(); } catch (e) {} }, 420); setTimeout(() => snd('cheer'), 900);
-    lx.classList.add('open'); setTimeout(() => { lx.remove(); card.classList.remove('unlocking', 'locked'); done && done(); }, 1900);
+    lx.classList.add('open'); setTimeout(() => { lx.remove(); card.classList.remove('unlocking', 'locked'); done && done(); }, 1050);
   }
   window.v2UnlockFx = i => { const c = document.querySelector(`#v2deck .tcard[data-lg="${i}"]`); unlockFx(c); };
   // focus effect, pager, landing sounds for the league cards
