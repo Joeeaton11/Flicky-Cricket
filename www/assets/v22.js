@@ -162,7 +162,7 @@
   .tcard.pt .v2stk .v2bar span::before{content:'🏆 ';font-size:15px}
   body:has(#v2deck.show) #bottomNav{z-index:9500}
   #v2deck .v2rail{bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}#v2deck .v2dots{bottom:calc(env(safe-area-inset-bottom,0px) + 82px)}
-  #v2deck .bgx{background:url(assets/ui/web/hero.webp) center bottom/cover;filter:none;inset:0}
+  #v2deck .bgx{background:url(assets/ui/deck_sunny.webp) center bottom/cover;filter:none;inset:0}
   .tcard.pt .ban.bimg{background:none!important;border:0!important;padding:0;max-width:none;width:84%;height:auto;margin-top:0}.tcard.pt .ban.bimg img{width:100%;display:block;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5))}
   .tcard.pt .lockx.ch .st,.tcard.pt .lockx.ch .bd{display:none}.tcard.pt .need{position:relative;z-index:9}.tcard.pt .lockx.ch{bottom:58px;top:6px;left:6px;right:6px;background:url(assets/ui/lock_chains.webp) center 38%/100% auto no-repeat;z-index:8}
   .tcard.pt.tf::after{border-width:34px;border-image:var(--fr) 170 / 34px / 0 stretch round}
