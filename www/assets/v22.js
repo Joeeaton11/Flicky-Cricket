@@ -155,6 +155,7 @@
   .tcard.pt::before{content:'';position:absolute;inset:var(--ins);border-radius:16px;pointer-events:none;z-index:0;background:linear-gradient(rgba(8,14,32,0) 28%,rgba(8,14,32,.3) 40%,rgba(8,14,32,.62) 58%,rgba(8,14,32,.8)),var(--pc) center calc(var(--u) * -60)/100% auto no-repeat,linear-gradient(color-mix(in srgb,var(--a) 40%,#14203a),#0b1226)}
   .tcard.pt::after{content:'';position:absolute;inset:0;border:30px solid transparent;border-image:url(assets/ui/card_frame.webp) 150 / 30px / 0 round;pointer-events:none;z-index:6}
   .tcard.pt>*{position:relative;z-index:1}
+  .v2pager em{display:flex;align-items:center;gap:1px;font-size:13px;color:#ffd75a}.v2pager em img{height:20px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
   #v2deck .v2top::before{content:'';position:absolute;left:0;right:0;top:0;height:calc(env(safe-area-inset-top,0px) + 22px);background:linear-gradient(rgba(6,34,80,.75),rgba(6,34,80,.35) 55%,rgba(6,34,80,0));pointer-events:none}
   #v2deck .v2pz2{min-width:0;width:100%;box-sizing:border-box}#v2deck .v2pz2 .g{min-width:0}#v2deck .v2pz2 .g:first-child h5{padding-right:0}#v2deck .v2pz2 .row span{min-width:0}#v2deck .tcard.pt .v2tgt{font-size:12px;white-space:normal;text-align:center}#v2deck .tcard.pt .v2tgt b{font-size:16px}
   #v2deck .v2pz2{padding:4px 2px 5px}#v2deck .v2pz2 .g{flex-basis:36%}#v2deck .v2pz2 .row{gap:3px;justify-content:space-evenly}#v2deck .v2pz2 .row img{height:23px}#v2deck .v2pz2 .row span{font-size:11px}#v2deck .v2pz2 h5{font-size:10.5px;padding-right:16px}#v2deck .v2info2{width:19px;height:19px;font-size:11px;top:3px;right:3px}
@@ -372,7 +373,7 @@
   }
   function openDeck(focus) {
     const o = ov('v2deck'), n = LG.length - 1;
-    o.innerHTML = `<div class="bgx"></div>${topBar('LEAGUES')}<div class="v2rail">${Array.from({ length: n }, (_, k) => leagueCard(k + 1)).join('')}</div><button class="v2pager" data-pager="1"><b>LEAGUE <span class="pn">1</span> OF ${n}</b><span class="pbar"><i></i></span><em>▦</em></button>`;
+    o.innerHTML = `<div class="bgx"></div>${topBar('LEAGUES')}<div class="v2rail">${Array.from({ length: n }, (_, k) => leagueCard(k + 1)).join('')}</div><button class="v2pager" data-pager="1"><b>LEAGUE <span class="pn">1</span> OF ${n}</b><span class="pbar"><i></i></span><em><img src="${ART.trophy}" alt="">▸</em></button>`;
     { const pills = o.querySelector('.v2top .pill'); if (pills) pills.insertAdjacentHTML('beforebegin', `<span class="pill tro">🏆 ${fmt(trophyState.count)}</span>`); }
     o.classList.add('show'); fillFaces(o); deckFocus(o, n);
     { const rail = o.querySelector('.v2rail'), bg = o.querySelector('.bgx'); const setBg = () => { const w = rail.children[0] ? rail.children[0].getBoundingClientRect().width + 14 : 1, c = rail.children[Math.round(rail.scrollLeft / w)]; if (c) { bg.style.setProperty('--dk', c.style.getPropertyValue('--pc')); const r = c.getBoundingClientRect(), bh = bg.clientHeight * 1.16, sc = bh / 1376, cr = 1047 * sc; bg.style.setProperty('--bgy', Math.round(Math.max(-0.16 * bg.clientHeight, Math.min(0, r.bottom - 6 - cr))) + 'px'); bg.style.setProperty('--cw', Math.round(608 * sc) + 'px'); } };
