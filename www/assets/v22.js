@@ -69,7 +69,7 @@
     rivalFace(v === 'me' ? 'me' : +v, k).then(u => { if (u) el.style.backgroundImage = `url(${u})`; }); });
 
   // ── 2. FINALS: a full league bar unlocks that league's Final; winning it lifts the cup and opens the next league
-  const FRAMES = new Set([6, 16]);
+  const FRAMES = new Set([6, 16]), BADGES = new Set([6, 16]);
   function F() { const f = sec('finals'); if (!f.won) { f.won = {}; f.ready = {}; const hi = highestLeagueIdx(); for (let i = 1; i < hi; i++) f.won[i] = 1; save(); } return f; }
   const finalWon = i => !!F().won[i], finalReady = i => !!F().ready[i] && !F().won[i];
   const cupsWon = () => Object.keys(F().won).filter(k => +k >= 1).length;
@@ -155,6 +155,16 @@
   .tcard.pt::before{content:'';position:absolute;inset:0;background:linear-gradient(rgba(8,14,32,0) 28%,rgba(8,14,32,.3) 40%,rgba(8,14,32,.62) 58%,rgba(8,14,32,.8));pointer-events:none;z-index:0}
   .tcard.pt::after{content:'';position:absolute;inset:0;border:30px solid transparent;border-image:url(assets/ui/card_frame.webp) 150 / 30px / 0 round;pointer-events:none;z-index:6}
   .tcard.pt>*{position:relative;z-index:1}
+  .v2pz2{display:flex;gap:0;padding:4px 4px 5px}.v2pz2 .g{flex:0 0 38%;text-align:center}.v2pz2 .g.f{flex:1;border-left:2px solid rgba(255,215,120,.25)}
+  .v2pz2 h5{margin:1px 0 3px;font-size:10px}.v2pz2 .row{gap:8px;margin:0}.v2pz2 .row span{font-size:10.5px;white-space:nowrap}.v2pz2 .row img{height:30px}
+  .v2pz2 em{font-style:normal;display:flex;align-items:center;gap:1px;font-size:10px;color:#e6c8ff}.v2pz2 em img{height:13px!important}
+  .tcard.pt .v2stk .v2bar{height:34px;border-color:#ffd75a}.tcard.pt .v2stk .v2bar span{line-height:30px;font-size:19px}
+  .tcard.pt .v2stk .v2bar span::before{content:'🏆 ';font-size:15px}
+  body:has(#v2deck.show) #bottomNav{z-index:9500}
+  #v2deck .v2rail{bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}#v2deck .v2dots{bottom:calc(env(safe-area-inset-bottom,0px) + 82px)}
+  #v2deck .bgx{background:var(--dk) center/cover;filter:blur(7px) brightness(.62) saturate(1.15);transition:background-image .25s}
+  .tcard.pt .ban.bimg{background:none!important;border:0!important;padding:0;max-width:none;width:84%;height:auto;margin-top:0}.tcard.pt .ban.bimg img{width:100%;display:block;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5))}
+  .tcard.pt .lockx.ch .st,.tcard.pt .lockx.ch .bd{display:none}.tcard.pt .need{position:relative;z-index:9}.tcard.pt .lockx.ch{bottom:58px;top:6px;left:6px;right:6px;background:url(assets/ui/lock_chains.webp) center 38%/100% auto no-repeat;z-index:8}
   .tcard.pt.tf::after{border-width:34px;border-image:var(--fr) 170 / 34px / 0 stretch round}
   .tcard.pt.tf .pto{position:absolute;inset:0;z-index:7;pointer-events:none;background:var(--frt) top center/auto 34px no-repeat,var(--frb) bottom center/auto 34px no-repeat}
   .tcard.pt{container-type:inline-size}
@@ -234,7 +244,7 @@
   #v2flame{position:absolute;z-index:46;right:12px;display:none;padding:3px 9px;border-radius:12px;border:3px solid #050A14;background:linear-gradient(#ffb43c,#e2501a);font:13px 'Lilita One',sans-serif;color:#fff;box-shadow:0 3px 0 #050A14}
   #v2flame.on{display:block}
   @media (max-height:620px){.tcard.pt{--ph:84}.tcard.pt .v2prz .row:last-child{display:none}.tcard.pt .v2prz h5:nth-of-type(2){display:none}}
-  @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
+  @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:66%}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
   // ── overlay helpers
@@ -263,22 +273,24 @@
     else if (nx) { lbl = `0 / ${nx.unlock}`; } else lbl = 'TOP LEAGUE';
     const R = rival(i), fr = finalReward(i), wins = nx && open && !won && !ready ? Math.ceil(Math.max(0, nx.unlock - trophyState.count) / (wT + 1)) : 0;
     let body = `<div class="v2stk"><div class="w">WIN<b>+${won || ready ? 0 : wT}🏆</b></div><div class="v2bar ${cls}"><i style="width:${pct}%"></i><span>${lbl}</span></div><div class="l">LOSS<b>${lossT ? '−' + lossT : '0'}🏆</b></div></div>
-      <div class="v2prz"><h5>EVERY WIN</h5><div class="row"><span><img src="${ART.coin}">${fmt(lg.winCoins)}</span><span><img src="${ART.bag(lg.winChest || 'bronze')}">${bagNm(lg.winChest || 'bronze')} BAG</span></div>
-      ${nx ? `<h5>WIN THE FINAL</h5><div class="row"><span><img src="${ART.coin}">${fmt(fr.coins)}</span><span><img src="${ART.gemS}" style="height:28px">${fr.gems}</span><span><img src="${ART.bag(fr.bag)}">${bagNm(fr.bag)} BAG</span><span><img src="${lg.cup ? '' : ''}${P.trophy || ART.trophy}">THE CUP</span></div>` : ''}</div>`;
-    if (nx && !won && open) body += `<div class="v2road"><div class="tx">${ready ? `<b style="font-weight:400;color:#ff8a65">THE FINAL IS ON!</b><small>Beat ${esc(R.n)} to lift the ${esc(lg.name)}</small>` : `THE ROAD TO THE FINAL<small>About ${wins} more win${wins === 1 ? '' : 's'} to face ${esc(R.n)}</small>`}</div><div class="v2face" data-face="${i}"></div></div>`;
+      <div class="v2prz v2pz2"><div class="g"><h5>EVERY WIN</h5><div class="row"><span><img src="${ART.coin}">${fmt(lg.winCoins)}</span><span><img src="${ART.bag(lg.winChest || 'bronze')}">${bagNm(lg.winChest || 'bronze')}</span></div></div>${nx ? `<div class="g f"><h5>WIN THE FINAL</h5><div class="row"><span><img src="${ART.coin}">${fmt(fr.coins)}<em><img src="${ART.gemS}">${fr.gems}</em></span><span><img src="${ART.bag(fr.bag)}">${bagNm(fr.bag)}</span><span><img src="${P.trophy || ART.trophy}">CUP</span></div></div>` : ''}</div>`;
+    if (nx && !won && open && ready) body += `<div class="v2road"><div class="tx">${ready ? `<b style="font-weight:400;color:#ff8a65">THE FINAL IS ON!</b><small>Beat ${esc(R.n)} to lift the ${esc(lg.name)}</small>` : `THE ROAD TO THE FINAL<small>About ${wins} more win${wins === 1 ? '' : 's'} to face ${esc(R.n)}</small>`}</div><div class="v2face" data-face="${i}"></div></div>`;
     if (won) body += `<div class="v2road"><span class="donepill">🏆 CUP WON</span><div class="tx"><small>Beat ${esc(R.n)} · no trophies lost here · play any time for coins and bags</small></div></div>`;
     let foot = '';
     if (!open) { const prevPending = i === hi + 1 && LG[hi + 1] && !finalWon(hi);
-      foot = `<div class="lockx"><div class="st s1"></div><div class="st s2"></div><div class="bd">🔒</div></div><div class="need">${prevPending ? `WIN THE <b>${esc(LG[hi].name)}</b> FINAL TO UNLOCK` : `WIN <b>${Math.max(0, lg.unlock - trophyState.count)}</b> MORE 🏆 TO UNLOCK`}</div>`; }
+      foot = `<div class="lockx ch"><div class="st s1"></div><div class="st s2"></div><div class="bd">🔒</div></div><div class="need">${prevPending ? `WIN THE <b>${esc(LG[hi].name)}</b> FINAL TO UNLOCK` : `WIN <b>${Math.max(0, lg.unlock - trophyState.count)}</b> MORE 🏆 TO UNLOCK`}</div>`; }
     else if (ready) foot = `<div class="v2tgt">FINAL: CHASE <b>${finalTarget(i)}</b> OFF <b>${band.balls}</b> · FREE ENTRY</div><button class="v2go red" data-final="${i}">⚔ PLAY THE FINAL</button>`;
     else foot = `<div class="v2tgt">NEED <b>${leagueTarget(lg)}</b> OFF <b>${band.balls}</b> BALLS · ${band.wickets} WKT${band.wickets === 1 ? '' : 'S'}</div><button class="v2go" data-play="${i}">PLAY · <img src="${ART.coinS}">${fmt(lg.entry)}</button>`;
-    return `<div class="tcard pt${FRAMES.has(i) ? ' tf' : ''} ${open ? (won ? 'done' : 'cur') : 'locked'}" style="--a:${lg.accentColor || '#f0a21a'};--pc:url(assets/ui/leagues/lg_${i}_tall.webp)${FRAMES.has(i) ? `;--fr:url(assets/ui/frames/fr${i}.webp);--frt:url(assets/ui/frames/frt${i}.webp);--frb:url(assets/ui/frames/frb${i}.webp)` : ''}${({3:280,8:300,11:308,13:296})[i] ? ';--pp:' + ({3:280,8:300,11:308,13:296})[i] : ''}">${FRAMES.has(i) ? '<i class="pto"></i>' : ''}<div class="hero" style="background-image:url(${P.bg || ''})"></div><div class="crest"><img class="cup" src="${P.trophy || ART.trophy}" alt=""><img class="ptcup" src="${P.trophy || ART.trophy}" alt=""><div class="ban">${esc(lg.name)}</div><div class="rib">LEAGUE ${i}</div></div>
+    return `<div class="tcard pt${FRAMES.has(i) ? ' tf' : ''} ${open ? (won ? 'done' : 'cur') : 'locked'}" style="--a:${lg.accentColor || '#f0a21a'};--pc:url(assets/ui/leagues/lg_${i}_tall.webp)${FRAMES.has(i) ? `;--fr:url(assets/ui/frames/fr${i}.webp);--frt:url(assets/ui/frames/frt${i}.webp);--frb:url(assets/ui/frames/frb${i}.webp)` : ''}${({3:280,8:300,11:308,13:296})[i] ? ';--pp:' + ({3:280,8:300,11:308,13:296})[i] : ''}">${FRAMES.has(i) ? '<i class="pto"></i>' : ''}<div class="hero" style="background-image:url(${P.bg || ''})"></div><div class="crest"><img class="cup" src="${P.trophy || ART.trophy}" alt=""><img class="ptcup" src="${P.trophy || ART.trophy}" alt="">${BADGES.has(i) ? `<div class="ban bimg"><img src="assets/ui/badges/lb${i}.webp" alt="${esc(lg.name)}"></div>` : `<div class="ban">${esc(lg.name)}</div>`}<div class="rib">LEAGUE ${i}</div></div>
       <div class="post" style="background-image:url(${P.bg || ''})"></div>${body}${foot}</div>`;
   }
   function openDeck(focus) {
     const o = ov('v2deck'), n = LG.length - 1;
     o.innerHTML = `<div class="bgx"></div>${topBar('LEAGUES')}<div class="v2rail">${Array.from({ length: n }, (_, k) => leagueCard(k + 1)).join('')}</div><div class="v2dots"></div>`;
     o.classList.add('show'); fillFaces(o); railDots(o);
+    { const rail = o.querySelector('.v2rail'), bg = o.querySelector('.bgx'); const setBg = () => { const w = rail.children[0] ? rail.children[0].getBoundingClientRect().width + 14 : 1, c = rail.children[Math.round(rail.scrollLeft / w)]; if (c) bg.style.setProperty('--dk', c.style.getPropertyValue('--pc')); };
+      rail.addEventListener('scroll', () => requestAnimationFrame(setBg), { passive: true }); setTimeout(setBg, 60); }
+    if (!window._v2NavHook) { window._v2NavHook = 1; const bn = document.getElementById('bottomNav'); if (bn) bn.addEventListener('click', () => { const d = document.getElementById('v2deck'); if (d) d.classList.remove('show'); }, true); }
     const f = focus != null ? focus : selectedLeagueIdx(); requestAnimationFrame(() => scrollTo(o, Math.max(0, f - 1)));
     try { showNav('league'); } catch (e) {}
     trk('v2_deck', { focus: f });
