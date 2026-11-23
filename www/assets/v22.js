@@ -360,6 +360,10 @@
   .tcard.pt.locked .lockx.st.shake .lock{animation:lkJig .5s!important}
   .tcard.pt.locked .lockx.st .ball{width:15%!important;left:42.5%!important;top:42%!important}
   .tcard.pt.locked .v2prz,.tcard.pt.locked .v2stk:not(.lkneed){filter:grayscale(1) brightness(.6)!important;opacity:.75}
+  .tcard .lockx.st .ext{position:absolute;left:0;right:0;top:calc(100% - 2px);height:var(--ext,0px);background:url(assets/ui/lock/stump_ext.webp) center top/100% auto repeat-y}
+  .lockx.st.open .ext{animation:smOff .8s .42s ease-out forwards}
+  .tcard.pt.locked .lockx.st{overflow:visible}
+  #v2deck .v2rail{bottom:0!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 128px)!important}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}#v2deck .v2rail{padding-top:52px!important}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
@@ -411,7 +415,7 @@
 
 
   const LK = n => `<img class="${n}" src="assets/ui/lock/${n}.webp" alt="">`;
-  const lockStumps = () => `<div class="lockx st"><div class="stk">${LK('stump_l')}${LK('stump_r')}${LK('stump_m')}${LK('bail_l')}${LK('bail_r')}${LK('lock')}<i class="ball"></i></div></div>`;
+  const lockStumps = () => `<div class="lockx st"><div class="stk">${LK('stump_l')}${LK('stump_r')}${LK('stump_m')}${LK('bail_l')}${LK('bail_r')}${LK('lock')}<i class="ball"></i><i class="ext"></i></div></div>`;
   function unlockFx(card, done) {
     if (!card) return done && done();
     let lx = card.querySelector('.lockx.st'); if (!lx) { card.insertAdjacentHTML('beforeend', lockStumps()); lx = card.querySelector('.lockx.st'); card.classList.add('unlocking'); }
@@ -421,7 +425,7 @@
   window.v2UnlockFx = i => { const c = document.querySelector(`#v2deck .tcard[data-lg="${i}"]`); unlockFx(c); };
   // focus effect, pager, landing sounds for the league cards
   function fitLocks(o) { o.querySelectorAll('.tcard.pt.locked').forEach(c => { const lx = c.querySelector('.lockx.st'); if (!lx) return; const nd = c.querySelector('.v2stk.lkneed'); if (nd) lx.style.setProperty('--lt', (nd.offsetTop + nd.offsetHeight + 4) + 'px');
-      const pg = o.querySelector('.v2pager'), sc = c.getBoundingClientRect().height / c.offsetHeight || 1; requestAnimationFrame(() => { const lt = lx.getBoundingClientRect().top, pt = pg ? pg.getBoundingClientRect().top : lt + c.offsetHeight; let h = (pt - 6 - lt) / sc; h = Math.min(h, c.offsetWidth * 0.95 / (896 / 1200)); if (h > 40) lx.style.height = Math.round(h) + 'px'; }); }); }
+      const pg = o.querySelector('.v2pager'), sc = c.getBoundingClientRect().height / c.offsetHeight || 1; requestAnimationFrame(() => { const lt = lx.getBoundingClientRect().top, pt = pg ? pg.getBoundingClientRect().top : lt + c.offsetHeight; const h = Math.min((pt - 6 - lt) / sc, c.offsetWidth * 0.95 / (896 / 1200)); if (h > 40) lx.style.height = Math.round(h) + 'px'; lx.style.setProperty('--ext', Math.max(0, Math.round((innerHeight - lt) / sc - h + 10)) + 'px'); }); }); }
   function deckFocus(o, n) { requestAnimationFrame(() => fitLocks(o)); setTimeout(() => fitLocks(o), 400);
     const rail = o.querySelector('.v2rail'), pg = o.querySelector('.v2pager'); let last = -1, settle = 0, ready = 0;
     const upd = () => { const mid = rail.scrollLeft + rail.clientWidth / 2; let best = 0, bd = 1e9;
