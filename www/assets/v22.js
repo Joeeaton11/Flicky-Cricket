@@ -163,7 +163,7 @@
   .tcard.pt .ban::after{animation-duration:9s}
   .tcard.pt .rib{display:none}
   .v2pz2{position:relative}.v2info2{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.85);background:#1d2c52;color:#fff;font:700 13px/1 Georgia,serif;font-style:italic;z-index:2}
-  #v2deck .tcard{transform:scale(calc(1 - .08 * var(--f,0)));filter:brightness(calc(1 - .28 * var(--f,0)));transform-origin:50% 60%}
+  #v2deck .tcard{transform:scale(calc(1 - .08 * var(--f,0)));filter:brightness(calc(1 - .28 * var(--f,0))) drop-shadow(0 14px 9px rgba(8,30,8,.5));transform-origin:50% 60%}#v2deck .tcard>.v2rib,#v2deck .tcard>.v2stamp,#v2deck .tcard>.v2rv{transition:opacity .2s}#v2deck .tcard:not(.foc)>.v2rib,#v2deck .tcard:not(.foc)>.v2stamp,#v2deck .tcard:not(.foc)>.v2rv{opacity:0}
   #v2deck .tcard.land{animation:v2land .38s cubic-bezier(.3,1.6,.5,1)}@keyframes v2land{0%{transform:scale(.97)}60%{transform:scale(1.025)}100%{transform:scale(1)}}
   .tcard.pt .ptcup{animation:v2bob 3.2s ease-in-out infinite}@keyframes v2bob{50%{transform:translateX(-50%) translateY(-4px)}}
   .tcard.pt .ptcup{filter:drop-shadow(0 6px 6px rgba(0,0,0,.5)) drop-shadow(0 0 0 rgba(255,230,140,0));}
@@ -341,7 +341,7 @@
   function deckFocus(o, n) {
     const rail = o.querySelector('.v2rail'), pg = o.querySelector('.v2pager'); let last = -1, settle = 0, ready = 0;
     const upd = () => { const mid = rail.scrollLeft + rail.clientWidth / 2; let best = 0, bd = 1e9;
-      [...rail.children].forEach((c, k) => { const cx = c.offsetLeft + c.offsetWidth / 2, d = Math.min(1, Math.abs(cx - mid) / (c.offsetWidth + 14)); c.style.setProperty('--f', d.toFixed(3)); if (Math.abs(cx - mid) < bd) { bd = Math.abs(cx - mid); best = k; } });
+      [...rail.children].forEach((c, k) => { const cx = c.offsetLeft + c.offsetWidth / 2, d = Math.min(1, Math.abs(cx - mid) / (c.offsetWidth + 14)); c.style.setProperty('--f', d.toFixed(3)); c.classList.toggle('foc', d < 0.35); if (Math.abs(cx - mid) < bd) { bd = Math.abs(cx - mid); best = k; } });
       if (pg) { pg.querySelector('.pn').textContent = best + 1; pg.querySelector('.pbar i').style.width = ((best + 1) / n * 100) + '%'; }
       if (best !== last) { if (ready && last >= 0) snd('whoosh'); last = best; }
       clearTimeout(settle); settle = setTimeout(() => { const c = rail.children[best]; if (!c || !ready) return; c.classList.remove('land'); void c.offsetWidth; c.classList.add('land');
