@@ -398,6 +398,7 @@
   .tcard .lockx.st.open .chn{animation:uCh .55s .38s ease-in forwards!important}@keyframes uCh{100%{transform:translateY(35%);opacity:0}}
   .tcard .lockx.st.open .stk{filter:none!important}
   .tcard .lockx.st.open .chn img.padb,.lockx.st.open img.padb{animation:none!important}
+  .tcard .lockx.st .chn{top:6.5%!important;bottom:-6.5%!important}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}#v2deck .v2rail{padding-top:52px!important}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
