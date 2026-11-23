@@ -155,6 +155,36 @@
   .tcard.pt::before{content:'';position:absolute;inset:0;background:linear-gradient(rgba(8,14,32,0) 28%,rgba(8,14,32,.3) 40%,rgba(8,14,32,.62) 58%,rgba(8,14,32,.8));pointer-events:none;z-index:0}
   .tcard.pt::after{content:'';position:absolute;inset:0;border:30px solid transparent;border-image:url(assets/ui/card_frame.webp) 150 / 30px / 0 round;pointer-events:none;z-index:6}
   .tcard.pt>*{position:relative;z-index:1}
+  #v2deck .tcard{transform:scale(calc(1 - .08 * var(--f,0)));filter:brightness(calc(1 - .28 * var(--f,0)));transform-origin:50% 60%}
+  #v2deck .tcard.land{animation:v2land .38s cubic-bezier(.3,1.6,.5,1)}@keyframes v2land{0%{transform:scale(.97)}60%{transform:scale(1.025)}100%{transform:scale(1)}}
+  .tcard.pt .ptcup{animation:v2bob 3.2s ease-in-out infinite}@keyframes v2bob{50%{transform:translateX(-50%) translateY(-4px)}}
+  .tcard.pt .ptcup{filter:drop-shadow(0 6px 6px rgba(0,0,0,.5)) drop-shadow(0 0 0 rgba(255,230,140,0));}
+  .tcard.pt .crest::after{content:'';position:absolute;left:50%;width:70px;height:70px;margin-left:-35px;top:calc(var(--u) * (120 + var(--pp,270)) - 80px);background:radial-gradient(circle,rgba(255,250,210,.9) 0 2px,transparent 3px) 30% 30%/100% 100% no-repeat,radial-gradient(circle,rgba(255,250,210,.9) 0 1.5px,transparent 2.5px) 72% 55%/100% 100% no-repeat;animation:v2spark 2.6s ease-in-out infinite;pointer-events:none;z-index:3}
+  @keyframes v2spark{0%,100%{opacity:0;transform:scale(.6)}50%{opacity:1;transform:scale(1.1)}}
+  .tcard.pt .ban{position:relative;overflow:hidden}.tcard.pt .ban::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.65) 50%,transparent 65%) -160% 0/60% 100% no-repeat;animation:v2glint 4.5s ease-in-out infinite;pointer-events:none}
+  .tcard.pt .ban.bimg{overflow:visible}.tcard.pt .ban.bimg::after{-webkit-mask:var(--bm) center/100% 100% no-repeat;mask:var(--bm) center/100% 100% no-repeat}
+  @keyframes v2glint{0%,60%{background-position:-160% 0}100%{background-position:260% 0}}
+  .tcard.fready{animation:v2ready 1.6s ease-in-out infinite}@keyframes v2ready{50%{box-shadow:0 0 34px 6px rgba(255,80,60,.85),0 8px 0 #050A14}}
+  .tcard.pt>.v2info{position:absolute;z-index:9;top:38px;right:36px;width:28px;height:28px;border-radius:50%;border:2px solid #fff;background:rgba(10,20,40,.55);color:#fff;font:700 16px/1 Georgia,serif;font-style:italic;backdrop-filter:blur(4px)}
+  .tcard.pt>.v2rv{position:absolute;z-index:9;top:36px;left:34px;display:flex;align-items:center;gap:5px;padding:3px 8px 3px 3px;border-radius:20px;background:rgba(10,20,40,.6);border:2px solid rgba(255,215,120,.7);backdrop-filter:blur(4px)}
+  .v2rv .v2face{width:30px;height:30px;border-radius:50%;border:2px solid #FFC93A}.v2rv span{font:9px/1.1 'Lilita One',sans-serif;color:#ffd75a;letter-spacing:.04em}.v2rv b{display:block;font-weight:400;font-size:11px;color:#fff;letter-spacing:0;max-width:92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tcard.pt>.v2rib{position:absolute;z-index:10;top:72px;left:-8px;padding:4px 14px 4px 12px;font-size:13px;letter-spacing:.06em;border:3px solid #050A14;border-left:0;border-radius:0 12px 12px 0;box-shadow:0 3px 0 #050A14}
+  .v2rib.here{background:linear-gradient(#5be0ff,#1f8fd6)}.v2rib.fin{background:linear-gradient(#ff7a59,#e0352b);animation:v2pulse 1.2s infinite}@keyframes v2pulse{50%{transform:scale(1.06)}}
+  .tcard.pt>.v2stamp{position:absolute;z-index:10;top:150px;right:16px;transform:rotate(14deg);padding:4px 10px;border:4px solid #ffd75a;border-radius:10px;color:#ffd75a;font-size:20px;letter-spacing:.08em;background:rgba(40,20,0,.55);text-shadow:0 2px 0 #000;box-shadow:0 0 0 2px #050A14}
+  .tcard.locked .ptcup{filter:drop-shadow(0 0 12px rgba(255,215,90,.95)) brightness(1.05)!important;animation:none}
+  .tcard.locked .lockx.shake{animation:v2shake .45s}.tcard.locked .need.shake{animation:v2pulse .45s 2;color:#ffd75a}
+  @keyframes v2shake{20%{transform:translateX(-7px) rotate(-2deg)}40%{transform:translateX(6px) rotate(2deg)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+  .v2go.gold img{height:22px}
+  #v2deck .v2top .pill.tro{color:#fff}#v2deck .v2top .pill.tro~.pill+.pill{display:none}.tcard.pt .v2stk .v2bar.fin span::before,.tcard.pt .v2stk .v2bar.done span::before{content:''}
+  .v2pager{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 80px);display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:14px;border:2px solid rgba(255,255,255,.7);background:rgba(10,30,20,.45);backdrop-filter:blur(6px);color:#fff;font:13px 'Lilita One',sans-serif;letter-spacing:.05em;z-index:5}
+  .v2pager b{font-weight:400;white-space:nowrap}.v2pager .pbar{width:70px;height:8px;border-radius:4px;background:rgba(0,0,0,.4);overflow:hidden}.v2pager .pbar i{display:block;height:100%;background:linear-gradient(90deg,#ffd75a,#f0a21a)}.v2pager em{font-style:normal;font-size:16px}
+  .v2grid,.v2sheet{position:absolute;inset:0;z-index:50;background:rgba(5,12,28,.7);backdrop-filter:blur(6px);opacity:0;transition:opacity .2s;display:flex;align-items:flex-end}
+  .v2grid.on,.v2sheet.on{opacity:1}
+  .v2grid .gin,.v2sheet .sin{width:100%;max-height:74%;overflow:auto;background:linear-gradient(#1b2b52,#0d1730);border-top:3px solid #FFC93A;border-radius:22px 22px 0 0;padding:12px 12px calc(env(safe-area-inset-bottom,0px) + 104px)}
+  .gh{display:flex;justify-content:space-between;align-items:center;font-size:20px;margin-bottom:10px}.gh button{width:34px;height:34px;border-radius:50%;border:2px solid #fff;background:#0a1226;color:#fff;font-size:16px}
+  .gg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.gt{position:relative;border:2px solid #2a3a60;border-radius:14px;background:#0a1226;color:#fff;padding:6px 4px;font:11px 'Lilita One',sans-serif;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .gt img{height:40px}.gt.lock{opacity:.55}.gt.won{border-color:#7CF29A}.gt.open{border-color:#FFC93A}.gt i{position:absolute;top:3px;right:6px;font-style:normal;font-size:11px;color:#ffd75a}
+  .v2sheet .ln{display:flex;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,.1);font:13px 'Lilita One',sans-serif}.v2sheet .ln span{color:#9fb3e0}.v2sheet .ln b{font-weight:400;text-align:right}.v2sheet .ln b img{height:16px;vertical-align:-3px}
   body:has(#v2deck.show) #bottomNav{background:linear-gradient(rgba(255,255,255,0),rgba(30,90,40,.35) 35%,rgba(20,70,30,.6));backdrop-filter:blur(6px)}
   body:has(#v2deck.show) #bottomNav .navTile{background:linear-gradient(rgba(255,255,255,.38),rgba(255,255,255,.16));border-color:rgba(255,255,255,.6);box-shadow:0 3px 0 rgba(0,0,0,.25)}
   #v2deck .v2top .pill{background:rgba(255,255,255,.26);border:2px solid rgba(255,255,255,.7);backdrop-filter:blur(8px);text-shadow:0 2px 0 rgba(0,0,0,.45)}
@@ -276,26 +306,67 @@
     const band = matchBand(Math.max(1, i)), wT = (lg.winTrophy || 1) + 1, lossT = (won || ready || i < cur) ? 0 : trophyLossFor(i);
     let pct = 0, lbl = '', cls = '';
     if (won) { pct = 100; lbl = '✓ COMPLETE'; cls = 'done'; }
-    else if (ready) { pct = 100; lbl = '⚔ FINAL READY'; cls = 'fin'; }
+    else if (ready) { pct = 100; lbl = 'FINAL READY'; cls = 'fin'; }
     else if (open && nx) { pct = Math.max(0, Math.min(1, (trophyState.count - lg.unlock) / Math.max(1, nx.unlock - lg.unlock))) * 100; lbl = `${trophyState.count} / ${nx.unlock}`; }
     else if (nx) { lbl = `0 / ${nx.unlock}`; } else lbl = 'TOP LEAGUE';
     const R = rival(i), fr = finalReward(i), wins = nx && open && !won && !ready ? Math.ceil(Math.max(0, nx.unlock - trophyState.count) / (wT + 1)) : 0;
     let body = `<div class="v2stk"><div class="w">WIN<b>+${won || ready ? 0 : wT}🏆</b></div><div class="v2bar ${cls}"><i style="width:${pct}%"></i><span>${lbl}</span></div><div class="l">LOSS<b>${lossT ? '−' + lossT : '0'}🏆</b></div></div>
       <div class="v2prz v2pz2"><div class="g"><h5>EVERY WIN</h5><div class="row"><span><img src="${ART.coin}">${fmt(lg.winCoins)}</span><span><img src="${ART.bag(lg.winChest || 'bronze')}">${bagNm(lg.winChest || 'bronze')}</span></div></div>${nx ? `<div class="g f"><h5>WIN THE FINAL</h5><div class="row"><span><img src="${ART.coin}">${fmt(fr.coins)}<em><img src="${ART.gemS}">${fr.gems}</em></span><span><img src="${ART.bag(fr.bag)}">${bagNm(fr.bag)}</span><span><img src="${P.trophy || ART.trophy}">CUP</span></div></div>` : ''}</div>`;
-    if (nx && !won && open && ready) body += `<div class="v2road"><div class="tx">${ready ? `<b style="font-weight:400;color:#ff8a65">THE FINAL IS ON!</b><small>Beat ${esc(R.n)} to lift the ${esc(lg.name)}</small>` : `THE ROAD TO THE FINAL<small>About ${wins} more win${wins === 1 ? '' : 's'} to face ${esc(R.n)}</small>`}</div><div class="v2face" data-face="${i}"></div></div>`;
+    if (false) body += `<div class="v2road"><div class="tx">${ready ? `<b style="font-weight:400;color:#ff8a65">THE FINAL IS ON!</b><small>Beat ${esc(R.n)} to lift the ${esc(lg.name)}</small>` : `THE ROAD TO THE FINAL<small>About ${wins} more win${wins === 1 ? '' : 's'} to face ${esc(R.n)}</small>`}</div><div class="v2face" data-face="${i}"></div></div>`;
     if (won) body += `<div class="v2road"><span class="donepill">🏆 CUP WON</span><div class="tx"><small>Beat ${esc(R.n)} · no trophies lost here · play any time for coins and bags</small></div></div>`;
+    const isCur = open && !won && i === cur, short = open && !ready && (career.coins || 0) < (lg.entry || 0);
+    let tags = `<button class="v2info" data-info="${i}">i</button>`;
+    if (nx) tags += `<div class="v2rv"><div class="v2face" data-face="${i}"></div><span>FINAL vs<b>${esc(R.n)}</b></span></div>`;
+    if (isCur && !ready) tags += `<div class="v2rib here">YOU ARE HERE</div>`;
+    if (ready) tags += `<div class="v2rib fin">⚔ FINAL READY</div>`;
+    if (won) tags += `<div class="v2stamp">CHAMPIONS</div>`;
     let foot = '';
     if (!open) { const prevPending = i === hi + 1 && LG[hi + 1] && !finalWon(hi);
       foot = `<div class="lockx ch"><div class="st s1"></div><div class="st s2"></div><div class="bd">🔒</div></div><div class="need">${prevPending ? `WIN THE <b>${esc(LG[hi].name)}</b> FINAL TO UNLOCK` : `WIN <b>${Math.max(0, lg.unlock - trophyState.count)}</b> MORE 🏆 TO UNLOCK`}</div>`; }
     else if (ready) foot = `<div class="v2tgt">FINAL: CHASE <b>${finalTarget(i)}</b> OFF <b>${band.balls}</b> · FREE ENTRY</div><button class="v2go red" data-final="${i}">⚔ PLAY THE FINAL</button>`;
-    else foot = `<div class="v2tgt">NEED <b>${leagueTarget(lg)}</b> OFF <b>${band.balls}</b> BALLS · ${band.wickets} WKT${band.wickets === 1 ? '' : 'S'}</div><button class="v2go" data-play="${i}">PLAY · <img src="${ART.coinS}">${fmt(lg.entry)}</button>`;
-    return `<div class="tcard pt${FRAMES.has(i) ? ' tf' : ''}${i === 6 ? ' nopto' : ''} ${open ? (won ? 'done' : 'cur') : 'locked'}" style="--a:${lg.accentColor || '#f0a21a'};--pc:url(assets/ui/leagues/lg_${i}_tall.webp)${FRAMES.has(i) ? `;--fr:url(assets/ui/frames/fr${i}.webp);--frt:url(assets/ui/frames/frt${i}.webp);--frb:url(assets/ui/frames/frb${i}.webp)` : ''}${({3:280,8:300,11:308,13:296})[i] ? ';--pp:' + ({3:280,8:300,11:308,13:296})[i] : ''}">${FRAMES.has(i) ? '<i class="pto"></i>' : ''}<div class="hero" style="background-image:url(${P.bg || ''})"></div><div class="crest"><img class="cup" src="${P.trophy || ART.trophy}" alt=""><img class="ptcup" src="${P.trophy || ART.trophy}" alt="">${BADGES.has(i) ? `<div class="ban bimg"><img src="assets/ui/badges/lb${i}.webp" alt="${esc(lg.name)}"></div>` : `<div class="ban">${esc(lg.name)}</div>`}<div class="rib">LEAGUE ${i}</div></div>
+    else foot = `<div class="v2tgt">NEED <b>${leagueTarget(lg)}</b> OFF <b>${band.balls}</b> BALLS · ${band.wickets} WKT${band.wickets === 1 ? '' : 'S'}</div>${short ? `<button class="v2go gold" data-short="${i}">NEED <img src="${ART.coinS}">${fmt(lg.entry - (career.coins || 0))} MORE</button>` : `<button class="v2go" data-play="${i}">PLAY · <img src="${ART.coinS}">${fmt(lg.entry)}</button>`}`;
+    return `<div data-lg="${i}" class="tcard pt${FRAMES.has(i) ? ' tf' : ''}${i === 6 ? ' nopto' : ''}${ready ? ' fready' : ''}${isCur ? ' iscur' : ''} ${open ? (won ? 'done' : 'cur') : 'locked'}" style="--a:${lg.accentColor || '#f0a21a'};--pc:url(assets/ui/leagues/lg_${i}_tall.webp)${FRAMES.has(i) ? `;--fr:url(assets/ui/frames/fr${i}.webp);--frt:url(assets/ui/frames/frt${i}.webp);--frb:url(assets/ui/frames/frb${i}.webp)` : ''}${({3:280,8:300,11:308,13:296})[i] ? ';--pp:' + ({3:280,8:300,11:308,13:296})[i] : ''}">${FRAMES.has(i) ? '<i class="pto"></i>' : ''}${tags}<div class="hero" style="background-image:url(${P.bg || ''})"></div><div class="crest"><img class="cup" src="${P.trophy || ART.trophy}" alt=""><img class="ptcup" src="${P.trophy || ART.trophy}" alt="">${BADGES.has(i) ? `<div class="ban bimg" style="--bm:url(assets/ui/badges/lb${i}.webp)"><img src="assets/ui/badges/lb${i}.webp" alt="${esc(lg.name)}"></div>` : `<div class="ban">${esc(lg.name)}</div>`}<div class="rib">LEAGUE ${i}</div></div>
       <div class="post" style="background-image:url(${P.bg || ''})"></div>${body}${foot}</div>`;
+  }
+
+  // focus effect, pager, landing sounds for the league cards
+  function deckFocus(o, n) {
+    const rail = o.querySelector('.v2rail'), pg = o.querySelector('.v2pager'); let last = -1, settle = 0, ready = 0;
+    const upd = () => { const mid = rail.scrollLeft + rail.clientWidth / 2; let best = 0, bd = 1e9;
+      [...rail.children].forEach((c, k) => { const cx = c.offsetLeft + c.offsetWidth / 2, d = Math.min(1, Math.abs(cx - mid) / (c.offsetWidth + 14)); c.style.setProperty('--f', d.toFixed(3)); if (Math.abs(cx - mid) < bd) { bd = Math.abs(cx - mid); best = k; } });
+      if (pg) { pg.querySelector('.pn').textContent = best + 1; pg.querySelector('.pbar i').style.width = ((best + 1) / n * 100) + '%'; }
+      if (best !== last) { if (ready && last >= 0) snd('whoosh'); last = best; }
+      clearTimeout(settle); settle = setTimeout(() => { const c = rail.children[best]; if (!c || !ready) return; c.classList.remove('land'); void c.offsetWidth; c.classList.add('land');
+        if (c.classList.contains('locked')) snd('gloves'); else if (c.classList.contains('iscur')) snd('cheer'); }, 160); };
+    rail.addEventListener('scroll', () => requestAnimationFrame(upd), { passive: true }); requestAnimationFrame(upd); setTimeout(() => { ready = 1; }, 700);
+  }
+  function deckGrid(o) {
+    const n = LG.length - 1, hi = highestLeagueIdx();
+    const g = document.createElement('div'); g.className = 'v2grid';
+    g.innerHTML = `<div class="gin"><div class="gh">ALL LEAGUES<button data-gridx="1">✕</button></div><div class="gg">${Array.from({ length: n }, (_, k) => { const i = k + 1, P = PAINT(i), st = finalWon(i) ? 'won' : i <= hi ? 'open' : 'lock';
+      return `<button class="gt ${st}" data-jump="${k}"><img src="${P.trophy || ART.trophy}"><span>${esc(LG[i].name)}</span><i>${st === 'won' ? '✓' : st === 'lock' ? '🔒' : i}</i></button>`; }).join('')}</div></div>`;
+    o.appendChild(g); requestAnimationFrame(() => g.classList.add('on'));
+  }
+  const BALLTXT = { spin: 'turns sharply after pitching', pace: 'comes at you extra fast', swing: 'swings late in the air', slow: 'a deceptive slower ball', yorker: 'aimed right at your toes', bouncer: 'rears up off a length' };
+  function deckInfo(o, i) {
+    const lg = LG[i], band = matchBand(Math.max(1, i)), R = rival(i), nx = LG[i + 1], wT = (lg.winTrophy || 1) + 1, lT = trophyLossFor(i), fr = finalReward(i), b = R.ball || ['Signature ball', 'spin'];
+    const sh = document.createElement('div'); sh.className = 'v2sheet';
+    sh.innerHTML = `<div class="sin"><div class="gh">${esc(lg.name)}<button data-gridx="1">✕</button></div>
+      <div class="ln"><span>Entry</span><b><img src="${ART.coinS}">${fmt(lg.entry)}</b></div>
+      <div class="ln"><span>Your chase</span><b>${leagueTarget(lg)} off ${band.balls} balls · ${band.wickets} wkt${band.wickets === 1 ? '' : 's'}</b></div>
+      <div class="ln"><span>Trophies</span><b>Win +${wT} · Lose −${lT}</b></div>
+      <div class="ln"><span>Every win</span><b>${fmt(lg.winCoins)} coins + ${bagNm(lg.winChest || 'bronze')} bag</b></div>
+      ${nx ? `<div class="ln"><span>Reach the Final</span><b>${nx.unlock} 🏆</b></div>
+      <div class="ln"><span>The Final</span><b>Beat ${esc(R.n)} · chase ${finalTarget(i)} · free entry</b></div>
+      <div class="ln"><span>${esc(b[0])}</span><b>Every 3rd ball ${BALLTXT[b[1]] || 'is special'}</b></div>
+      <div class="ln"><span>Win the Final</span><b>${fmt(fr.coins)} coins · ${fr.gems} gems · ${bagNm(fr.bag)} bag · the cup</b></div>` : ''}</div>`;
+    o.appendChild(sh); requestAnimationFrame(() => sh.classList.add('on'));
   }
   function openDeck(focus) {
     const o = ov('v2deck'), n = LG.length - 1;
-    o.innerHTML = `<div class="bgx"></div>${topBar('LEAGUES')}<div class="v2rail">${Array.from({ length: n }, (_, k) => leagueCard(k + 1)).join('')}</div><div class="v2dots"></div>`;
-    o.classList.add('show'); fillFaces(o); railDots(o);
+    o.innerHTML = `<div class="bgx"></div>${topBar('LEAGUES')}<div class="v2rail">${Array.from({ length: n }, (_, k) => leagueCard(k + 1)).join('')}</div><button class="v2pager" data-pager="1"><b>LEAGUE <span class="pn">1</span> OF ${n}</b><span class="pbar"><i></i></span><em>▦</em></button>`;
+    { const pills = o.querySelector('.v2top .pill'); if (pills) pills.insertAdjacentHTML('beforebegin', `<span class="pill tro">🏆 ${fmt(trophyState.count)}</span>`); }
+    o.classList.add('show'); fillFaces(o); deckFocus(o, n);
     { const rail = o.querySelector('.v2rail'), bg = o.querySelector('.bgx'); const setBg = () => { const w = rail.children[0] ? rail.children[0].getBoundingClientRect().width + 14 : 1, c = rail.children[Math.round(rail.scrollLeft / w)]; if (c) { bg.style.setProperty('--dk', c.style.getPropertyValue('--pc')); const r = c.getBoundingClientRect(), bh = bg.clientHeight * 1.16, sc = bh / 1376, cr = 1047 * sc; bg.style.setProperty('--bgy', Math.round(r.bottom - 6 - cr) + 'px'); bg.style.setProperty('--cw', Math.round(608 * sc) + 'px'); } };
       rail.addEventListener('scroll', () => requestAnimationFrame(setBg), { passive: true }); setTimeout(setBg, 60); }
     if (!window._v2NavHook) { window._v2NavHook = 1; const bn = document.getElementById('bottomNav'); if (bn) bn.addEventListener('click', () => { const d = document.getElementById('v2deck'); if (d) d.classList.remove('show'); }, true); }
@@ -392,6 +463,12 @@
     const inV2 = t.closest('.v2o'); if (!inV2) return;
     let b;
     if ((b = t.closest('[data-v2back]'))) { tap(); const w = b.dataset.v2back; if (w === 'deck') { closeAll(); openDeck(); } else if (w === 'result') { closeAll(); } else goHome(); return; }
+    if ((b = t.closest('[data-gridx]'))) { tap(); const w = b.closest('.v2grid,.v2sheet'); if (w) w.remove(); return; }
+    if ((b = t.closest('[data-jump]'))) { tap(); const d = b.closest('.v2o'), w = b.closest('.v2grid'); if (w) w.remove(); const rail = d.querySelector('.v2rail'), c = rail.children[+b.dataset.jump]; if (c) rail.scrollTo({ left: c.offsetLeft - (rail.clientWidth - c.clientWidth) / 2, behavior: 'smooth' }); return; }
+    if ((b = t.closest('[data-pager]'))) { tap(); deckGrid(b.closest('.v2o')); return; }
+    if ((b = t.closest('[data-info]'))) { tap(); deckInfo(b.closest('.v2o'), +b.dataset.info); return; }
+    if ((b = t.closest('[data-short]'))) { tap(); closeAll(); try { const sb = document.getElementById('shopNavBtn'); if (sb) sb.click(); } catch (e) {} return; }
+    if ((b = t.closest('.tcard.locked'))) { const lx = b.querySelector('.lockx'), nd = b.querySelector('.need'); [lx, nd].forEach(el => { if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); } }); snd('gloves'); try { hapticTap(); } catch (e) {} return; }
     if ((b = t.closest('[data-play]'))) { tap(); const i = +b.dataset.play; closeAll(); window._v2NoDeck = true; try { playLeague(i); } finally { window._v2NoDeck = false; } return; }
     if ((b = t.closest('[data-final]'))) { tap(); openVs(+b.dataset.final); return; }
     if ((b = t.closest('[data-walk]'))) { tap(); playFinal(+b.dataset.walk); return; }
