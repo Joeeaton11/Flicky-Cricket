@@ -294,6 +294,31 @@
   #v2deck .v2pz2 .row span{font-size:12.5px}#v2deck .v2pz2 h5{font-size:11px;white-space:nowrap;letter-spacing:.03em}#v2deck .v2pz2 .row img{height:25px}#v2deck .v2pz2 em{font-size:12px}
   .tcard.pt.tf::after{border:0!important;border-image:none!important;--fw:calc(100cqw + 2 * var(--pad,22px));background:var(--ft) center top/100% auto no-repeat,var(--fb) center bottom/100% auto no-repeat,var(--fm) center calc(var(--fw) * var(--fr1))/100% calc(100% - var(--fw) * (var(--fr1) + var(--fr2))) no-repeat}
   .tcard.pt.tf{overflow:visible}.tcard.pt.tf::after{top:calc(var(--fw) * var(--ftop,-.06) + 3px);bottom:calc(var(--fw) * var(--fbot,-.06) + 3px)}.tcard.pt.tf{padding-bottom:34px}.tcard.pt.tf[data-lg="6"]{--pad:30px;--ftop:-.151;--fbot:-.038}.tcard.pt.tf[data-lg="16"]{--pad:31px;--ftop:-.102;--fbot:-.03}.v2go.gold{white-space:nowrap;font-size:clamp(14px,4.6vw,20px);padding:0 6px}.v2go.gold img{height:20px}
+  .tcard .lockx.st{position:absolute;left:0;right:0;top:3%;bottom:64px;display:flex;justify-content:center;pointer-events:none;z-index:8}
+  .tcard .lockx.st .stk{position:relative;height:100%;aspect-ratio:768/1376;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45))}
+  .tcard .lockx.st img{position:absolute;inset:0;width:100%;height:100%}
+  .lockx.st .lock{transform-origin:50% 14.5%;animation:lkSway 3.4s ease-in-out infinite}
+  .lockx.st .bail_l{transform-origin:12% 14%}.lockx.st .bail_r{transform-origin:88% 14%}
+  .lockx.st .stump_l,.lockx.st .stump_m,.lockx.st .stump_r{transform-origin:50% 100%}
+  @keyframes lkSway{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+  #v2deck .tcard.land .lockx.st .lock{animation:lkSwing 1.5s ease-out,lkSway 3.4s ease-in-out 1.5s infinite}
+  @keyframes lkSwing{0%{transform:rotate(0)}15%{transform:rotate(14deg)}35%{transform:rotate(-10deg)}55%{transform:rotate(6deg)}75%{transform:rotate(-3deg)}100%{transform:rotate(0)}}
+  .lockx.st.shake{animation:none!important}.lockx.st.shake .lock{animation:lkJig .5s}.lockx.st.shake .bail_l{animation:blJig .4s}.lockx.st.shake .bail_r{animation:brJig .4s}
+  @keyframes lkJig{20%{transform:rotate(-12deg)}45%{transform:rotate(10deg)}70%{transform:rotate(-5deg)}100%{transform:rotate(0)}}
+  @keyframes blJig{30%{transform:translateY(-4%) rotate(-6deg)}60%{transform:translateY(0) rotate(3deg)}}@keyframes brJig{30%{transform:translateY(-4%) rotate(6deg)}60%{transform:translateY(0) rotate(-3deg)}}
+  .lockx.st .ball{position:absolute;width:17%;aspect-ratio:1;left:41.5%;top:30%;border-radius:50%;opacity:0;background:radial-gradient(circle at 35% 30%,#ff8a7a,#c8161b 45%,#6e0508);box-shadow:inset 0 0 0 2px rgba(0,0,0,.15)}
+  .lockx.st .ball::after{content:'';position:absolute;inset:0;border-radius:50%;border-left:2px dashed rgba(255,240,220,.9);transform:translateX(42%)}
+  .lockx.st.open .ball{animation:bFly .45s cubic-bezier(.3,.1,.6,1) forwards}
+  @keyframes bFly{0%{opacity:1;transform:translate(-320%,180%) scale(.6)}100%{opacity:1;transform:translate(0,0) scale(1)}}
+  .lockx.st.open .stk>*{animation-fill-mode:forwards!important}
+  .lockx.st.open .bail_l{animation:blOff .9s .42s cubic-bezier(.2,.6,.4,1) forwards}.lockx.st.open .bail_r{animation:brOff .9s .42s cubic-bezier(.2,.6,.4,1) forwards}
+  @keyframes blOff{to{transform:translate(-55%,-35%) rotate(-280deg);opacity:0}}@keyframes brOff{to{transform:translate(55%,-40%) rotate(300deg);opacity:0}}
+  .lockx.st.open .stump_m{animation:smOff .8s .42s ease-out forwards}.lockx.st.open .stump_l{animation:slOff .8s .46s ease-out forwards}.lockx.st.open .stump_r{animation:srOff .8s .46s ease-out forwards}
+  @keyframes smOff{to{transform:translateY(6%) rotate(14deg);opacity:0}}@keyframes slOff{to{transform:rotate(-38deg) translateX(-20%);opacity:0}}@keyframes srOff{to{transform:rotate(38deg) translateX(20%);opacity:0}}
+  .lockx.st.open .lock{animation:lkDrop .9s .42s cubic-bezier(.5,0,.8,.6) forwards}@keyframes lkDrop{30%{transform:rotate(-18deg) scale(1.1)}100%{transform:translateY(70%) rotate(25deg) scale(.8);opacity:0}}
+  .lockx.st.open .ball{animation:bFly .45s cubic-bezier(.3,.1,.6,1) forwards,bOut .6s .45s ease-in forwards}@keyframes bOut{to{opacity:0;transform:translate(260%,-60%) scale(.8)}}
+  .tcard.unlocking .need{transition:opacity .4s 1.2s}.tcard.unlocking .lockx.open~.need{opacity:0}
+  .tcard.unlocking{filter:none}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}#v2deck .v2rail{padding-top:52px!important}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
@@ -334,13 +359,23 @@
     if (won) tags += `<div class="v2stamp">CHAMPIONS</div>`;
     let foot = '';
     if (!open) { const prevPending = i === hi + 1 && LG[hi + 1] && !finalWon(hi);
-      foot = `<div class="lockx ch"><div class="st s1"></div><div class="st s2"></div><div class="bd">🔒</div></div><div class="need">${prevPending ? `WIN THE <b>${esc(LG[hi].name)}</b> FINAL TO UNLOCK` : `WIN <b>${Math.max(0, lg.unlock - trophyState.count)}</b> MORE 🏆 TO UNLOCK`}</div>`; }
+      foot = `${lockStumps()}<div class="need">${prevPending ? `WIN THE <b>${esc(LG[hi].name)}</b> FINAL TO UNLOCK` : `WIN <b>${Math.max(0, lg.unlock - trophyState.count)}</b> MORE 🏆 TO UNLOCK`}</div>`; }
     else if (ready) foot = `<div class="v2tgt">FINAL: CHASE <b>${finalTarget(i)}</b> OFF <b>${band.balls}</b> · FREE ENTRY</div><button class="v2go red" data-final="${i}">⚔ PLAY THE FINAL</button>`;
     else foot = `${short ? `<button class="v2go gold" data-short="${i}">NEED <img src="${ART.coinS}">${fmt(lg.entry - (career.coins || 0))} MORE</button>` : `<button class="v2go" data-play="${i}">PLAY · <img src="${ART.coinS}">${fmt(lg.entry)}</button>`}`;
     return `<div data-lg="${i}" class="tcard pt${FRAMES.has(i) ? ' tf' : ''}${i === 6 ? ' nopto' : ''}${ready ? ' fready' : ''}${isCur ? ' iscur' : ''} ${open ? (won ? 'done' : 'cur') : 'locked'}" style="--a:${lg.accentColor || '#f0a21a'};--pc:url(assets/ui/leagues/lg_${i}_tall.webp)${FRAMES.has(i) ? `;--ft:url(assets/ui/frames/f${i}t.webp);--fm:url(assets/ui/frames/f${i}m.webp);--fb:url(assets/ui/frames/f${i}b.webp);--fr1:${FDIM[i][0]};--fr2:${FDIM[i][1]}` : ''}${({3:280,8:300,11:308,13:296})[i] ? ';--pp:' + ({3:280,8:300,11:308,13:296})[i] : ''}">${tags}<div class="hero" style="background-image:url(${P.bg || ''})"></div><div class="crest"><img class="cup" src="${P.trophy || ART.trophy}" alt=""><img class="ptcup" src="${P.trophy || ART.trophy}" alt="">${BADGES.has(i) ? `<div class="ban bimg" style="--bm:url(assets/ui/badges/lb${i}.webp)"><img src="assets/ui/badges/lb${i}.webp" alt="${esc(lg.name)}"></div>` : `<div class="ban">${esc(lg.name)}</div>`}<div class="rib">LEAGUE ${i}</div></div>
       <div class="post" style="background-image:url(${P.bg || ''})"></div>${body}${foot}</div>`;
   }
 
+
+  const LK = n => `<img class="${n}" src="assets/ui/lock/${n}.webp" alt="">`;
+  const lockStumps = () => `<div class="lockx st"><div class="stk">${LK('stump_l')}${LK('stump_r')}${LK('stump_m')}${LK('bail_l')}${LK('bail_r')}${LK('lock')}<i class="ball"></i></div></div>`;
+  function unlockFx(card, done) {
+    if (!card) return done && done();
+    let lx = card.querySelector('.lockx.st'); if (!lx) { card.insertAdjacentHTML('beforeend', lockStumps()); lx = card.querySelector('.lockx.st'); card.classList.add('unlocking'); }
+    snd('whoosh'); setTimeout(() => { snd('stumps'); try { hapticTap(); } catch (e) {} }, 420); setTimeout(() => snd('cheer'), 900);
+    lx.classList.add('open'); setTimeout(() => { lx.remove(); card.classList.remove('unlocking', 'locked'); done && done(); }, 1900);
+  }
+  window.v2UnlockFx = i => { const c = document.querySelector(`#v2deck .tcard[data-lg="${i}"]`); unlockFx(c); };
   // focus effect, pager, landing sounds for the league cards
   function deckFocus(o, n) {
     const rail = o.querySelector('.v2rail'), pg = o.querySelector('.v2pager'); let last = -1, settle = 0, ready = 0;
@@ -379,6 +414,7 @@
     o.innerHTML = `<div class="bgx"></div>${topBar('LEAGUES')}<div class="v2rail">${Array.from({ length: n }, (_, k) => leagueCard(k + 1)).join('')}</div><button class="v2pager" data-pager="1"><b>LEAGUE <span class="pn">1</span> OF ${n}</b><span class="pbar"><i></i></span><em><img src="${ART.trophy}" alt="">▸</em></button>`;
     { const pills = o.querySelector('.v2top .pill'); if (pills) pills.insertAdjacentHTML('beforebegin', `<span class="pill tro">🏆 ${fmt(trophyState.count)}</span>`); }
     o.classList.add('show'); fillFaces(o); deckFocus(o, n);
+    { const v = sec('v2deck'), hi = highestLeagueIdx(); if (v.seenHi && hi > v.seenHi) { const c = o.querySelector(`.tcard[data-lg="${hi}"]`); if (c) { c.classList.add('locked'); c.insertAdjacentHTML('beforeend', lockStumps()); c.classList.add('unlocking'); setTimeout(() => unlockFx(c), 900); } } v.seenHi = hi; save(); }
     { const rail = o.querySelector('.v2rail'), bg = o.querySelector('.bgx'); const setBg = () => { const w = rail.children[0] ? rail.children[0].getBoundingClientRect().width + 14 : 1, c = rail.children[Math.round(rail.scrollLeft / w)]; if (c) { bg.style.setProperty('--dk', c.style.getPropertyValue('--pc')); const r = c.getBoundingClientRect(), bh = bg.clientHeight * 1.16, sc = bh / 1376, cr = 1047 * sc; bg.style.setProperty('--bgy', Math.round(Math.max(-0.16 * bg.clientHeight, Math.min(0, r.bottom - 6 - cr))) + 'px'); bg.style.setProperty('--cw', Math.round(608 * sc) + 'px'); } };
       rail.addEventListener('scroll', () => requestAnimationFrame(setBg), { passive: true }); setTimeout(setBg, 60); }
     if (!window._v2NavHook) { window._v2NavHook = 1; const bn = document.getElementById('bottomNav'); if (bn) bn.addEventListener('click', () => { const d = document.getElementById('v2deck'); if (d) d.classList.remove('show'); }, true); }
