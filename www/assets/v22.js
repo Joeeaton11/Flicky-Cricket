@@ -364,6 +364,15 @@
   .lockx.st.open .ext{animation:smOff .8s .42s ease-out forwards}
   .tcard.pt.locked .lockx.st{overflow:visible}
   #v2deck .v2rail{bottom:0!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 128px)!important}
+  
+  .tcard.pt.locked .v2prz,.tcard.pt.locked .v2stk:not(.lkneed){filter:grayscale(1) brightness(.6) blur(2.5px)!important}
+  #v2deck .tcard.pt{transition:translate .35s cubic-bezier(.3,1.3,.5,1),transform .15s,filter .15s}
+  .tcard .lockx.st img.padb{inset:auto;left:36.3%;top:54.6%;width:28%;height:auto;transform-origin:50% 0;scale:1.3;animation:pbBob 3.4s ease-in-out infinite}
+  @keyframes pbBob{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg) translateY(1%)}}
+  #v2deck .tcard.land .lockx.st img.padb{animation:pbSwing 1.5s ease-out,pbBob 3.4s ease-in-out 1.5s infinite}
+  @keyframes pbSwing{15%{transform:rotate(8deg)}35%{transform:rotate(-6deg)}55%{transform:rotate(3deg)}75%{transform:rotate(-1deg)}100%{transform:rotate(0)}}
+  .lockx.st.shake img.padb{animation:pbJig .5s!important}@keyframes pbJig{20%{transform:translateY(3%) rotate(-7deg)}45%{transform:translateY(-1%) rotate(6deg)}70%{transform:rotate(-2deg)}}
+  .lockx.st.open img.padb{animation:lkDrop .9s .42s cubic-bezier(.5,0,.8,.6) forwards!important}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}#v2deck .v2rail{padding-top:52px!important}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
@@ -415,7 +424,7 @@
 
 
   const LK = n => `<img class="${n}" src="assets/ui/lock/${n}.webp" alt="">`;
-  const lockStumps = () => `<div class="lockx st"><div class="stk">${LK('stump_l')}${LK('stump_r')}${LK('stump_m')}${LK('bail_l')}${LK('bail_r')}${LK('lock')}<i class="ball"></i><i class="ext"></i></div></div>`;
+  const lockStumps = () => `<div class="lockx st"><div class="stk">${LK('stump_l')}${LK('stump_r')}${LK('stump_m')}${LK('bail_l')}${LK('bail_r')}${LK('lock')}<img class="padb" src="assets/ui/lock/padbody.webp" alt=""><i class="ball"></i><i class="ext"></i></div></div>`;
   function unlockFx(card, done) {
     if (!card) return done && done();
     let lx = card.querySelector('.lockx.st'); if (!lx) { card.insertAdjacentHTML('beforeend', lockStumps()); lx = card.querySelector('.lockx.st'); card.classList.add('unlocking'); }
