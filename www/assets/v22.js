@@ -69,7 +69,7 @@
     rivalFace(v === 'me' ? 'me' : +v, k).then(u => { if (u) el.style.backgroundImage = `url(${u})`; }); });
 
   // ── 2. FINALS: a full league bar unlocks that league's Final; winning it lifts the cup and opens the next league
-  const FRAMES = new Set([6, 16]), BADGES = new Set([6, 16]), FDIM = { 6: [0.289, 0.2475], 16: [0.2241, 0.2241] };
+  const FRAMES = new Set([6, 16]), BADGES = new Set([1, 6, 10, 16, 19]), FDIM = { 6: [0.289, 0.2475], 16: [0.2241, 0.2241] };
   function F() { const f = sec('finals'); if (!f.won) { f.won = {}; f.ready = {}; const hi = highestLeagueIdx(); for (let i = 1; i < hi; i++) f.won[i] = 1; save(); } return f; }
   const finalWon = i => !!F().won[i], finalReady = i => !!F().ready[i] && !F().won[i];
   const cupsWon = () => Object.keys(F().won).filter(k => +k >= 1).length;
