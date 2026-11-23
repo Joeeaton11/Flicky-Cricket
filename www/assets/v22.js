@@ -133,11 +133,11 @@
   .v2o{position:fixed;inset:0;z-index:9000;display:none;overflow:hidden;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;background:#071022}
   .v2o.show{display:block}
   .v2o .bgx{position:absolute;inset:-20px;background:url(assets/ui/web/hero.webp) center/cover;filter:blur(5px) brightness(.5)}
-  .v2top{position:relative;display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 12px) 12px 0}
+  .v2top{position:relative;display:flex;align-items:center;gap:8px;padding:max(env(safe-area-inset-top,0px),12px) 12px 0}
   .v2top .bk{width:42px;height:42px;border-radius:50%;border:3px solid #FFC93A;background:#14203a;color:#fff;font:30px/1 'Lilita One',sans-serif;cursor:pointer;flex:none}
   .v2top h1{flex:1;min-width:0;margin:0;font-weight:400;font-size:clamp(16px,5.2vw,24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.04em;text-shadow:0 3px 0 #050A14}
   .v2top .pill{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:14px;border:3px solid #050A14;background:#14203a;font-size:16px}.v2top .pill img{height:20px}
-  .v2rail{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 70px);bottom:calc(env(safe-area-inset-bottom,0px) + 34px);display:flex;gap:14px;overflow-x:auto;overflow-y:auto;scroll-snap-type:x mandatory;padding:14px 9vw 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .v2rail{position:absolute;left:0;right:0;top:calc(max(env(safe-area-inset-top,0px),12px) + 58px);bottom:calc(env(safe-area-inset-bottom,0px) + 34px);display:flex;gap:14px;overflow-x:auto;overflow-y:auto;scroll-snap-type:x mandatory;padding:14px 9vw 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .v2rail::-webkit-scrollbar{display:none}
   .v2dots{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);display:flex;justify-content:center;gap:6px}
   .v2dots i{width:7px;height:7px;border-radius:50%;background:#55607a}.v2dots i.on{width:18px;border-radius:4px;background:#FFC93A}
