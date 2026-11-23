@@ -160,7 +160,7 @@
   #v2deck .v2top .pill{background:rgba(255,255,255,.26);border:2px solid rgba(255,255,255,.7);backdrop-filter:blur(8px);text-shadow:0 2px 0 rgba(0,0,0,.45)}
   #v2deck .v2top .bk{background:linear-gradient(#ffd75a,#f0a21a);color:#3a2000;border-color:#fff;text-shadow:none}
   #v2deck .v2top h1{text-shadow:0 2px 0 #0b3a66,0 0 8px rgba(0,0,0,.35)}
-  #v2deck .bgx{background-size:auto 116%!important;background-position:center var(--bgy,0px)!important}
+  #v2deck .bgx{background:url(assets/ui/deck_sky.webp) center top/100% 100% no-repeat!important;overflow:hidden}#v2deck .bgx::before,#v2deck .bgx::after{content:'';position:absolute;left:0;right:0;top:0;bottom:0}#v2deck .bgx::before{left:calc(-1 * var(--cw,700px));width:calc(100% + 3 * var(--cw,700px));background:url(assets/ui/deck_clouds.webp) 0 var(--bgy,0px)/var(--cw,700px) auto repeat-x;animation:v2clouds 120s linear infinite}#v2deck .bgx::after{background:url(assets/ui/deck_ground.webp) center var(--bgy,0px)/auto 116% no-repeat}@keyframes v2clouds{to{transform:translateX(var(--cw,700px))}}
   .v2pz2 h5{font-size:11.5px}.v2pz2 .row span{font-size:12.5px}.v2pz2 .row img{height:26px}.v2pz2 em{font-size:12px}.v2pz2 em img{height:14px!important}.v2pz2 .row{gap:6px}
   .tcard.pt.tf.nopto .pto{background:var(--frb) bottom center/auto 34px no-repeat}
   .v2pz2{display:flex;gap:0;padding:4px 4px 5px}.v2pz2 .g{flex:0 0 38%;text-align:center}.v2pz2 .g.f{flex:1;border-left:2px solid rgba(255,215,120,.25)}
@@ -296,7 +296,7 @@
     const o = ov('v2deck'), n = LG.length - 1;
     o.innerHTML = `<div class="bgx"></div>${topBar('LEAGUES')}<div class="v2rail">${Array.from({ length: n }, (_, k) => leagueCard(k + 1)).join('')}</div><div class="v2dots"></div>`;
     o.classList.add('show'); fillFaces(o); railDots(o);
-    { const rail = o.querySelector('.v2rail'), bg = o.querySelector('.bgx'); const setBg = () => { const w = rail.children[0] ? rail.children[0].getBoundingClientRect().width + 14 : 1, c = rail.children[Math.round(rail.scrollLeft / w)]; if (c) { bg.style.setProperty('--dk', c.style.getPropertyValue('--pc')); const r = c.getBoundingClientRect(), bh = bg.clientHeight * 1.16, sc = bh / 1376, cr = 1047 * sc; bg.style.setProperty('--bgy', Math.round(r.bottom - 6 - cr) + 'px'); } };
+    { const rail = o.querySelector('.v2rail'), bg = o.querySelector('.bgx'); const setBg = () => { const w = rail.children[0] ? rail.children[0].getBoundingClientRect().width + 14 : 1, c = rail.children[Math.round(rail.scrollLeft / w)]; if (c) { bg.style.setProperty('--dk', c.style.getPropertyValue('--pc')); const r = c.getBoundingClientRect(), bh = bg.clientHeight * 1.16, sc = bh / 1376, cr = 1047 * sc; bg.style.setProperty('--bgy', Math.round(r.bottom - 6 - cr) + 'px'); bg.style.setProperty('--cw', Math.round(608 * sc) + 'px'); } };
       rail.addEventListener('scroll', () => requestAnimationFrame(setBg), { passive: true }); setTimeout(setBg, 60); }
     if (!window._v2NavHook) { window._v2NavHook = 1; const bn = document.getElementById('bottomNav'); if (bn) bn.addEventListener('click', () => { const d = document.getElementById('v2deck'); if (d) d.classList.remove('show'); }, true); }
     const f = focus != null ? focus : selectedLeagueIdx(); requestAnimationFrame(() => scrollTo(o, Math.max(0, f - 1)));
