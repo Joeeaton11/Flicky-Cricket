@@ -380,7 +380,7 @@
   .tcard.pt.locked .lockx.st.open .chn,.lockx.st.open .chn{animation:chDrop .9s .42s cubic-bezier(.5,0,.8,.6) forwards!important}
   @keyframes chDrop{25%{transform:translateY(-3%) rotate(-6deg)}100%{transform:translateY(60%) rotate(18deg);opacity:0}}
   .tcard.pt.locked .lockx.st.open .bail_l{animation:blOff .9s .42s cubic-bezier(.2,.6,.4,1) forwards!important}.tcard.pt.locked .lockx.st.open .bail_r{animation:brOff .9s .42s cubic-bezier(.2,.6,.4,1) forwards!important}
-  .tcard .lockx.st .ball,.tcard.pt.locked .lockx.st .ball{width:24%!important;left:38%!important;top:40%!important;background:radial-gradient(circle at 35% 30%,#fff,#f1efe6 45%,#b9b4a6)!important;box-shadow:0 3px 6px rgba(0,0,0,.35)}
+  .tcard .lockx.st .ball,.tcard.pt.locked .lockx.st .ball{width:34%!important;left:33%!important;top:36%!important;background:radial-gradient(circle at 35% 30%,#fff,#f1efe6 45%,#b9b4a6)!important;box-shadow:0 3px 6px rgba(0,0,0,.35)}
   .tcard .lockx.st .ball::after{border-left-color:rgba(60,60,70,.55)!important}
   /* clean unlock sequence */
   .tcard .lockx.st.open .stk>*,.tcard .lockx.st.open .chn,.tcard .lockx.st.open .ext{animation:none!important}
