@@ -185,7 +185,7 @@
   @keyframes v2shake{20%{transform:translateX(-7px) rotate(-2deg)}40%{transform:translateX(6px) rotate(2deg)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
   .v2go.gold img{height:22px}
   #v2deck .v2top .pill.tro{color:#fff}#v2deck .v2top .pill.tro~.pill+.pill{display:none}.tcard.pt .v2stk .v2bar.fin span::before,.tcard.pt .v2stk .v2bar.done span::before{content:''}
-  .v2pager{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 98px);display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:14px;border:2px solid rgba(255,255,255,.7);background:rgba(10,30,20,.45);backdrop-filter:blur(6px);color:#fff;font:13px 'Lilita One',sans-serif;letter-spacing:.05em;z-index:5}
+  .v2pager{z-index:6!important;position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 98px);display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:14px;border:2px solid rgba(255,255,255,.7);background:rgba(10,30,20,.45);backdrop-filter:blur(6px);color:#fff;font:13px 'Lilita One',sans-serif;letter-spacing:.05em;z-index:5}
   .v2pager b{font-weight:400;white-space:nowrap}.v2pager .pbar{width:70px;height:8px;border-radius:4px;background:rgba(0,0,0,.4);overflow:hidden}.v2pager .pbar i{display:block;height:100%;background:linear-gradient(90deg,#ffd75a,#f0a21a)}.v2pager em{font-style:normal;font-size:16px}
   .v2grid,.v2sheet{position:absolute;inset:0;z-index:50;background:rgba(5,12,28,.7);backdrop-filter:blur(6px);opacity:0;transition:opacity .2s;display:flex;align-items:flex-end}
   .v2grid.on,.v2sheet.on{opacity:1}
@@ -332,6 +332,19 @@
   .tcard.pt.locked .crest .ban{visibility:hidden}.v2lockp .lnm{font-size:13px;letter-spacing:.06em;color:#ffd75a;margin-bottom:-2px}
   .tcard.pt.locked{overflow:visible}.tcard.pt.locked .lockx.st{z-index:2}.tcard.pt.locked .v2lockp{position:relative;z-index:5}
   .tcard.pt.locked .lockx.st .stk{filter:drop-shadow(0 8px 5px rgba(0,0,0,.5))}
+  .tcard.pt.locked{overflow:hidden!important}
+  .tcard.pt.locked .lockx.st{top:calc(var(--ins,9px) + 2%)!important;bottom:auto!important;align-items:flex-start!important;z-index:3!important}
+  .tcard.pt.locked .lockx.st .stk{aspect-ratio:auto!important;width:78%;filter:drop-shadow(0 8px 8px rgba(0,0,0,.55))}
+  .tcard.pt.locked .lockx.st .lock{transform-origin:50% 14.5%!important;animation:lkSway1 3.4s ease-in-out infinite!important}
+  .tcard.pt.locked .lockx.st .bail_l{transform-origin:12% 14%!important}.tcard.pt.locked .lockx.st .bail_r{transform-origin:88% 14%!important}
+  @keyframes lkSway1{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+  #v2deck .tcard.pt.locked.land .lockx.st .lock{animation:lkSwing1 1.5s ease-out,lkSway1 3.4s ease-in-out 1.5s infinite!important}
+  @keyframes lkSwing1{15%{transform:rotate(14deg)}35%{transform:rotate(-10deg)}55%{transform:rotate(6deg)}75%{transform:rotate(-3deg)}100%{transform:rotate(0)}}
+  .tcard.pt.locked .lockx.st.shake .lock{animation:lkJig1 .5s!important}@keyframes lkJig1{20%{transform:rotate(-12deg)}45%{transform:rotate(10deg)}70%{transform:rotate(-5deg)}100%{transform:rotate(0)}}
+  .tcard.pt.locked .lockx.st .ball{width:17%!important;left:41.5%!important;top:30%!important}
+  .tcard.pt.locked .ptcup{opacity:.9}
+  .tcard.pt.locked .lockx.st::after{display:none}
+  .tcard.pt.locked .lockx.st .lock{left:28%!important;right:28%!important;width:44%!important}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}#v2deck .v2rail{padding-top:52px!important}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
@@ -384,7 +397,7 @@
   }
 
 
-  const LK = n => `<img class="${n}" src="assets/ui/lock/${n}.webp" alt="">`;
+  const LK = n => `<img class="${n}" src="assets/ui/lock1/${n}.webp" alt="">`;
   const lockStumps = () => `<div class="lockx st"><div class="stk">${LK('stump_l')}${LK('stump_r')}${LK('stump_m')}${LK('bail_l')}${LK('bail_r')}${LK('lock')}<i class="ball"></i></div></div>`;
   function unlockFx(card, done) {
     if (!card) return done && done();
@@ -394,7 +407,7 @@
   }
   window.v2UnlockFx = i => { const c = document.querySelector(`#v2deck .tcard[data-lg="${i}"]`); unlockFx(c); };
   // focus effect, pager, landing sounds for the league cards
-  function fitLocks(o) { o.querySelectorAll('.tcard.pt.locked').forEach(c => { const lx = c.querySelector('.lockx.st'); if (!lx) return; const h = c.offsetHeight - lx.offsetTop + Math.round(c.offsetWidth * 0.2); if (h > 40) lx.style.height = h + 'px'; }); }
+  function fitLocks(o) { o.querySelectorAll('.tcard.pt.locked').forEach(c => { const lx = c.querySelector('.lockx.st'); if (!lx) return; const pn = c.querySelector('.v2lockp'); const h = pn ? pn.offsetTop - lx.offsetTop + 6 : 0; if (h > 40) lx.style.height = h + 'px'; }); }
   function deckFocus(o, n) { requestAnimationFrame(() => fitLocks(o)); setTimeout(() => fitLocks(o), 400);
     const rail = o.querySelector('.v2rail'), pg = o.querySelector('.v2pager'); let last = -1, settle = 0, ready = 0;
     const upd = () => { const mid = rail.scrollLeft + rail.clientWidth / 2; let best = 0, bd = 1e9;
