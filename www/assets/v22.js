@@ -70,7 +70,7 @@
 
   // ── 2. FINALS: a full league bar unlocks that league's Final; winning it lifts the cup and opens the next league
   const kfmt = n => n >= 1000 ? (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'K' : fmt(n);
-  const FRAMES = new Set([1, 6, 16, 18, 21]), BADGES = new Set([...Array(27).keys()].map(i => i + 1)), FDIM = { 1: [0.2929, 0.1771], 6: [0.289, 0.2475], 16: [0.2241, 0.2241], 18: [0.28, 0.2886], 21: [0.2414, 0.26] };
+  const FRAMES = new Set([1, 6, 16, 18, 21]), BADGES = new Set([...Array(27).keys()].map(i => i + 1)), FDIM = { 1: [0.3157, 0.2086], 6: [0.289, 0.2475], 16: [0.2241, 0.2241], 18: [0.2629, 0.2671], 21: [0.2414, 0.26] };
   function F() { const f = sec('finals'); if (!f.won) { f.won = {}; f.ready = {}; const hi = highestLeagueIdx(); for (let i = 1; i < hi; i++) f.won[i] = 1; save(); } return f; }
   const finalWon = i => !!F().won[i], finalReady = i => !!F().ready[i] && !F().won[i];
   const cupsWon = () => Object.keys(F().won).filter(k => +k >= 1).length;
