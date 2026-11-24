@@ -70,7 +70,7 @@
 
   // ── 2. FINALS: a full league bar unlocks that league's Final; winning it lifts the cup and opens the next league
   const kfmt = n => n >= 1000 ? (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'K' : fmt(n);
-  const FRAMES = new Set([1, 6, 16, 18, 21]), BADGES = new Set([...Array(27).keys()].map(i => i + 1)), FDIM = { 1: [0.27, 0.2443], 6: [0.289, 0.2475], 16: [0.2241, 0.2241], 18: [0.4243, 0.2443], 21: [0.2114, 0.1857] };
+  const FRAMES = new Set([1, 6, 16, 18, 21]), BADGES = new Set([...Array(27).keys()].map(i => i + 1)), FDIM = { 1: [0.2086, 0.1357], 6: [0.289, 0.2475], 16: [0.2241, 0.2241], 18: [0.2, 0.1357], 21: [0.1457, 0.0971] };
   function F() { const f = sec('finals'); if (!f.won) { f.won = {}; f.ready = {}; const hi = highestLeagueIdx(); for (let i = 1; i < hi; i++) f.won[i] = 1; save(); } return f; }
   const finalWon = i => !!F().won[i], finalReady = i => !!F().ready[i] && !F().won[i];
   const cupsWon = () => Object.keys(F().won).filter(k => +k >= 1).length;
@@ -294,7 +294,7 @@
   @media (max-height:620px){.tcard.pt{--ph:84}.tcard.pt .v2prz .row:last-child{display:none}.tcard.pt .v2prz h5:nth-of-type(2){display:none}}
   #v2deck .v2pz2 .row span{font-size:12.5px}#v2deck .v2pz2 h5{font-size:11px;white-space:nowrap;letter-spacing:.03em}#v2deck .v2pz2 .row img{height:25px}#v2deck .v2pz2 em{font-size:12px}
   .tcard.pt.tf::after{border:0!important;border-image:none!important;--fw:calc(100cqw + 2 * var(--pad,22px));background:var(--ft) center top/100% auto no-repeat,var(--fb) center bottom/100% auto no-repeat,var(--fm) center calc(var(--fw) * var(--fr1) - 2px)/100% calc(100% - var(--fw) * (var(--fr1) + var(--fr2)) + 4px) no-repeat}
-  .tcard.pt.tf{overflow:visible}.tcard.pt.tf::after{top:calc(var(--fw) * var(--ftop,-.06) + 3px);bottom:calc(var(--fw) * var(--fbot,-.06) + 3px)}.tcard.pt.tf{padding-bottom:34px}.tcard.pt.tf[data-lg="6"]{--pad:30px;--ftop:-.151;--fbot:-.038}.tcard.pt.tf[data-lg="16"]{--pad:31px;--ftop:-.102;--fbot:-.03}.tcard.pt.tf[data-lg="1"]{--pad:30px;--ftop:-.14;--fbot:-.049}.tcard.pt.tf[data-lg="18"]{--pad:30px;--ftop:-.119;--fbot:-.04}.tcard.pt.tf[data-lg="21"]{--pad:30px;--ftop:-.057;--fbot:-.001}.v2go.gold{white-space:nowrap;font-size:clamp(14px,4.6vw,20px);padding:0 6px}.v2go.gold img{height:20px}
+  .tcard.pt.tf{overflow:visible}.tcard.pt.tf::after{top:calc(var(--fw) * var(--ftop,-.06) + 3px);bottom:calc(var(--fw) * var(--fbot,-.06) + 3px)}.tcard.pt.tf{padding-bottom:34px}.tcard.pt.tf[data-lg="6"]{--pad:30px;--ftop:-.151;--fbot:-.038}.tcard.pt.tf[data-lg="16"]{--pad:31px;--ftop:-.102;--fbot:-.03}.tcard.pt.tf[data-lg="1"]{--pad:30px;--ftop:-.119;--fbot:-.034}.tcard.pt.tf[data-lg="18"]{--pad:30px;--ftop:-.103;--fbot:-.05}.tcard.pt.tf[data-lg="21"]{--pad:30px;--ftop:-.047;--fbot:0}.v2go.gold{white-space:nowrap;font-size:clamp(14px,4.6vw,20px);padding:0 6px}.v2go.gold img{height:20px}
   .tcard .lockx.st{position:absolute;left:0;right:0;top:auto;bottom:64px;height:52%;align-items:flex-end;display:flex;justify-content:center;pointer-events:none;z-index:8}
   .tcard .lockx.st .stk{position:relative;height:100%;aspect-ratio:896/1200;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45))}
   .tcard .lockx.st img{position:absolute;inset:0;width:100%;height:100%}
