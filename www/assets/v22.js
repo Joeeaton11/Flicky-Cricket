@@ -70,7 +70,7 @@
 
   // ── 2. FINALS: a full league bar unlocks that league's Final; winning it lifts the cup and opens the next league
   const kfmt = n => n >= 1000 ? (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'K' : fmt(n);
-  const FRAMES = new Set([1, 6, 16, 18, 21]), BADGES = new Set([...Array(27).keys()].map(i => i + 1)), FDIM = { 1: [0.4086, 0.2371], 6: [0.289, 0.2475], 16: [0.2241, 0.2241], 18: [0.56, 0.2886], 21: [0.2586, 0.26] };
+  const FRAMES = new Set([1, 6, 16, 18, 21]), BADGES = new Set([...Array(27).keys()].map(i => i + 1)), FDIM = { 1: [0.2929, 0.1771], 6: [0.289, 0.2475], 16: [0.2241, 0.2241], 18: [0.28, 0.2886], 21: [0.2414, 0.26] };
   function F() { const f = sec('finals'); if (!f.won) { f.won = {}; f.ready = {}; const hi = highestLeagueIdx(); for (let i = 1; i < hi; i++) f.won[i] = 1; save(); } return f; }
   const finalWon = i => !!F().won[i], finalReady = i => !!F().ready[i] && !F().won[i];
   const cupsWon = () => Object.keys(F().won).filter(k => +k >= 1).length;
@@ -294,7 +294,7 @@
   @media (max-height:620px){.tcard.pt{--ph:84}.tcard.pt .v2prz .row:last-child{display:none}.tcard.pt .v2prz h5:nth-of-type(2){display:none}}
   #v2deck .v2pz2 .row span{font-size:12.5px}#v2deck .v2pz2 h5{font-size:11px;white-space:nowrap;letter-spacing:.03em}#v2deck .v2pz2 .row img{height:25px}#v2deck .v2pz2 em{font-size:12px}
   .tcard.pt.tf::after{border:0!important;border-image:none!important;--fw:calc(100cqw + 2 * var(--pad,22px));background:var(--ft) center top/100% auto no-repeat,var(--fb) center bottom/100% auto no-repeat,var(--fm) center calc(var(--fw) * var(--fr1) - 2px)/100% calc(100% - var(--fw) * (var(--fr1) + var(--fr2)) + 4px) no-repeat}
-  .tcard.pt.tf{overflow:visible}.tcard.pt.tf::after{top:calc(var(--fw) * var(--ftop,-.06) + 3px);bottom:calc(var(--fw) * var(--fbot,-.06) + 3px)}.tcard.pt.tf{padding-bottom:34px}.tcard.pt.tf[data-lg="6"]{--pad:30px;--ftop:-.151;--fbot:-.038}.tcard.pt.tf[data-lg="16"]{--pad:31px;--ftop:-.102;--fbot:-.03}.tcard.pt.tf[data-lg="1"]{--pad:30px;--ftop:-.123;--fbot:-.051;--fside:.0408}.tcard.pt.tf[data-lg="18"]{--pad:30px;--ftop:-.081;--fbot:-.1;--fside:.0588}.tcard.pt.tf[data-lg="21"]{--pad:30px;--ftop:-.094;--fbot:-.133;--fside:.0634}.v2go.gold{white-space:nowrap;font-size:clamp(14px,4.6vw,20px);padding:0 6px}.v2go.gold img{height:20px}
+  .tcard.pt.tf{overflow:visible}.tcard.pt.tf::after{top:calc(var(--fw) * var(--ftop,-.06) + 3px);bottom:calc(var(--fw) * var(--fbot,-.06) + 3px)}.tcard.pt.tf{padding-bottom:34px}.tcard.pt.tf[data-lg="6"]{--pad:30px;--ftop:-.151;--fbot:-.038}.tcard.pt.tf[data-lg="16"]{--pad:31px;--ftop:-.102;--fbot:-.03}.tcard.pt.tf[data-lg="1"]{--pad:30px;--ftop:-0.141;--fbot:-0.069;--fside:0.0588}.tcard.pt.tf[data-lg="18"]{--pad:30px;--ftop:-0.099;--fbot:-0.118;--fside:0.0768}.tcard.pt.tf[data-lg="21"]{--pad:30px;--ftop:-0.112;--fbot:-0.151;--fside:0.0814}.v2go.gold{white-space:nowrap;font-size:clamp(14px,4.6vw,20px);padding:0 6px}.v2go.gold img{height:20px}
   .tcard .lockx.st{position:absolute;left:0;right:0;top:auto;bottom:64px;height:52%;align-items:flex-end;display:flex;justify-content:center;pointer-events:none;z-index:8}
   .tcard .lockx.st .stk{position:relative;height:100%;aspect-ratio:896/1200;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45))}
   .tcard .lockx.st img{position:absolute;inset:0;width:100%;height:100%}
@@ -400,7 +400,7 @@
   .tcard .lockx.st.open .stk{filter:none!important}
   .tcard .lockx.st.open .chn img.padb,.lockx.st.open img.padb{animation:none!important}
   .v2pz2 .g:not(.f){flex:0 0 40%!important}.v2pz2 .g:not(.f) .row{gap:4px;justify-content:space-around}.v2pz2 .g:not(.f) .row span{font-size:11.5px;letter-spacing:-.2px}.v2pz2 .g.f .row{gap:3px}.v2pz2 .g.f .row span{font-size:11.5px;letter-spacing:-.2px}
-  .tcard.pt.tf::after{z-index:40!important;pointer-events:none;--cw:calc(100cqw + 2 * var(--pad,22px));--fw:calc(var(--cw) * (1 + 2 * var(--fside,0)));left:calc(var(--cw) * var(--fside,0) * -1);right:calc(var(--cw) * var(--fside,0) * -1)}
+  .tcard.pt.tf[data-lg="1"]::before,.tcard.pt.tf[data-lg="18"]::before,.tcard.pt.tf[data-lg="21"]::before{border-radius:28px}.tcard.pt.tf::after{z-index:40!important;pointer-events:none;--cw:calc(100cqw + 2 * var(--pad,22px));--fw:calc(var(--cw) * (1 + 2 * var(--fside,0)));left:calc(var(--cw) * var(--fside,0) * -1);right:calc(var(--cw) * var(--fside,0) * -1)}
   @media (max-height:760px){.tcard.pt{padding-bottom:20px}.tcard.pt .ban.bimg{width:60%}#v2deck .v2rail{padding-top:52px!important}.tcard.pt .rib{display:none}.tcard.pt .v2tgt{font-size:12px}.tcard.pt .v2prz .row img{height:24px}#v2deck .v2rail{padding-top:6px}.tcard.pt .crest{margin-top:-16px}.tcard.pt .v2road{display:none}.tcard{gap:6px}.tcard .hero{height:104px}.tcard .crest{margin-top:-50px}.tcard .v2road{padding:3px 8px}.tcard .v2road .tx small{display:none}.tcard .v2face{width:34px;height:34px}.v2prz h5{margin:0 0 2px}.v2prz .row img{height:26px}.v2go{height:46px;font-size:20px}.tcard .crest .cup{height:72px}.mcard .post{display:none}.mcard .ico{height:64px}.mcard h4{font-size:28px}.v2rail{padding-top:48px}}`;
   document.head.appendChild(css);
 
