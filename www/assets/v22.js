@@ -70,7 +70,7 @@
 
   // ── 2. FINALS: a full league bar unlocks that league's Final; winning it lifts the cup and opens the next league
   const kfmt = n => n >= 1000 ? (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'K' : fmt(n);
-  const FRAMES = new Set([1]), BADGES = new Set([...Array(27).keys()].map(i => i + 1)), FDIM = { 5: [0.25, 0.2214], 7: [0.3271, 0.24], 8: [0.4686, 0.3886], 2: [0.3814, 0.3329], 3: [0.3471, 0.3629], 4: [0.3257, 0.3529], 1: [0.075, 0.2483], 6: [0.289, 0.2475], 16: [0.2241, 0.2241], 18: [0.4843, 0.1243], 21: [0.2543, 0.2643] };
+  const FRAMES = new Set([]), BADGES = new Set([...Array(27).keys()].map(i => i + 1)), FDIM = { 5: [0.25, 0.2214], 7: [0.3271, 0.24], 8: [0.4686, 0.3886], 2: [0.3814, 0.3329], 3: [0.3471, 0.3629], 4: [0.3257, 0.3529], 1: [0.075, 0.2483], 6: [0.289, 0.2475], 16: [0.2241, 0.2241], 18: [0.4843, 0.1243], 21: [0.2543, 0.2643] };
   function F() { const f = sec('finals'); if (!f.won) { f.won = {}; f.ready = {}; const hi = highestLeagueIdx(); for (let i = 1; i < hi; i++) f.won[i] = 1; save(); } return f; }
   const finalWon = i => !!F().won[i], finalReady = i => !!F().ready[i] && !F().won[i];
   const cupsWon = () => Object.keys(F().won).filter(k => +k >= 1).length;
