@@ -354,6 +354,7 @@
   .tcard.pt.locked .need{position:relative;z-index:9}
   .tcard.pt .v2stk.lkneed{justify-content:center;min-height:38px}.v2stk.lkneed .need{font-size:15px;line-height:1.1;text-align:center;color:#fff;text-shadow:0 2px 0 #000}.v2stk.lkneed .need b{font-weight:400;color:#ffd75a;display:inline;font-size:inherit}
   #v2deck .tcard.pt{translate:0 -46px}
+  #v2deck .tcard.pt{flex-basis:calc(73vw - min(26px, env(safe-area-inset-top,0px) * .45));translate:0 calc(-46px + min(27px, env(safe-area-inset-top,0px) * .46))}
   .tcard.pt.locked .lockx.st .stk{aspect-ratio:896/1200!important;width:auto!important}
   .tcard.pt.locked .lockx.st .lock{transform-origin:50% 13%!important;animation:lkSway 3.4s ease-in-out infinite!important;left:0!important;right:0!important;width:100%!important}
   .tcard.pt.locked .lockx.st .bail_l{transform-origin:8% 15%!important}.tcard.pt.locked .lockx.st .bail_r{transform-origin:92% 15%!important}
