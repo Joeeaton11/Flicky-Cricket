@@ -910,7 +910,7 @@
           card.style.setProperty('--hv2x', (cx - 384 * k).toFixed(1) + 'px');
           card.style.setProperty('--hv2y', (cb - d[1] * k).toFixed(1) + 'px');
           card.style.setProperty('--hv2cx', cx.toFixed(1) + 'px'); card.style.setProperty('--hv2cb', cb + 'px');
-          card.style.setProperty('--hv2cw', cw + 'px'); { const a0 = Math.max(0, cx - 384 * k) / W * 100; card.style.setProperty('--hv2a0', (a0 + 5).toFixed(1) + '%'); card.style.setProperty('--hv2a1', Math.min(86, a0 + 26).toFixed(1) + '%'); } card.style.setProperty('--hv2ch', (cw * 1.03).toFixed(1) + 'px'); }
+          card.style.setProperty('--hv2cw', cw + 'px'); { const a0 = Math.max(0, cx - 384 * k) / W * 100; card.style.setProperty('--hv2a0', (a0 + 0.5).toFixed(1) + '%'); card.style.setProperty('--hv2a1', Math.min(86, a0 + 11).toFixed(1) + '%'); } card.style.setProperty('--hv2ch', (cw * 1.03).toFixed(1) + 'px'); }
         const bd = card.querySelector('.hv2bd'), src = `assets/ui/badges/lb${n}.webp`; if (bd.getAttribute('src') !== src) bd.src = src;
         card.querySelector('.hv2e').textContent = ($('homeLeagueEntry') || {}).textContent || '';
         const m = (($('homeRoadTxt') || {}).textContent || '').match(/([\d,]+)\s*\/\s*([\d,]+)/);
