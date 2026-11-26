@@ -1045,6 +1045,18 @@
   #duelVs.cupVs .vsSide.me b{border-color:#ffd24a!important}
   #duelVs.cupVs .vsSide.them b{border-color:#c9b6ff!important}
   #duelVs.cupVs .vsMid img{display:none!important}
+  #duelVs.cupVs{grid-template-rows:auto 1fr auto auto!important}
+  #duelVs.cupVs .vsSide,#duelVs.cupVs .vsMid{align-self:end;margin-bottom:2vh}
+  #duelVs.cupVs .vsSide canvas{max-width:200px!important}
+  #duelVs.cupVs .vsSide.them b{background:linear-gradient(#5b5577,#2c2846)!important;border-color:#d8d4ea!important}
+  #duelVs.cupVs .vsMid span{font-size:64px}
+  #duelVs .cupStake{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px 0 16px;animation:vsDrop .5s .3s cubic-bezier(.3,1.5,.5,1) both}
+  #duelVs .cupStake b{font-size:17px;letter-spacing:.06em;color:#ff8a7a;text-shadow:0 2px 0 #2a0c1a}
+  #duelVs .cupStake .dots{display:flex;gap:6px;padding:7px 12px;border-radius:16px;background:rgba(20,6,50,.7);border:2px solid rgba(255,210,74,.5)}
+  #duelVs .cupStake .dots span{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:#9fb0d6;min-width:44px}
+  #duelVs .cupStake .dots i{width:22px;height:22px;border-radius:50%;border:2.5px solid #3a4f86;background:#132247}
+  #duelVs .cupStake .dots span.w{color:#7CF29A}#duelVs .cupStake .dots span.w i{background:#2bb24c;border-color:#bff5c8}
+  #duelVs .cupStake .dots span.n{color:#ffd24a}#duelVs .cupStake .dots span.n i{background:#ffd24a;border-color:#fff3c4;box-shadow:0 0 10px rgba(255,210,74,.7)}
 
   #duelVs.cupVs .vsFoot span{background:linear-gradient(#a56cff,#5a24c8)!important;color:#fff!important;box-shadow:0 6px 0 #2a0c6a!important;border-color:#ffd24a!important;text-shadow:0 2px 0 #2a0c6a}
   #duelVs.cupVs .vsFlash{background:radial-gradient(circle,rgba(255,210,74,.55),transparent 60%)!important}
@@ -1062,7 +1074,10 @@
       if (extra && extra.cup) {
         const li = window._activeLeagueIdx || 1, art = (typeof sceneArt === 'function') ? sceneArt('cup', li) : 'assets/ui/cup_bg.webp';
         el.style.backgroundImage = `linear-gradient(#1a0a40 0%,rgba(26,10,64,0) calc(var(--hdrTop,6px) + 150px)),linear-gradient(rgba(20,6,50,0) 60%,rgba(20,6,50,.9) 88%),url(${art})`;
-        el.style.backgroundSize = '100% 100%,100% 100%,100% auto'; el.style.backgroundPosition = '0 0,0 0,center calc(var(--hdrTop,6px) + 70px)'; el.style.backgroundColor = '#1a0a40'; el.style.backgroundRepeat = 'no-repeat';
+        el.style.backgroundSize = '100% 100%,100% 100%,100% auto'; el.style.backgroundPosition = '0 0,0 0,center calc(var(--hdrTop,6px) + 70px)';
+        if (!el.querySelector('.cupStake')) { const C = GAME_CONFIG.season.cup, run = cupState().run, rd = extra.cupRound || 0, fin = rd === C.rounds.length - 1;
+          const dots = C.rounds.map((n, i) => `<span class="${i < rd ? 'w' : i === rd ? 'n' : ''}"><i></i>${String(n).replace('ROUND OF ', 'LAST ').replace('QUARTER-FINAL', 'QF').replace('SEMI-FINAL', 'SF')}</span>`).join('');
+          const foot = el.querySelector('.vsFoot'); if (foot) foot.insertAdjacentHTML('beforebegin', `<div class="cupStake"><b>${fin ? 'WIN AND LIFT THE CUP' : 'LOSE AND YOU\'RE OUT'}</b><div class="dots">${dots}</div></div>`); } el.style.backgroundColor = '#1a0a40'; el.style.backgroundRepeat = 'no-repeat';
       } } catch (e) {}
     return r;
   };
