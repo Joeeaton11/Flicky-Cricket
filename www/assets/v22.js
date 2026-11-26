@@ -1102,7 +1102,7 @@
   #resultScreen.r2 #r2ArtCanvas{opacity:0}
   #resultScreen.r2 #r2Art{height:max(280px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px)))!important}
   #resultScreen.r2 #r2Road.v22{margin-top:26px!important;margin-bottom:6px}
-  #resultScreen.r2{background:linear-gradient(rgba(8,14,32,0) 0,rgba(8,14,32,0) 38%,rgba(8,14,32,.75) 58%,#081020 74%),#0b1226 var(--r2art) center top/100% auto no-repeat!important}
+  #resultScreen.r2{background:linear-gradient(rgba(8,14,32,0) 0,rgba(8,14,32,0) 34%,rgba(8,14,32,.8) 45%,#081020 50%),#0b1226 var(--r2art) center top/100% auto no-repeat!important}
   #resultScreen.r2 #r2Art{background:none!important}
   #resultScreen.r2 #r2Art::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,12,30,.1) 30%,rgba(6,12,30,.55) 70%),linear-gradient(rgba(6,12,30,.35),rgba(6,12,30,0) 30%);pointer-events:none;z-index:1}
   #resultScreen.r2 #r2Player{height:min(300px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px) - max(env(safe-area-inset-top,0px),6px) - 116px))!important;left:14px!important;bottom:48px!important}
@@ -1138,6 +1138,9 @@
   #resultScreen.r2 #r2Team{top:calc(max(env(safe-area-inset-top,0px),3px) + 2px)!important}
   #resultScreen.r2 #r2HeroR #r2Runs{font-size:88px!important}
   #resultScreen.r2 #r2HeroR #r2ScoreTop{margin-right:22px}
+  #resultScreen.r2 #r2HeroR::before{content:'';position:absolute;z-index:-1;left:-14%;right:-8%;top:-6%;bottom:-8%;background:radial-gradient(closest-side,rgba(6,12,30,.62),rgba(6,12,30,.35) 60%,rgba(6,12,30,0));pointer-events:none}
+  #resultScreen.r2 .r2cup{position:absolute;z-index:0;transform:translateX(-50%);object-fit:contain;object-position:50% 100%;filter:drop-shadow(0 6px 6px rgba(0,0,0,.5));pointer-events:none;animation:r2cupIn .6s cubic-bezier(.3,1.5,.5,1) .5s both}
+  @keyframes r2cupIn{0%{opacity:0;transform:translateX(-50%) translateY(-30px) scale(.7)}100%{opacity:1;transform:translateX(-50%)}}
   `;
   document.head.appendChild(css);
   const _s = window.showResultScreen;
@@ -1148,6 +1151,11 @@
       const $ = id => document.getElementById(id);
       const li = (d && d.activeLgIdx) || selectedLeagueIdx() || 1;
       const art = $('resultScreen'); if (art) art.style.setProperty('--r2art', `url(assets/ui/leagues/lg_${li}_tall.webp)`);
+      // the cup sits on its plinth when you win; the plinth stays bare when you lose
+      { const host = $('r2Art'), old = host && host.querySelector('.r2cup'); if (old) old.remove();
+        if (host && d && d.beatTarget) { const W = document.getElementById('resultScreen').clientWidth || 393, k = W / 768, dd = PL[li] || [225, 405];
+          const cw = dd[0] * k, im = document.createElement('img'); im.className = 'r2cup'; im.alt = ''; im.src = `assets/ui/leagues/lg_${li}_cup.webp`;
+          Object.assign(im.style, { left: (W / 2) + 'px', width: cw + 'px', height: (cw * 1.03) + 'px', top: (dd[1] * k - cw * 1.03) + 'px' }); host.appendChild(im); } }
       // loss coin label
       if (d && !d.beatTarget && d.entryPaid) { $('r2CoinsSub').textContent = d.coinsEarned ? `ENTRY · ${d.coinsEarned.toLocaleString()} BACK` : 'ENTRY'; }
       // league panel in place of the trophy road
