@@ -848,7 +848,7 @@
   #homeLeagueCard{border-radius:18px!important;overflow:hidden!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#2a1a10 var(--hv2art) var(--hv2x,0px) var(--hv2y,0px)/var(--hv2w,260px) auto no-repeat!important;height:88px!important}
   #homeLeagueCard>canvas,#homeLeagueCard>.lcShade,#homeLeagueCard>.lcTag,#homeLeagueCard>.lcBody{display:none!important}
   #homeLeagueCard .hv2s{position:absolute;inset:0;background:linear-gradient(90deg,rgb(8,14,32) 0%,rgb(8,14,32) var(--hv2a0,52%),rgba(8,14,32,0) var(--hv2a1,74%));pointer-events:none}
-  #homeLeagueCard .hv2bd{position:absolute;left:8px;top:5px;height:54px;width:auto;max-width:48%;object-fit:contain;object-position:0 50%;pointer-events:none}
+  #homeLeagueCard .hv2bd{position:absolute;left:2px;top:-22px;height:80px;width:auto;max-width:56%;filter:drop-shadow(0 4px 4px rgba(0,0,0,.55));object-fit:contain;object-position:0 50%;pointer-events:none}
   #homeLeagueCard .hv2c{position:static;flex:none;margin-right:-2px;font-size:13px!important;padding:1px 7px 1px 3px!important;background:rgba(0,0,0,.5);border-radius:12px;padding:2px 9px 2px 4px;font:400 15px 'Lilita One',sans-serif;color:#fff;display:flex;align-items:center;gap:3px;text-shadow:0 2px 0 rgba(0,0,0,.5)}
   #homeLeagueCard .hv2c i{width:20px;height:20px}
   #homeLeagueCard .hv2p{position:absolute;left:12px;right:26%;bottom:8px;display:flex;align-items:center;gap:7px;font:400 12px 'Lilita One',sans-serif;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.6);white-space:nowrap}
