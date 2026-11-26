@@ -1102,8 +1102,9 @@
   #resultScreen.r2 #r2ArtCanvas{opacity:0}
   #resultScreen.r2 #r2Art{height:max(280px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px)))!important}
   #resultScreen.r2 #r2Road.v22{margin-top:26px!important;margin-bottom:6px}
-  #resultScreen.r2 #r2Art{background:#0b1226 var(--r2art) center var(--r2y,26%)/cover no-repeat}
-  #resultScreen.r2 #r2Art::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,12,30,.1) 30%,rgba(6,12,30,.55) 70%),linear-gradient(rgba(6,12,30,.35),rgba(6,12,30,0) 30%,rgba(6,12,30,0) 70%,rgba(6,12,30,.85));pointer-events:none;z-index:1}
+  #resultScreen.r2{background:linear-gradient(rgba(8,14,32,0) 0,rgba(8,14,32,0) 38%,rgba(8,14,32,.75) 58%,#081020 74%),#0b1226 var(--r2art) center top/100% auto no-repeat!important}
+  #resultScreen.r2 #r2Art{background:none!important}
+  #resultScreen.r2 #r2Art::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,12,30,.1) 30%,rgba(6,12,30,.55) 70%),linear-gradient(rgba(6,12,30,.35),rgba(6,12,30,0) 30%);pointer-events:none;z-index:1}
   #resultScreen.r2 #r2Player{height:min(300px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px) - max(env(safe-area-inset-top,0px),6px) - 116px))!important;left:14px!important;bottom:48px!important}
   #resultScreen.r2 #r2HeroR{width:58%!important;z-index:3}
   #resultScreen.r2 .r2Rew img#r2BagImg{width:58px!important;height:52px!important;margin-top:-6px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.5))}
@@ -1136,6 +1137,7 @@
   #resultScreen.r2 #r2Pills{top:calc(max(env(safe-area-inset-top,0px),3px) + 2px)!important}
   #resultScreen.r2 #r2Team{top:calc(max(env(safe-area-inset-top,0px),3px) + 2px)!important}
   #resultScreen.r2 #r2HeroR #r2Runs{font-size:88px!important}
+  #resultScreen.r2 #r2HeroR #r2ScoreTop{margin-right:22px}
   `;
   document.head.appendChild(css);
   const _s = window.showResultScreen;
@@ -1145,7 +1147,7 @@
     try {
       const $ = id => document.getElementById(id);
       const li = (d && d.activeLgIdx) || selectedLeagueIdx() || 1;
-      const art = $('r2Art'); if (art) art.style.setProperty('--r2art', `url(assets/ui/leagues/lg_${li}_tall.webp)`);
+      const art = $('resultScreen'); if (art) art.style.setProperty('--r2art', `url(assets/ui/leagues/lg_${li}_tall.webp)`);
       // loss coin label
       if (d && !d.beatTarget && d.entryPaid) { $('r2CoinsSub').textContent = d.coinsEarned ? `ENTRY · ${d.coinsEarned.toLocaleString()} BACK` : 'ENTRY'; }
       // league panel in place of the trophy road
