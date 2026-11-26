@@ -1073,8 +1073,8 @@
       el.classList.toggle('cupVs', !!(extra && extra.cup));
       if (extra && extra.cup) {
         const li = window._activeLeagueIdx || 1, art = (typeof sceneArt === 'function') ? sceneArt('cup', li) : 'assets/ui/cup_bg.webp';
-        el.style.backgroundImage = `radial-gradient(60% 22% at 50% calc(100% - 516px - env(safe-area-inset-bottom,0px)),rgba(255,200,90,.35),rgba(255,200,90,0) 70%),linear-gradient(0deg,rgba(26,10,64,0) 0,rgba(26,10,64,0) calc(446px + env(safe-area-inset-bottom,0px)),#1a0a40 calc(526px + env(safe-area-inset-bottom,0px)),#1a0a40 100%),linear-gradient(rgba(20,6,50,0) 60%,rgba(20,6,50,.9) 88%),url(${art})`;
-        el.style.backgroundSize = '100% 100%,100% 100%,100% 100%,118% auto'; el.style.backgroundPosition = '0 0,0 0,0 0,center calc(100% + 555px - env(safe-area-inset-bottom,0px))';
+        el.style.backgroundImage = `linear-gradient(#1a0a40 0%,#1a0a40 calc(max(var(--hdrTop,6px),50px) + 70px),rgba(26,10,64,0) calc(max(var(--hdrTop,6px),50px) + 170px)),linear-gradient(rgba(20,6,50,0) 60%,rgba(20,6,50,.9) 88%),url(${art})`;
+        el.style.backgroundSize = '100% 100%,100% 100%,100% auto'; el.style.backgroundPosition = '0 0,0 0,center calc(max(var(--hdrTop,6px),50px) + 110px)'; el.style.backgroundColor = '#1a0a40'; el.style.backgroundRepeat = 'no-repeat';
         if (!el.querySelector('.cupStake')) { const C = GAME_CONFIG.season.cup, run = cupState().run, rd = extra.cupRound || 0, fin = rd === C.rounds.length - 1;
           const dots = C.rounds.map((n, i) => `<span class="${i < rd ? 'w' : i === rd ? 'n' : ''}"><i></i>${String(n).replace('ROUND OF ', 'LAST ').replace('QUARTER-FINAL', 'QF').replace('SEMI-FINAL', 'SF')}</span>`).join('');
           const foot = el.querySelector('.vsFoot'); if (foot) foot.insertAdjacentHTML('beforebegin', `<div class="cupStake"><b>${fin ? 'WIN AND LIFT THE CUP' : 'LOSE AND YOU\'RE OUT'}</b><div class="dots">${dots}</div></div>`); } el.style.backgroundColor = '#1a0a40'; el.style.backgroundRepeat = 'no-repeat';
