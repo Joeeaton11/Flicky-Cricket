@@ -845,18 +845,18 @@
   .hv2b .dt{position:absolute;right:-6px;top:-6px;min-width:19px;height:19px;border-radius:10px;background:#e8243a;border:2px solid #fff;font-size:11px;display:grid;place-items:center;padding:0 3px}
   .hv2b.off .ic{filter:grayscale(.7) brightness(.75)}
   @media (max-height:720px){#homeWordmark{width:150px!important}.hv2rail{top:150px;gap:9px}.hv2b{width:48px;font-size:9px}.hv2b .ic{width:48px;height:48px;border-radius:13px}}
-  #homeLeagueCard{border-radius:18px!important;overflow:hidden!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#2a1a10 var(--hv2art) right 17%/80% auto no-repeat!important;height:76px!important}
+  #homeLeagueCard{border-radius:18px!important;overflow:hidden!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#2a1a10 var(--hv2art) var(--hv2x,138%) var(--hv2y,15%)/72% auto no-repeat!important;height:76px!important}
   #homeLeagueCard>canvas,#homeLeagueCard>.lcShade,#homeLeagueCard>.lcTag,#homeLeagueCard>.lcBody{display:none!important}
-  #homeLeagueCard .hv2s{position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,14,32,.92),rgba(8,14,32,.5) 50%,rgba(8,14,32,0) 80%);pointer-events:none}
+  #homeLeagueCard .hv2s{position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,14,32,.95) 0%,rgba(8,14,32,.75) 48%,rgba(8,14,32,0) 72%);pointer-events:none}
   #homeLeagueCard .hv2bd{position:absolute;left:4px;top:-3px;width:128px;height:auto;pointer-events:none}
-  #homeLeagueCard .hv2c{position:absolute;right:62px;top:7px;background:rgba(0,0,0,.5);border-radius:12px;padding:2px 9px 2px 4px;font:400 15px 'Lilita One',sans-serif;color:#fff;display:flex;align-items:center;gap:3px;text-shadow:0 2px 0 rgba(0,0,0,.5)}
+  #homeLeagueCard .hv2c{position:absolute;right:8px;bottom:7px;background:rgba(0,0,0,.5);border-radius:12px;padding:2px 9px 2px 4px;font:400 15px 'Lilita One',sans-serif;color:#fff;display:flex;align-items:center;gap:3px;text-shadow:0 2px 0 rgba(0,0,0,.5)}
   #homeLeagueCard .hv2c i{width:20px;height:20px}
-  #homeLeagueCard .hv2p{position:absolute;left:12px;right:10px;bottom:7px;display:flex;align-items:center;gap:7px;font:400 12px 'Lilita One',sans-serif;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.6);white-space:nowrap}
+  #homeLeagueCard .hv2p{position:absolute;left:12px;right:42%;bottom:8px;display:flex;align-items:center;gap:7px;font:400 12px 'Lilita One',sans-serif;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.6);white-space:nowrap}
   #homeLeagueCard .hv2p i.hIco{width:16px;height:16px;flex:none}
   #homeLeagueCard .hv2bar{flex:1;height:10px;border-radius:6px;background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
   #homeLeagueCard .hv2bar b{display:block;height:100%;border-radius:6px;background:linear-gradient(#ffe27a,#f5a11a);box-shadow:inset 0 2px 0 rgba(255,255,255,.5);transition:width .6s}
   #homeLeagueCard .hv2n{color:#ffd24a}
-  #homeLeagueCard .hv2nc{width:46px;height:46px;object-fit:contain;margin:-30px -4px -6px 0;filter:drop-shadow(0 3px 3px rgba(0,0,0,.6))}
+  #homeLeagueCard{overflow:visible!important}#homeLeagueCard .hv2nc{position:absolute;left:var(--hv2cx,73%);bottom:22px;width:74px;height:74px;margin-left:-37px;object-fit:contain;object-position:50% 100%;filter:drop-shadow(0 4px 4px rgba(0,0,0,.55));pointer-events:none}
   #homeLeagueCard .hv2g:empty{display:none}
   `;
   document.head.appendChild(css);
@@ -897,7 +897,7 @@
   // league panel
   const card = $('homeLeagueCard');
   if (card && !card.querySelector('.hv2s')) {
-    card.insertAdjacentHTML('beforeend', '<span class="hv2s"></span><img class="hv2bd" alt=""><span class="hv2c"><i class="hIco hi-coin"></i><span class="hv2e">75</span></span><span class="hv2p"><i class="hIco hi-trophy"></i><span class="hv2t"></span><span class="hv2bar"><b></b></span><span class="hv2g"></span><img class="hv2nc" alt=""></span>');
+    card.insertAdjacentHTML('beforeend', '<span class="hv2s"></span><img class="hv2bd" alt=""><span class="hv2c"><i class="hIco hi-coin"></i><span class="hv2e">75</span></span><span class="hv2p"><i class="hIco hi-trophy"></i><span class="hv2t"></span><span class="hv2bar"><b></b></span><span class="hv2g"></span></span><img class="hv2nc" alt="">');
   }
   function refresh() {
     try {
