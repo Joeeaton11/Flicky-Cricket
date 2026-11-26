@@ -1035,3 +1035,42 @@
   `;
   document.head.appendChild(css);
 })();
+
+/* ===== 2.2 Flicky Cup gets its own versus + result look (purple and gold), so it never reads as a normal duel ===== */
+(function cupLookV22() {
+  const css = document.createElement('style');
+  css.textContent = `
+  #duelVs.cupVs .vsHead{background:linear-gradient(#7b3fe4,#4a1ea8)!important;border:3px solid #ffd24a!important;color:#fff!important;font-size:17px!important;padding:8px 20px!important;box-shadow:0 4px 0 rgba(0,0,0,.4)}
+  #duelVs.cupVs .vsSide.me b,#duelVs.cupVs .vsSide.them b{background:linear-gradient(#8a4cf0,#4a1ea8)!important}
+  #duelVs.cupVs .vsSide.me b{border-color:#ffd24a!important}
+  #duelVs.cupVs .vsSide.them b{border-color:#c9b6ff!important}
+  #duelVs.cupVs .vsMid img{width:96px!important;filter:drop-shadow(0 6px 8px rgba(0,0,0,.6))}
+  #duelVs.cupVs .vsFoot span{background:linear-gradient(#a56cff,#5a24c8)!important;color:#fff!important;box-shadow:0 6px 0 #2a0c6a!important;border-color:#ffd24a!important;text-shadow:0 2px 0 #2a0c6a}
+  #duelVs.cupVs .vsFlash{background:radial-gradient(circle,rgba(255,210,74,.55),transparent 60%)!important}
+  #duelRes.cupRes .drCard{border-color:#b48cff!important;box-shadow:0 0 0 3px #2a0c6a,0 0 30px rgba(140,90,255,.45)!important;background:linear-gradient(#3a1e7a,#1c0f44)!important}
+  #duelRes.cupRes .drP.me{background:linear-gradient(#8a4cf0,#4a1ea8)!important}
+  #duelRes.cupRes .drP.them{background:linear-gradient(#5b4a8a,#2c2050)!important}
+  #duelRes.cupRes .drTitle::before{content:'';display:block;width:64px;height:64px;margin:-6px auto 2px;background:url(assets/ui/cup_trophy.webp) center/contain no-repeat;filter:drop-shadow(0 4px 4px rgba(0,0,0,.5))}
+  `;
+  document.head.appendChild(css);
+  const _v = window.duelVersus;
+  if (typeof _v === 'function') window.duelVersus = function (rival, extra) {
+    const r = _v.apply(this, arguments);
+    try { const el = document.getElementById('duelVs'); if (!el) return r;
+      el.classList.toggle('cupVs', !!(extra && extra.cup));
+      if (extra && extra.cup) {
+        const li = window._activeLeagueIdx || 1, art = (typeof sceneArt === 'function') ? sceneArt('cup', li) : 'assets/ui/cup_bg.webp';
+        el.style.backgroundImage = `linear-gradient(rgba(30,10,70,.25) 0%,rgba(30,10,70,0) 30%,rgba(30,10,70,.3) 62%,rgba(20,6,50,.9) 88%),url(${art})`;
+        const im = el.querySelector('.vsMid img'); if (im) im.src = CUP_TROPHY_SRC;
+      } } catch (e) {}
+    return r;
+  };
+  const _s = window.showDuelResult;
+  if (typeof _s === 'function') window.showDuelResult = function (u) {
+    const r = _s.apply(this, arguments);
+    try { const el = document.getElementById('duelRes'); if (el) { el.classList.toggle('cupRes', !!(u && u.cup));
+      if (u && u.cup) { const li = u.li || 1, art = (typeof sceneArt === 'function') ? sceneArt('cup', li) : 'assets/ui/cup_bg.webp';
+        el.style.backgroundImage = `linear-gradient(rgba(30,10,70,.5),rgba(20,6,50,.92) 70%),url(${art})`; } } } catch (e) {}
+    return r;
+  };
+})();
