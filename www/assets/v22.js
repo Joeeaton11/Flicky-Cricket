@@ -827,7 +827,9 @@
   const css = document.createElement('style');
   css.textContent = `
   #homeWordmark{width:204px!important;height:auto!important;left:50%!important;transform:translateX(-50%)!important}
-  #homePlayer::after{right:-6px!important;top:auto!important;bottom:30%!important}
+  #homePlayer::after{display:none!important}
+  @keyframes hv2flash{0%,100%{box-shadow:0 0 0 0 rgba(255,210,74,0)}40%{box-shadow:0 0 0 5px rgba(255,210,74,.9)}}
+  .hv2flash{animation:hv2flash .7s ease 2;border-radius:16px}
   #homeTop{left:62px!important;right:8px!important;width:auto!important;display:flex!important;gap:5px!important}
   #homeTop .hPill{flex:1 1 0!important;min-width:0!important;width:auto!important;padding-right:4px!important}
   #homeTop .hPill .hNum{font-size:15px!important;min-width:0!important}
@@ -842,19 +844,20 @@
   .hv2b .tg.g{background:#2bb24c}
   .hv2b .dt{position:absolute;right:-6px;top:-6px;min-width:19px;height:19px;border-radius:10px;background:#e8243a;border:2px solid #fff;font-size:11px;display:grid;place-items:center;padding:0 3px}
   .hv2b.off .ic{filter:grayscale(.7) brightness(.75)}
-  @media (max-height:720px){#homeWordmark{width:150px!important}#homePlayer::after{width:40px!important;height:40px!important;right:-34px!important;bottom:36%!important}.hv2rail{top:150px;gap:9px}.hv2b{width:48px;font-size:9px}.hv2b .ic{width:48px;height:48px;border-radius:13px}}
+  @media (max-height:720px){#homeWordmark{width:150px!important}.hv2rail{top:150px;gap:9px}.hv2b{width:48px;font-size:9px}.hv2b .ic{width:48px;height:48px;border-radius:13px}}
   #homeLeagueCard{border-radius:18px!important;overflow:hidden!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#2a1a10 var(--hv2art) right 17%/80% auto no-repeat!important;height:76px!important}
   #homeLeagueCard>canvas,#homeLeagueCard>.lcShade,#homeLeagueCard>.lcTag,#homeLeagueCard>.lcBody{display:none!important}
   #homeLeagueCard .hv2s{position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,14,32,.92),rgba(8,14,32,.5) 50%,rgba(8,14,32,0) 80%);pointer-events:none}
   #homeLeagueCard .hv2bd{position:absolute;left:4px;top:-3px;width:128px;height:auto;pointer-events:none}
-  #homeLeagueCard .hv2c{position:absolute;right:10px;top:7px;background:rgba(0,0,0,.5);border-radius:12px;padding:2px 9px 2px 4px;font:400 15px 'Lilita One',sans-serif;color:#fff;display:flex;align-items:center;gap:3px;text-shadow:0 2px 0 rgba(0,0,0,.5)}
+  #homeLeagueCard .hv2c{position:absolute;right:62px;top:7px;background:rgba(0,0,0,.5);border-radius:12px;padding:2px 9px 2px 4px;font:400 15px 'Lilita One',sans-serif;color:#fff;display:flex;align-items:center;gap:3px;text-shadow:0 2px 0 rgba(0,0,0,.5)}
   #homeLeagueCard .hv2c i{width:20px;height:20px}
   #homeLeagueCard .hv2p{position:absolute;left:12px;right:10px;bottom:7px;display:flex;align-items:center;gap:7px;font:400 12px 'Lilita One',sans-serif;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.6);white-space:nowrap}
   #homeLeagueCard .hv2p i.hIco{width:16px;height:16px;flex:none}
   #homeLeagueCard .hv2bar{flex:1;height:10px;border-radius:6px;background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
   #homeLeagueCard .hv2bar b{display:block;height:100%;border-radius:6px;background:linear-gradient(#ffe27a,#f5a11a);box-shadow:inset 0 2px 0 rgba(255,255,255,.5);transition:width .6s}
   #homeLeagueCard .hv2n{color:#ffd24a}
-  #homeLeagueCard .hv2nc{width:22px;height:22px;object-fit:contain;filter:grayscale(.5) brightness(.85)}
+  #homeLeagueCard .hv2nc{width:46px;height:46px;object-fit:contain;margin:-30px -4px -6px 0;filter:drop-shadow(0 3px 3px rgba(0,0,0,.6))}
+  #homeLeagueCard .hv2g:empty{display:none}
   `;
   document.head.appendChild(css);
   const $ = id => document.getElementById(id), ov = $('overlay');
@@ -871,9 +874,10 @@
   const btn = (cls, art, label, extra) => `<button class="hv2b ${cls}"><span class="ic" style="background:${art}">${extra || ''}</span>${label}</button>`;
   const L = document.createElement('div'); L.className = 'hv2rail l'; L.id = 'hv2L';
   L.innerHTML = btn('gift', `url(assets/inline/a0752272b3ad.webp) center/78% no-repeat,linear-gradient(#3fb24f,#1f7a2e)`, 'DAILY GIFT', '<span class="tg g">FREE</span>')
-    + btn('inbox', `url(assets/ui/icon_inbox.webp) center/70% no-repeat,linear-gradient(#3f6ac8,#22408a)`, 'INBOX', '<span class="dt" hidden></span>');
+    + btn('inbox', `url(assets/ui/icon_inbox.webp) center/70% no-repeat,linear-gradient(#3f6ac8,#22408a)`, 'INBOX', '<span class="dt" hidden></span>')
+    + btn('kit', `url(assets/ui/home_edit_kit.webp) center/80% no-repeat,radial-gradient(circle at 50% 35%,#3a63ad,#13284f 70%)`, 'MY KIT');
   const R = document.createElement('div'); R.className = 'hv2rail r'; R.id = 'hv2R';
-  R.innerHTML = btn('ev', 'url(assets/ui/ev_cup.webp) center/cover no-repeat', 'CUP') + btn('ev', 'url(assets/ui/ev_duels.webp) center/cover no-repeat', 'DUELS') + btn('ev', 'url(assets/ui/ev_weekly.webp) center/cover no-repeat', 'WEEKLY');
+  R.innerHTML = btn('ev" data-hv2ev="cup', 'url(assets/ui/ev_cup.webp) center/cover no-repeat', 'CUP') + btn('ev" data-hv2ev="duel', 'url(assets/ui/ev_duels.webp) center/cover no-repeat', 'DUELS') + btn('ev" data-hv2ev="tourney', 'url(assets/ui/ev_weekly.webp) center/cover no-repeat', 'WEEKLY');
   ov.appendChild(L); ov.appendChild(R);
   L.querySelector('.gift').addEventListener('click', () => {
     try { hapticTap(); } catch (e) {}
@@ -881,7 +885,15 @@
     refresh();
   });
   L.querySelector('.inbox').addEventListener('click', () => { try { $('inboxBtn').click(); } catch (e) {} });
-  R.querySelectorAll('.ev').forEach(b => b.addEventListener('click', () => { try { $('eventsNavBtn').click(); } catch (e) {} }));
+  L.querySelector('.kit').addEventListener('click', () => { try { $('homePlayer').click(); } catch (e) {} });
+  R.querySelectorAll('.ev').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.hv2ev; try { $('eventsNavBtn').click(); } catch (e) {}
+    setTimeout(() => { try {
+      let t = k === 'cup' ? [...document.querySelectorAll('h2,h3,b,strong,div,span')].find(e => e.children.length < 3 && /FLICKY CUP/.test(e.textContent) && e.getBoundingClientRect().width > 0) : document.querySelector(`button[data-mode="${k}"]`);
+      if (!t) return; const card = t.closest('.evCard,.gcCard,section,article') || t.parentElement || t;
+      card.scrollIntoView({ block: 'center', behavior: 'smooth' }); card.classList.add('hv2flash'); setTimeout(() => card.classList.remove('hv2flash'), 1600);
+    } catch (e) {} }, 350);
+  }));
   // league panel
   const card = $('homeLeagueCard');
   if (card && !card.querySelector('.hv2s')) {
@@ -902,12 +914,11 @@
           const a = +m[1].replace(/,/g, ''), z = +m[2].replace(/,/g, '');
           card.querySelector('.hv2t').textContent = a.toLocaleString('en-GB') + '/' + z.toLocaleString('en-GB');
           card.querySelector('.hv2bar b').style.width = Math.max(4, Math.min(100, a / z * 100)) + '%';
-          const left = Math.max(0, z - a), short = String(nx.name || '').split(' ')[0].toUpperCase();
-          card.querySelector('.hv2g').innerHTML = left > 0 ? `${left.toLocaleString('en-GB')} to <span class="hv2n">${short}</span>` : `<span class="hv2n">${short} UNLOCKED</span>`;
-          nc.src = `assets/ui/leagues/lg_${n + 1}_cup.webp`; nc.hidden = false;
+          card.querySelector('.hv2g').innerHTML = '';
+          nc.src = `assets/ui/leagues/lg_${n}_cup.webp`; nc.hidden = false;
         } else {
           card.querySelector('.hv2t').textContent = troph.toLocaleString('en-GB');
-          card.querySelector('.hv2bar b').style.width = '100%'; card.querySelector('.hv2g').innerHTML = '<span class="hv2n">TOP LEAGUE</span>'; nc.hidden = true;
+          card.querySelector('.hv2bar b').style.width = '100%'; card.querySelector('.hv2g').innerHTML = ''; nc.src = `assets/ui/leagues/lg_${n}_cup.webp`; nc.hidden = false;
         }
       }
       const g = L.querySelector('.gift'), ready = typeof giftReady === 'function' && giftReady();
