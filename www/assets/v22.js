@@ -991,3 +991,47 @@
   const _o = window.openDuelTables;
   if (typeof _o === 'function') window.openDuelTables = function () { const r = _o.apply(this, arguments); requestAnimationFrame(decorate); return r; };
 })();
+
+/* ===== 2.2 cup results use the duel result card (with cup titles), not the plain end screen ===== */
+(function cupResultV22() {
+  if (typeof window.cupAfterDuel !== 'function' || typeof window.showDuelResult !== 'function') return;
+  const _c = window.cupAfterDuel;
+  window.cupAfterDuel = function (c, res, line) {
+    const c0 = career.coins, run = cupState().run, li = run ? run.li : (c.leagueIdx || 1);
+    const r = _c.apply(this, arguments);
+    try {
+      const got = Math.max(0, career.coins - c0), champ = run && run.champ;
+      r.ui = { res: r.res, me: (typeof runs !== 'undefined' ? runs : 0), them: c.rv, myWk: Math.min(c.wkLost, c.wickets), rvWk: c.rvWk, sd: !!c.sd,
+        rv: c.rival, coins: got, bag: '', troph: 0, tg: 0, li, streak: 0, cup: true, champ, title: r.title, extra: r.extra, again: r.again };
+      window._duelUi = r.ui;
+    } catch (e) {}
+    return r;
+  };
+  const _s = window.showDuelResult;
+  window.showDuelResult = function (u) {
+    _s.apply(this, arguments);
+    if (!u || !u.cup) return;
+    const el = document.getElementById('duelRes'); if (!el) return;
+    const t = el.querySelector('.drTitle'); if (t) { t.textContent = u.title || t.textContent; t.classList.add('cupT'); }
+    el.querySelectorAll('.drTile.tro,.drTile.neg').forEach(x => x.remove());
+    const rew = el.querySelector('.drRew'), C = GAME_CONFIG.season.cup;
+    if (rew && !rew.children.length) {
+      const run = cupState().run, done = run ? run.path.filter(p => p.res === 'win').length : 0, total = C.rounds.length;
+      rew.innerHTML = `<div class="drPath">${C.rounds.map((n, i) => `<span class="${i < done ? 'w' : i === done && u.res === 'win' && !u.champ ? 'n' : u.res !== 'win' && i === done ? 'x' : ''}"><i></i>${String(n).replace('ROUND OF ', 'LAST ').replace('QUARTER-FINAL', 'QF').replace('SEMI-FINAL', 'SF')}</span>`).join('')}</div>`;
+    }
+    if (u.extra) { const s = el.querySelector('.drSub'); if (s) s.insertAdjacentHTML('afterend', `<div class="drNote cupX">${u.extra}</div>`); }
+    if (u.res !== 'win') el.querySelectorAll('.drNote').forEach(n => { if (/fresh balls/.test(n.textContent)) n.textContent = 'A new cup draw is ready whenever you are'; });
+  };
+  const css = document.createElement('style');
+  css.textContent = `
+  #duelRes .drTitle.cupT{font-size:clamp(26px,8vw,40px);line-height:1.05}
+  #duelRes .drNote.cupX{color:#ffd24a;font-size:14px;margin:2px 0 4px}
+  #duelRes .drPath{display:flex;gap:4px;justify-content:center;flex-wrap:nowrap;width:100%}
+  #duelRes .drPath span{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:#9fb0d6;min-width:46px}
+  #duelRes .drPath i{width:26px;height:26px;border-radius:50%;border:2.5px solid #3a4f86;background:#132247}
+  #duelRes .drPath span.w{color:#7CF29A}#duelRes .drPath span.w i{background:#2bb24c;border-color:#bff5c8}
+  #duelRes .drPath span.n{color:#ffd24a}#duelRes .drPath span.n i{background:#ffd24a;border-color:#fff3c4;box-shadow:0 0 10px rgba(255,210,74,.7)}
+  #duelRes .drPath span.x{color:#ff8a7a}#duelRes .drPath span.x i{background:#c42a2a;border-color:#ffc2b8}
+  `;
+  document.head.appendChild(css);
+})();
