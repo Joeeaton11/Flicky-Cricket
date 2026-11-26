@@ -835,6 +835,10 @@
   #homeTop .hPill .hNum{font-size:15px!important;min-width:0!important}
   #homeTroPill{border-color:#ffd24a!important}
   #homeTroPill .hNum{color:#fff}
+  body:not(:has(#v2deck.show)) #bottomNav .navTile{border:2.5px solid rgba(255,255,255,.85);border-radius:16px;background:linear-gradient(#3a64b8,#1a3270);box-shadow:inset 0 2px 0 rgba(255,255,255,.28),0 3px 0 rgba(0,0,0,.45)}
+  body:not(:has(#v2deck.show)) #bottomNav .navBtn.active .navTile{border-color:#ffd24a;background:linear-gradient(#4a78d0,#1f3c86)}
+  body:not(:has(#v2deck.show)) #bottomNav .navBtn.navPlay .navTile{border:3px solid #ffd24a;background:linear-gradient(#4a78d0,#1a3270);box-shadow:inset 0 2px 0 rgba(255,255,255,.3),0 4px 0 #050A14,0 0 14px rgba(255,201,58,.45)}
+  #homePlayer{height:max(220px, min(calc(100vh - var(--navH) - 176px - var(--hdrTop) - 138px), 400px))!important;bottom:calc(var(--navH) + 176px)!important}
   .hv2rail{position:absolute;top:196px;display:flex;flex-direction:column;gap:14px;z-index:4}
   .hv2rail.l{left:10px}.hv2rail.r{right:10px}
   .hv2b{width:58px;background:none;border:0;padding:0;color:#fff;font:400 10.5px/1.05 'Lilita One',sans-serif;text-align:center;text-shadow:0 2px 0 rgba(0,0,0,.6);cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -844,7 +848,7 @@
   .hv2b .tg.g{background:#2bb24c}
   .hv2b .dt{position:absolute;right:-6px;top:-6px;min-width:19px;height:19px;border-radius:10px;background:#e8243a;border:2px solid #fff;font-size:11px;display:grid;place-items:center;padding:0 3px}
   .hv2b.off .ic{filter:grayscale(.7) brightness(.75)}
-  @media (max-height:720px){#homeWordmark{width:150px!important}.hv2rail{top:150px;gap:9px}.hv2b{width:48px;font-size:9px}.hv2b .ic{width:48px;height:48px;border-radius:13px}}
+  @media (max-height:720px){#homeWordmark{width:132px!important;top:calc(var(--safeT,0px) + 50px)!important}#homePlayer{height:calc(100vh - var(--navH) - 176px - var(--hdrTop) - 114px)!important}.hv2rail{top:150px;gap:9px}.hv2b{width:48px;font-size:9px}.hv2b .ic{width:48px;height:48px;border-radius:13px}}
   #homeLeagueCard{border-radius:18px!important;overflow:hidden!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#2a1a10 var(--hv2art) var(--hv2x,0px) var(--hv2y,0px)/var(--hv2w,260px) auto no-repeat!important;height:88px!important}
   #homeLeagueCard>canvas,#homeLeagueCard>.lcShade,#homeLeagueCard>.lcTag,#homeLeagueCard>.lcBody{display:none!important}
   #homeLeagueCard .hv2s{position:absolute;inset:0;border-radius:15.5px;background:linear-gradient(90deg,rgb(8,14,32) 0%,rgb(8,14,32) var(--hv2a0,52%),rgba(8,14,32,0) var(--hv2a1,74%));pointer-events:none}
@@ -873,11 +877,11 @@
   // side rails
   const btn = (cls, art, label, extra) => `<button class="hv2b ${cls}"><span class="ic" style="background:${art}">${extra || ''}</span>${label}</button>`;
   const L = document.createElement('div'); L.className = 'hv2rail l'; L.id = 'hv2L';
-  L.innerHTML = btn('gift', `url(assets/inline/a0752272b3ad.webp) center/78% no-repeat,linear-gradient(#3fb24f,#1f7a2e)`, 'DAILY GIFT', '<span class="tg g">FREE</span>')
+  L.innerHTML = btn('gift', `url(assets/ui/daily_gift.webp) center/84% no-repeat,linear-gradient(#ffcf4a,#f08a1a)`, 'DAILY GIFT', '<span class="tg g">FREE</span>')
     + btn('inbox', `url(assets/ui/icon_inbox.webp) center/70% no-repeat,linear-gradient(#3f6ac8,#22408a)`, 'INBOX', '<span class="dt" hidden></span>')
     + btn('kit', `url(assets/ui/home_edit_kit.webp) center/80% no-repeat,radial-gradient(circle at 50% 35%,#3a63ad,#13284f 70%)`, 'MY KIT');
   const R = document.createElement('div'); R.className = 'hv2rail r'; R.id = 'hv2R';
-  R.innerHTML = btn('ev" data-hv2ev="cup', 'url(assets/ui/ev_cup.webp) center/cover no-repeat', 'CUP') + btn('ev" data-hv2ev="duel', 'url(assets/ui/ev_duels.webp) center/cover no-repeat', 'DUELS') + btn('ev" data-hv2ev="tourney', 'url(assets/ui/ev_weekly.webp) center/cover no-repeat', 'WEEKLY');
+  R.innerHTML = btn('ev" data-hv2ev="cup', 'url(assets/ui/ev_cup.webp) center/cover no-repeat', 'CUP', '<span class="tg"></span>') + btn('ev" data-hv2ev="duel', 'url(assets/ui/ev_duels.webp) center/cover no-repeat', 'DUELS', '<span class="tg"></span>') + btn('ev" data-hv2ev="tourney', 'url(assets/ui/ev_weekly.webp) center/cover no-repeat', 'WEEKLY', '<span class="tg"></span>');
   ov.appendChild(L); ov.appendChild(R);
   L.querySelector('.gift').addEventListener('click', () => {
     try { hapticTap(); } catch (e) {}
@@ -932,6 +936,10 @@
       const ib = $('inboxBadge'), dt = L.querySelector('.inbox .dt');
       const cnt = ib && getComputedStyle(ib).display !== 'none' ? ib.textContent.trim() : '';
       dt.textContent = cnt; dt.hidden = !cnt;
+      try { const tg = R.querySelector('[data-hv2ev=cup] .tg'), open = typeof cupOpenNow === 'function' && cupOpenNow();
+        if (open) { tg.textContent = 'OPEN'; tg.className = 'tg g'; } else { const ms = cupOpensIn(); tg.textContent = ms >= 864e5 ? Math.ceil(ms / 864e5) + 'd' : fmtLeft(ms).replace(/ \d+m$/, ''); tg.className = 'tg'; } } catch (e) {}
+      try { const tg = R.querySelector('[data-hv2ev=duel] .tg'), f = duelFreeLeft() > 0; tg.textContent = f ? 'FREE' : ''; tg.className = 'tg g'; tg.hidden = !f; } catch (e) {}
+      try { const tg = R.querySelector('[data-hv2ev=tourney] .tg'), dl = passDaysLeftWeek(); tg.textContent = dl + 'd LEFT'; tg.className = 'tg'; } catch (e) {}
       const hidden = ov.classList.contains('hidden'); L.style.display = R.style.display = hidden ? 'none' : '';
     } catch (e) {}
   }
