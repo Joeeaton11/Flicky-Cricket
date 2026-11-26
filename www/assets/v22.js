@@ -1143,7 +1143,17 @@
   #resultScreen.r2.cupWin #r2HeroR{top:var(--hrTop)!important;width:62%!important;gap:3px!important}
   #resultScreen.r2.cupWin #r2HeroR #r2Ribbon{font-size:40px!important;padding:2px 10px!important}
   #resultScreen.r2.cupWin #r2HeroR #r2Runs{font-size:74px!important}
-  #resultScreen.r2.cupWin #r2HeroR #r2Stars{transform:scale(.72);transform-origin:100% 0;margin:-4px 0 -16px}
+  #resultScreen.r2.cupWin #r2HeroR #r2Stars{transform:scale(.85);transform-origin:100% 0;margin:-4px 0 -8px}
+  #resultScreen.r2 #r2Stars i.on{animation:r2starPop .5s cubic-bezier(.3,1.8,.5,1) both}
+  #resultScreen.r2 #r2Stars i.on:nth-child(2){animation-delay:.15s}#resultScreen.r2 #r2Stars i.on:nth-child(3){animation-delay:.3s}
+  @keyframes r2starPop{0%{transform:scale(0) rotate(-40deg)}100%{transform:scale(1) rotate(0)}}
+  #resultScreen.r2 .r2best{display:inline-block;margin:0 0 2px;padding:3px 10px;border-radius:10px;background:linear-gradient(#ffe066,#f7a81b);color:#5a2a00;font-size:14px;letter-spacing:.04em;border:2px solid #fff3c4;box-shadow:0 3px 0 #a5560a;animation:r2starPop .5s .6s cubic-bezier(.3,1.8,.5,1) both}
+  html body #resultScreen.r2 #r2Double{height:44px!important;font-size:15px!important;background:linear-gradient(#3fae5a,#27863f)!important;border-width:2px!important;box-shadow:0 3px 0 #155a26!important;opacity:.95}
+  #resultScreen.r2 .r2trofly{position:fixed;z-index:20000;width:30px;height:30px;left:0;top:0;transition:transform .7s cubic-bezier(.4,0,.2,1),opacity .2s .65s;pointer-events:none}
+  #r2Road.v22{transition:transform .12s}#r2Road.v22.bump{transform:scale(1.03)}
+  #resultScreen.r2 #r2Extras .r2Badge.gold{display:none}
+  #resultScreen.r2 #r2ScoreTop{position:relative}
+  #resultScreen.r2 #r2ScoreTop .r2best{position:absolute;right:calc(100% + 6px);top:18px;white-space:nowrap}
   #resultScreen.r2.cupWin.tight #r2StatLine{display:none}
   @keyframes r2cupIn{0%{opacity:0;transform:translateX(-50%) translateY(-30px) scale(.7)}100%{opacity:1;transform:translateX(-50%)}}
   `;
@@ -1163,7 +1173,19 @@
           Object.assign(im.style, { left: (W / 2) + 'px', width: cw + 'px', height: (cw * 1.03) + 'px', top: (dd[1] * k - cw * 1.03) + 'px' }); host.appendChild(im); }
         const rs = $('resultScreen'); rs.classList.toggle('cupWin', !!(d && d.beatTarget));
         if (d && d.beatTarget) { const dd = PL[li] || [225, 405], W = rs.clientWidth || 393, k = W / 768; rs.style.setProperty('--hrTop', (dd[1] * k + 2).toFixed(0) + 'px');
-          requestAnimationFrame(() => { const rw = $('r2Rewards').getBoundingClientRect().top, need = dd[1] * k + 232; rs.classList.toggle('tight', rw < need); }); } }
+          requestAnimationFrame(() => { const rw = $('r2Rewards').getBoundingClientRect().top, need = dd[1] * k + 232; rs.classList.toggle("tight", rw < need + 34); }); } }
+      // NEW BEST tag
+      { const sc = $('r2ScoreTop'), old = document.querySelector('#resultScreen .r2best'); if (old) old.remove();
+        if (d && d.isNewBest && sc) sc.insertAdjacentHTML('afterbegin', '<span class="r2best">NEW BEST!</span>'); }
+      // trophies fly into the league panel
+      if (d && d.trophyDelta > 0) setTimeout(() => { try {
+        const a = $('r2Trophy'), b = document.querySelector('#r2Road.v22 .rrow .hIco'); if (!a || !b) return;
+        const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(), n = Math.min(6, d.trophyDelta + 2);
+        for (let i = 0; i < n; i++) { const f = document.createElement('i'); f.className = 'hIco hi-trophy r2trofly';
+          f.style.transform = `translate(${ra.left + ra.width / 2 - 15 + (Math.random() * 30 - 15)}px,${ra.top + 20}px)`; $('resultScreen').appendChild(f);
+          setTimeout(() => { f.style.transform = `translate(${rb.left - 7}px,${rb.top - 7}px) scale(.6)`; f.style.opacity = '0'; }, 40 + i * 80);
+          setTimeout(() => { f.remove(); if (i === n - 1) { const r = $('r2Road'); r.classList.add('bump'); setTimeout(() => r.classList.remove('bump'), 260); try { playTone({ freq: 1100, duration: .08, volume: .08 }); } catch (e) {} } }, 800 + i * 80); }
+      } catch (e) {} }, 2300);
       // loss coin label
       if (d && !d.beatTarget && d.entryPaid) { $('r2CoinsSub').textContent = d.coinsEarned ? `ENTRY · ${d.coinsEarned.toLocaleString()} BACK` : 'ENTRY'; }
       // league panel in place of the trophy road
