@@ -1102,10 +1102,10 @@
   #resultScreen.r2 #r2ArtCanvas{opacity:0}
   #resultScreen.r2 #r2Art{height:max(280px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px)))!important}
   #resultScreen.r2 #r2Road.v22{margin-top:26px!important;margin-bottom:6px}
-  #resultScreen.r2{background:linear-gradient(rgba(18,48,99,0) 0,rgba(18,48,99,0) 34%,rgba(18,48,99,.85) 45%,#123063 50%,#0a1d3d 72%,#01162C 100%),#123063 var(--r2art) center top/100% auto no-repeat!important}
+  #resultScreen.r2{background:linear-gradient(rgba(18,48,99,0) 0,rgba(18,48,99,0) 30%,rgba(18,48,99,.18) 36%,rgba(18,48,99,.5) 42%,rgba(18,48,99,.82) 48%,#123063 55%,#0a1d3d 74%,#01162C 100%),#123063 var(--r2art) center top/100% auto no-repeat!important}
   #resultScreen.r2 #r2Art{background:none!important}
-  #resultScreen.r2 #r2Art::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,12,30,.1) 30%,rgba(6,12,30,.55) 70%),linear-gradient(rgba(6,12,30,.35),rgba(6,12,30,0) 30%);pointer-events:none;z-index:1}
-  #resultScreen.r2 #r2Player{height:min(300px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px) - max(env(safe-area-inset-top,0px),6px) - 116px))!important;left:14px!important;bottom:48px!important}
+  html body #resultScreen.r2 #r2Art::after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(6,12,30,.35),rgba(6,12,30,0) 30%)!important;pointer-events:none;z-index:1}
+  #resultScreen.r2 #r2Player{height:min(330px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px) - max(env(safe-area-inset-top,0px),6px) - 78px))!important;left:12px!important;bottom:14px!important}
   #resultScreen.r2 #r2HeroR{width:58%!important;z-index:3}
   #resultScreen.r2 .r2Rew img#r2BagImg{width:58px!important;height:52px!important;margin-top:-6px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.5))}
   #r2Road.v22{position:relative;height:86px;margin-top:22px;border-radius:18px!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#0b1226 var(--rart) var(--rx,0) var(--ry,0)/var(--rw,260px) auto no-repeat!important;padding:0!important;overflow:visible}
