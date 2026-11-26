@@ -1102,7 +1102,7 @@
   #resultScreen.r2 #r2ArtCanvas{opacity:0}
   #resultScreen.r2 #r2Art{height:max(280px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px)))!important}
   #resultScreen.r2 #r2Road.v22{margin-top:26px!important;margin-bottom:6px}
-  #resultScreen.r2{background:linear-gradient(rgba(8,14,32,0) 0,rgba(8,14,32,0) 34%,rgba(8,14,32,.8) 45%,#081020 50%),#0b1226 var(--r2art) center top/100% auto no-repeat!important}
+  #resultScreen.r2{background:linear-gradient(rgba(18,48,99,0) 0,rgba(18,48,99,0) 34%,rgba(18,48,99,.85) 45%,#123063 50%,#0a1d3d 72%,#01162C 100%),#123063 var(--r2art) center top/100% auto no-repeat!important}
   #resultScreen.r2 #r2Art{background:none!important}
   #resultScreen.r2 #r2Art::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,12,30,.1) 30%,rgba(6,12,30,.55) 70%),linear-gradient(rgba(6,12,30,.35),rgba(6,12,30,0) 30%);pointer-events:none;z-index:1}
   #resultScreen.r2 #r2Player{height:min(300px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px) - max(env(safe-area-inset-top,0px),6px) - 116px))!important;left:14px!important;bottom:48px!important}
