@@ -1048,6 +1048,8 @@
   #duelVs.cupVs{grid-template-rows:auto 1fr auto auto!important;padding-top:calc(max(var(--hdrTop,6px), 50px) + 34px)!important}
   #duelVs.cupVs .vsSide,#duelVs.cupVs .vsMid{align-self:end;margin-bottom:2vh}
   #duelVs.cupVs .vsSide canvas{max-width:200px!important}
+  #duelVs.cupVs .vsSide.me{transform:translateX(16px)}#duelVs.cupVs .vsSide.them{transform:translateX(-16px)}
+  #duelVs.cupVs .vsMid{align-self:end!important;margin:0 0 calc(2vh + 96px)!important}
   #duelVs.cupVs .vsSide.them b{background:linear-gradient(#5b5577,#2c2846)!important;border-color:#d8d4ea!important}
   #duelVs.cupVs .vsMid span{font-size:64px}
   #duelVs .cupStake{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px 0 16px;animation:vsDrop .5s .3s cubic-bezier(.3,1.5,.5,1) both}
@@ -1073,8 +1075,8 @@
       el.classList.toggle('cupVs', !!(extra && extra.cup));
       if (extra && extra.cup) {
         const li = window._activeLeagueIdx || 1, art = (typeof sceneArt === 'function') ? sceneArt('cup', li) : 'assets/ui/cup_bg.webp';
-        el.style.backgroundImage = `linear-gradient(#1a0a40 0%,#1a0a40 calc(max(var(--hdrTop,6px),50px) + 70px),rgba(26,10,64,0) calc(max(var(--hdrTop,6px),50px) + 170px)),linear-gradient(rgba(20,6,50,0) 60%,rgba(20,6,50,.9) 88%),url(${art})`;
-        el.style.backgroundSize = '100% 100%,100% 100%,100% auto'; el.style.backgroundPosition = '0 0,0 0,center calc(max(var(--hdrTop,6px),50px) + 110px)'; el.style.backgroundColor = '#1a0a40'; el.style.backgroundRepeat = 'no-repeat';
+        el.style.backgroundImage = `linear-gradient(#1a0a40 0%,#1a0a40 calc(max(var(--hdrTop,6px),50px) + 84px),rgba(26,10,64,0) calc(max(var(--hdrTop,6px),50px) + 200px)),linear-gradient(rgba(20,6,50,0) 60%,rgba(20,6,50,.9) 88%),url(${art})`;
+        el.style.backgroundSize = '100% 100%,100% 100%,100% auto'; el.style.backgroundPosition = '0 0,0 0,center calc(max(var(--hdrTop,6px),50px) + 80px)'; el.style.backgroundColor = '#1a0a40'; el.style.backgroundRepeat = 'no-repeat';
         if (!el.querySelector('.cupStake')) { const C = GAME_CONFIG.season.cup, run = cupState().run, rd = extra.cupRound || 0, fin = rd === C.rounds.length - 1;
           const dots = C.rounds.map((n, i) => `<span class="${i < rd ? 'w' : i === rd ? 'n' : ''}"><i></i>${String(n).replace('ROUND OF ', 'LAST ').replace('QUARTER-FINAL', 'QF').replace('SEMI-FINAL', 'SF')}</span>`).join('');
           const foot = el.querySelector('.vsFoot'); if (foot) foot.insertAdjacentHTML('beforebegin', `<div class="cupStake"><b>${fin ? 'WIN AND LIFT THE CUP' : 'LOSE AND YOU\'RE OUT'}</b><div class="dots">${dots}</div></div>`); } el.style.backgroundColor = '#1a0a40'; el.style.backgroundRepeat = 'no-repeat';
