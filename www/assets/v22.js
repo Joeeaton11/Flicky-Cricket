@@ -354,6 +354,7 @@
   .tcard.pt.locked .need{position:relative;z-index:9}
   .tcard.pt .v2stk.lkneed{justify-content:center;min-height:38px}.v2stk.lkneed .need{font-size:15px;line-height:1.1;text-align:center;color:#fff;text-shadow:0 2px 0 #000}.v2stk.lkneed .need b{font-weight:400;color:#ffd75a;display:inline;font-size:inherit}
   #v2deck .tcard.pt{translate:0 -46px}
+  .tcard.pt.locked .lockx.st{z-index:50!important}
   #v2deck .tcard.pt .v2go{font-size:7.6cqw!important;white-space:nowrap}#v2deck .tcard.pt .v2go img{height:1.4em;width:auto}#v2deck .tcard.pt .v2pz2 .row span{font-size:min(12.5px,5.3cqw)!important}#v2deck .tcard.pt .v2pz2 h5{font-size:min(11px,4.7cqw)!important}
   #v2deck .tcard.pt{flex-basis:calc(73vw - min(26px, env(safe-area-inset-top,0px) * .45));translate:0 calc(-46px + min(27px, env(safe-area-inset-top,0px) * .46))}
   .tcard.pt.locked .lockx.st .stk{aspect-ratio:896/1200!important;width:auto!important}
