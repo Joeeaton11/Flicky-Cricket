@@ -957,6 +957,10 @@
   const PL = {"1":[233,399],"2":[246,408],"3":[202,426],"4":[171,432],"5":[232,400],"6":[205,399],"7":[175,414],"8":[197,429],"9":[192,415],"10":[280,399],"11":[222,444],"12":[233,405],"13":[211,440],"14":[234,405],"15":[219,399],"16":[287,399],"17":[231,404],"18":[204,417],"19":[195,398],"20":[213,399],"21":[209,415],"22":[229,394],"23":[207,399],"24":[218,411],"25":[203,416],"26":[226,408],"27":[195,402]};
   const css = document.createElement('style');
   css.textContent = `
+  #duelRes .drScore em{font-size:0!important;flex:none}
+  #duelRes .drScore em::after{content:'VS';font-size:30px;line-height:1;color:#ffd24a;text-shadow:0 3px 0 #7a3a00,0 0 8px rgba(0,0,0,.5);-webkit-text-stroke:1px #7a3a00}
+  #duelRes .drChat{gap:8px!important}
+  #duelRes .drChat button{font-size:14px!important;padding:8px 14px!important;min-height:38px;border-radius:14px!important}
   #duelTables .dtTop{padding-bottom:2px}
   #duelTables .dtTop>b{font-size:22px}
   #duelTables .dtSub{font-size:12.5px;line-height:1.35;padding:2px 16px 0 66px;margin-top:-4px}
