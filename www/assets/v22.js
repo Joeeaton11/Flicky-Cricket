@@ -1045,7 +1045,7 @@
   #duelVs.cupVs .vsSide.me b{border-color:#ffd24a!important}
   #duelVs.cupVs .vsSide.them b{border-color:#c9b6ff!important}
   #duelVs.cupVs .vsMid img{display:none!important}
-  #duelVs.cupVs{grid-template-rows:auto 1fr auto auto!important;padding-top:calc(max(var(--hdrTop,6px), 50px) + 34px)!important}
+  #duelVs.cupVs{grid-template-rows:auto 1fr auto auto!important;padding-top:calc(max(var(--hdrTop,6px), 50px) + 20px)!important}
   #duelVs.cupVs .vsSide,#duelVs.cupVs .vsMid{align-self:end;margin-bottom:2vh}
   #duelVs.cupVs .vsSide canvas{max-width:200px!important}
   #duelVs.cupVs .vsSide.me{transform:translateX(16px)}#duelVs.cupVs .vsSide.them{transform:translateX(-16px)}
@@ -1075,7 +1075,7 @@
       el.classList.toggle('cupVs', !!(extra && extra.cup));
       if (extra && extra.cup) {
         const li = window._activeLeagueIdx || 1, art = (typeof sceneArt === 'function') ? sceneArt('cup', li) : 'assets/ui/cup_bg.webp';
-        el.style.backgroundImage = `linear-gradient(#1a0a40 0%,#1a0a40 calc(max(var(--hdrTop,6px),50px) + 84px),rgba(26,10,64,0) calc(max(var(--hdrTop,6px),50px) + 200px)),linear-gradient(rgba(20,6,50,0) 60%,rgba(20,6,50,.9) 88%),url(${art})`;
+        el.style.backgroundImage = `linear-gradient(#1a0a40 0%,#1a0a40 calc(max(var(--hdrTop,6px),50px) + 80px),rgba(26,10,64,0) calc(max(var(--hdrTop,6px),50px) + 106px)),linear-gradient(rgba(20,6,50,0) 60%,rgba(20,6,50,.9) 88%),url(${art})`;
         el.style.backgroundSize = '100% 100%,100% 100%,100% auto'; el.style.backgroundPosition = '0 0,0 0,center calc(max(var(--hdrTop,6px),50px) + 80px)'; el.style.backgroundColor = '#1a0a40'; el.style.backgroundRepeat = 'no-repeat';
         if (!el.querySelector('.cupStake')) { const C = GAME_CONFIG.season.cup, run = cupState().run, rd = extra.cupRound || 0, fin = rd === C.rounds.length - 1;
           const dots = C.rounds.map((n, i) => `<span class="${i < rd ? 'w' : i === rd ? 'n' : ''}"><i></i>${String(n).replace('ROUND OF ', 'LAST ').replace('QUARTER-FINAL', 'QF').replace('SEMI-FINAL', 'SF')}</span>`).join('');
