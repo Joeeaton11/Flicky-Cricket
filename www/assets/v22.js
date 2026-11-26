@@ -1134,8 +1134,8 @@
   #resultScreen.r2 .r2Rew small{font-size:11px!important}
   #resultScreen.r2 #r2HeroR{top:calc(max(env(safe-area-inset-top,0px),6px) + 72px)!important;gap:6px!important}
   #resultScreen.r2 #r2HeroR #r2Ribbon{font-size:44px!important;padding:6px 18px!important}
-  #resultScreen.r2 #r2Pills{top:calc(max(env(safe-area-inset-top,0px),3px) + 2px)!important}
-  #resultScreen.r2 #r2Team{top:calc(max(env(safe-area-inset-top,0px),3px) + 2px)!important}
+  #resultScreen.r2 #r2Pills{top:calc(max(env(safe-area-inset-top,0px),6px) + 12px)!important}
+  #resultScreen.r2 #r2Team{top:calc(max(env(safe-area-inset-top,0px),6px) + 13px)!important}
   #resultScreen.r2 #r2HeroR #r2Runs{font-size:88px!important}
   #resultScreen.r2 #r2HeroR #r2ScoreTop{margin-right:22px}
   #resultScreen.r2 #r2HeroR::before{content:'';position:absolute;z-index:-1;left:-14%;right:-8%;top:-6%;bottom:-8%;background:radial-gradient(closest-side,rgba(6,12,30,.62),rgba(6,12,30,.35) 60%,rgba(6,12,30,0));pointer-events:none}
