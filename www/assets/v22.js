@@ -838,17 +838,18 @@
   body:not(:has(#v2deck.show)) #bottomNav .navTile{border:2.5px solid rgba(255,255,255,.85);border-radius:16px;background:linear-gradient(#3a64b8,#1a3270);box-shadow:inset 0 2px 0 rgba(255,255,255,.28),0 3px 0 rgba(0,0,0,.45)}
   body:not(:has(#v2deck.show)) #bottomNav .navBtn.active .navTile{border-color:#ffd24a;background:linear-gradient(#4a78d0,#1f3c86)}
   body:not(:has(#v2deck.show)) #bottomNav .navBtn.navPlay .navTile{border:3px solid #ffd24a;background:linear-gradient(#4a78d0,#1a3270);box-shadow:inset 0 2px 0 rgba(255,255,255,.3),0 4px 0 #050A14,0 0 14px rgba(255,201,58,.45)}
-  #homePlayer{height:max(220px, min(calc(100vh - var(--navH) - 176px - var(--hdrTop) - 138px), 400px))!important;bottom:calc(var(--navH) + 176px)!important}
-  .hv2rail{position:absolute;top:196px;display:flex;flex-direction:column;gap:14px;z-index:4}
+  #homePlayer{height:max(200px, min(calc(100vh - var(--navH) - 206px - var(--hdrTop) - 138px), 390px))!important;bottom:calc(var(--navH) + 206px)!important}
+  .hv2rail{position:absolute;top:calc(var(--hdrTop,6px) + 184px);display:flex;flex-direction:column;gap:16px;z-index:4}
   .hv2rail.l{left:10px}.hv2rail.r{right:10px}
-  .hv2b{width:58px;background:none;border:0;padding:0;color:#fff;font:400 10.5px/1.05 'Lilita One',sans-serif;text-align:center;text-shadow:0 2px 0 rgba(0,0,0,.6);cursor:pointer;-webkit-tap-highlight-color:transparent}
-  .hv2b .ic{display:block;width:58px;height:58px;border-radius:16px;background:center/cover no-repeat;border:2.5px solid #fff;box-shadow:0 3px 0 rgba(0,0,0,.45);position:relative;margin-bottom:3px}
+  .hv2b{width:62px;background:none;border:0;padding:0;color:#fff;font:400 11.5px/1 'Lilita One',sans-serif;letter-spacing:.02em;text-align:center;text-shadow:0 2px 0 rgba(0,0,0,.6);cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .hv2b .ic{display:block;width:56px;height:56px;margin:0 auto 5px;border-radius:15px;background:center/cover no-repeat;border:2.5px solid #fff;box-shadow:0 3px 0 rgba(0,0,0,.45);position:relative}
   .hv2b:active .ic{transform:scale(.94)}
-  .hv2b .tg{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);background:#e8243a;border-radius:8px;padding:1px 6px;font-size:10px;white-space:nowrap;border:1.5px solid #fff}
+  .hv2b .tg{position:absolute;right:-9px;top:-9px;background:#e8243a;border-radius:9px;padding:2px 6px 1px;font-size:10.5px;line-height:1.1;white-space:nowrap;border:2px solid #fff;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+  .hv2b .tg:empty{display:none}
   .hv2b .tg.g{background:#2bb24c}
   .hv2b .dt{position:absolute;right:-6px;top:-6px;min-width:19px;height:19px;border-radius:10px;background:#e8243a;border:2px solid #fff;font-size:11px;display:grid;place-items:center;padding:0 3px}
   .hv2b.off .ic{filter:grayscale(.7) brightness(.75)}
-  @media (max-height:720px){#homeWordmark{width:132px!important;top:calc(var(--safeT,0px) + 50px)!important}#homePlayer{height:calc(100vh - var(--navH) - 176px - var(--hdrTop) - 114px)!important}.hv2rail{top:150px;gap:9px}.hv2b{width:48px;font-size:9px}.hv2b .ic{width:48px;height:48px;border-radius:13px}}
+  @media (max-height:720px){.hv2rail{top:calc(var(--hdrTop,6px) + 124px)!important;gap:11px!important}.hv2b{width:52px!important;font-size:10px!important}.hv2b .ic{width:46px!important;height:46px!important;border-radius:12px!important;margin-bottom:4px!important}#homeWordmark{width:132px!important;top:calc(var(--safeT,0px) + 50px)!important}#homePlayer{height:calc(100vh - var(--navH) - 200px - var(--hdrTop) - 112px)!important;bottom:calc(var(--navH) + 200px)!important}}
   #homeLeagueCard{border-radius:18px!important;overflow:hidden!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#2a1a10 var(--hv2art) var(--hv2x,0px) var(--hv2y,0px)/var(--hv2w,260px) auto no-repeat!important;height:88px!important}
   #homeLeagueCard>canvas,#homeLeagueCard>.lcShade,#homeLeagueCard>.lcTag,#homeLeagueCard>.lcBody{display:none!important}
   #homeLeagueCard .hv2s{position:absolute;inset:0;border-radius:15.5px;background:linear-gradient(90deg,rgb(8,14,32) 0%,rgb(8,14,32) var(--hv2a0,52%),rgba(8,14,32,0) var(--hv2a1,74%));pointer-events:none}
@@ -939,7 +940,7 @@
       try { const tg = R.querySelector('[data-hv2ev=cup] .tg'), open = typeof cupOpenNow === 'function' && cupOpenNow();
         if (open) { tg.textContent = 'OPEN'; tg.className = 'tg g'; } else { const ms = cupOpensIn(); tg.textContent = ms >= 864e5 ? Math.ceil(ms / 864e5) + 'd' : fmtLeft(ms).replace(/ \d+m$/, ''); tg.className = 'tg'; } } catch (e) {}
       try { const tg = R.querySelector('[data-hv2ev=duel] .tg'), f = duelFreeLeft() > 0; tg.textContent = f ? 'FREE' : ''; tg.className = 'tg g'; tg.hidden = !f; } catch (e) {}
-      try { const tg = R.querySelector('[data-hv2ev=tourney] .tg'), dl = passDaysLeftWeek(); tg.textContent = dl + 'd LEFT'; tg.className = 'tg'; } catch (e) {}
+      try { const tg = R.querySelector('[data-hv2ev=tourney] .tg'), dl = passDaysLeftWeek(); tg.textContent = dl + 'd'; tg.className = 'tg'; } catch (e) {}
       const hidden = ov.classList.contains('hidden'); L.style.display = R.style.display = hidden ? 'none' : '';
     } catch (e) {}
   }
