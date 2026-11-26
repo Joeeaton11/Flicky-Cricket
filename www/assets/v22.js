@@ -1100,11 +1100,11 @@
   const css = document.createElement('style');
   css.textContent = `
   #resultScreen.r2 #r2ArtCanvas{opacity:0}
-  #resultScreen.r2 #r2Art{height:max(280px, calc(100dvh - 474px - env(safe-area-inset-bottom,0px)))!important}
+  #resultScreen.r2 #r2Art{height:max(280px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px)))!important}
   #resultScreen.r2 #r2Road.v22{margin-top:26px!important;margin-bottom:6px}
   #resultScreen.r2 #r2Art{background:#0b1226 var(--r2art) center var(--r2y,26%)/cover no-repeat}
   #resultScreen.r2 #r2Art::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,12,30,.1) 30%,rgba(6,12,30,.55) 70%),linear-gradient(rgba(6,12,30,.35),rgba(6,12,30,0) 30%,rgba(6,12,30,0) 70%,rgba(6,12,30,.85));pointer-events:none;z-index:1}
-  #resultScreen.r2 #r2Player{height:min(236px, calc(100dvh - 520px - env(safe-area-inset-bottom,0px) - env(safe-area-inset-top,0px)))!important;left:-6px!important;bottom:4px!important}
+  #resultScreen.r2 #r2Player{height:min(300px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px) - max(env(safe-area-inset-top,0px),6px) - 116px))!important;left:-10px!important;bottom:48px!important}
   #resultScreen.r2 #r2HeroR{width:58%!important;z-index:3}
   #resultScreen.r2 .r2Rew img#r2BagImg{width:58px!important;height:52px!important;margin-top:-6px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.5))}
   #r2Road.v22{position:relative;height:86px;margin-top:22px;border-radius:18px!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#0b1226 var(--rart) var(--rx,0) var(--ry,0)/var(--rw,260px) auto no-repeat!important;padding:0!important;overflow:visible}
@@ -1117,10 +1117,23 @@
   #r2Road.v22 #r2RoadBar{flex:1;height:10px!important;border:0!important;border-radius:6px!important;background:rgba(0,0,0,.55)!important;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
   #r2Road.v22 #r2RoadFill{border-radius:6px;box-shadow:inset 0 2px 0 rgba(255,255,255,.5)}
   #r2Road.v22 .rnx{color:#ffd24a}
-  #resultScreen.r2 #r2Btns{flex-wrap:wrap!important;row-gap:4px!important}
-  #resultScreen.r2 #rs-playAgainBtn{order:1;flex:1 1 0!important;height:62px!important}
-  #resultScreen.r2 #r2Share{order:2}
-  #resultScreen.r2 #rs-menuBtn{order:3;flex:1 0 100%!important;height:34px!important;background:none!important;border:0!important;box-shadow:none!important;font-size:16px!important;color:#c9d6f2!important;letter-spacing:.08em}
+  #resultScreen.r2 #r2Btns{display:grid!important;grid-template-columns:1fr 2.1fr 54px!important;gap:8px!important;align-items:center;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 10px)!important}
+  html body #resultScreen.r2 #rs-menuBtn,html body.rsTight #resultScreen.r2 #rs-menuBtn{order:1;width:auto!important;height:58px!important;font-size:17px!important}
+  html body #resultScreen.r2 .r2Rew{height:104px!important}
+  html body #r2Wrap{gap:10px!important}
+  #resultScreen.r2 #r2Road.v22{margin-top:22px!important}
+  #resultScreen.r2 #rs-playAgainBtn{order:2;height:66px!important;width:auto!important}
+  #resultScreen.r2 #r2Share{order:3;height:58px!important;width:54px!important}
+  #resultScreen.r2 .rs-playLabel{font-size:24px!important}
+  #resultScreen.r2 .rs-playCost{font-size:18px!important;opacity:1!important;margin-top:2px!important}
+  #resultScreen.r2 .rs-playCost .hIco{width:21px!important;height:21px!important}
+  #resultScreen.r2 .r2Rew .hIco{width:46px!important;height:46px!important}
+  #resultScreen.r2 .r2Rew img#r2BagImg{width:70px!important;height:56px!important;margin-top:-6px}
+  #resultScreen.r2 .r2Rew b{font-size:28px!important}
+  #resultScreen.r2 .r2Rew small{font-size:11px!important}
+  #resultScreen.r2 #r2HeroR{top:calc(max(env(safe-area-inset-top,0px),6px) + 72px)!important;gap:6px!important}
+  #resultScreen.r2 #r2HeroR #r2Ribbon{font-size:36px!important;padding:6px 18px!important}
+  #resultScreen.r2 #r2HeroR #r2Runs{font-size:88px!important}
   `;
   document.head.appendChild(css);
   const _s = window.showResultScreen;
