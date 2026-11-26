@@ -845,10 +845,10 @@
   .hv2b .dt{position:absolute;right:-6px;top:-6px;min-width:19px;height:19px;border-radius:10px;background:#e8243a;border:2px solid #fff;font-size:11px;display:grid;place-items:center;padding:0 3px}
   .hv2b.off .ic{filter:grayscale(.7) brightness(.75)}
   @media (max-height:720px){#homeWordmark{width:150px!important}.hv2rail{top:150px;gap:9px}.hv2b{width:48px;font-size:9px}.hv2b .ic{width:48px;height:48px;border-radius:13px}}
-  #homeLeagueCard{border-radius:18px!important;overflow:hidden!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#2a1a10 var(--hv2art) var(--hv2x,0px) var(--hv2y,0px)/var(--hv2w,260px) auto no-repeat!important;height:76px!important}
+  #homeLeagueCard{border-radius:18px!important;overflow:hidden!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#2a1a10 var(--hv2art) var(--hv2x,0px) var(--hv2y,0px)/var(--hv2w,260px) auto no-repeat!important;height:88px!important}
   #homeLeagueCard>canvas,#homeLeagueCard>.lcShade,#homeLeagueCard>.lcTag,#homeLeagueCard>.lcBody{display:none!important}
   #homeLeagueCard .hv2s{position:absolute;inset:0;background:linear-gradient(90deg,rgb(8,14,32) 0%,rgb(8,14,32) var(--hv2a0,52%),rgba(8,14,32,0) var(--hv2a1,74%));pointer-events:none}
-  #homeLeagueCard .hv2bd{position:absolute;left:4px;top:-3px;width:128px;height:auto;pointer-events:none}
+  #homeLeagueCard .hv2bd{position:absolute;left:8px;top:5px;height:54px;width:auto;max-width:48%;object-fit:contain;object-position:0 50%;pointer-events:none}
   #homeLeagueCard .hv2c{position:static;flex:none;margin-right:-2px;font-size:13px!important;padding:1px 7px 1px 3px!important;background:rgba(0,0,0,.5);border-radius:12px;padding:2px 9px 2px 4px;font:400 15px 'Lilita One',sans-serif;color:#fff;display:flex;align-items:center;gap:3px;text-shadow:0 2px 0 rgba(0,0,0,.5)}
   #homeLeagueCard .hv2c i{width:20px;height:20px}
   #homeLeagueCard .hv2p{position:absolute;left:12px;right:26%;bottom:8px;display:flex;align-items:center;gap:7px;font:400 12px 'Lilita One',sans-serif;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.6);white-space:nowrap}
@@ -905,7 +905,7 @@
       const tc = $('homeTroCount'); if (tc) tc.textContent = troph.toLocaleString('en-GB');
       if (card) {
         card.style.setProperty('--hv2art', `url(assets/ui/leagues/lg_${n}_tall.webp)`);
-        { const PL = {"1":[233,399],"2":[246,408],"3":[202,426],"4":[171,432],"5":[232,400],"6":[205,399],"7":[175,414],"8":[197,429],"9":[192,415],"10":[280,399],"11":[222,444],"12":[233,405],"13":[211,440],"14":[234,405],"15":[219,399],"16":[287,399],"17":[231,404],"18":[204,417],"19":[195,398],"20":[213,399],"21":[209,415],"22":[229,394],"23":[207,399],"24":[218,411],"25":[203,416],"26":[226,408],"27":[195,402]}, d = PL[n] || [225, 405], W = card.clientWidth || 363, cw = 74, k = cw / d[0], cx = W * 0.85, cb = 52;
+        { const PL = {"1":[233,399],"2":[246,408],"3":[202,426],"4":[171,432],"5":[232,400],"6":[205,399],"7":[175,414],"8":[197,429],"9":[192,415],"10":[280,399],"11":[222,444],"12":[233,405],"13":[211,440],"14":[234,405],"15":[219,399],"16":[287,399],"17":[231,404],"18":[204,417],"19":[195,398],"20":[213,399],"21":[209,415],"22":[229,394],"23":[207,399],"24":[218,411],"25":[203,416],"26":[226,408],"27":[195,402]}, d = PL[n] || [225, 405], W = card.clientWidth || 363, cw = 84, k = cw / d[0], cx = W * 0.81, cb = 61;
           card.style.setProperty('--hv2w', (768 * k).toFixed(1) + 'px');
           card.style.setProperty('--hv2x', (cx - 384 * k).toFixed(1) + 'px');
           card.style.setProperty('--hv2y', (cb - d[1] * k).toFixed(1) + 'px');
