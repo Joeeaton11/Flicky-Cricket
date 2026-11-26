@@ -821,3 +821,106 @@
       if (list.length) await LN.schedule({ notifications: list.map(n => ({ id: n.id, title: n.title, body: n.body, schedule: { at: new Date(n.at) } })) }); } catch (e) {} }
   document.addEventListener('visibilitychange', () => { if (document.hidden) loopNotices(); });
 })();
+
+/* ===== 2.2 home screen (option 1): trophies in the top bar, smaller logo, side rails, painted league panel ===== */
+(function homeV22() {
+  const css = document.createElement('style');
+  css.textContent = `
+  #homeWordmark{width:204px!important;height:auto!important;left:50%!important;transform:translateX(-50%)!important}
+  #homePlayer::after{right:-6px!important;top:auto!important;bottom:30%!important}
+  #homeTop{left:62px!important;right:8px!important;width:auto!important;display:flex!important;gap:5px!important}
+  #homeTop .hPill{flex:1 1 0!important;min-width:0!important;width:auto!important;padding-right:4px!important}
+  #homeTop .hPill .hNum{font-size:15px!important;min-width:0!important}
+  #homeTroPill{border-color:#ffd24a!important}
+  #homeTroPill .hNum{color:#fff}
+  .hv2rail{position:absolute;top:196px;display:flex;flex-direction:column;gap:14px;z-index:4}
+  .hv2rail.l{left:10px}.hv2rail.r{right:10px}
+  .hv2b{width:58px;background:none;border:0;padding:0;color:#fff;font:400 10.5px/1.05 'Lilita One',sans-serif;text-align:center;text-shadow:0 2px 0 rgba(0,0,0,.6);cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .hv2b .ic{display:block;width:58px;height:58px;border-radius:16px;background:center/cover no-repeat;border:2.5px solid #fff;box-shadow:0 3px 0 rgba(0,0,0,.45);position:relative;margin-bottom:3px}
+  .hv2b:active .ic{transform:scale(.94)}
+  .hv2b .tg{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);background:#e8243a;border-radius:8px;padding:1px 6px;font-size:10px;white-space:nowrap;border:1.5px solid #fff}
+  .hv2b .tg.g{background:#2bb24c}
+  .hv2b .dt{position:absolute;right:-6px;top:-6px;min-width:19px;height:19px;border-radius:10px;background:#e8243a;border:2px solid #fff;font-size:11px;display:grid;place-items:center;padding:0 3px}
+  .hv2b.off .ic{filter:grayscale(.7) brightness(.75)}
+  @media (max-height:720px){#homeWordmark{width:150px!important}#homePlayer::after{width:40px!important;height:40px!important;right:-34px!important;bottom:36%!important}.hv2rail{top:150px;gap:9px}.hv2b{width:48px;font-size:9px}.hv2b .ic{width:48px;height:48px;border-radius:13px}}
+  #homeLeagueCard{border-radius:18px!important;overflow:hidden!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#2a1a10 var(--hv2art) right 17%/80% auto no-repeat!important;height:76px!important}
+  #homeLeagueCard>canvas,#homeLeagueCard>.lcShade,#homeLeagueCard>.lcTag,#homeLeagueCard>.lcBody{display:none!important}
+  #homeLeagueCard .hv2s{position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,14,32,.92),rgba(8,14,32,.5) 50%,rgba(8,14,32,0) 80%);pointer-events:none}
+  #homeLeagueCard .hv2bd{position:absolute;left:4px;top:-3px;width:128px;height:auto;pointer-events:none}
+  #homeLeagueCard .hv2c{position:absolute;right:10px;top:7px;background:rgba(0,0,0,.5);border-radius:12px;padding:2px 9px 2px 4px;font:400 15px 'Lilita One',sans-serif;color:#fff;display:flex;align-items:center;gap:3px;text-shadow:0 2px 0 rgba(0,0,0,.5)}
+  #homeLeagueCard .hv2c i{width:20px;height:20px}
+  #homeLeagueCard .hv2p{position:absolute;left:12px;right:10px;bottom:7px;display:flex;align-items:center;gap:7px;font:400 12px 'Lilita One',sans-serif;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.6);white-space:nowrap}
+  #homeLeagueCard .hv2p i.hIco{width:16px;height:16px;flex:none}
+  #homeLeagueCard .hv2bar{flex:1;height:10px;border-radius:6px;background:rgba(0,0,0,.55);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+  #homeLeagueCard .hv2bar b{display:block;height:100%;border-radius:6px;background:linear-gradient(#ffe27a,#f5a11a);box-shadow:inset 0 2px 0 rgba(255,255,255,.5);transition:width .6s}
+  #homeLeagueCard .hv2n{color:#ffd24a}
+  #homeLeagueCard .hv2nc{width:22px;height:22px;object-fit:contain;filter:grayscale(.5) brightness(.85)}
+  `;
+  document.head.appendChild(css);
+  const $ = id => document.getElementById(id), ov = $('overlay');
+  if (!ov || !$('homeTop')) return;
+  // trophies pill, first in the top bar
+  const coin = $('homeCoinPill');
+  if (coin && !$('homeTroPill')) {
+    const t = document.createElement('button'); t.id = 'homeTroPill'; t.className = 'hPill menuCurrencyPill';
+    t.innerHTML = '<i class="hIco hi-trophy"></i><span class="hNum" id="homeTroCount">0</span>';
+    t.addEventListener('click', () => { try { hapticTap(); } catch (e) {} $('homeLeagueCard').click(); });
+    coin.parentNode.insertBefore(t, coin);
+  }
+  // side rails
+  const btn = (cls, art, label, extra) => `<button class="hv2b ${cls}"><span class="ic" style="background:${art}">${extra || ''}</span>${label}</button>`;
+  const L = document.createElement('div'); L.className = 'hv2rail l'; L.id = 'hv2L';
+  L.innerHTML = btn('gift', `url(assets/inline/a0752272b3ad.webp) center/78% no-repeat,linear-gradient(#3fb24f,#1f7a2e)`, 'DAILY GIFT', '<span class="tg g">FREE</span>')
+    + btn('inbox', `url(assets/ui/icon_inbox.webp) center/70% no-repeat,linear-gradient(#3f6ac8,#22408a)`, 'INBOX', '<span class="dt" hidden></span>');
+  const R = document.createElement('div'); R.className = 'hv2rail r'; R.id = 'hv2R';
+  R.innerHTML = btn('ev', 'url(assets/ui/ev_cup.webp) center/cover no-repeat', 'CUP') + btn('ev', 'url(assets/ui/ev_duels.webp) center/cover no-repeat', 'DUELS') + btn('ev', 'url(assets/ui/ev_weekly.webp) center/cover no-repeat', 'WEEKLY');
+  ov.appendChild(L); ov.appendChild(R);
+  L.querySelector('.gift').addEventListener('click', () => {
+    try { hapticTap(); } catch (e) {}
+    try { if (giftReady()) { const l = claimGift(); if (l) showMessage('+ ' + l, '#FFC93A', 2000); } else showMessage('Next gift tomorrow', '#B4C2DD', 1600); } catch (e) {}
+    refresh();
+  });
+  L.querySelector('.inbox').addEventListener('click', () => { try { $('inboxBtn').click(); } catch (e) {} });
+  R.querySelectorAll('.ev').forEach(b => b.addEventListener('click', () => { try { $('eventsNavBtn').click(); } catch (e) {} }));
+  // league panel
+  const card = $('homeLeagueCard');
+  if (card && !card.querySelector('.hv2s')) {
+    card.insertAdjacentHTML('beforeend', '<span class="hv2s"></span><img class="hv2bd" alt=""><span class="hv2c"><i class="hIco hi-coin"></i><span class="hv2e">75</span></span><span class="hv2p"><i class="hIco hi-trophy"></i><span class="hv2t"></span><span class="hv2bar"><b></b></span><span class="hv2g"></span><img class="hv2nc" alt=""></span>');
+  }
+  function refresh() {
+    try {
+      const n = selectedLeagueIdx(), troph = (typeof trophyState !== 'undefined' ? trophyState.count : 0) || 0;
+      const tc = $('homeTroCount'); if (tc) tc.textContent = troph.toLocaleString('en-GB');
+      if (card) {
+        card.style.setProperty('--hv2art', `url(assets/ui/leagues/lg_${n}_tall.webp)`);
+        const bd = card.querySelector('.hv2bd'), src = `assets/ui/badges/lb${n}.webp`; if (bd.getAttribute('src') !== src) bd.src = src;
+        card.querySelector('.hv2e').textContent = ($('homeLeagueEntry') || {}).textContent || '';
+        const m = (($('homeRoadTxt') || {}).textContent || '').match(/([\d,]+)\s*\/\s*([\d,]+)/);
+        const nx = (typeof THEMED_LEAGUES !== 'undefined') && THEMED_LEAGUES[n + 1];
+        const nc = card.querySelector('.hv2nc');
+        if (m && nx) {
+          const a = +m[1].replace(/,/g, ''), z = +m[2].replace(/,/g, '');
+          card.querySelector('.hv2t').textContent = a.toLocaleString('en-GB') + '/' + z.toLocaleString('en-GB');
+          card.querySelector('.hv2bar b').style.width = Math.max(4, Math.min(100, a / z * 100)) + '%';
+          const left = Math.max(0, z - a), short = String(nx.name || '').split(' ')[0].toUpperCase();
+          card.querySelector('.hv2g').innerHTML = left > 0 ? `${left.toLocaleString('en-GB')} to <span class="hv2n">${short}</span>` : `<span class="hv2n">${short} UNLOCKED</span>`;
+          nc.src = `assets/ui/leagues/lg_${n + 1}_cup.webp`; nc.hidden = false;
+        } else {
+          card.querySelector('.hv2t').textContent = troph.toLocaleString('en-GB');
+          card.querySelector('.hv2bar b').style.width = '100%'; card.querySelector('.hv2g').innerHTML = '<span class="hv2n">TOP LEAGUE</span>'; nc.hidden = true;
+        }
+      }
+      const g = L.querySelector('.gift'), ready = typeof giftReady === 'function' && giftReady();
+      g.classList.toggle('off', !ready); g.querySelector('.tg').hidden = !ready;
+      const ib = $('inboxBadge'), dt = L.querySelector('.inbox .dt');
+      const cnt = ib && getComputedStyle(ib).display !== 'none' ? ib.textContent.trim() : '';
+      dt.textContent = cnt; dt.hidden = !cnt;
+      const hidden = ov.classList.contains('hidden'); L.style.display = R.style.display = hidden ? 'none' : '';
+    } catch (e) {}
+  }
+  const _u = window.updateMenuHUD;
+  if (typeof _u === 'function') window.updateMenuHUD = function () { const r = _u.apply(this, arguments); refresh(); return r; };
+  new MutationObserver(refresh).observe(ov, { attributes: true, attributeFilter: ['class'] });
+  ['homeRoadTxt', 'homeLeagueName', 'inboxBadge'].forEach(id => { const e = $(id); if (e) new MutationObserver(refresh).observe(e, { childList: true, characterData: true, subtree: true, attributes: true }); });
+  setInterval(refresh, 4000); refresh();
+})();
