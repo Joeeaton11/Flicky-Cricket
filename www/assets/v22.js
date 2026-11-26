@@ -1092,3 +1092,68 @@
     return r;
   };
 })();
+
+
+/* ===== 2.2 match result: painted league scene, league panel instead of trophy road, bigger bag, clearer loss coins, one hero button ===== */
+(function resultV22() {
+  const PL = {"1":[233,399],"2":[246,408],"3":[202,426],"4":[171,432],"5":[232,400],"6":[205,399],"7":[175,414],"8":[197,429],"9":[192,415],"10":[280,399],"11":[222,444],"12":[233,405],"13":[211,440],"14":[234,405],"15":[219,399],"16":[287,399],"17":[231,404],"18":[204,417],"19":[195,398],"20":[213,399],"21":[209,415],"22":[229,394],"23":[207,399],"24":[218,411],"25":[203,416],"26":[226,408],"27":[195,402]};
+  const css = document.createElement('style');
+  css.textContent = `
+  #resultScreen.r2 #r2ArtCanvas{opacity:0}
+  #resultScreen.r2 #r2Art{height:max(280px, calc(100dvh - 474px - env(safe-area-inset-bottom,0px)))!important}
+  #resultScreen.r2 #r2Road.v22{margin-top:26px!important;margin-bottom:6px}
+  #resultScreen.r2 #r2Art{background:#0b1226 var(--r2art) center var(--r2y,26%)/cover no-repeat}
+  #resultScreen.r2 #r2Art::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,12,30,.1) 30%,rgba(6,12,30,.55) 70%),linear-gradient(rgba(6,12,30,.35),rgba(6,12,30,0) 30%,rgba(6,12,30,0) 70%,rgba(6,12,30,.85));pointer-events:none;z-index:1}
+  #resultScreen.r2 #r2Player{height:min(236px, calc(100dvh - 520px - env(safe-area-inset-bottom,0px) - env(safe-area-inset-top,0px)))!important;left:-6px!important;bottom:4px!important}
+  #resultScreen.r2 #r2HeroR{width:58%!important;z-index:3}
+  #resultScreen.r2 .r2Rew img#r2BagImg{width:58px!important;height:52px!important;margin-top:-6px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.5))}
+  #r2Road.v22{position:relative;height:86px;margin-top:22px;border-radius:18px!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#0b1226 var(--rart) var(--rx,0) var(--ry,0)/var(--rw,260px) auto no-repeat!important;padding:0!important;overflow:visible}
+  #r2Road.v22::before{content:'';position:absolute;inset:0;border-radius:15.5px;background:linear-gradient(90deg,rgb(8,14,32) 0%,rgb(8,14,32) var(--ra0,50%),rgba(8,14,32,0) var(--ra1,70%));pointer-events:none}
+  #r2Road.v22 #r2RoadHead{display:none}
+  #r2Road.v22 .rbd{position:absolute;left:2px;top:-20px;height:74px;max-width:56%;object-fit:contain;object-position:0 50%;filter:drop-shadow(0 4px 4px rgba(0,0,0,.55));z-index:2}
+  #r2Road.v22 .rcup{position:absolute;transform:translateX(-50%);object-fit:contain;object-position:50% 100%;filter:drop-shadow(0 4px 4px rgba(0,0,0,.55));z-index:2}
+  #r2Road.v22 .rrow{position:absolute;left:12px;right:24%;bottom:7px;display:flex;align-items:center;gap:7px;z-index:2;font:400 12px 'Lilita One',sans-serif;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.6);white-space:nowrap}
+  #r2Road.v22 .rrow i.hIco{width:16px;height:16px;flex:none}
+  #r2Road.v22 #r2RoadBar{flex:1;height:10px!important;border:0!important;border-radius:6px!important;background:rgba(0,0,0,.55)!important;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+  #r2Road.v22 #r2RoadFill{border-radius:6px;box-shadow:inset 0 2px 0 rgba(255,255,255,.5)}
+  #r2Road.v22 .rnx{color:#ffd24a}
+  #resultScreen.r2 #r2Btns{flex-wrap:wrap!important;row-gap:4px!important}
+  #resultScreen.r2 #rs-playAgainBtn{order:1;flex:1 1 0!important;height:62px!important}
+  #resultScreen.r2 #r2Share{order:2}
+  #resultScreen.r2 #rs-menuBtn{order:3;flex:1 0 100%!important;height:34px!important;background:none!important;border:0!important;box-shadow:none!important;font-size:16px!important;color:#c9d6f2!important;letter-spacing:.08em}
+  `;
+  document.head.appendChild(css);
+  const _s = window.showResultScreen;
+  if (typeof _s !== 'function') return;
+  window.showResultScreen = function (d) {
+    const r = _s.apply(this, arguments);
+    try {
+      const $ = id => document.getElementById(id);
+      const li = (d && d.activeLgIdx) || selectedLeagueIdx() || 1;
+      const art = $('r2Art'); if (art) art.style.setProperty('--r2art', `url(assets/ui/leagues/lg_${li}_tall.webp)`);
+      // loss coin label
+      if (d && !d.beatTarget && d.entryPaid) { $('r2CoinsSub').textContent = d.coinsEarned ? `ENTRY · ${d.coinsEarned.toLocaleString()} BACK` : 'ENTRY'; }
+      // league panel in place of the trophy road
+      const road = $('r2Road');
+      if (road) {
+        road.classList.add('v22');
+        const ci = currentLeagueIdx(), cur = THEMED_LEAGUES[ci], nx = THEMED_LEAGUES[ci + 1];
+        if (!road.querySelector('.rrow')) {
+          road.insertAdjacentHTML('afterbegin', '<img class="rbd" alt=""><img class="rcup" alt=""><div class="rrow"><i class="hIco hi-trophy"></i><span class="rt"></span></div>');
+          road.querySelector('.rrow').appendChild($('r2RoadBar'));
+          road.querySelector('.rrow').insertAdjacentHTML('beforeend', '<span class="rn"></span>');
+        }
+        road.querySelector('.rbd').src = `assets/ui/badges/lb${ci}.webp`;
+        road.querySelector('.rt').textContent = nx ? `${trophyState.count.toLocaleString('en-GB')}/${nx.unlock.toLocaleString('en-GB')}` : trophyState.count.toLocaleString('en-GB');
+        road.querySelector('.rn').innerHTML = nx ? `NEXT <span class="rnx">${String(nx.name).split(' ')[0]}</span>` : '<span class="rnx">TOP LEAGUE</span>';
+        const W = road.clientWidth || 360, dd = PL[ci] || [225, 405], cw = 80, k = cw / dd[0], cx = W * 0.84, cb = 60;
+        road.style.setProperty('--rart', `url(assets/ui/leagues/lg_${ci}_tall.webp)`);
+        road.style.setProperty('--rw', (768 * k).toFixed(1) + 'px'); road.style.setProperty('--rx', (cx - 384 * k).toFixed(1) + 'px'); road.style.setProperty('--ry', (cb - dd[1] * k).toFixed(1) + 'px');
+        const a0 = Math.max(0, cx - 384 * k) / W * 100; road.style.setProperty('--ra0', (a0 + .5).toFixed(1) + '%'); road.style.setProperty('--ra1', (a0 + 11).toFixed(1) + '%');
+        const cup = road.querySelector('.rcup'); cup.src = `assets/ui/leagues/lg_${ci}_cup.webp`;
+        Object.assign(cup.style, { left: cx + 'px', width: cw + 'px', height: (cw * 1.03) + 'px', top: (cb - cw * 1.03) + 'px' });
+      }
+    } catch (e) {}
+    return r;
+  };
+})();
