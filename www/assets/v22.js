@@ -845,9 +845,11 @@
   .hv2b .dt{position:absolute;right:-6px;top:-6px;min-width:19px;height:19px;border-radius:10px;background:#e8243a;border:2px solid #fff;font-size:11px;display:grid;place-items:center;padding:0 3px}
   .hv2b.off .ic{filter:grayscale(.7) brightness(.75)}
   @media (max-height:720px){#homeWordmark{width:150px!important}.hv2rail{top:150px;gap:9px}.hv2b{width:48px;font-size:9px}.hv2b .ic{width:48px;height:48px;border-radius:13px}}
-  #homeLeagueCard{border-radius:18px!important;overflow:hidden!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#2a1a10 var(--hv2art) var(--hv2x,0px) var(--hv2y,0px)/var(--hv2w,260px) auto no-repeat!important;height:76px!important}
+  #homeLeagueCard{border-radius:18px!important;overflow:hidden!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#0b1226!important;height:76px!important}
   #homeLeagueCard>canvas,#homeLeagueCard>.lcShade,#homeLeagueCard>.lcTag,#homeLeagueCard>.lcBody{display:none!important}
-  #homeLeagueCard .hv2s{position:absolute;inset:0;background:linear-gradient(90deg,rgb(8,14,32) 0%,rgb(8,14,32) var(--hv2a0,52%),rgba(8,14,32,0) var(--hv2a1,74%));pointer-events:none}
+  #homeLeagueCard .hv2ext{position:absolute;inset:-8px;background:var(--hv2art) right var(--hv2ey,30%)/var(--hv2ew,200%) auto no-repeat;filter:blur(3px) saturate(1.1);clip-path:inset(8px round 15px);pointer-events:none}
+  #homeLeagueCard .hv2art{position:absolute;inset:0;border-radius:15px;background:var(--hv2art) var(--hv2x,0px) var(--hv2y,0px)/var(--hv2w,260px) auto no-repeat;-webkit-mask:linear-gradient(90deg,transparent var(--hv2m0,40%),#000 var(--hv2m1,55%));mask:linear-gradient(90deg,transparent var(--hv2m0,40%),#000 var(--hv2m1,55%));pointer-events:none}
+  #homeLeagueCard .hv2s{position:absolute;inset:0;border-radius:15px;background:linear-gradient(90deg,rgba(8,14,32,.95) 0%,rgba(8,14,32,.85) 30%,rgba(8,14,32,.35) 52%,rgba(8,14,32,0) 70%);pointer-events:none}
   #homeLeagueCard .hv2bd{position:absolute;left:4px;top:-3px;width:128px;height:auto;pointer-events:none}
   #homeLeagueCard .hv2c{position:static;flex:none;margin-right:-2px;font-size:13px!important;padding:1px 7px 1px 3px!important;background:rgba(0,0,0,.5);border-radius:12px;padding:2px 9px 2px 4px;font:400 15px 'Lilita One',sans-serif;color:#fff;display:flex;align-items:center;gap:3px;text-shadow:0 2px 0 rgba(0,0,0,.5)}
   #homeLeagueCard .hv2c i{width:20px;height:20px}
@@ -897,7 +899,7 @@
   // league panel
   const card = $('homeLeagueCard');
   if (card && !card.querySelector('.hv2s')) {
-    card.insertAdjacentHTML('beforeend', '<span class="hv2s"></span><img class="hv2bd" alt=""><span class="hv2p"><i class="hIco hi-trophy"></i><span class="hv2t"></span><span class="hv2bar"><b></b></span><span class="hv2g"></span><span class="hv2c"><i class="hIco hi-coin"></i><span class="hv2e">75</span></span></span><img class="hv2nc" alt="">');
+    card.insertAdjacentHTML('beforeend', '<span class="hv2ext"></span><span class="hv2art"></span><span class="hv2s"></span><img class="hv2bd" alt=""><span class="hv2p"><i class="hIco hi-trophy"></i><span class="hv2t"></span><span class="hv2bar"><b></b></span><span class="hv2g"></span><span class="hv2c"><i class="hIco hi-coin"></i><span class="hv2e">75</span></span></span><img class="hv2nc" alt="">');
   }
   function refresh() {
     try {
@@ -910,7 +912,8 @@
           card.style.setProperty('--hv2x', (cx - 384 * k).toFixed(1) + 'px');
           card.style.setProperty('--hv2y', (cb - d[1] * k).toFixed(1) + 'px');
           card.style.setProperty('--hv2cx', cx.toFixed(1) + 'px'); card.style.setProperty('--hv2cb', cb + 'px');
-          card.style.setProperty('--hv2cw', cw + 'px'); { const a0 = Math.max(0, cx - 384 * k) / W * 100; card.style.setProperty('--hv2a0', (a0 + 5).toFixed(1) + '%'); card.style.setProperty('--hv2a1', Math.min(86, a0 + 26).toFixed(1) + '%'); } card.style.setProperty('--hv2ch', (cw * 1.03).toFixed(1) + 'px'); }
+          card.style.setProperty('--hv2cw', cw + 'px'); { const a0 = Math.max(0, cx - 384 * k) / W * 100; card.style.setProperty('--hv2m0', (a0 + 1).toFixed(1) + '%'); card.style.setProperty('--hv2m1', (a0 + 12).toFixed(1) + '%');
+            const ew = W * 1.25; card.style.setProperty('--hv2ew', ew.toFixed(0) + 'px'); card.style.setProperty('--hv2ey', (-(d[1] / 768 * ew) + 44).toFixed(0) + 'px'); } card.style.setProperty('--hv2ch', (cw * 1.03).toFixed(1) + 'px'); }
         const bd = card.querySelector('.hv2bd'), src = `assets/ui/badges/lb${n}.webp`; if (bd.getAttribute('src') !== src) bd.src = src;
         card.querySelector('.hv2e').textContent = ($('homeLeagueEntry') || {}).textContent || '';
         const m = (($('homeRoadTxt') || {}).textContent || '').match(/([\d,]+)\s*\/\s*([\d,]+)/);
