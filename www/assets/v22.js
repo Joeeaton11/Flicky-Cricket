@@ -950,3 +950,40 @@
   ['homeRoadTxt', 'homeLeagueName', 'inboxBadge'].forEach(id => { const e = $(id); if (e) new MutationObserver(refresh).observe(e, { childList: true, characterData: true, subtree: true, attributes: true }); });
   setInterval(refresh, 4000); refresh();
 })();
+
+
+/* ===== 2.2 duel tables: painted league scenes, cup on plinth, league badge, rim + shadow ===== */
+(function duelV22() {
+  const PL = {"1":[233,399],"2":[246,408],"3":[202,426],"4":[171,432],"5":[232,400],"6":[205,399],"7":[175,414],"8":[197,429],"9":[192,415],"10":[280,399],"11":[222,444],"12":[233,405],"13":[211,440],"14":[234,405],"15":[219,399],"16":[287,399],"17":[231,404],"18":[204,417],"19":[195,398],"20":[213,399],"21":[209,415],"22":[229,394],"23":[207,399],"24":[218,411],"25":[203,416],"26":[226,408],"27":[195,402]};
+  const css = document.createElement('style');
+  css.textContent = `
+  #duelTables .dtTop{padding-bottom:2px}
+  #duelTables .dtTop>b{font-size:22px}
+  #duelTables .dtSub{font-size:12.5px;line-height:1.35;padding:2px 16px 0 66px;margin-top:-4px}
+  #duelTables .dtCard{border:0!important;border-radius:22px!important;overflow:hidden;background:linear-gradient(#14234a,#0a1430)!important;box-shadow:0 0 0 2.5px color-mix(in srgb,var(--a) 55%,#fff6d8),0 0 0 4px rgba(0,0,0,.45),0 22px 24px rgba(4,10,24,.6),0 8px 8px rgba(0,0,0,.3)!important}
+  #duelTables .dtCard.cur{box-shadow:0 0 0 3px #ffd24a,0 0 0 4.5px rgba(0,0,0,.45),0 24px 26px rgba(4,10,24,.65),0 8px 8px rgba(0,0,0,.3)!important}
+  #duelTables .dtHero{background:#0b1226 var(--dart) var(--dx,0) var(--dy,0)/var(--dw,100%) auto no-repeat!important;border-bottom:0!important;overflow:hidden}
+  #duelTables .dtHero::after{background:linear-gradient(rgba(8,14,32,0) 55%,rgba(8,14,32,.9))!important}
+  #duelTables .dtCrest{display:none}
+  #duelTables .dtCup{position:absolute;z-index:1;left:50%;transform:translateX(-50%);object-fit:contain;object-position:50% 100%;filter:drop-shadow(0 6px 6px rgba(0,0,0,.5))}
+  #duelTables .dtBadge{position:absolute;z-index:2;left:50%;bottom:-2px;transform:translateX(-50%);width:72%;filter:drop-shadow(0 4px 4px rgba(0,0,0,.55))}
+  #duelTables .dtName{padding-top:4px}#duelTables .dtName b{display:none}
+  #duelTables .dtName small{font-size:12px;color:#c9d6f2}
+  #duelTables .dtCard.locked .dtHero{filter:grayscale(.7) brightness(.55)}
+  #duelTables .dtLock{z-index:3}
+  `;
+  document.head.appendChild(css);
+  const decorate = () => {
+    const el = document.getElementById('duelTables'); if (!el) return;
+    const sub = el.querySelector('.dtSub'); if (sub && !sub.dataset.v22) { sub.dataset.v22 = 1; sub.innerHTML = sub.innerHTML.replace(/\s*Bigger tables, bigger pots\s*(·\s*)?/, ' ').replace(/·\s*$/, ''); }
+    el.querySelectorAll('.dtCard').forEach(c => {
+      const li = +c.dataset.dtli, h = c.querySelector('.dtHero'); if (!h || h.querySelector('.dtCup')) return;
+      const d = PL[li] || [225, 405], W = h.clientWidth || 300, H = h.clientHeight || 230, cupW = W * 0.4, k = cupW / d[0], cb = H * 0.62;
+      h.style.setProperty('--dart', `url(assets/ui/leagues/lg_${li}_tall.webp)`);
+      h.style.setProperty('--dw', (768 * k).toFixed(1) + 'px'); h.style.setProperty('--dx', (W / 2 - 384 * k).toFixed(1) + 'px'); h.style.setProperty('--dy', (cb - d[1] * k).toFixed(1) + 'px');
+      h.insertAdjacentHTML('beforeend', `<img class="dtCup" alt="" src="assets/ui/leagues/lg_${li}_cup.webp" style="width:${cupW.toFixed(0)}px;height:${(cupW * 1.03).toFixed(0)}px;top:${(cb - cupW * 1.03).toFixed(0)}px"><img class="dtBadge" alt="" src="assets/ui/badges/lb${li}.webp">`);
+    });
+  };
+  const _o = window.openDuelTables;
+  if (typeof _o === 'function') window.openDuelTables = function () { const r = _o.apply(this, arguments); requestAnimationFrame(decorate); return r; };
+})();
