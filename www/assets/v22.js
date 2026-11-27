@@ -1309,7 +1309,7 @@
 // are real money (£0.99 one / £4.99 six — placeholders). Home tile sits bottom left beside PLAY on Fri–Sun.
 (function oneOver() {
   if (window.__oneOver) return; window.__oneOver = 1;
-  const TIERS = [{ t: 30, bag: 'platinum', c: '#8A5CF6' }, { t: 24, bag: 'gold', c: '#e0a01a' }, { t: 18, bag: 'silver', c: '#7d8aa3' }, { t: 12, bag: 'bronze', c: '#b0652a' }, { t: 6, bag: 'wooden', c: '#7a5233' }];
+  const TIERS = [{ t: 30, bag: 'platinum', c: '#8A5CF6' }, { t: 25, bag: 'gold', c: '#e0a01a' }, { t: 20, bag: 'silver', c: '#7d8aa3' }, { t: 15, bag: 'bronze', c: '#b0652a' }, { t: 10, bag: 'wooden', c: '#7a5233' }];
   const DAYS = [5, 6, 0], MIN_MATCHES = 3;
   const $ = id => document.getElementById(id);
   const tapS = () => { try { playUiTap(); hapticTap(); } catch (e) {} };
