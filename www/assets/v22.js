@@ -1393,7 +1393,7 @@
   .ooLad.v2{background:linear-gradient(#152d63,#0c1d42);box-shadow:0 0 0 2px #2d4f94 inset,0 5px 0 #050A14;padding:20px 10px 8px;gap:8px}
   .ooLad.v2 .ooRow{height:52px;border-radius:14px;border:3px solid #050A14;background:linear-gradient(#2c4f93,#1a336b);box-shadow:inset 0 2px 0 rgba(255,255,255,.18);padding-right:5px;gap:4px}
   .ooLad.v2 .ooRow img{width:64px;height:50px;margin:-6px -4px 0 -6px}
-  .ooLad.v2 .ooRow .nm{background:none;border:0;color:#fff;font-size:19px;padding-left:2px;text-shadow:0 2px 0 #050A14;height:auto}
+  .ooLad.v2 .ooRow .nm{background:none;border:0;color:#fff;font-size:19px;padding-left:12px;text-shadow:0 2px 0 #050A14;height:auto}
   .ooLad.v2 .ooRow .rn{width:auto;min-width:70px;height:38px;padding:0 8px;border-radius:11px;background:linear-gradient(color-mix(in srgb,var(--c) 70%,#fff),var(--c) 55%,color-mix(in srgb,var(--c) 70%,#000));gap:3px;font-size:21px}
   .ooLad.v2 .ooRow .rn small{font-size:10px;opacity:.9;margin-top:5px}
   .ooLad.v2 .ooRow.got{background:linear-gradient(#273450,#1b2640)}
@@ -1446,8 +1446,8 @@
 
   // ── prize ladder screen ──
   const scr = document.createElement('div'); scr.id = 'ooScr'; document.body.appendChild(scr);
-  const T = () => `max(var(--insT,0px),6px)`;
-  function ladder(o, hit) { return TIERS.map(x => `<div class="ooRow${o.won[x.bag] ? ' got' : ''}"><img alt="" src="${img(x.bag)}">${o.won[x.bag] ? '<b class="tick">WON ✓</b>' : ''}<span class="nm">${nm(x.bag)} BAG</span><span class="rn" style="--c:${x.c}">${x.t}${x.t === 30 ? '+' : ''}<small>RUNS</small></span></div>`).join(''); }
+  const T = () => `(max(var(--insT,0px),6px) + 16px)`;
+  function ladder(o, hit) { const g = x => o.won[x.bag] && x.bag !== 'wooden'; return TIERS.map(x => `<div class="ooRow${g(x) ? ' got' : ''}"><img alt="" src="${img(x.bag)}">${g(x) ? '<b class="tick">WON ✓</b>' : ''}<span class="nm">${nm(x.bag)} BAG</span><span class="rn" style="--c:${x.c}">${x.t}${x.t === 30 ? '+' : ''}<small>RUNS</small></span></div>`).join(''); }
   function openScr() {
     const o = st(), li = Math.max(1, typeof selectedLeagueIdx === 'function' ? selectedLeagueIdx() : 1), ground = (THEMED_LEAGUES[li] && THEMED_LEAGUES[li].name) || '';
     let btns;
@@ -1461,7 +1461,7 @@
       <div class="ooRib" style="top:calc(${T()} + 232px)">SCORE BIG FOR TOP PRIZES!</div>
       <div class="ooLad v2" style="top:calc(${T()} + 256px)">${ladder(o)}</div>
       <div class="ooBtns" style="top:calc(${T()} + 614px)">${btns}</div>
-      <div class="ooFoot" style="top:calc(${T()} + 696px)">ONE BAG A GO · WON IT ALREADY? NEXT ONE DOWN</div>`;
+      <div class="ooFoot" style="top:calc(${T()} + 696px)">ONE BAG A GO · 10+ RUNS ALWAYS WINS A BAG</div>`;
     scr.classList.add('show');
   }
   function closeScr() { scr.classList.remove('show'); }
@@ -1513,7 +1513,8 @@
     const o = st(), r = runs, tier = TIERS.find(x => r >= x.t && !o.won[x.bag]);
     let title, bag = null, sub = '';
     if (tier) { bag = tier.bag; o.won[bag] = Date.now(); try { grantReward({ bag }); } catch (e) {} title = `${nm(bag)} BAG WON!`; }
-    else if (TIERS.some(x => r >= x.t)) title = 'BAGS AT THIS SCORE ALL WON';
+    // Joe: 10+ always earns at least a canvas bag, even when every bag you reached is already won
+    else if (r >= 10) { bag = 'wooden'; try { grantReward({ bag }); } catch (e) {} title = `${nm(bag)} BAG WON!`; }
     else title = 'NO BAG THIS TIME';
     o.best = Math.max(o.best || 0, r); save();
     const nx = TIERS.slice().reverse().find(x => x.t > r && !o.won[x.bag]);
