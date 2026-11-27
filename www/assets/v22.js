@@ -1274,9 +1274,12 @@
   .albPill{position:absolute;left:10px;z-index:3;height:38px;box-sizing:border-box;display:flex;align-items:center;gap:5px;padding:0 10px 0 6px;border-radius:19px;border:2px solid #2a1606;background:linear-gradient(#fdf4dc,#e8d09b);box-shadow:0 3px 0 rgba(42,22,6,.55);color:#4a2a0c;font:14px/1 'Lilita One',sans-serif;cursor:pointer}
   .albPill b{font-weight:400;color:#b3261e}
   #chestSlotsGrid ~ .oddsBtn, .bagFreeBar ~ .oddsBtn, .oddsBtn{box-sizing:border-box}
-  .bagFreeBar{box-shadow:0 3px 0 rgba(42,22,6,.55)!important;white-space:nowrap!important;height:38px!important;box-sizing:border-box!important;padding-left:5px!important;padding-right:10px!important;gap:4px!important;font-size:14px!important}
+  .bagFreeBar{margin-top:8px!important;box-shadow:0 3px 0 rgba(42,22,6,.55)!important;white-space:nowrap!important;height:38px!important;box-sizing:border-box!important;padding-left:5px!important;padding-right:10px!important;gap:4px!important;font-size:14px!important}
   .bagFreeBar .bIcon{width:26px!important;height:26px!important}
-  .albPill i{width:18px!important;height:24px!important}
+  .albPill i{position:relative;margin-right:2px;width:26px!important;height:26px!important;background:none!important;border:0!important;box-shadow:none!important}
+  .albPill i:before,.albPill i:after{content:'';position:absolute;top:2px;width:14px;height:20px;border-radius:3px;border:2px solid #fff;outline:1.5px solid #2a1606;background:center/cover}
+  .albPill i:before{left:0;transform:rotate(-12deg);background-image:url(assets/ui/leagues/lg_2_bg.webp)}
+  .albPill i:after{left:8px;transform:rotate(10deg);background-image:url(assets/ui/leagues/lg_1_bg.webp)}
   .albPill i{width:22px;height:26px;border-radius:4px;border:2px solid #050A14;background:linear-gradient(90deg,#c0392b 0 22%,#FFC93A 22% 30%,#e9573f 30%);box-shadow:inset -2px 0 0 rgba(0,0,0,.2)}
   .albPill .n{position:absolute;top:-8px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:#e0352b;border:2px solid #050A14;font-size:11px;display:grid;place-items:center;padding:0 3px}`;
   document.head.appendChild(css);
