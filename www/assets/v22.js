@@ -134,11 +134,11 @@
   .v2o{position:fixed;inset:0;z-index:9000;display:none;overflow:hidden;color:#fff;font-family:'Lilita One','Arial Black',Arial,sans-serif;background:#071022}
   .v2o.show{display:block}
   .v2o .bgx{position:absolute;inset:-20px;background:url(assets/ui/web/hero.webp) center/cover;filter:blur(5px) brightness(.5)}
-  .v2top{position:relative;display:flex;align-items:center;gap:8px;padding:max(env(safe-area-inset-top,0px),12px) 12px 0}
+  .v2top{position:relative;display:flex;align-items:center;gap:8px;padding:max(var(--insT),12px) 12px 0}
   .v2top .bk{width:42px;height:42px;border-radius:50%;border:3px solid #FFC93A;background:#14203a;color:#fff;font:30px/1 'Lilita One',sans-serif;cursor:pointer;flex:none}
   .v2top h1{flex:1;min-width:0;margin:0;font-weight:400;font-size:clamp(16px,5.2vw,24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.04em;text-shadow:0 3px 0 #050A14}
   .v2top .pill{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:14px;border:3px solid #050A14;background:#14203a;font-size:16px}.v2top .pill img{height:20px}
-  .v2rail{position:absolute;left:0;right:0;top:calc(max(env(safe-area-inset-top,0px),12px) + 58px);bottom:calc(env(safe-area-inset-bottom,0px) + 34px);display:flex;gap:14px;overflow-x:auto;overflow-y:auto;scroll-snap-type:x mandatory;padding:14px 9vw 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .v2rail{position:absolute;left:0;right:0;top:calc(max(var(--insT),12px) + 58px);bottom:calc(env(safe-area-inset-bottom,0px) + 34px);display:flex;gap:14px;overflow-x:auto;overflow-y:auto;scroll-snap-type:x mandatory;padding:14px 9vw 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .v2rail::-webkit-scrollbar{display:none}
   .v2dots{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);display:flex;justify-content:center;gap:6px}
   .v2dots i{width:7px;height:7px;border-radius:50%;background:#55607a}.v2dots i.on{width:18px;border-radius:4px;background:#FFC93A}
@@ -157,7 +157,7 @@
   .tcard.pt::after{content:'';position:absolute;inset:0;border:30px solid transparent;border-image:url(assets/ui/card_frame.webp) 150 / 30px / 0 round;pointer-events:none;z-index:6}
   .tcard.pt>*{position:relative;z-index:1}
   .v2pager em{display:flex;align-items:center;gap:1px;font-size:13px;color:#ffd75a}.v2pager em img{height:20px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
-  #v2deck .v2top::before{content:'';position:absolute;left:0;right:0;top:0;height:calc(env(safe-area-inset-top,0px) + 22px);background:linear-gradient(rgba(6,34,80,.75),rgba(6,34,80,.35) 55%,rgba(6,34,80,0));pointer-events:none}
+  #v2deck .v2top::before{content:'';position:absolute;left:0;right:0;top:0;height:calc(var(--insT) + 22px);background:linear-gradient(rgba(6,34,80,.75),rgba(6,34,80,.35) 55%,rgba(6,34,80,0));pointer-events:none}
   #v2deck .v2pz2{min-width:0;width:100%;box-sizing:border-box}#v2deck .v2pz2 .g{min-width:0}#v2deck .v2pz2 .g:first-child h5{padding-right:0}#v2deck .v2pz2 .row span{min-width:0}#v2deck .tcard.pt .v2tgt{font-size:12px;white-space:normal;text-align:center}#v2deck .tcard.pt .v2tgt b{font-size:16px}
   #v2deck .v2pz2{padding:4px 2px 5px}#v2deck .v2pz2 .g{flex-basis:36%}#v2deck .v2pz2 .row{gap:3px;justify-content:space-evenly}#v2deck .v2pz2 .row img{height:23px}#v2deck .v2pz2 .row span{font-size:11px}#v2deck .v2pz2 h5{font-size:10.5px;padding-right:16px}#v2deck .v2info2{width:19px;height:19px;font-size:11px;top:3px;right:3px}
   #v2deck .tcard{flex-basis:73vw;max-width:350px;align-self:center}#v2deck .v2rail{padding-left:13.5vw;padding-right:13.5vw;padding-top:52px}
@@ -248,7 +248,7 @@
   .tcard .need{font-size:18px;text-align:center;text-shadow:0 3px 0 #050A14;padding:6px 4px 2px}.tcard .need b{font-weight:400;color:#FFC93A}
   .tcard .donepill{padding:3px 10px;border-radius:10px;background:#1e7a3c;border:2px solid #050A14;font-size:13px}
   /* finals: walk-out + champions */
-  #v2vs .scr,#v2champ .scr{position:relative;height:100%;display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 22px);box-sizing:border-box}
+  #v2vs .scr,#v2champ .scr{position:relative;height:100%;display:flex;flex-direction:column;align-items:center;padding:calc(var(--insT) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 22px);box-sizing:border-box}
   .v2o h2{margin:6px 0 2px;font-weight:400;font-size:30px;text-align:center;color:#FFC93A;text-shadow:0 3px 0 #050A14;line-height:1}
   .v2o h3{margin:0;font-weight:400;font-size:15px;text-align:center;color:#cfd9f2}
   .v2o .tag{font-size:13px;color:#FFC93A;letter-spacing:.1em}
@@ -356,7 +356,7 @@
   #v2deck .tcard.pt{translate:0 -46px}
   .tcard.pt.locked .lockx.st{z-index:50!important}
   #v2deck .tcard.pt .v2go{font-size:7.6cqw!important;white-space:nowrap}#v2deck .tcard.pt .v2go img{height:1.4em;width:auto}#v2deck .tcard.pt .v2pz2 .row span{font-size:min(12.5px,5.3cqw)!important}#v2deck .tcard.pt .v2pz2 h5{font-size:min(11px,4.7cqw)!important}
-  #v2deck .tcard.pt{flex-basis:calc(73vw - min(26px, env(safe-area-inset-top,0px) * .45));translate:0 calc(-46px + min(27px, env(safe-area-inset-top,0px) * .46))}
+  #v2deck .tcard.pt{flex-basis:calc(73vw - min(26px, var(--insT) * .45));translate:0 calc(-46px + min(27px, var(--insT) * .46))}
   .tcard.pt.locked .lockx.st .stk{aspect-ratio:896/1200!important;width:auto!important}
   .tcard.pt.locked .lockx.st .lock{transform-origin:50% 13%!important;animation:lkSway 3.4s ease-in-out infinite!important;left:0!important;right:0!important;width:100%!important}
   .tcard.pt.locked .lockx.st .bail_l{transform-origin:8% 15%!important}.tcard.pt.locked .lockx.st .bail_r{transform-origin:92% 15%!important}
@@ -622,7 +622,9 @@
   // Home PLAY → Choose how to play (the app); the web taster keeps one tap to play
   window.addEventListener('click', e => { const t = e.target && e.target.closest && e.target.closest('#startBtn'); if (!t || TEASER) return;
     if (matches() < 1) return;   // the very first match goes straight in
-    e.stopImmediatePropagation(); e.preventDefault(); tap(); openModes(); }, true);
+    // Nov 27 (Joe): PLAY goes straight to your league match; other modes live on the MODES screen
+    e.stopImmediatePropagation(); e.preventDefault(); tap(); const li = selectedLeagueIdx();
+    if (finalReady(li)) { openVs(li); return; } closeAll(); window._v2NoDeck = true; try { playLeague(li); } finally { window._v2NoDeck = false; } }, true);
   // the home league card opens the league cards
   window.addEventListener('click', e => { const t = e.target && e.target.closest && e.target.closest('#homeLeagueCard'); if (!t || TEASER) return;
     e.stopImmediatePropagation(); e.preventDefault(); tap(); openDeck(); }, true);
@@ -1105,7 +1107,7 @@
   #resultScreen.r2{background:linear-gradient(rgba(18,48,99,0) 0,rgba(18,48,99,0) 30%,rgba(18,48,99,.18) 36%,rgba(18,48,99,.5) 42%,rgba(18,48,99,.82) 48%,#123063 55%,#0a1d3d 74%,#01162C 100%),#123063 var(--r2art) center top/100% auto no-repeat!important}
   #resultScreen.r2 #r2Art{background:none!important}
   html body #resultScreen.r2 #r2Art::after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(6,12,30,.35),rgba(6,12,30,0) 30%)!important;pointer-events:none;z-index:1}
-  #resultScreen.r2 #r2Player{height:min(330px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px) - max(env(safe-area-inset-top,0px),6px) - 78px))!important;left:12px!important;bottom:14px!important}
+  #resultScreen.r2 #r2Player{height:min(330px, calc(100dvh - 404px - env(safe-area-inset-bottom,0px) - max(var(--insT),6px) - 78px))!important;left:12px!important;bottom:14px!important}
   #resultScreen.r2 #r2HeroR{width:58%!important;z-index:3}
   #resultScreen.r2 .r2Rew img#r2BagImg{width:58px!important;height:52px!important;margin-top:-6px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.5))}
   #r2Road.v22{position:relative;height:86px;margin-top:22px;border-radius:18px!important;border:2.5px solid #ffd98a!important;box-shadow:0 0 0 1.5px rgba(0,0,0,.5),0 8px 14px rgba(0,0,0,.45)!important;background:#0b1226 var(--rart) var(--rx,0) var(--ry,0)/var(--rw,260px) auto no-repeat!important;padding:0!important;overflow:visible}
@@ -1132,10 +1134,10 @@
   #resultScreen.r2 .r2Rew img#r2BagImg{width:70px!important;height:56px!important;margin-top:-6px}
   #resultScreen.r2 .r2Rew b{font-size:28px!important}
   #resultScreen.r2 .r2Rew small{font-size:11px!important}
-  #resultScreen.r2 #r2HeroR{top:calc(max(env(safe-area-inset-top,0px),6px) + 72px)!important;gap:6px!important}
+  #resultScreen.r2 #r2HeroR{top:calc(max(var(--insT),6px) + 72px)!important;gap:6px!important}
   #resultScreen.r2 #r2HeroR #r2Ribbon{font-size:44px!important;padding:6px 18px!important}
-  #resultScreen.r2 #r2Pills{top:calc(max(env(safe-area-inset-top,0px),6px) + 12px)!important}
-  #resultScreen.r2 #r2Team{top:calc(max(env(safe-area-inset-top,0px),6px) + 13px)!important}
+  #resultScreen.r2 #r2Pills{top:calc(max(var(--insT),6px) + 12px)!important}
+  #resultScreen.r2 #r2Team{top:calc(max(var(--insT),6px) + 13px)!important}
   #resultScreen.r2 #r2HeroR #r2Runs{font-size:88px!important}
   #resultScreen.r2 #r2HeroR #r2ScoreTop{margin-right:22px}
   #resultScreen.r2 #r2HeroR::before{content:'';position:absolute;z-index:-1;left:-14%;right:-8%;top:-6%;bottom:-8%;background:radial-gradient(closest-side,rgba(6,12,30,.62),rgba(6,12,30,.35) 60%,rgba(6,12,30,0));pointer-events:none}
@@ -1212,3 +1214,54 @@
     return r;
   };
 })();
+
+// ── MODES (Nov 27, Joe): the Events screen becomes MODES. A slim "Just play" row (Nets, Friends) sits above
+// the "Compete" posters; "i HOW IT WORKS" loses the i; the nav button reads MODES (trophy icon stays).
+(function modesV22() {
+  if (window.__modesV22) return; window.__modesV22 = 1;
+  const css = document.createElement('style'); css.textContent = `
+  .jpLbl{font-family:'Lilita One',sans-serif;color:#9fb4dc;font-size:15px;letter-spacing:.08em;margin:4px 4px 8px;display:flex;align-items:center;gap:8px}
+  .jpLbl:after{content:'';flex:1;height:2px;background:linear-gradient(90deg,rgba(159,180,220,.45),transparent)}
+  .jpRow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
+  .jpT{position:relative;height:80px;border-radius:18px;border:3px solid #050A14;box-shadow:0 5px 0 rgba(0,0,0,.45);overflow:hidden;background:#101a33 center/cover no-repeat;display:flex;flex-direction:column;justify-content:flex-end;padding:0 40px 9px 12px;text-align:left;font-family:'Lilita One',sans-serif;cursor:pointer}
+  .jpT:before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,16,36,.92) 0,rgba(8,16,36,.7) 48%,rgba(8,16,36,.05) 100%)}
+  .jpT:after{content:'';position:absolute;inset:0;border-radius:15px;box-shadow:0 0 0 2px var(--c) inset;pointer-events:none}
+  .jpT:active{transform:translateY(2px)}
+  .jpT b{position:relative;font-size:23px;line-height:1;font-weight:400;color:#fff;text-shadow:0 2px 0 #050A14}
+  .jpT small{position:relative;font-size:11px;color:#c8d6f0;letter-spacing:.03em;margin-top:3px;white-space:nowrap}
+  .jpT .go{position:absolute;right:8px;bottom:8px;width:30px;height:30px;border-radius:50%;background:var(--c);border:2px solid #050A14;box-shadow:0 2px 0 #050A14;display:grid;place-items:center}
+  .jpT .go:before{content:'';width:8px;height:8px;border:solid #fff;border-width:3px 3px 0 0;transform:translateX(-2px) rotate(45deg)}
+  .jpT .tag{position:absolute;top:7px;right:8px;background:var(--c);color:#fff;font-size:12px;padding:1px 8px;border-radius:9px;border:2px solid #050A14}`;
+  document.head.appendChild(css);
+  const label = () => { try { const nb = document.getElementById('eventsNavBtn'); if (!nb) return;
+      const s = [...nb.querySelectorAll('*')].find(y => y.children.length === 0 && /EVENTS/.test(y.textContent)); if (s) s.textContent = 'MODES';
+      else for (const n of nb.childNodes) if (n.nodeType === 3 && /EVENTS/.test(n.textContent)) n.textContent = n.textContent.replace('EVENTS', 'MODES'); } catch (e) {} };
+  label(); setTimeout(label, 500); setTimeout(label, 2500);
+  const _r = window.renderCompeteV2; if (typeof _r !== 'function') return;
+  window.renderCompeteV2 = function () { const r = _r.apply(this, arguments);
+    try { const pn = document.getElementById('competePanel'), sh = pn && pn.querySelector('.sh3'), car = sh && sh.querySelector('.evCarousel'); if (!car) return r;
+      const tl = pn.querySelector('.evTop'); if (tl) { const t = [...tl.querySelectorAll('*')].find(x => x.children.length === 0 && /EVENTS/.test(x.textContent)); if (t) t.textContent = 'MODES'; }
+      sh.querySelectorAll('.evHow').forEach(x => { x.textContent = x.textContent.replace(/^\s*i\s+/, ''); });
+      if (!sh.querySelector('.jpRow')) { const w = document.createElement('div');
+        w.innerHTML = `<div class="jpLbl">JUST PLAY</div><div class="jpRow">
+          <button class="jpT" data-jp="nets" style="--c:#3b82f6;background-image:url(assets/ui/deck_ground.webp)"><span class="tag">FREE PLAY</span><b>NETS</b><small>PRACTICE · NO ENTRY</small><i class="go"></i></button>
+          <button class="jpT" data-jp="friends" style="--c:#22a050;background-image:url(assets/ui/web/hero.webp)"><b>FRIENDS</b><small>CHALLENGE A MATE</small><i class="go"></i></button>
+        </div><div class="jpLbl">COMPETE</div>`;
+        car.parentNode.insertBefore(w, car); }
+    } catch (e) {}
+    label(); return r; };
+  document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-jp]'); if (!b) return;
+    e.stopImmediatePropagation(); e.preventDefault(); try { playUiTap(); hapticTap(); } catch (er) {}
+    try { document.getElementById('competePanel').classList.remove('show'); } catch (er) {}
+    if (b.dataset.jp === 'nets') { try { closeAllScreens(); } catch (er) {} try { playNets(); } catch (er) {} }
+    else { try { Mates.render(); const m = document.getElementById('matesPanel'); if (m) m.classList.add('show'); } catch (er) {} } }, true);
+})();
+// Nov 27: the old home badges (Pass bar, Album, event badge, Missions) from the earlier layout appeared over the new side rails a few
+// seconds after the home opened. The new home doesn't use them; the Pass lives on MODES.
+(function () { const s = document.createElement('style');
+  s.textContent = '#overlay #v2pass,#overlay #v2alB,#overlay #v2evB,#overlay #todayBtn{display:none!important}';
+  document.head.appendChild(s); })();
+// Nov 27: coin pill clipped "5,000" to "5,00" — give coins more room than the trophy pill
+(function () { const s = document.createElement('style');
+  s.textContent = '#homeTop #homeCoinPill{flex:1.35 1 0!important}#homeTop #homeTroPill{flex:.8 1 0!important}';
+  document.head.appendChild(s); })();
