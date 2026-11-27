@@ -1454,7 +1454,7 @@
     else btns = `<button class="ooBtn bl" data-oo="x" style="flex:.8">EXIT</button><button class="ooBtn g" data-oo="b1">1 OVER<small>${price('one_over_1', 0.99)}</small></button><button class="ooBtn g" data-oo="b6">6 OVERS<small>${price('one_over_6', 4.99)}</small></button>`;
     scr.innerHTML = `<div class="ooArt sp"></div>
       <div class="ooTop" style="top:calc(${T()} + 6px)"><div class="lg"><img alt="" src="assets/ui/comet_ball.webp"><b>ONE OVER</b></div><span class="wk">WEEKEND · ENDS IN ${fmtL(left())}</span></div>
-      <div class="ooCard" style="top:calc(${T()} + 96px);background-image:url(assets/themes/t20_night.webp);background-position:center 30%"><span class="ch" style="top:10px;bottom:auto"><span>6 BALLS</span><span>1 WICKET</span></span><span class="gn">UNDER THE LIGHTS</span></div>
+      <div class="ooCard" style="top:calc(${T()} + 96px);background-image:url(assets/themes/te_evening.webp);background-position:center 6%"><span class="ch" style="top:10px;bottom:auto"><span>6 BALLS</span><span>1 WICKET</span></span><span class="gn">EVENING SPECIAL</span></div>
       <div class="ooRib" style="top:calc(${T()} + 232px)">SCORE BIG FOR TOP PRIZES!</div>
       <div class="ooLad v2" style="top:calc(${T()} + 256px)">${ladder(o)}</div>
       <div class="ooBtns" style="top:calc(${T()} + 614px)">${btns}</div>
@@ -1468,7 +1468,7 @@
     closeScr(); $('ooRes').classList.remove('show');
     const li = Math.max(1, selectedLeagueIdx());
     window._activeLeagueIdx = li; window._leagueTargetFloor = 0;
-    setupChase('league', li); Object.assign(window.chase, { mode: 'tourney', oo: true, target: 0, balls: 6, wickets: 1, board: null }); window._modeScene = 't20_night';
+    setupChase('league', li); Object.assign(window.chase, { mode: 'tourney', oo: true, target: 0, balls: 6, wickets: 1, board: null }); window._modeScene = 'te_evening';
     try { track('match_start', { mode: 'one_over' }); } catch (e) {}
     closeAllScreens(); startGame();
   }
