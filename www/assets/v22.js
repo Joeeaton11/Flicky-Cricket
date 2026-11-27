@@ -1397,7 +1397,31 @@
   .ooLad.v2 .ooRow.got .nm{color:#8090b0;background:none}
   .ooLad.v2 .ooRow .tick{left:auto;right:84px;top:50%;transform:translateY(-50%) rotate(-8deg);font-size:13px;padding:1px 8px;border-radius:9px;background:linear-gradient(#5fd35f,#23912a)}
   .ooGlow{position:absolute;left:50%;width:250px;height:250px;margin-left:-125px;border-radius:50%;background:radial-gradient(circle,rgba(255,214,90,.55),rgba(255,214,90,0) 65%)}
-  .ooRib.dim{background:linear-gradient(#3a5590,#22386b);color:#fff;text-shadow:0 3px 0 #050A14}.ooRib.dim:before,.ooRib.dim:after{background:#18294f}`;
+  .ooRib.dim{background:linear-gradient(#3a5590,#22386b);color:#fff;text-shadow:0 3px 0 #050A14}.ooRib.dim:before,.ooRib.dim:after{background:#18294f}
+  /* round 2 (Joe): One Over has its own floodlit look; bags bigger than their rows; real over summary; result in one card */
+  .ooArt.sp{background-image:url(assets/ui/web/hero.webp)!important;background-position:center top}
+  .ooArt.sp:after{background:linear-gradient(rgba(6,14,34,.15) 0,rgba(6,14,34,.35) 28%,rgba(8,20,48,.9) 50%,#081430 75%,#050d20 100%)}
+  .ooLad.v2 .ooRow{overflow:visible}
+  .ooLad.v2 .ooRow img{width:84px!important;height:64px!important;margin:-14px -10px -10px -14px!important;object-fit:contain;position:relative;z-index:2;filter:drop-shadow(0 4px 0 rgba(0,0,0,.55))!important}
+  .ooLad.v2 .ooRow.got img{filter:grayscale(.85) brightness(.75) drop-shadow(0 4px 0 rgba(0,0,0,.55))!important}
+  .ooLad.v2{gap:12px;padding-top:24px}
+  .ooRC{position:absolute;left:22px;right:22px;border-radius:24px;border:4px solid #050A14;background:linear-gradient(#1d3b7c,#0f2452 60%,#0b1b40);box-shadow:0 0 0 3px #FFC93A inset,0 7px 0 #050A14;display:flex;flex-direction:column;align-items:center;padding:44px 14px 16px}
+  .ooRC .ooRib{position:absolute;top:-24px;left:12px;right:12px}
+  .ooRC .bagw{position:relative;width:210px;height:170px;display:grid;place-items:center}
+  .ooRC .bagw:before{content:'';position:absolute;inset:-10px;border-radius:50%;background:radial-gradient(circle,rgba(255,214,90,.5),rgba(255,214,90,0) 66%)}
+  .ooRC .bagw img{position:relative;width:200px;filter:drop-shadow(0 10px 8px rgba(0,0,0,.55))}
+  .ooRC .bagw.none img{width:130px;filter:grayscale(1) brightness(.6) drop-shadow(0 8px 6px rgba(0,0,0,.5));opacity:.75}
+  .ooRC .rr{font-size:64px;line-height:1;text-shadow:0 4px 0 #050A14;margin-top:2px}.ooRC .rr small{font-size:20px;color:#9fb4dc}
+  .ooRC .ol{margin-top:12px;font-size:13px;color:#9fb4dc;letter-spacing:.1em}
+  .ooOver{display:flex;gap:8px;margin-top:6px}
+  .ooOver .b{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .ooOver .b i{width:38px;height:38px;border-radius:50%;border:3px solid #050A14;box-shadow:inset -4px -5px 0 rgba(0,0,0,.25),inset 3px 3px 0 rgba(255,255,255,.35),0 3px 0 #050A14;display:grid;place-items:center;font:18px/1 'Lilita One';font-style:normal;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.5);background:#e9eef7;color:#0a1b3c;text-shadow:none}
+  .ooOver .b i.six{background:radial-gradient(circle at 35% 30%,#ff6a5e,#c8191d 60%,#8a0f12);color:#fff;text-shadow:0 2px 0 #5a0a0a}
+  .ooOver .b i.four{background:radial-gradient(circle at 35% 30%,#7fb2ff,#2a62c4 60%,#183f86);color:#fff}
+  .ooOver .b i.dot{background:radial-gradient(circle at 35% 30%,#7c889e,#46556f 65%);color:#c8d0e0}
+  .ooOver .b i.wk{background:radial-gradient(circle at 35% 30%,#3a1a1a,#140808);color:#ff6b6b}
+  .ooOver .b i.no{background:transparent;border-style:dashed;border-color:#3a4f7a;box-shadow:none}
+  .ooOver .b span{font-size:10px;color:#6f84ad}`;
   document.head.appendChild(css);
 
   // ── home tile ──
@@ -1428,13 +1452,13 @@
     else if (o.free) btns = `<button class="ooBtn bl" data-oo="x">EXIT</button><button class="ooBtn g" data-oo="go">FREE OVER<small>× 1</small></button>`;
     else if (o.paid) btns = `<button class="ooBtn bl" data-oo="x">EXIT</button><button class="ooBtn g" data-oo="go">PLAY<small>${o.paid} LEFT</small></button>`;
     else btns = `<button class="ooBtn bl" data-oo="x" style="flex:.8">EXIT</button><button class="ooBtn g" data-oo="b1">1 OVER<small>${price('one_over_1', 0.99)}</small></button><button class="ooBtn g" data-oo="b6">6 OVERS<small>${price('one_over_6', 4.99)}</small></button>`;
-    scr.innerHTML = `<div class="ooArt" style="background-image:url(assets/ui/leagues/lg_${li}_tall.webp)"></div>
+    scr.innerHTML = `<div class="ooArt sp"></div>
       <div class="ooTop" style="top:calc(${T()} + 6px)"><div class="lg"><img alt="" src="assets/ui/comet_ball.webp"><b>ONE OVER</b></div><span class="wk">WEEKEND · ENDS IN ${fmtL(left())}</span></div>
-      <div class="ooCard" style="top:calc(${T()} + 96px);background-image:url(assets/ui/leagues/lg_${li}_bg.webp)"><span class="gn">${String(ground).toUpperCase()}</span><span class="ch"><span>6 BALLS</span><span>1 WICKET</span></span></div>
+      <div class="ooCard" style="top:calc(${T()} + 96px);background-image:url(assets/themes/t20_night.webp);background-position:center 30%"><span class="ch" style="top:10px;bottom:auto"><span>6 BALLS</span><span>1 WICKET</span></span><span class="gn">UNDER THE LIGHTS</span></div>
       <div class="ooRib" style="top:calc(${T()} + 232px)">SCORE BIG FOR TOP PRIZES!</div>
       <div class="ooLad v2" style="top:calc(${T()} + 256px)">${ladder(o)}</div>
-      <div class="ooBtns" style="top:calc(${T()} + 590px)">${btns}</div>
-      <div class="ooFoot" style="top:calc(${T()} + 672px)">ONE BAG A GO · EACH BAG CAN ONLY BE WON ONCE</div>`;
+      <div class="ooBtns" style="top:calc(${T()} + 614px)">${btns}</div>
+      <div class="ooFoot" style="top:calc(${T()} + 696px)">ONE BAG A GO · EACH BAG CAN ONLY BE WON ONCE</div>`;
     scr.classList.add('show');
   }
   function closeScr() { scr.classList.remove('show'); }
@@ -1443,8 +1467,8 @@
     if (o.free) o.free = 0; else if (o.paid > 0) o.paid--; else return; save();
     closeScr(); $('ooRes').classList.remove('show');
     const li = Math.max(1, selectedLeagueIdx());
-    window._modeScene = null; window._activeLeagueIdx = li; window._leagueTargetFloor = 0;
-    setupChase('league', li); Object.assign(window.chase, { mode: 'tourney', oo: true, target: 0, balls: 6, wickets: 1, board: null });
+    window._activeLeagueIdx = li; window._leagueTargetFloor = 0;
+    setupChase('league', li); Object.assign(window.chase, { mode: 'tourney', oo: true, target: 0, balls: 6, wickets: 1, board: null }); window._modeScene = 't20_night';
     try { track('match_start', { mode: 'one_over' }); } catch (e) {}
     closeAllScreens(); startGame();
   }
@@ -1461,7 +1485,7 @@
 
   // ── in-game prize strip along the bottom ──
   const strip = document.createElement('div'); strip.id = 'ooStrip'; document.body.appendChild(strip);
-  const MAX = 36, pos = t => 16 + (t / MAX) * 100;
+  const MAX = 32, pos = t => 16 + (t / MAX) * 100;
   function paintStrip() {
     const c = window.chase; if (!c || !c.oo || (typeof state !== 'undefined' && state === 'menu')) { strip.classList.remove('on'); strip.dataset.k = ''; return; }
     strip.classList.add('on');
@@ -1493,13 +1517,16 @@
     const log = (c.log || []).slice(0, 6), balls = log.map(v => typeof v !== 'number' ? '<i style="background:#7a1d1d">W</i>' : `<i style="background:${v >= 6 ? '#e0352b' : v >= 4 ? '#2a62c4' : v === 0 ? '#46556f' : '#0a1b3c'}">${v}</i>`).join('') + (c.wkLost && !log.some(v => typeof v !== 'number') ? '<i style="background:#7a1d1d">W</i>' : '');
     window.chase = null; window._modeScene = null; window._activeLeagueIdx = null; window._modeEndAt = Date.now();
     const again = allWon(o) ? '' : o.paid ? `<button class="ooBtn gd" data-oo="again">GO AGAIN<small>${o.paid} LEFT</small></button>` : `<button class="ooBtn gd" data-oo="again">GO AGAIN<small>${price('one_over_1', 0.99)}</small></button>`;
-    const gli = Math.max(1, selectedLeagueIdx());
-    res.innerHTML = `<div class="ooArt" style="background-image:url(assets/ui/leagues/lg_${gli}_tall.webp)"></div>${bag ? '<div class="ooRays"></div>' : ''}
+    const chip = (v, k) => v === undefined ? `<div class="b"><i class="no"></i><span>${k + 1}</span></div>` : typeof v !== 'number' ? `<div class="b"><i class="wk">W</i><span>${k + 1}</span></div>`
+      : `<div class="b"><i class="${v >= 6 ? 'six' : v >= 4 ? 'four' : v === 0 ? 'dot' : ''}">${v === 0 ? '•' : v}</i><span>${k + 1}</span></div>`;
+    const lg2 = log.slice(); if (c.wkLost && !lg2.some(v => typeof v !== 'number') && lg2.length < 6) lg2.push('W');
+    const over = [0, 1, 2, 3, 4, 5].map(k => chip(lg2[k], k)).join('');
+    const showBag = bag || (tier && tier.bag);
+    res.innerHTML = `<div class="ooArt sp"></div>
       <div class="ooTop" style="top:calc(${T()} + 6px)"><div class="lg"><img alt="" src="assets/ui/comet_ball.webp"><b>ONE OVER</b></div></div>
-      <div class="ooRib${bag ? '' : ' dim'}" style="top:calc(${T()} + 82px)">${title}</div>
-      ${bag ? `<div class="ooGlow" style="top:calc(${T()} + 130px)"></div>` : ''}
-      <div class="ooWon" style="top:calc(${T()} + 142px)">${bag ? `<img alt="" src="${img(bag)}" style="margin-top:0">` : '<div style="height:60px"></div>'}
-        <div class="runs">${r}<small> RUNS</small></div><div class="ooBalls">${balls}</div></div>
+      <div class="ooRC" style="top:calc(${T()} + 104px)"><div class="ooRib${bag ? '' : ' dim'}">${title}</div>
+        <div class="bagw${bag ? '' : ' none'}"><img alt="" src="${img(showBag || 'wooden')}"></div>
+        <div class="rr">${r}<small> RUNS</small></div><div class="ol">THE OVER</div><div class="ooOver">${over}</div></div>
       ${nx ? `<div class="ooNxt" style="top:calc(${T()} + 520px)"><img alt="" src="${img(nx.bag)}"><div>${nx.t - r} RUN${nx.t - r === 1 ? '' : 'S'} FROM THE ${nm(nx.bag)} BAG<small>Face the over again to go for it</small></div></div>` : ''}
       <div class="ooBtns" style="top:calc(${T()} + 610px)"><button class="ooBtn bl" data-oo="home">CONTINUE</button>${again}</div>`;
     res.classList.add('show'); strip.classList.remove('on'); strip.dataset.k = '';
