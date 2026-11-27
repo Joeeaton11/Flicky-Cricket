@@ -1447,7 +1447,7 @@
   // ── prize ladder screen ──
   const scr = document.createElement('div'); scr.id = 'ooScr'; document.body.appendChild(scr);
   const T = () => `(max(var(--insT,0px),6px) + 16px)`;
-  function ladder(o, hit) { const g = x => o.won[x.bag] && x.bag !== 'wooden'; return TIERS.map(x => `<div class="ooRow${g(x) ? ' got' : ''}"><img alt="" src="${img(x.bag)}">${g(x) ? '<b class="tick">WON ✓</b>' : ''}<span class="nm">${nm(x.bag)} BAG</span><span class="rn" style="--c:${x.c}">${x.t}${x.t === 30 ? '+' : ''}<small>RUNS</small></span></div>`).join(''); }
+  function ladder(o, hit) { const g = x => o.won[x.bag]; return TIERS.map(x => `<div class="ooRow${g(x) ? ' got' : ''}"><img alt="" src="${img(x.bag)}">${g(x) ? '<b class="tick">WON ✓</b>' : ''}<span class="nm">${nm(x.bag)} BAG</span><span class="rn" style="--c:${x.c}">${x.t}${x.t === 30 ? '+' : ''}<small>RUNS</small></span></div>`).join(''); }
   function openScr() {
     const o = st(), li = Math.max(1, typeof selectedLeagueIdx === 'function' ? selectedLeagueIdx() : 1), ground = (THEMED_LEAGUES[li] && THEMED_LEAGUES[li].name) || '';
     let btns;
