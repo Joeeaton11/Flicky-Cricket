@@ -1311,6 +1311,9 @@
   if (window.__oneOver) return; window.__oneOver = 1;
   const TIERS = [{ t: 30, bag: 'platinum', c: '#8A5CF6' }, { t: 25, bag: 'gold', c: '#e0a01a' }, { t: 20, bag: 'silver', c: '#7d8aa3' }, { t: 15, bag: 'bronze', c: '#b0652a' }, { t: 10, bag: 'wooden', c: '#7a5233' }];
   const DAYS = [5, 6, 0], MIN_MATCHES = 3;
+  // Nov 27 (Joe): a different special ground each weekend until bespoke One Over grounds are painted
+  const GROUNDS = [{ k: 'te_evening', n: 'EVENING SPECIAL' }, { k: 'te_twilight', n: 'PIER AT TWILIGHT' }, { k: 'te_dusk', n: 'CARNIVAL BEACH' }, { k: 'te_bigground', n: 'FESTIVAL NIGHT' }, { k: 'te_afterglow', n: 'FORT AT SUNSET' }];
+  const ground = () => { const w = wkKey().split('-').map(Number), n = Math.floor(Date.UTC(w[0], w[1] - 1, w[2]) / 6048e5); return GROUNDS[((n % GROUNDS.length) + GROUNDS.length) % GROUNDS.length]; };
   const $ = id => document.getElementById(id);
   const tapS = () => { try { playUiTap(); hapticTap(); } catch (e) {} };
   const now = () => (typeof _nowDate === 'function' ? _nowDate() : new Date());
@@ -1454,7 +1457,7 @@
     else btns = `<button class="ooBtn bl" data-oo="x" style="flex:.8">EXIT</button><button class="ooBtn g" data-oo="b1">1 OVER<small>${price('one_over_1', 0.99)}</small></button><button class="ooBtn g" data-oo="b6">6 OVERS<small>${price('one_over_6', 4.99)}</small></button>`;
     scr.innerHTML = `<div class="ooArt sp"></div>
       <div class="ooTop" style="top:calc(${T()} + 6px)"><div class="lg"><img alt="" src="assets/ui/comet_ball.webp"><b>ONE OVER</b></div><span class="wk">WEEKEND · ENDS IN ${fmtL(left())}</span></div>
-      <div class="ooCard" style="top:calc(${T()} + 96px);background-image:url(assets/themes/te_evening.webp);background-position:center 6%"><span class="ch" style="top:10px;bottom:auto"><span>6 BALLS</span><span>1 WICKET</span></span><span class="gn">EVENING SPECIAL</span></div>
+      <div class="ooCard" style="top:calc(${T()} + 96px);background-image:url(assets/themes/${ground().k}.webp);background-position:center 6%"><span class="ch" style="top:10px;bottom:auto"><span>6 BALLS</span><span>1 WICKET</span></span><span class="gn">${ground().n}</span></div>
       <div class="ooRib" style="top:calc(${T()} + 232px)">SCORE BIG FOR TOP PRIZES!</div>
       <div class="ooLad v2" style="top:calc(${T()} + 256px)">${ladder(o)}</div>
       <div class="ooBtns" style="top:calc(${T()} + 614px)">${btns}</div>
@@ -1468,7 +1471,7 @@
     closeScr(); $('ooRes').classList.remove('show');
     const li = Math.max(1, selectedLeagueIdx());
     window._activeLeagueIdx = li; window._leagueTargetFloor = 0;
-    setupChase('league', li); Object.assign(window.chase, { mode: 'tourney', oo: true, target: 0, balls: 6, wickets: 1, board: null }); window._modeScene = 'te_evening';
+    setupChase('league', li); Object.assign(window.chase, { mode: 'tourney', oo: true, target: 0, balls: 6, wickets: 1, board: null }); window._modeScene = ground().k;
     try { track('match_start', { mode: 'one_over' }); } catch (e) {}
     closeAllScreens(); startGame();
   }
