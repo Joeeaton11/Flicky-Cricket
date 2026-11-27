@@ -1313,7 +1313,7 @@
   const DAYS = [5, 6, 0], MIN_MATCHES = 3;
   // Nov 27 (Joe): a different special ground each weekend until bespoke One Over grounds are painted
   const GROUNDS = [{ k: 'te_evening', n: 'EVENING SPECIAL' }, { k: 'te_twilight', n: 'PIER AT TWILIGHT' }, { k: 'te_dusk', n: 'CARNIVAL BEACH' }, { k: 'te_bigground', n: 'FESTIVAL NIGHT' }, { k: 'te_afterglow', n: 'FORT AT SUNSET' }];
-  const ground = () => { const w = wkKey().split('-').map(Number), n = Math.floor(Date.UTC(w[0], w[1] - 1, w[2]) / 6048e5); return GROUNDS[((n % GROUNDS.length) + GROUNDS.length) % GROUNDS.length]; };
+  const ooGround = () => { const w = wkKey().split('-').map(Number), n = Math.floor(Date.UTC(w[0], w[1] - 1, w[2]) / 6048e5); return GROUNDS[((n % GROUNDS.length) + GROUNDS.length) % GROUNDS.length]; };
   const $ = id => document.getElementById(id);
   const tapS = () => { try { playUiTap(); hapticTap(); } catch (e) {} };
   const now = () => (typeof _nowDate === 'function' ? _nowDate() : new Date());
@@ -1398,7 +1398,7 @@
   .ooLad.v2 .ooRow .rn small{font-size:10px;opacity:.9;margin-top:5px}
   .ooLad.v2 .ooRow.got{background:linear-gradient(#273450,#1b2640)}
   .ooLad.v2 .ooRow.got .nm{color:#8090b0;background:none}
-  .ooLad.v2 .ooRow .tick{left:auto;right:84px;top:50%;transform:translateY(-50%) rotate(-8deg);font-size:13px;padding:1px 8px;border-radius:9px;background:linear-gradient(#5fd35f,#23912a)}
+  .ooLad.v2 .ooRow .tick{z-index:3;left:6px;right:auto;top:auto;bottom:-6px;transform:rotate(-8deg);font-size:13px;padding:1px 8px;border-radius:9px;background:linear-gradient(#5fd35f,#23912a)}
   .ooGlow{position:absolute;left:50%;width:250px;height:250px;margin-left:-125px;border-radius:50%;background:radial-gradient(circle,rgba(255,214,90,.55),rgba(255,214,90,0) 65%)}
   .ooRib.dim{background:linear-gradient(#3a5590,#22386b);color:#fff;text-shadow:0 3px 0 #050A14}.ooRib.dim:before,.ooRib.dim:after{background:#18294f}
   /* round 2 (Joe): One Over has its own floodlit look; bags bigger than their rows; real over summary; result in one card */
@@ -1457,11 +1457,11 @@
     else btns = `<button class="ooBtn bl" data-oo="x" style="flex:.8">EXIT</button><button class="ooBtn g" data-oo="b1">1 OVER<small>${price('one_over_1', 0.99)}</small></button><button class="ooBtn g" data-oo="b6">6 OVERS<small>${price('one_over_6', 4.99)}</small></button>`;
     scr.innerHTML = `<div class="ooArt sp"></div>
       <div class="ooTop" style="top:calc(${T()} + 6px)"><div class="lg"><img alt="" src="assets/ui/comet_ball.webp"><b>ONE OVER</b></div><span class="wk">WEEKEND · ENDS IN ${fmtL(left())}</span></div>
-      <div class="ooCard" style="top:calc(${T()} + 96px);background-image:url(assets/themes/${ground().k}.webp);background-position:center 6%"><span class="ch" style="top:10px;bottom:auto"><span>6 BALLS</span><span>1 WICKET</span></span><span class="gn">${ground().n}</span></div>
+      <div class="ooCard" style="top:calc(${T()} + 96px);background-image:url(assets/themes/${ooGround().k}.webp);background-position:center 6%"><span class="ch" style="top:10px;bottom:auto"><span>6 BALLS</span><span>1 WICKET</span></span><span class="gn">${ooGround().n}</span></div>
       <div class="ooRib" style="top:calc(${T()} + 232px)">SCORE BIG FOR TOP PRIZES!</div>
       <div class="ooLad v2" style="top:calc(${T()} + 256px)">${ladder(o)}</div>
       <div class="ooBtns" style="top:calc(${T()} + 614px)">${btns}</div>
-      <div class="ooFoot" style="top:calc(${T()} + 696px)">ONE BAG A GO · EACH BAG CAN ONLY BE WON ONCE</div>`;
+      <div class="ooFoot" style="top:calc(${T()} + 696px)">ONE BAG A GO · WON IT ALREADY? NEXT ONE DOWN</div>`;
     scr.classList.add('show');
   }
   function closeScr() { scr.classList.remove('show'); }
@@ -1471,7 +1471,7 @@
     closeScr(); $('ooRes').classList.remove('show');
     const li = Math.max(1, selectedLeagueIdx());
     window._activeLeagueIdx = li; window._leagueTargetFloor = 0;
-    setupChase('league', li); Object.assign(window.chase, { mode: 'tourney', oo: true, target: 0, balls: 6, wickets: 1, board: null }); window._modeScene = ground().k;
+    setupChase('league', li); Object.assign(window.chase, { mode: 'tourney', oo: true, target: 0, balls: 6, wickets: 1, board: null }); window._modeScene = ooGround().k;
     try { track('match_start', { mode: 'one_over' }); } catch (e) {}
     closeAllScreens(); startGame();
   }
@@ -1509,10 +1509,11 @@
   window.modeEnd = function () { const c = window.chase; if (!c || !c.oo) return _me.apply(this, arguments);
     try { if (typeof _fxBigEl !== 'undefined' && _fxBigEl) { _fxBigEl.remove(); } } catch (e) {}
     state = 'menu'; try { hideMoment(); } catch (e) {}
-    const o = st(), r = runs, tier = TIERS.find(x => r >= x.t);
+    // Nov 27 (Joe): you win the best bag your score reaches that you haven't won yet (a repeat score drops to the next one down)
+    const o = st(), r = runs, tier = TIERS.find(x => r >= x.t && !o.won[x.bag]);
     let title, bag = null, sub = '';
-    if (tier && !o.won[tier.bag]) { bag = tier.bag; o.won[bag] = Date.now(); try { grantReward({ bag }); } catch (e) {} title = `${nm(bag)} BAG WON!`; }
-    else if (tier) title = `${nm(tier.bag)} BAG ALREADY WON`;
+    if (tier) { bag = tier.bag; o.won[bag] = Date.now(); try { grantReward({ bag }); } catch (e) {} title = `${nm(bag)} BAG WON!`; }
+    else if (TIERS.some(x => r >= x.t)) title = 'BAGS AT THIS SCORE ALL WON';
     else title = 'NO BAG THIS TIME';
     o.best = Math.max(o.best || 0, r); save();
     const nx = TIERS.slice().reverse().find(x => x.t > r && !o.won[x.bag]);
