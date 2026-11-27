@@ -1271,7 +1271,12 @@
 // Nov 27 (Joe): the sticker album lives on the Bags screen (stickers come from bags) — a pill left of the free-bags timer
 (function () {
   const css = document.createElement('style'); css.textContent = `
-  .albPill{position:absolute;left:12px;z-index:3;height:34px;display:flex;align-items:center;gap:5px;padding:0 10px 0 6px;border-radius:17px;border:2.5px solid #050A14;background:linear-gradient(#3ec7a0,#178a68);box-shadow:0 3px 0 #050A14;color:#fff;font:13px/1 'Lilita One',sans-serif;cursor:pointer}
+  .albPill{position:absolute;left:12px;z-index:3;height:38px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 12px 0 7px;border-radius:19px;border:2px solid #2a1606;background:linear-gradient(#fdf4dc,#e8d09b);box-shadow:0 3px 0 rgba(42,22,6,.55);color:#4a2a0c;font:15px/1 'Lilita One',sans-serif;cursor:pointer}
+  .albPill b{font-weight:400;color:#b3261e}
+  #chestSlotsGrid ~ .oddsBtn, .bagFreeBar ~ .oddsBtn, .oddsBtn{box-sizing:border-box}
+  .bagFreeBar{box-shadow:0 3px 0 rgba(42,22,6,.55)!important;white-space:nowrap!important;height:38px!important;box-sizing:border-box!important;padding-left:6px!important;padding-right:12px!important;gap:6px!important;font-size:14px!important}
+  .bagFreeBar .bIcon{width:30px!important;height:30px!important}
+  .albPill i{width:18px!important;height:24px!important}
   .albPill i{width:22px;height:26px;border-radius:4px;border:2px solid #050A14;background:linear-gradient(90deg,#c0392b 0 22%,#FFC93A 22% 30%,#e9573f 30%);box-shadow:inset -2px 0 0 rgba(0,0,0,.2)}
   .albPill .n{position:absolute;top:-8px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:#e0352b;border:2px solid #050A14;font-size:11px;display:grid;place-items:center;padding:0 3px}`;
   document.head.appendChild(css);
@@ -1283,8 +1288,14 @@
       if (!b) { b = document.createElement('button'); b.className = 'albPill'; b.addEventListener('click', e => { e.stopPropagation(); try { playUiTap(); } catch (er) {} window.openFlickyAlbum(); }); el.parentElement.insertBefore(b, el.nextSibling);
         if (getComputedStyle(el.parentElement).position === 'static') el.parentElement.style.position = 'relative'; }
       const a = SAVE.section('album'), have = a.have || {}, li = Math.max(1, selectedLeagueIdx()), pg = window.v2AlbumPage ? window.v2AlbumPage(li) : [], got = pg.filter(x => have[x.id]).length, nw = a.fresh || 0;
-      b.innerHTML = `<i></i>ALBUM ${got}/${pg.length}${nw ? `<span class="n">${nw}</span>` : ''}`;
-      b.style.top = (el.offsetTop + (el.offsetHeight - 34) / 2) + 'px'; el.style.transform = 'translateX(32px)';
+      b.innerHTML = `<i></i>ALBUM <b>${got}/${pg.length}</b>${nw ? `<span class="n">${nw}</span>` : ''}`;
+      b.style.top = (el.offsetTop + (el.offsetHeight - 38) / 2) + 'px';
+      // one row, equal 8px gaps: [ALBUM] [free bags timer] [i]
+      requestAnimationFrame(() => { try { el.style.transform = ''; const pr = el.parentElement.getBoundingClientRect(), ar = b.getBoundingClientRect(), er = el.getBoundingClientRect();
+        const ob = el.parentElement.querySelector('.oddsBtn'); if (ob) { ob.style.width = ob.style.height = '38px'; ob.style.boxShadow = '0 3px 0 rgba(42,22,6,.55)'; ob.style.top = (el.offsetTop) + 'px'; }
+        const ir = ob ? ob.getBoundingClientRect() : { left: pr.right - 12 }; const room = ir.left - 8 - (ar.right + 8);
+        
+        const er2 = el.getBoundingClientRect(); el.style.transform = `translateX(${Math.round(ar.right + 8 + (room - er2.width) / 2 - er2.left)}px)`; } catch (e) {} });
     } catch (e) {}
     return r; };
 })();
