@@ -1303,3 +1303,177 @@
     } catch (e) {}
     return r; };
 })();
+
+// ── ONE OVER (Nov 27, Joe): a weekend event like Golf Clash's Golden Shot. One over (6 balls, 1 wicket) at your ground.
+// Your runs pick ONE bag from the ladder; each bag can only be won once a weekend. First go each weekend is free; more goes
+// are real money (£0.99 one / £4.99 six — placeholders). Home tile sits bottom left beside PLAY on Fri–Sun.
+(function oneOver() {
+  if (window.__oneOver) return; window.__oneOver = 1;
+  const TIERS = [{ t: 30, bag: 'platinum', c: '#8A5CF6' }, { t: 24, bag: 'gold', c: '#e0a01a' }, { t: 18, bag: 'silver', c: '#7d8aa3' }, { t: 12, bag: 'bronze', c: '#b0652a' }, { t: 6, bag: 'wooden', c: '#7a5233' }];
+  const DAYS = [5, 6, 0], MIN_MATCHES = 3;
+  const $ = id => document.getElementById(id);
+  const tapS = () => { try { playUiTap(); hapticTap(); } catch (e) {} };
+  const now = () => (typeof _nowDate === 'function' ? _nowDate() : new Date());
+  const wkKey = () => { const d = now(), back = (d.getDay() + 2) % 7, f = new Date(d.getFullYear(), d.getMonth(), d.getDate() - back); return `${f.getFullYear()}-${f.getMonth() + 1}-${f.getDate()}`; };
+  const st = () => { const o = SAVE.section('oneover'); if (o.wk !== wkKey()) { o.wk = wkKey(); o.free = 1; o.won = {}; o.best = 0; } o.paid = o.paid || 0; o.won = o.won || {}; return o; };
+  const save = () => { try { SAVE.save(); } catch (e) {} };
+  const mp = () => (typeof career !== 'undefined' && career.matchesPlayed) || 0;
+  const isOn = () => (window.OO_ALWAYS || DAYS.includes(now().getDay())) && mp() >= MIN_MATCHES && !(typeof TEASER !== 'undefined' && TEASER);
+  const left = () => { const d = now(), add = (8 - d.getDay()) % 7 || 7, m = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (d.getDay() === 1 ? 7 : add)); return Math.max(0, m - d); };
+  const fmtL = ms => { const h = Math.floor(ms / 36e5), dd = Math.floor(h / 24); return dd ? `${dd}D ${h % 24}H` : `${h}H ${Math.floor(ms / 6e4) % 60}M`; };
+  const img = b => (typeof CHEST_IMG_SRC !== 'undefined' && CHEST_IMG_SRC[b]) || '';
+  const nm = b => (typeof bagNm === 'function' ? bagNm(b) : b.toUpperCase());
+  const allWon = o => TIERS.every(x => o.won[x.bag]);
+  const price = (id, g) => (typeof storePrice === 'function' ? storePrice(id, g) : '£' + g);
+
+  const css = document.createElement('style'); css.textContent = `
+  #ooTile{position:fixed;left:12px;z-index:40;width:96px;border-radius:18px;border:3px solid #050A14;background:radial-gradient(circle at 50% 30%,#2b5fb8,#0f2550 70%);box-shadow:0 0 0 2px #FFC93A inset,0 5px 0 #050A14;display:none;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 0 6px;box-sizing:border-box;font-family:'Lilita One',sans-serif;color:#fff;cursor:pointer}
+  body.ooOn #ooTile{display:flex}
+  #ooTile .ball{position:absolute;top:-24px;left:-12px;width:34px;filter:drop-shadow(0 3px 0 #050A14)}
+  #ooTile b{font-weight:400;font-size:19px;line-height:.92;color:#FFC93A;text-shadow:0 2px 0 #050A14;text-align:center}
+  #ooTile .rb{margin-top:4px;background:linear-gradient(#45c24a,#23912a);border:2px solid #050A14;border-radius:8px;font-size:12px;padding:1px 7px;white-space:nowrap}
+  #ooTile .rb.gold{background:linear-gradient(#ffd34d,#f0a21a)}#ooTile .rb.dim{background:#46556f}
+  #ooTile .tm{position:absolute;top:-10px;right:-8px;background:#e0352b;border:2px solid #050A14;border-radius:9px;font-size:11px;padding:1px 6px;white-space:nowrap}
+  #ooScr,#ooRes{position:fixed;inset:0;z-index:400;display:none;font-family:'Lilita One',sans-serif;color:#fff;overflow:hidden;background:#0a1b3c}
+  #ooScr.show,#ooRes.show{display:block}
+  .ooBg{position:absolute;inset:-10px;background:url(assets/ui/home_bg_v5.webp) center/cover;filter:blur(3px) brightness(.5)}
+  .ooLogo{position:absolute;left:0;right:0;text-align:center;font-size:46px;line-height:.9;background:linear-gradient(#fff3a8,#FFC93A 45%,#e88a10);-webkit-background-clip:background;-webkit-background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 #5a2a00) drop-shadow(0 0 2px #5a2a00) drop-shadow(0 6px 6px rgba(0,0,0,.5))}
+  .ooHdr{position:absolute;left:22px;right:22px;border-radius:20px;border:3px solid #050A14;background:linear-gradient(#1c3a78,#132a58);box-shadow:0 0 0 2px #FFC93A inset,0 5px 0 #050A14;text-align:center;padding:40px 8px 12px}
+  .ooHdr b{font-weight:400;font-size:23px;display:block}.ooHdr small{font-size:13px;color:#9fb4dc;letter-spacing:.03em}
+  .ooCall{position:absolute;left:0;right:0;text-align:center;font-size:20px;text-shadow:0 3px 0 #050A14}
+  .ooLad{position:absolute;left:22px;right:22px;border-radius:20px;border:3px solid #050A14;background:linear-gradient(#0f2550,#0a1b3c);box-shadow:0 5px 0 #050A14;padding:10px 10px 6px;display:flex;flex-direction:column;gap:7px}
+  .ooRow{position:relative;height:50px;display:flex;align-items:center;gap:8px}
+  .ooRow img{width:56px;height:44px;object-fit:contain;filter:drop-shadow(0 3px 0 rgba(0,0,0,.5))}
+  .ooRow .nm{flex:1;height:38px;border-radius:12px;border:3px solid #050A14;background:#e9f0ff;color:#0a1b3c;font-size:18px;display:flex;align-items:center;padding-left:12px;box-sizing:border-box}
+  .ooRow .rn{width:70px;height:42px;border-radius:12px;border:3px solid #050A14;background:var(--c);display:flex;align-items:center;justify-content:center;font-size:22px;text-shadow:0 2px 0 rgba(0,0,0,.45);box-sizing:border-box}
+  .ooRow.got .nm{background:#b9c4da;color:#5a6a8c}.ooRow.got img{filter:grayscale(.8) brightness(.8)}
+  .ooRow .tick{position:absolute;left:24px;top:24px;background:#23912a;border:2px solid #050A14;border-radius:8px;font-size:11px;padding:0 5px}
+  .ooBtns{position:absolute;left:22px;right:22px;display:flex;gap:10px}
+  .ooBtn{flex:1;height:68px;border-radius:16px;border:3px solid #050A14;box-shadow:0 5px 0 #050A14;display:flex;flex-direction:column;align-items:center;justify-content:center;font:22px/1 'Lilita One',sans-serif;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.4);cursor:pointer}
+  .ooBtn small{font-size:19px;margin-top:3px}.ooBtn:active{transform:translateY(3px);box-shadow:0 2px 0 #050A14}
+  .ooBtn.g{background:linear-gradient(#5fd35f,#23912a)}.ooBtn.bl{background:linear-gradient(#4b8ef0,#2a62c4)}.ooBtn.gd{background:linear-gradient(#ffd34d,#f0a21a)}.ooBtn[disabled]{filter:grayscale(.7);opacity:.7}
+  .ooFoot{position:absolute;left:0;right:0;text-align:center;font-size:14px;color:#c8d6f0}
+  #ooStrip{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:60;height:58px;border-radius:16px;border:3px solid #050A14;background:rgba(10,27,60,.86);box-shadow:0 4px 0 #050A14;display:none;pointer-events:none;font-family:'Lilita One',sans-serif;color:#fff}
+  #ooStrip.on{display:block}
+  #ooStrip .bar{position:absolute;left:16px;right:16px;top:36px;height:8px;border-radius:4px;background:#26375a}
+  #ooStrip .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,#ffd34d,#f0a21a);transition:width .4s}
+  #ooStrip .s{position:absolute;top:2px;width:40px;margin-left:-20px;text-align:center}
+  #ooStrip .s img{width:34px;height:26px;object-fit:contain;filter:drop-shadow(0 2px 0 #050A14) grayscale(.6) brightness(.75)}
+  #ooStrip .s.hit img{filter:drop-shadow(0 0 6px #ffd34d)}#ooStrip .s.got img{filter:grayscale(1) brightness(.5)}
+  #ooStrip .s span{display:block;font-size:11px;margin-top:12px;text-shadow:0 2px 0 #050A14}
+  #ooStrip .me{position:absolute;top:28px;width:30px;margin-left:-15px;height:22px;border-radius:8px;border:2px solid #050A14;background:#fff;color:#0a1b3c;font-size:14px;display:flex;align-items:center;justify-content:center;transition:left .4s}
+  .ooRays{position:absolute;left:50%;top:38%;width:760px;height:760px;margin:-380px 0 0 -380px;border-radius:50%;background:repeating-conic-gradient(rgba(255,201,58,.15) 0 10deg,transparent 10deg 20deg)}
+  .ooWon{position:absolute;left:0;right:0;text-align:center}
+  .ooWon .h{font-size:38px;line-height:1;color:#FFC93A;text-shadow:0 3px 0 #5a2a00,0 0 2px #5a2a00;padding:0 16px}
+  .ooWon img{width:190px;margin-top:16px;filter:drop-shadow(0 10px 10px rgba(0,0,0,.5))}
+  .ooWon .runs{font-size:60px;line-height:1;margin-top:8px;text-shadow:0 4px 0 #050A14}.ooWon .runs small{font-size:20px;color:#9fb4dc}
+  .ooBalls{display:flex;gap:6px;justify-content:center;margin-top:8px}
+  .ooBalls i{width:36px;height:30px;border-radius:9px;border:3px solid #050A14;font-style:normal;font-size:17px;display:flex;align-items:center;justify-content:center;background:#0a1b3c;box-sizing:border-box}
+  .ooNxt{position:absolute;left:28px;right:28px;border-radius:16px;border:3px solid #050A14;background:#0f2550;padding:10px 12px;display:flex;align-items:center;gap:10px}
+  .ooNxt img{width:50px}.ooNxt div{font-size:16px;line-height:1.15}.ooNxt small{display:block;font-size:13px;color:#9fb4dc}`;
+  document.head.appendChild(css);
+
+  // ── home tile ──
+  const tile = document.createElement('div'); tile.id = 'ooTile';
+  (document.getElementById('overlay') || document.body).appendChild(tile);
+  function paintTile() {
+    const on = isOn(); document.body.classList.toggle('ooOn', on); if (!on) return;
+    const o = st(), sb = $('startBtn');
+    if (sb) { const r = sb.getBoundingClientRect(); if (r.height) { tile.style.top = r.top + 'px'; tile.style.height = r.height + 'px'; } }
+    const rb = o.free ? '<span class="rb">FREE OVER</span>' : allWon(o) ? '<span class="rb dim">ALL WON</span>' : o.paid ? `<span class="rb">${o.paid} LEFT</span>` : '<span class="rb gold">GO AGAIN</span>';
+    tile.innerHTML = `<img class="ball" alt="" src="assets/ui/comet_ball.webp"><b>ONE<br>OVER</b>${rb}<span class="tm">${fmtL(left())}</span>`;
+  }
+  const css2 = document.createElement('style'); css2.textContent = `body.ooOn #startBtn{margin-left:96px!important;width:calc(100% - 96px)!important;max-width:none!important}`; document.head.appendChild(css2);
+  tile.addEventListener('click', e => { e.stopPropagation(); tapS(); openScr(); });
+  { const _u = window.updateMenuHUD; if (typeof _u === 'function') window.updateMenuHUD = function () { const r = _u.apply(this, arguments); try { paintTile(); } catch (e) {} return r; }; }
+  setInterval(() => { try { const ov = $('overlay'); if (ov && !ov.classList.contains('hidden')) paintTile(); } catch (e) {} }, 15000);
+  addEventListener('resize', () => { try { paintTile(); } catch (e) {} });
+  setTimeout(() => { try { paintTile(); } catch (e) {} }, 800);
+
+  // ── prize ladder screen ──
+  const scr = document.createElement('div'); scr.id = 'ooScr'; document.body.appendChild(scr);
+  const T = () => `max(var(--insT,0px),6px)`;
+  function ladder(o, hit) { return TIERS.map(x => `<div class="ooRow${o.won[x.bag] ? ' got' : ''}"><img alt="" src="${img(x.bag)}">${o.won[x.bag] ? '<b class="tick">WON</b>' : ''}<span class="nm">${nm(x.bag)} BAG</span><span class="rn" style="--c:${x.c}">${x.t}+</span></div>`).join(''); }
+  function openScr() {
+    const o = st(), li = Math.max(1, typeof selectedLeagueIdx === 'function' ? selectedLeagueIdx() : 1), ground = (THEMED_LEAGUES[li] && THEMED_LEAGUES[li].name) || '';
+    let btns;
+    if (allWon(o)) btns = `<button class="ooBtn bl" data-oo="x">BACK</button><button class="ooBtn g" disabled>ALL BAGS WON<small>BACK NEXT WEEKEND</small></button>`;
+    else if (o.free) btns = `<button class="ooBtn bl" data-oo="x">EXIT</button><button class="ooBtn g" data-oo="go">FREE OVER<small>× 1</small></button>`;
+    else if (o.paid) btns = `<button class="ooBtn bl" data-oo="x">EXIT</button><button class="ooBtn g" data-oo="go">PLAY<small>${o.paid} LEFT</small></button>`;
+    else btns = `<button class="ooBtn bl" data-oo="x" style="flex:.8">EXIT</button><button class="ooBtn g" data-oo="b1">1 OVER<small>${price('one_over_1', 0.99)}</small></button><button class="ooBtn g" data-oo="b6">6 OVERS<small>${price('one_over_6', 4.99)}</small></button>`;
+    scr.innerHTML = `<div class="ooBg"></div>
+      <div class="ooHdr" style="top:calc(${T()} + 78px)"><b>${String(ground).toUpperCase()}</b><small>6 BALLS · 1 WICKET · ENDS IN ${fmtL(left())}</small></div>
+      <div class="ooLogo" style="top:calc(${T()} + 42px)">ONE OVER</div>
+      <div class="ooCall" style="top:calc(${T()} + 196px)">SCORE BIG FOR TOP PRIZES!</div>
+      <div class="ooLad" style="top:calc(${T()} + 230px)">${ladder(o)}</div>
+      <div class="ooBtns" style="top:calc(${T()} + 560px)">${btns}</div>
+      <div class="ooFoot" style="top:calc(${T()} + 644px)">ONE BAG A GO · EACH BAG CAN ONLY BE WON ONCE</div>`;
+    scr.classList.add('show');
+  }
+  function closeScr() { scr.classList.remove('show'); }
+  function start() {
+    const o = st(); if (allWon(o)) return;
+    if (o.free) o.free = 0; else if (o.paid > 0) o.paid--; else return; save();
+    closeScr(); $('ooRes').classList.remove('show');
+    const li = Math.max(1, selectedLeagueIdx());
+    window._modeScene = null; window._activeLeagueIdx = li; window._leagueTargetFloor = 0;
+    setupChase('league', li); Object.assign(window.chase, { mode: 'tourney', oo: true, target: 0, balls: 6, wickets: 1, board: null });
+    try { track('match_start', { mode: 'one_over' }); } catch (e) {}
+    closeAllScreens(); startGame();
+  }
+  function buy(n) { const id = n === 6 ? 'one_over_6' : 'one_over_1', g = n === 6 ? 4.99 : 0.99;
+    buyRealMoney(id, g, () => { const o = st(); o.paid += n; save(); setTimeout(() => { if (scr.classList.contains('show')) openScr(); if ($('ooRes').classList.contains('show')) start(); paintTile(); }, 50); return `${n} ONE OVER GO${n > 1 ? 'ES' : ''}`; }); }
+  document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-oo]'); if (!b) return; e.stopImmediatePropagation(); tapS();
+    const k = b.dataset.oo;
+    if (k === 'x') { closeScr(); return; }
+    if (k === 'go') { start(); return; }
+    if (k === 'b1') { buy(1); return; } if (k === 'b6') { buy(6); return; }
+    if (k === 'home') { $('ooRes').classList.remove('show'); try { closeAllScreens(); $('overlay').classList.remove('hidden'); showNav('league'); updateMenuHUD(); } catch (er) {} return; }
+    if (k === 'again') { const o = st(); if (o.paid > 0) start(); else buy(1); return; }
+  }, true);
+
+  // ── in-game prize strip along the bottom ──
+  const strip = document.createElement('div'); strip.id = 'ooStrip'; document.body.appendChild(strip);
+  const MAX = 36, pos = t => 16 + (t / MAX) * 100;
+  function paintStrip() {
+    const c = window.chase; if (!c || !c.oo || (typeof state !== 'undefined' && state === 'menu')) { strip.classList.remove('on'); strip.dataset.k = ''; return; }
+    strip.classList.add('on');
+    const o = st(), r = typeof runs === 'number' ? runs : 0, w = (strip.clientWidth || 373) - 32, px = t => 16 + Math.min(1, t / MAX) * w;
+    if (!strip.dataset.k) { strip.innerHTML = '<div class="bar"><i></i></div>' + TIERS.slice().reverse().map(x => `<div class="s" data-t="${x.t}"><img alt="" src="${img(x.bag)}"><span>${x.t}</span></div>`).join('') + '<div class="me"></div>'; strip.dataset.k = '1'; }
+    strip.querySelectorAll('.s').forEach(s => { s.style.left = px(+s.dataset.t) + 'px'; });
+    strip.querySelector('.bar i').style.width = Math.min(100, r / MAX * 100) + '%';
+    const top = TIERS.find(y => r >= y.t && !o.won[y.bag]);
+    strip.querySelectorAll('.s').forEach(s => { const t = +s.dataset.t, x = TIERS.find(y => y.t === t); s.classList.toggle('got', !!o.won[x.bag]); s.classList.toggle('hit', !!top && top.t === t); });
+    const me = strip.querySelector('.me'); me.textContent = r; me.style.left = px(r) + 'px';
+    strip.classList.add('on');
+  }
+  setInterval(paintStrip, 250);
+
+  // ── result ──
+  const res = document.createElement('div'); res.id = 'ooRes'; document.body.appendChild(res);
+  const _me = window.modeEnd;
+  window.modeEnd = function () { const c = window.chase; if (!c || !c.oo) return _me.apply(this, arguments);
+    try { if (typeof _fxBigEl !== 'undefined' && _fxBigEl) { _fxBigEl.remove(); } } catch (e) {}
+    state = 'menu'; try { hideMoment(); } catch (e) {}
+    const o = st(), r = runs, tier = TIERS.find(x => r >= x.t);
+    let title, bag = null, sub = '';
+    if (tier && !o.won[tier.bag]) { bag = tier.bag; o.won[bag] = Date.now(); try { grantReward({ bag }); } catch (e) {} title = `${nm(bag)} BAG WON!`; }
+    else if (tier) title = `${nm(tier.bag)} BAG ALREADY WON`;
+    else title = 'NO BAG THIS TIME';
+    o.best = Math.max(o.best || 0, r); save();
+    const nx = TIERS.slice().reverse().find(x => x.t > r && !o.won[x.bag]);
+    try { track('match_end', { mode: 'one_over', runs: r, bag: bag || '' }); } catch (e) {}
+    const log = (c.log || []).slice(0, 6), balls = log.map(v => typeof v !== 'number' ? '<i style="background:#7a1d1d">W</i>' : `<i style="background:${v >= 6 ? '#e0352b' : v >= 4 ? '#2a62c4' : v === 0 ? '#46556f' : '#0a1b3c'}">${v}</i>`).join('') + (c.wkLost && !log.some(v => typeof v !== 'number') ? '<i style="background:#7a1d1d">W</i>' : '');
+    window.chase = null; window._modeScene = null; window._activeLeagueIdx = null; window._modeEndAt = Date.now();
+    const again = allWon(o) ? '' : o.paid ? `<button class="ooBtn gd" data-oo="again">GO AGAIN<small>${o.paid} LEFT</small></button>` : `<button class="ooBtn gd" data-oo="again">GO AGAIN<small>${price('one_over_1', 0.99)}</small></button>`;
+    res.innerHTML = `<div class="ooBg"></div><div class="ooRays"></div>
+      <div class="ooLogo" style="top:calc(${T()} + 24px);font-size:40px">ONE OVER</div>
+      <div class="ooWon" style="top:calc(${T()} + 92px)"><div class="h">${title}</div>${bag ? `<img alt="" src="${img(bag)}">` : '<div style="height:24px"></div>'}
+        <div class="runs">${r}<small> RUNS</small></div><div class="ooBalls">${balls}</div></div>
+      ${nx ? `<div class="ooNxt" style="top:calc(${T()} + 520px)"><img alt="" src="${img(nx.bag)}"><div>${nx.t - r} RUN${nx.t - r === 1 ? '' : 'S'} FROM THE ${nm(nx.bag)} BAG<small>Face the over again to go for it</small></div></div>` : ''}
+      <div class="ooBtns" style="top:calc(${T()} + 610px)"><button class="ooBtn bl" data-oo="home">CONTINUE</button>${again}</div>`;
+    res.classList.add('show'); strip.classList.remove('on'); strip.dataset.k = '';
+    try { hapticBig(); playAchievementChime(); } catch (e) {}
+  };
+  window.openOneOver = openScr;
+})();
