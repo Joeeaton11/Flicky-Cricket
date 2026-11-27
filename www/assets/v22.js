@@ -880,7 +880,7 @@
   // side rails
   const btn = (cls, art, label, extra) => `<button class="hv2b ${cls}"><span class="ic" style="background:${art}">${extra || ''}</span>${label}</button>`;
   const L = document.createElement('div'); L.className = 'hv2rail l'; L.id = 'hv2L';
-  L.innerHTML = btn('gift', `url(assets/ui/daily_gift.webp) center/84% no-repeat,linear-gradient(#ffcf4a,#f08a1a)`, 'DAILY GIFT', '<span class="tg g">FREE</span>')
+  L.innerHTML = btn('gift', `url(assets/ui/daily_gift.webp) center/84% no-repeat,linear-gradient(#ffcf4a,#f08a1a)`, 'DAILY', '<span class="tg g">FREE</span>')
     + btn('inbox', `url(assets/ui/icon_inbox.webp) center/70% no-repeat,linear-gradient(#3f6ac8,#22408a)`, 'INBOX', '<span class="dt" hidden></span>')
     + btn('kit', `url(assets/ui/home_edit_kit.webp) center/80% no-repeat,radial-gradient(circle at 50% 35%,#3a63ad,#13284f 70%)`, 'MY KIT');
   const R = document.createElement('div'); R.className = 'hv2rail r'; R.id = 'hv2R';
@@ -888,7 +888,9 @@
   ov.appendChild(L); ov.appendChild(R);
   L.querySelector('.gift').addEventListener('click', () => {
     try { hapticTap(); } catch (e) {}
-    try { if (giftReady()) { const l = claimGift(); if (l) showMessage('+ ' + l, '#FFC93A', 2000); } else showMessage('Next gift tomorrow', '#B4C2DD', 1600); } catch (e) {}
+    // Nov 27 (Joe): the tile is DAILY: it still hands over today's gift, then opens Today (daily reward + missions)
+    try { if (giftReady()) { const l = claimGift(); if (l) showMessage('+ ' + l, '#FFC93A', 2000); } } catch (e) {}
+    try { openToday(); } catch (e) {}
     refresh();
   });
   L.querySelector('.inbox').addEventListener('click', () => { try { $('inboxBtn').click(); } catch (e) {} });
@@ -934,7 +936,7 @@
           card.querySelector('.hv2bar b').style.width = '100%'; card.querySelector('.hv2g').innerHTML = ''; nc.src = `assets/ui/leagues/lg_${n}_cup.webp`; nc.hidden = false;
         }
       }
-      const g = L.querySelector('.gift'), ready = typeof giftReady === 'function' && giftReady();
+      const g = L.querySelector('.gift'), ready = (typeof giftReady === 'function' && giftReady()) || (typeof calendarReady === 'function' && calendarReady());
       g.classList.toggle('off', !ready); g.querySelector('.tg').hidden = !ready;
       const ib = $('inboxBadge'), dt = L.querySelector('.inbox .dt');
       const cnt = ib && getComputedStyle(ib).display !== 'none' ? ib.textContent.trim() : '';
@@ -1265,3 +1267,24 @@
 (function () { const s = document.createElement('style');
   s.textContent = '#homeTop #homeCoinPill{flex:1.35 1 0!important}#homeTop #homeTroPill{flex:.8 1 0!important}';
   document.head.appendChild(s); })();
+
+// Nov 27 (Joe): the sticker album lives on the Bags screen (stickers come from bags) — a pill left of the free-bags timer
+(function () {
+  const css = document.createElement('style'); css.textContent = `
+  .albPill{position:absolute;left:12px;z-index:3;height:34px;display:flex;align-items:center;gap:5px;padding:0 10px 0 6px;border-radius:17px;border:2.5px solid #050A14;background:linear-gradient(#3ec7a0,#178a68);box-shadow:0 3px 0 #050A14;color:#fff;font:13px/1 'Lilita One',sans-serif;cursor:pointer}
+  .albPill i{width:22px;height:26px;border-radius:4px;border:2px solid #050A14;background:linear-gradient(90deg,#c0392b 0 22%,#FFC93A 22% 30%,#e9573f 30%);box-shadow:inset -2px 0 0 rgba(0,0,0,.2)}
+  .albPill .n{position:absolute;top:-8px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:#e0352b;border:2px solid #050A14;font-size:11px;display:grid;place-items:center;padding:0 3px}`;
+  document.head.appendChild(css);
+  const _rf = window.renderFreeBar; if (typeof _rf !== 'function') return;
+  window.renderFreeBar = function (el) { const r = _rf.apply(this, arguments);
+    try { if (!el || !el.parentElement) return r;
+      const mp = (typeof career !== 'undefined' && career.matchesPlayed) || 0; let b = el.parentElement.querySelector(':scope > .albPill');
+      if (mp < 10 || typeof window.openFlickyAlbum !== 'function') { if (b) b.remove(); el.style.transform = ''; return r; }
+      if (!b) { b = document.createElement('button'); b.className = 'albPill'; b.addEventListener('click', e => { e.stopPropagation(); try { playUiTap(); } catch (er) {} window.openFlickyAlbum(); }); el.parentElement.insertBefore(b, el.nextSibling);
+        if (getComputedStyle(el.parentElement).position === 'static') el.parentElement.style.position = 'relative'; }
+      const a = SAVE.section('album'), have = a.have || {}, li = Math.max(1, selectedLeagueIdx()), pg = window.v2AlbumPage ? window.v2AlbumPage(li) : [], got = pg.filter(x => have[x.id]).length, nw = a.fresh || 0;
+      b.innerHTML = `<i></i>ALBUM ${got}/${pg.length}${nw ? `<span class="n">${nw}</span>` : ''}`;
+      b.style.top = (el.offsetTop + (el.offsetHeight - 34) / 2) + 'px'; el.style.transform = 'translateX(32px)';
+    } catch (e) {}
+    return r; };
+})();
