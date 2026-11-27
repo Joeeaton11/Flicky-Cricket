@@ -1370,7 +1370,34 @@
   .ooBalls{display:flex;gap:6px;justify-content:center;margin-top:8px}
   .ooBalls i{width:36px;height:30px;border-radius:9px;border:3px solid #050A14;font-style:normal;font-size:17px;display:flex;align-items:center;justify-content:center;background:#0a1b3c;box-sizing:border-box}
   .ooNxt{position:absolute;left:28px;right:28px;border-radius:16px;border:3px solid #050A14;background:#0f2550;padding:10px 12px;display:flex;align-items:center;gap:10px}
-  .ooNxt img{width:50px}.ooNxt div{font-size:16px;line-height:1.15}.ooNxt small{display:block;font-size:13px;color:#9fb4dc}`;
+  .ooNxt img{width:50px}.ooNxt div{font-size:16px;line-height:1.15}.ooNxt small{display:block;font-size:13px;color:#9fb4dc}
+  /* art pass: painted ground, gold rims, red ribbon, glossy rows */
+  .ooArt{position:absolute;inset:0;background-position:center top;background-size:cover}
+  .ooArt:after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(10,27,60,.35) 0,rgba(10,27,60,.55) 30%,#0f2550 52%,#0a1b3c 78%,#061226 100%)}
+  .ooTop{position:absolute;left:0;right:0;display:flex;flex-direction:column;align-items:center;z-index:3}
+  .ooTop .lg{display:flex;align-items:center;gap:6px}
+  .ooTop .lg img{width:46px;transform:rotate(-14deg);filter:drop-shadow(0 4px 0 #050A14)}
+  .ooTop .lg b{font-weight:400;font-size:50px;line-height:.9;background:linear-gradient(#fff3a8,#FFC93A 45%,#e88a10);-webkit-background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 #5a2a00) drop-shadow(0 0 2px #5a2a00) drop-shadow(0 6px 6px rgba(0,0,0,.5))}
+  .ooTop .wk{margin-top:4px;font-size:14px;color:#fff;background:linear-gradient(#e0352b,#a3161a);border:3px solid #050A14;border-radius:11px;padding:2px 12px;box-shadow:0 3px 0 #050A14;letter-spacing:.04em}
+  .ooCard{position:absolute;left:22px;right:22px;height:122px;border-radius:20px;border:4px solid #050A14;box-shadow:0 0 0 3px #FFC93A inset,0 6px 0 #050A14;background:center 40%/cover;overflow:hidden}
+  .ooCard:after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(5,10,20,0) 40%,rgba(5,10,20,.85))}
+  .ooCard .gn{position:absolute;left:14px;bottom:10px;z-index:2;font-size:24px;line-height:1;text-shadow:0 3px 0 #050A14}
+  .ooCard .ch{position:absolute;right:10px;bottom:10px;z-index:2;display:flex;gap:6px}
+  .ooCard .ch span{font-size:13px;background:rgba(5,10,20,.8);border:2px solid #FFC93A;border-radius:10px;padding:2px 8px}
+  .ooRib{position:absolute;left:34px;right:34px;height:46px;z-index:3;display:flex;align-items:center;justify-content:center;font-size:21px;color:#FFE27A;text-shadow:0 3px 0 #5a0a0a;background:linear-gradient(#ef4136,#b31b1f);border:3px solid #050A14;border-radius:6px;box-shadow:0 4px 0 #050A14}
+  .ooRib:before,.ooRib:after{content:'';position:absolute;top:10px;width:28px;height:36px;background:#8e1418;border:3px solid #050A14;z-index:-1}
+  .ooRib:before{left:-22px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,30% 50%)}.ooRib:after{right:-22px;clip-path:polygon(0 0,100% 0,70% 50%,100% 100%,0 100%)}
+  .ooLad.v2{background:linear-gradient(#152d63,#0c1d42);box-shadow:0 0 0 2px #2d4f94 inset,0 5px 0 #050A14;padding:20px 10px 8px;gap:8px}
+  .ooLad.v2 .ooRow{height:52px;border-radius:14px;border:3px solid #050A14;background:linear-gradient(#2c4f93,#1a336b);box-shadow:inset 0 2px 0 rgba(255,255,255,.18);padding-right:5px;gap:4px}
+  .ooLad.v2 .ooRow img{width:64px;height:50px;margin:-6px -4px 0 -6px}
+  .ooLad.v2 .ooRow .nm{background:none;border:0;color:#fff;font-size:19px;padding-left:2px;text-shadow:0 2px 0 #050A14;height:auto}
+  .ooLad.v2 .ooRow .rn{width:auto;min-width:70px;height:38px;padding:0 8px;border-radius:11px;background:linear-gradient(color-mix(in srgb,var(--c) 70%,#fff),var(--c) 55%,color-mix(in srgb,var(--c) 70%,#000));gap:3px;font-size:21px}
+  .ooLad.v2 .ooRow .rn small{font-size:10px;opacity:.9;margin-top:5px}
+  .ooLad.v2 .ooRow.got{background:linear-gradient(#273450,#1b2640)}
+  .ooLad.v2 .ooRow.got .nm{color:#8090b0;background:none}
+  .ooLad.v2 .ooRow .tick{left:auto;right:84px;top:50%;transform:translateY(-50%) rotate(-8deg);font-size:13px;padding:1px 8px;border-radius:9px;background:linear-gradient(#5fd35f,#23912a)}
+  .ooGlow{position:absolute;left:50%;width:250px;height:250px;margin-left:-125px;border-radius:50%;background:radial-gradient(circle,rgba(255,214,90,.55),rgba(255,214,90,0) 65%)}
+  .ooRib.dim{background:linear-gradient(#3a5590,#22386b);color:#fff;text-shadow:0 3px 0 #050A14}.ooRib.dim:before,.ooRib.dim:after{background:#18294f}`;
   document.head.appendChild(css);
 
   // ── home tile ──
@@ -1393,7 +1420,7 @@
   // ── prize ladder screen ──
   const scr = document.createElement('div'); scr.id = 'ooScr'; document.body.appendChild(scr);
   const T = () => `max(var(--insT,0px),6px)`;
-  function ladder(o, hit) { return TIERS.map(x => `<div class="ooRow${o.won[x.bag] ? ' got' : ''}"><img alt="" src="${img(x.bag)}">${o.won[x.bag] ? '<b class="tick">WON</b>' : ''}<span class="nm">${nm(x.bag)} BAG</span><span class="rn" style="--c:${x.c}">${x.t}+</span></div>`).join(''); }
+  function ladder(o, hit) { return TIERS.map(x => `<div class="ooRow${o.won[x.bag] ? ' got' : ''}"><img alt="" src="${img(x.bag)}">${o.won[x.bag] ? '<b class="tick">WON ✓</b>' : ''}<span class="nm">${nm(x.bag)} BAG</span><span class="rn" style="--c:${x.c}">${x.t}${x.t === 30 ? '+' : ''}<small>RUNS</small></span></div>`).join(''); }
   function openScr() {
     const o = st(), li = Math.max(1, typeof selectedLeagueIdx === 'function' ? selectedLeagueIdx() : 1), ground = (THEMED_LEAGUES[li] && THEMED_LEAGUES[li].name) || '';
     let btns;
@@ -1401,13 +1428,13 @@
     else if (o.free) btns = `<button class="ooBtn bl" data-oo="x">EXIT</button><button class="ooBtn g" data-oo="go">FREE OVER<small>× 1</small></button>`;
     else if (o.paid) btns = `<button class="ooBtn bl" data-oo="x">EXIT</button><button class="ooBtn g" data-oo="go">PLAY<small>${o.paid} LEFT</small></button>`;
     else btns = `<button class="ooBtn bl" data-oo="x" style="flex:.8">EXIT</button><button class="ooBtn g" data-oo="b1">1 OVER<small>${price('one_over_1', 0.99)}</small></button><button class="ooBtn g" data-oo="b6">6 OVERS<small>${price('one_over_6', 4.99)}</small></button>`;
-    scr.innerHTML = `<div class="ooBg"></div>
-      <div class="ooHdr" style="top:calc(${T()} + 78px)"><b>${String(ground).toUpperCase()}</b><small>6 BALLS · 1 WICKET · ENDS IN ${fmtL(left())}</small></div>
-      <div class="ooLogo" style="top:calc(${T()} + 42px)">ONE OVER</div>
-      <div class="ooCall" style="top:calc(${T()} + 196px)">SCORE BIG FOR TOP PRIZES!</div>
-      <div class="ooLad" style="top:calc(${T()} + 230px)">${ladder(o)}</div>
-      <div class="ooBtns" style="top:calc(${T()} + 560px)">${btns}</div>
-      <div class="ooFoot" style="top:calc(${T()} + 644px)">ONE BAG A GO · EACH BAG CAN ONLY BE WON ONCE</div>`;
+    scr.innerHTML = `<div class="ooArt" style="background-image:url(assets/ui/leagues/lg_${li}_tall.webp)"></div>
+      <div class="ooTop" style="top:calc(${T()} + 6px)"><div class="lg"><img alt="" src="assets/ui/comet_ball.webp"><b>ONE OVER</b></div><span class="wk">WEEKEND · ENDS IN ${fmtL(left())}</span></div>
+      <div class="ooCard" style="top:calc(${T()} + 96px);background-image:url(assets/ui/leagues/lg_${li}_bg.webp)"><span class="gn">${String(ground).toUpperCase()}</span><span class="ch"><span>6 BALLS</span><span>1 WICKET</span></span></div>
+      <div class="ooRib" style="top:calc(${T()} + 232px)">SCORE BIG FOR TOP PRIZES!</div>
+      <div class="ooLad v2" style="top:calc(${T()} + 256px)">${ladder(o)}</div>
+      <div class="ooBtns" style="top:calc(${T()} + 590px)">${btns}</div>
+      <div class="ooFoot" style="top:calc(${T()} + 672px)">ONE BAG A GO · EACH BAG CAN ONLY BE WON ONCE</div>`;
     scr.classList.add('show');
   }
   function closeScr() { scr.classList.remove('show'); }
@@ -1466,9 +1493,12 @@
     const log = (c.log || []).slice(0, 6), balls = log.map(v => typeof v !== 'number' ? '<i style="background:#7a1d1d">W</i>' : `<i style="background:${v >= 6 ? '#e0352b' : v >= 4 ? '#2a62c4' : v === 0 ? '#46556f' : '#0a1b3c'}">${v}</i>`).join('') + (c.wkLost && !log.some(v => typeof v !== 'number') ? '<i style="background:#7a1d1d">W</i>' : '');
     window.chase = null; window._modeScene = null; window._activeLeagueIdx = null; window._modeEndAt = Date.now();
     const again = allWon(o) ? '' : o.paid ? `<button class="ooBtn gd" data-oo="again">GO AGAIN<small>${o.paid} LEFT</small></button>` : `<button class="ooBtn gd" data-oo="again">GO AGAIN<small>${price('one_over_1', 0.99)}</small></button>`;
-    res.innerHTML = `<div class="ooBg"></div><div class="ooRays"></div>
-      <div class="ooLogo" style="top:calc(${T()} + 24px);font-size:40px">ONE OVER</div>
-      <div class="ooWon" style="top:calc(${T()} + 92px)"><div class="h">${title}</div>${bag ? `<img alt="" src="${img(bag)}">` : '<div style="height:24px"></div>'}
+    const gli = Math.max(1, selectedLeagueIdx());
+    res.innerHTML = `<div class="ooArt" style="background-image:url(assets/ui/leagues/lg_${gli}_tall.webp)"></div>${bag ? '<div class="ooRays"></div>' : ''}
+      <div class="ooTop" style="top:calc(${T()} + 6px)"><div class="lg"><img alt="" src="assets/ui/comet_ball.webp"><b>ONE OVER</b></div></div>
+      <div class="ooRib${bag ? '' : ' dim'}" style="top:calc(${T()} + 82px)">${title}</div>
+      ${bag ? `<div class="ooGlow" style="top:calc(${T()} + 130px)"></div>` : ''}
+      <div class="ooWon" style="top:calc(${T()} + 142px)">${bag ? `<img alt="" src="${img(bag)}" style="margin-top:0">` : '<div style="height:60px"></div>'}
         <div class="runs">${r}<small> RUNS</small></div><div class="ooBalls">${balls}</div></div>
       ${nx ? `<div class="ooNxt" style="top:calc(${T()} + 520px)"><img alt="" src="${img(nx.bag)}"><div>${nx.t - r} RUN${nx.t - r === 1 ? '' : 'S'} FROM THE ${nm(nx.bag)} BAG<small>Face the over again to go for it</small></div></div>` : ''}
       <div class="ooBtns" style="top:calc(${T()} + 610px)"><button class="ooBtn bl" data-oo="home">CONTINUE</button>${again}</div>`;
